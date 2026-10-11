@@ -1596,8 +1596,8 @@ export function createScriptWorkspace(deps){
       }
     }
     if(showMessage){
-      if(errors.length) setTimeEstimateMessage(errors.join(' / '),true);
-      else if(warnings.length) setTimeEstimateMessage(`Warning: ${warnings.join(' / ')}`,false,true);
+      if(errors.length) setTimeEstimateMessage(errors.join('\n'),true);
+      else if(warnings.length) setTimeEstimateMessage(`Warning:\n${warnings.join('\n')}`,false,true);
       else clearTimeEstimateMessage();
     }
     return {ok:errors.length===0,rows,results,errors,warnings};
@@ -2857,7 +2857,7 @@ export function createScriptWorkspace(deps){
 
   function timeRowMotionWarnings(row,result,index,structure,darkCache=null){
     const meta=timeCommandMeta(result.command);
-    if(!['s2','th2th','qe','hkle','br'].includes(meta.target)) return [];
+    if(!['s1','s2','th2th','qe','hkle','br'].includes(meta.target)) return [];
     const contextResult=timeLoopContextsForRow(row,structure);
     if(!contextResult.ok){
       return contextResult.tooMany
@@ -2874,66 +2874,89 @@ export function createScriptWorkspace(deps){
     if(meta.target==='hkle'||meta.target==='br'){
       try{ rl=buildResolutionLattice().rl; }catch(_e){ return []; }
     }
-    const points=Math.max(1,result.points||1), warnings=[];
-    const add=message=>{ if(message && !warnings.includes(message)) warnings.push(message); };
+    // A command can contain hundreds of scan points and loop iterations.
+    // Record the problem *type* only once, rather than allocating a long
+    // warning string containing an HKLE tuple for every affected point.
+    const issues=new Set();
+    const add=kind=>{ if(kind) issues.add(kind); };
+    const checkS2=(s2,Ei)=>{
+      if(timeS2RangeWarning(s2,Ei,'',index)) add('S2 out of range');
+    };
+    const checkReachability=reach=>{
+      if(reach?.ok) return true;
+      const reason=reach?.reason||'';
+      if(reason.includes('scattering triangle cannot be formed')) add('scattering triangle cannot be formed');
+      else if(reason.includes('Ei or Ef non-positive')) add('Ei/Ef out of range');
+      else if(reason.includes('Q is not a valid')) add('invalid Q');
+      else add('inaccessible Q–E point');
+      return false;
+    };
+    const points=Math.max(1,result.points||1);
     for(const context of contextResult.contexts){
       for(let point=0;point<points;point++){
+        if(meta.target==='s1'){
+          // Relative S1 is not checked against absolute limits without a
+          // known starting encoder position; do not report false positives.
+          if(meta.op==='driverel'||meta.op==='scanrel') continue;
+          const s1=timeDetailValueAt(parsedByKey.s1,point,context);
+          const min=num('S1min'),max=num('S1max');
+          if(Number.isFinite(s1) && Number.isFinite(min) && Number.isFinite(max)
+            && (s1<Math.min(min,max)-1e-8 || s1>Math.max(min,max)+1e-8)){
+            add('S1 out of range');
+          }
+          continue;
+        }
         if(meta.target==='s2' || meta.target==='th2th'){
           const key=meta.target==='th2th'?'th2th':'s2';
           const value=timeDetailValueAt(parsedByKey[key],point,context);
           if(!Number.isFinite(value)) continue;
           if(meta.target==='th2th'){
-            // SPICE th2th is a relative scan: evaluate every requested offset
-            // from the S2 position reached by the preceding Script commands.
+            // SPICE th2th is a relative scan from the preceding S2 position.
             const base=timePreviousS2Position(row,index,context,structure);
-            if(!base){
-              add(`Command ${index}: th2th reachability check requires a preceding position-defining command (for example br, drive/scan HKLE, or S2).`);
-              continue;
-            }
-            const finalS2=base.s2+value;
-            add(timeS2RangeWarning(finalS2,base.Ei,`base S2=${base.s2.toFixed(2)}°, th2th offset=${Number(value.toPrecision?.(6)??value)}`,index));
+            if(!base){ add('th2th: previous S2 position unavailable'); continue; }
+            checkS2(base.s2+value,base.Ei);
           }else if(meta.op==='driverel'||meta.op==='scanrel'){
             const base=timePreviousS2Position(row,index,context,structure);
             if(!base) continue;
-            const finalS2=base.s2+value;
-            add(timeS2RangeWarning(finalS2,base.Ei,`previous S2=${base.s2.toFixed(2)}°, rel S2=${Number(value.toPrecision?.(6)??value)}`,index));
+            checkS2(base.s2+value,base.Ei);
           }else{
-            const Ei=timeElasticIncidentEnergy();
-            add(timeS2RangeWarning(value,Ei,`${key}=${Number(value.toPrecision?.(6)??value)}`,index));
+            checkS2(value,timeElasticIncidentEnergy());
           }
           continue;
         }
-
         if(meta.target==='qe'){
           const q=timeDetailValueAt(parsedByKey.q,point,context);
           const hw=timeDetailValueAt(parsedByKey.hw,point,context);
           if(!Number.isFinite(q)||!Number.isFinite(hw)) continue;
-          const detail=`Q=${Number(q.toPrecision(6))}, E=${Number(hw.toPrecision(6))}`;
           const reach=timeReachabilityFromQ(q,hw);
-          if(!reach.ok){ add(`Command ${index}: inaccessible point — ${reach.reason} (${detail}).`); continue; }
-          add(timeS2RangeWarning(reach.s2,reach.Ei,detail,index));
+          if(!checkReachability(reach)) continue;
+          checkS2(reach.s2,reach.Ei);
           continue;
         }
-
         const hkl=meta.target==='br'
           ? (parsedByKey.hkl?.tuple||[]).map(item=>resolveTimeFixedValue(item,context))
           : ['h','k','l'].map(key=>timeDetailValueAt(parsedByKey[key],point,context));
         const hw=meta.target==='br'?0:timeDetailValueAt(parsedByKey.hw,point,context);
         if(hkl.length!==3 || hkl.some(v=>!Number.isFinite(v)) || !Number.isFinite(hw)) continue;
-        const detail=`HKLE=(${hkl.map(v=>Number(v.toPrecision(6))).join(', ')}, ${Number(hw.toPrecision(6))})`;
         const plane=hklInCurrentScatteringPlane(hkl);
-        if(!plane.ok){
-          add(`Command ${index}: inaccessible point — HKL is outside the current U-V scattering plane (${detail}).`);
-          continue;
-        }
+        if(!plane.ok){ add('HKL outside U–V scattering plane'); continue; }
         const q=norm(hklToQ(rl,hkl));
         const reach=timeReachabilityFromQ(q,hw);
-        if(!reach.ok){ add(`Command ${index}: inaccessible point — ${reach.reason} (${detail}).`); continue; }
-        add(timeS2RangeWarning(reach.s2,reach.Ei,detail,index));
-        add(timeDarkWarningForHKLE(darkCache,hkl,hw,index,detail));
+        if(!checkReachability(reach)) continue;
+        checkS2(reach.s2,reach.Ei);
+        if(darkCache?.addDark){
+          for(const block of qeDarkBlockWarningsForHKLE(darkCache,hkl,hw)) add(block);
+        }
       }
     }
-    return warnings;
+    if(!issues.size) return [];
+    // Keep the order consistent regardless of which scan point failed first.
+    const order=['ki blocked','kf blocked','fixed blocked','S1 out of range',
+      'S2 out of range','scattering triangle cannot be formed',
+      'Ei/Ef out of range','invalid Q','inaccessible Q–E point',
+      'HKL outside U–V scattering plane','th2th: previous S2 position unavailable'];
+    const sorted=[...issues].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    return [`Command ${index}: ${sorted.join(', ')}.`];
   }
 
   timeRowS2LimitWarning = function(row,result,index,structure){

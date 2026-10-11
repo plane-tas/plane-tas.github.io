@@ -1297,15 +1297,18 @@ function positionSingleColorbarEntries(){
   const rect=bar?.getBoundingClientRect();
   const outer=frame.getBoundingClientRect();
   if(!rect || rect.height<1 || !outer.width) return;
+  // getBoundingClientRect() returns *visual* pixels under transform:scale(),
+  // whereas style.left/top expect the unscaled CSS layout coordinates.
+  const scale=Number.parseFloat(getComputedStyle(frame).getPropertyValue('--tas-ui-scale'))||1;
   const max=$('sfColorMaxEntry'),min=$('sfColorMinEntry');
-  // Keep the hit area entirely within the plot frame, including on mobile.
   const entryWidth=58;
-  const x=Math.max(0,Math.min(outer.width-entryWidth,rect.right-outer.left+7));
-  const topY=rect.top-outer.top, bottomY=rect.bottom-outer.top;
+  const width=outer.width/scale, height=outer.height/scale;
+  const x=Math.max(0,Math.min(width-entryWidth,(rect.right-outer.left)/scale+7));
+  const topY=(rect.top-outer.top)/scale, bottomY=(rect.bottom-outer.top)/scale;
   for(const [entry,cy] of [[max,topY],[min,bottomY]]){
     if(!entry) continue;
     entry.style.left=`${x}px`;
-    entry.style.top=`${Math.max(0,Math.min(outer.height-26,cy-13))}px`;
+    entry.style.top=`${Math.max(0,Math.min(height-26,cy-13))}px`;
   }
 }
 

@@ -1773,7 +1773,7 @@ main{
 .script-command-actions{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
 .script-command-actions button{width:auto;white-space:nowrap}
 .script-workspace.aset-collapsed{
-  grid-template-columns:minmax(480px,1fr) minmax(520px,1.22fr)!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
 }
 .script-workspace.aset-collapsed .script-aset-pane{display:none}
 .script-aset-remove{display:inline-flex!important;align-items:center;justify-content:center}
@@ -1870,7 +1870,7 @@ main{
   opacity:1;
 }
 .script-workspace.aset-collapsed{
-  grid-template-columns:minmax(480px,1fr) minmax(520px,1.22fr)!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
   gap:8px;
 }
 .script-workspace.aset-collapsed .script-aset-pane{
@@ -5880,3 +5880,46 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   outline:2px solid #477db0;outline-offset:0;
   border-color:#7b97b2;background:#fff;
 }
+
+
+/* Global UI density: 67% for desktop and tablet, 100% for smartphones.
+   Screen diagonal and touch capability do not choose the application scale.
+   Avoid CSS `zoom` because it can misalign Plotly hover/pointer coordinates;
+   retain the existing transform-based scale and layout sizing. */
+:root { --tas-ui-scale: .67; }
+@media (max-width: 760px) {
+  /* Preserve the previous smartphone layout and touch target sizes. */
+  :root { --tas-ui-scale: 1; }
+}
+html, body { margin: 0; width: 100%; overflow-x: clip; }
+/* Keep the global header in the normal sticky scroll context: positioning it
+   inside a transformed ancestor would stop it sticking on desktop/tablet. */
+#tasTopBar { width: 100%; position: sticky; top: 0; z-index: 20; background: #fff; }
+#tasTopBar > header {
+  position: static;
+  width: calc(100% / var(--tas-ui-scale));
+  transform: scale(var(--tas-ui-scale));
+  transform-origin: 0 0;
+}
+#tasUiViewport { width: 100%; position: relative; min-height: 0; }
+#tasUiStage {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: calc(100% / var(--tas-ui-scale));
+  transform: scale(var(--tas-ui-scale));
+  transform-origin: 0 0;
+}
+/* Browser zoom reduces the CSS viewport in the same proportion.  Increase
+   the application layout viewport height for sidebar and sticky content. */
+#tasUiStage .shell {
+  min-height: calc(100vh / var(--tas-ui-scale) - 50px);
+}
+#tasUiStage .sidebar {
+  max-height: calc(100vh / var(--tas-ui-scale) - 50px);
+}
+@media (max-width: 760px) {
+  #tasUiStage .sidebar { max-height: none; }
+}
+
+/* Read each Time estimate Command diagnostic on its own line. */
+.time-estimate-message{white-space:pre-line}

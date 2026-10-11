@@ -2584,7 +2584,14 @@ function loadFigureOverlayImage(url){
 async function saveStructureFigure(){
   const plot=$("cifStructurePlot"), wrap=plot?.closest(".structure-plot-wrap");
   if(!plot || !wrap || !plot._fullLayout || typeof Plotly?.toImage!=="function") throw new Error("Draw the structure before saving a figure.");
-  const bounds=wrap.getBoundingClientRect(), pb=plot.getBoundingClientRect();
+  // Export in plot CSS pixels, not in the smaller CSS-transform display pixels.
+  const zoom=Number.parseFloat(getComputedStyle(wrap).getPropertyValue('--tas-ui-scale'))||1;
+  const layoutRect=element=>{
+    const r=element.getBoundingClientRect();
+    return {left:r.left/zoom,top:r.top/zoom,right:r.right/zoom,bottom:r.bottom/zoom,
+      width:r.width/zoom,height:r.height/zoom};
+  };
+  const bounds=layoutRect(wrap), pb=layoutRect(plot);
   if(bounds.width<1 || bounds.height<1) throw new Error("The structure is not visible.");
   const scale=1,canvas=document.createElement("canvas");
   canvas.width=Math.round(bounds.width*scale);canvas.height=Math.round(bounds.height*scale);
@@ -2603,11 +2610,11 @@ async function saveStructureFigure(){
   // Render the element legend using computed CSS and its current DOM positions.
   const legend=$("cifAtomLegend");
   if(legend && !legend.classList.contains("hidden")){
-    const r=legend.getBoundingClientRect(),style=getComputedStyle(legend);
+    const r=layoutRect(legend),style=getComputedStyle(legend);
     ctx.fillStyle=style.backgroundColor==="rgba(0, 0, 0, 0)"?"rgba(255,255,255,0.90)":style.backgroundColor;
     ctx.fillRect(r.left-bounds.left,r.top-bounds.top,r.width,r.height);
     for(const item of legend.querySelectorAll(".structure-atom-legend-item")){
-      const ir=item.getBoundingClientRect(),dot=item.querySelector(".structure-atom-legend-dot"),dr=dot?.getBoundingClientRect();
+      const ir=layoutRect(item),dot=item.querySelector(".structure-atom-legend-dot"),dr=dot?layoutRect(dot):null;
       if(dr){ctx.fillStyle=getComputedStyle(dot).backgroundColor;ctx.beginPath();ctx.arc(dr.left-bounds.left+dr.width/2,dr.top-bounds.top+dr.height/2,Math.min(dr.width,dr.height)/2,0,Math.PI*2);ctx.fill();}
       ctx.font=getComputedStyle(item).font||"18px sans-serif";ctx.fillStyle=getComputedStyle(item).color||"#222";
       const text=item.querySelector("span")?.textContent||item.textContent;
@@ -2618,7 +2625,7 @@ async function saveStructureFigure(){
   // last displayed orientation, without resetting or changing the 3D camera.
   for(const id of ["cifDirectTriad","cifReciprocalTriad"]){
     const el=$(id);if(!el) continue;
-    const r=el.getBoundingClientRect();if(!r.width||!r.height)continue;
+    const r=layoutRect(el);if(!r.width||!r.height)continue;
     const bg=getComputedStyle(el).backgroundColor;
     if(bg && bg!=="rgba(0, 0, 0, 0)"){ctx.fillStyle=bg;ctx.fillRect(r.left-bounds.left,r.top-bounds.top,r.width,r.height);}
     const clone=el.cloneNode(true);
@@ -4376,7 +4383,8 @@ async function initializeCifGenerator(){
         outputPane.style.height="";
         return;
       }
-      const h=Math.ceil(inputPane.getBoundingClientRect().height);
+      const scale=Number.parseFloat(getComputedStyle(inputPane).getPropertyValue('--tas-ui-scale'))||1;
+      const h=Math.ceil(inputPane.getBoundingClientRect().height/scale);
       if(h>0) outputPane.style.height=`${h}px`;
     };
     if(typeof ResizeObserver!=="undefined" && inputPane){
