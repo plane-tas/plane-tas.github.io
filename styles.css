@@ -41,7 +41,8 @@
 #resolutionPanel .calc-card{margin-top:0}
 
 @media(max-width:760px){
-  .main-tabs{position:sticky;top:calc(49px * var(--tas-density));z-index:15;background:#f7f7f7}
+  /* Mobile: workspace navigation scrolls away with page content. */
+  .main-tabs{position:static;background:#f7f7f7}
   .tab-button{flex:1;padding:calc(8px * var(--tas-density)) calc(6px * var(--tas-density))}
 }
 
