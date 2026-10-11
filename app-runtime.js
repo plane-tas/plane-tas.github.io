@@ -332,7 +332,7 @@ function ensureQESliderControls(){
       const sfCard=document.createElement('div');
       sfCard.id='sfColorMaxRow';
       sfCard.className='qe-range-control sf-control hidden';
-      sfCard.innerHTML='<label class="qe-control-entry">Threshold (% of max)<input id="sfThresholdEntry" type="number" min="0" max="100" step="0.1" value="0.0"></label><label class="qe-control-entry">Colorbar scale<input id="sfColorMaxEntry" type="number" min="0.01" max="1" step="0.01" value="1.00"></label><input id="sfColorMaxSlider" type="range" min="0.01" max="1" step="0.01" value="1"><output id="sfColorMaxValue" class="hidden">1.00</output>';
+      sfCard.innerHTML='<label class="qe-control-entry">Colorbar scale<input id="sfColorMaxEntry" type="number" min="0.01" max="1" step="0.01" value="1.00"></label><input id="sfColorMaxSlider" type="range" min="0.01" max="1" step="0.01" value="1"><output id="sfColorMaxValue" class="hidden">1.00</output>';
 
       grid.append(hwCard,s2Card,sfCard);
       parent.insertBefore(grid,row);

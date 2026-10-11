@@ -99,15 +99,6 @@ function syncSfColorMaxControl(source="slider"){
   if(output) output.textContent=v.toFixed(2);
 }
 
-function sfThresholdFraction(){
-  const entry=$("sfThresholdEntry");
-  let pct=Number(entry?.value);
-  if(!Number.isFinite(pct)) pct=0;
-  pct=Math.max(0,Math.min(100,pct));
-  if(entry) entry.value=pct.toFixed(1);
-  return pct/100;
-}
-
 function saveSelectedCifLocal(text,fileName){
   try{
     const payload={version:1,fileName:String(fileName||"selected_structure.cif"),text:String(text||"")};
@@ -4651,7 +4642,6 @@ async function initializeCifGenerator(){
   return {
     updateCifUI,
     syncSfColorMaxControl,
-    sfThresholdFraction,
     selectCifFile,
     clearSelectedCif,
     centeringFromSpaceGroup,

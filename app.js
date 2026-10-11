@@ -39,7 +39,7 @@ const backgroundMaterials = new Map();
 const sampleEnvironments = new Map();
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let updateCifUI, syncSfColorMaxControl, sfThresholdFraction, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults;
+let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults;
 let getDarkAssets, darkSampleRangeForConvention, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal, calculateSingleCrystalCore;
@@ -1108,6 +1108,7 @@ function updateModeVisibility(){
   $("geometrySpurionWarning")?.classList.toggle("hidden",!single);
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
+  $('qePlotLegend')?.classList.toggle('hidden',!single);
   if(!single) syncPowderLinkedInputs();
   updateCifUI();
   requestAnimationFrame(scheduleVisiblePlotResize);
@@ -1197,8 +1198,7 @@ function bindSingleZoomLabelScaling(cache,Qplot){
     // nuclear peaks.  Using all cache.Gpoints here caused Plotly reset/double-click
     // to pair a shorter text array with a longer x/y array, visually piling labels
     // against one side of the plot.
-    const threshold=cache.cifStructure ? sfThresholdFraction() : 0;
-    const pts=cache.Gpoints.filter(p=>p.label!=="" && (!cache.cifStructure || !Number.isFinite(p.sfNorm) || p.sfNorm>threshold));
+    const pts=cache.Gpoints.filter(p=>p.label!=="");
     const unit=currentQEMapUnit();
     const qpts=pts.map(p=>qeXYForUnit(cache,[p.x,p.y],unit));
     Plotly.restyle(gd,{
@@ -1669,6 +1669,69 @@ function setQEMapTab(name){
   }));
 }
 
+// Separate the Constant-E display controls from its legend while retaining
+// click-to-toggle and double-click-to-isolate behavior of a Plotly legend.
+const qeLegendVisibility=new Map();
+function qeLegendKey(trace){
+  if(trace.meta==='nuclear-data' || trace.meta==='nuclear-labels' || trace.meta==='nuclear-legend') return 'Nuclear Bragg peaks';
+  return trace.legendgroup || trace.name || '';
+}
+function renderSingleExternalLegend(traces){
+  const host=$('qePlotLegend');
+  if(!host) return;
+  host.replaceChildren();
+  const keys=[];
+  for(const trace of traces){
+    const key=qeLegendKey(trace);
+    if(key && trace.showlegend!==false && !keys.includes(key)) keys.push(key);
+  }
+  for(const key of keys){
+    const exemplar=traces.find(tr=>qeLegendKey(tr)===key && tr.showlegend!==false);
+    const visible=qeLegendVisibility.get(key)!==false;
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='qe-legend-item';
+    button.title='Click to show/hide; double-click to isolate';
+    button.setAttribute('aria-pressed',String(visible));
+    const swatch=document.createElement('span');
+    swatch.className='qe-legend-swatch';
+    const color=exemplar?.meta==='nuclear-legend' ? '#111'
+      : (typeof exemplar?.marker?.color==='string' ? exemplar.marker.color
+      : exemplar?.line?.color || (key.startsWith('Accessible Q') ? '#e4be12'
+      : exemplar?.fillcolor || '#667085'));
+    swatch.style.setProperty('--legend-color',color);
+    if(exemplar?.mode?.includes('lines') && !exemplar?.fill && !key.startsWith('Accessible Q')) swatch.classList.add('qe-legend-line');
+    const label=document.createElement('span');
+    label.textContent=exemplar?.name || key;
+    button.append(swatch,label);
+    const applyVisibility=()=>{
+      const indices=traces.map((tr,i)=>qeLegendKey(tr)===key ? i : -1).filter(i=>i>=0);
+      Plotly.restyle('singlePlot',{visible:indices.map(()=>qeLegendVisibility.get(key)!==false ? true : 'legendonly')},indices);
+      button.setAttribute('aria-pressed',String(qeLegendVisibility.get(key)!==false));
+    };
+    button.addEventListener('click',()=>{
+      qeLegendVisibility.set(key,qeLegendVisibility.get(key)===false);
+      applyVisibility();
+    });
+    button.addEventListener('dblclick',event=>{
+      event.preventDefault();
+      const solo=keys.some(k=>k!==key && qeLegendVisibility.get(k)!==false);
+      for(const k of keys) qeLegendVisibility.set(k,!solo || k===key);
+      const indices=traces.map((tr,i)=>qeLegendKey(tr) && keys.includes(qeLegendKey(tr)) ? i : -1).filter(i=>i>=0);
+      Plotly.restyle('singlePlot',{visible:indices.map(i=>qeLegendVisibility.get(qeLegendKey(traces[i]))!==false ? true : 'legendonly')},indices);
+      for(const el of host.querySelectorAll('.qe-legend-item')){
+        const k=el.dataset.legendKey;
+        el.setAttribute('aria-pressed',String(qeLegendVisibility.get(k)!==false));
+      }
+    });
+    button.dataset.legendKey=key;
+    host.appendChild(button);
+  }
+  for(const trace of traces){
+    if(qeLegendVisibility.get(qeLegendKey(trace))===false) trace.visible='legendonly';
+  }
+}
+
 function renderSingle(cache,index=0){
   const unit=currentQEMapUnit();
   const plotNode=$("singlePlot");
@@ -1687,10 +1750,8 @@ function renderSingle(cache,index=0){
   const Qplot=Math.max(1e-6,1.15*Math.max(...allViewPoints.map(p=>Math.max(Math.abs(p[0]),Math.abs(p[1]))),1));
   const initialMarkerSizes=singleMarkerSizes(2*Qplot,2*Qplot,cache.Gpoints.length+cache.magPoints.length);
 
-  const sfThreshold=cache.cifStructure ? sfThresholdFraction() : 0;
-  const visibleGpoints=cache.cifStructure
-    ? transformedG.filter(p=>!p.label || !Number.isFinite(p.sfNorm) || p.sfNorm>sfThreshold)
-    : transformedG;
+  // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
+  const visibleGpoints=transformedG;
 
   const traces=[
     {
@@ -1768,7 +1829,7 @@ function renderSingle(cache,index=0){
   }
   const selectedS2=syncSingleNavigation(cache,i);
   const selectedQ=selectedQAtS2(cache,i,selectedS2);
-  if(Number.isFinite(selectedQ)){
+  if($('displayS2Ring')?.checked && Number.isFinite(selectedQ)){
     const phi=linspace(0,2*PI,361);
     const ringPts=phi.map(t=>T([selectedQ*Math.cos(t),selectedQ*Math.sin(t)]));
     traces.push({x:ringPts.map(p=>p[0]),y:ringPts.map(p=>p[1]),mode:"lines",name:`S2 = ${selectedS2.toFixed(1)}°`,showlegend:false,line:{color:"black",width:1.2,dash:"solid"},hovertemplate:`S2 = ${selectedS2.toFixed(1)}°<br>Q = ${selectedQ.toFixed(3)} Å⁻¹<extra></extra>`});
@@ -1806,8 +1867,6 @@ function renderSingle(cache,index=0){
     }
   }
 
-  const title=qeMapHeaderTitle(cache);
-
   // Plotly draws later traces on top. Keep the nuclear legend entry where it is,
   // but render the actual nuclear markers/labels last so BG1-BG4 and other
   // line traces cannot cover them.
@@ -1819,16 +1878,15 @@ function renderSingle(cache,index=0){
     traces.push(...nuclearTop);
   }
 
+  renderSingleExternalLegend(traces);
   Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
-    title:{text:title,x:0.5,xanchor:"center",font:{size:16}},
+    showlegend:false,
     xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.x||[-Qplot,Qplot],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
     yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.y||[-Qplot,Qplot],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,scaleanchor:"x",scaleratio:1,constrain:"domain"},
-    // UI-only spacing: reclaim a little space above the plot, while reserving
-    // more room below so the x-axis title and horizontal legend do not crowd.
-    margin:{l:60,r:cache.cifStructure?88:20,t:92,b:96},
-    legend:{orientation:"h",x:0.5,xanchor:"center",y:-0.16,yanchor:"top"}
+    // The legend now lives below the display controls, outside this Plotly canvas.
+    margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
   },{responsive:true});
   if(plotNode) plotNode.dataset.qeUnit=unit;
   bindSingleZoomMarkerScaling(cache,Qplot);
@@ -2554,7 +2612,7 @@ function ensureQESliderControls(){
       const sfCard=document.createElement('div');
       sfCard.id='sfColorMaxRow';
       sfCard.className='qe-range-control sf-control hidden';
-      sfCard.innerHTML='<label class="qe-control-entry">Threshold (% of max)<input id="sfThresholdEntry" type="number" min="0" max="100" step="0.1" value="0.0"></label><label class="qe-control-entry">Colorbar scale<input id="sfColorMaxEntry" type="number" min="0.01" max="1" step="0.01" value="1.00"></label><input id="sfColorMaxSlider" type="range" min="0.01" max="1" step="0.01" value="1"><output id="sfColorMaxValue" class="hidden">1.00</output>';
+      sfCard.innerHTML='<label class="qe-control-entry">Colorbar scale<input id="sfColorMaxEntry" type="number" min="0.01" max="1" step="0.01" value="1.00"></label><input id="sfColorMaxSlider" type="range" min="0.01" max="1" step="0.01" value="1"><output id="sfColorMaxValue" class="hidden">1.00</output>';
 
       grid.append(hwCard,s2Card,sfCard);
       parent.insertBefore(grid,row);
@@ -2836,17 +2894,13 @@ async function initialize(){
   $('s2Slider').addEventListener('input',()=>{$('s2Entry').value=Number($('s2Slider').value).toFixed(1);if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
   $('s2Entry').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
   $('displayNuclearLabels').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
+  $('displayS2Ring').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
   $('sfColorMaxSlider')?.addEventListener('input',()=>{
     syncSfColorMaxControl("slider");
     if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
   });
   $('sfColorMaxEntry')?.addEventListener('change',()=>{
     syncSfColorMaxControl("entry");
-    if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
-    saveRightPanelState();
-  });
-  $('sfThresholdEntry')?.addEventListener('change',()=>{
-    sfThresholdFraction();
     if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
     saveRightPanelState();
   });
@@ -3037,7 +3091,6 @@ async function initialize(){
 ({
   updateCifUI,
   syncSfColorMaxControl,
-  sfThresholdFraction,
   selectCifFile,
   clearSelectedCif,
   centeringFromSpaceGroup,

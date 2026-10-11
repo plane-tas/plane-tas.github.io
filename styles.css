@@ -5774,3 +5774,61 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
     min-width:740px;
   }
 }
+
+/* Constant E map: controls are discoverable before scrolling into the plot. */
+#qeConstantMapPane > .qe-range-control-grid{
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  border:1px solid #e3e7ed;
+  border-radius:6px;
+  background:#fff;
+  padding:10px 12px;
+  margin:10px 0;
+  align-items:start;
+}
+#qeConstantMapPane .qe-spurion-warning:empty{display:none}
+#qeConstantMapPane .qe-range-control{justify-content:start}
+#qeConstantMapPane .qe-range-control input[type=range]{accent-color:#466d98}
+#singlePlot{height:760px;min-height:760px}
+#qeDisplayControls{
+  display:flex;
+  align-items:center;
+  gap:12px 22px;
+  flex-wrap:wrap;
+  border:1px solid #e3e7ed;
+  border-top:0;
+  border-radius:0 0 6px 6px;
+  padding:10px 12px;
+  margin-top:0;
+  background:#fff;
+}
+#qeDisplayControls.hidden,#qePlotLegend.hidden{display:none!important}
+#qeDisplayControls .qe-map-toolbar{margin:0;padding:0;border:0;background:transparent;order:0;}
+#qeDisplayControls .qe-map-toolbar label{display:flex;flex-direction:row;align-items:center;gap:7px}
+#qeDisplayControls .checkbox-label{margin:0;display:inline-flex;align-items:center;gap:5px;min-height:28px;font-size:13px;white-space:normal}
+#qePlotLegend{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:5px 13px;
+  padding:10px 8px;
+  min-height:38px;
+  border-bottom:1px solid #e3e7ed;
+}
+#qePlotLegend .qe-legend-item{
+  display:inline-flex;gap:6px;align-items:center;
+  border:1px solid transparent;border-radius:4px;
+  padding:4px 5px;background:transparent;
+  color:#202a37;cursor:pointer;font-size:13px;line-height:1.25;
+  text-align:left;
+}
+#qePlotLegend .qe-legend-item:hover,#qePlotLegend .qe-legend-item:focus-visible{background:#f2f5f9;border-color:#b7c2d0}
+#qePlotLegend .qe-legend-item[aria-pressed=false]{opacity:.45;text-decoration:line-through}
+#qePlotLegend .qe-legend-swatch{display:inline-block;flex:0 0 16px;height:10px;border-radius:2px;background:var(--legend-color);border:1px solid rgba(0,0,0,.15)}
+#qePlotLegend .qe-legend-line{height:0;border:0;border-top:3px solid var(--legend-color);border-radius:0;background:transparent}
+@media(max-width:1050px){#singlePlot{height:670px;min-height:670px}}
+@media(max-width:760px){
+  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr;gap:8px;padding:9px}
+  #singlePlot{height:560px;min-height:560px}
+  #qeDisplayControls{gap:8px 16px}
+}
