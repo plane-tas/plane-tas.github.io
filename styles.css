@@ -6369,9 +6369,10 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   font-variant-numeric:tabular-nums;
 }
 
-/* UI startup: keep instrument-conditional controls from flashing before restore.
-   The class is removed in app.js in both success and failure cases. */
-html.tas-ui-booting .shell{visibility:hidden!important}
-
 /* CIF output has one supported file format: no unusable format selector. */
 #structurePanel .cif-unified-output-line{grid-template-columns:minmax(0,1fr)!important}
+
+/* Neutron attenuation: the Plotly SVG must not retain a stale wide canvas
+   outside its own card after the page switches between narrow/wide layouts. */
+#toolboxAttenuationPane .absorption-right{min-width:0;max-width:100%;}
+#toolboxAttenuationPane .absorption-plot{min-width:0;max-width:100%;overflow:hidden;}

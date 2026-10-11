@@ -117,6 +117,33 @@ export function createToolboxUI({
       $(id)?.addEventListener('change',()=>{ syncAbsorptionBeamFromInstrument(); updateAbsorptionCalculator(); });
     }
 
+    // Plotly's SVG can keep an old pixel width if the attenuation card changes
+    // width during a narrow-to-wide layout transition. Watch the actual card,
+    // not only the window: main/sidebar CSS reflows can also change its width.
+    // Re-measure after layout has settled; do not redraw attenuation data.
+    const attenuationCard=$('absorptionPlot')?.closest('.absorption-right');
+    if(attenuationCard && typeof ResizeObserver!=='undefined'){
+      let resizeFrame=0;
+      const attenuationResizeObserver=new ResizeObserver(()=>{
+        if(resizeFrame) cancelAnimationFrame(resizeFrame);
+        resizeFrame=requestAnimationFrame(()=>{
+          resizeFrame=requestAnimationFrame(()=>{
+            resizeFrame=0;
+            const plot=$('absorptionPlot');
+            if(!plot?.isConnected || !plot.classList.contains('js-plotly-plot') ||
+               !plot.offsetWidth || !plot.offsetHeight) return;
+            const plotly=window.Plotly;
+            if(!plotly?.Plots?.resize) return;
+            try{
+              const result=plotly.Plots.resize(plot);
+              if(result?.catch) result.catch(()=>{});
+            }catch(_err){}
+          });
+        });
+      });
+      attenuationResizeObserver.observe(attenuationCard);
+    }
+
     syncAbsorptionBeamFromInstrument();
     setAbsorptionInputMode();
     setToolboxFrom('toolLambda');

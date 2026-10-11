@@ -3493,16 +3493,9 @@ async function initialize(){
   updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache, hasScanResults
 }));
 
-// The initial HTML contains every conditional panel for later use, but only
-// reveal them after instrument data, local preferences and active tabs agree.
-// On an initialization failure reveal the error box instead of leaving a blank UI.
+// Initialize without hiding the interface while instrument/local state loads.
 initialize()
   .catch(err=>{
     showError(err);
     setStatus('Configuration loading failed. Open the project through an HTTP server.');
-  })
-  .finally(()=>{
-    document.documentElement.classList.remove('tas-ui-booting');
-    // Deferred plot measurement happens after the real layout is visible.
-    requestAnimationFrame(()=>scheduleVisiblePlotResize());
   });
