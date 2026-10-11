@@ -25,8 +25,19 @@
 <h2>Instrument configuration</h2>
 <div class="instrument-primary-row">
 <label>Instrument<select id="instrument"><option>Loading...</option></select></label>
-<label>Fixed<select id="energyMode"><option value="Ei fixed">Ei</option><option selected="" value="Ef fixed">Ef</option></select></label>
-<label id="energyLabel">Ef (meV)<input id="energy" step="0.1" type="number" value="14.7"/></label>
+<label>Fixed<select id="fixedBeamQuantity" aria-label="Fixed beam quantity">
+<option value="Ei">Ei</option><option value="Ef" selected>Ef</option>
+<option value="lambda_i">λi</option><option value="lambda_f">λf</option>
+<option value="ki">ki</option><option value="kf">kf</option>
+</select></label>
+<label id="fixedBeamLabel"><span id="fixedBeamLabelText">Ef (meV)</span><input id="fixedBeamValue" type="number" min="0.000001" step="any" inputmode="decimal" value="14.7" aria-label="Fixed beam value"/></label>
+<!-- Canonical energy state, retained for every TAS/QE/Resolution/Script calculation. -->
+<label id="canonicalFixedModeLabel" class="fixed-beam-internal" aria-hidden="true">Mode<select id="energyMode" tabindex="-1"><option value="Ei fixed">Ei</option><option selected value="Ef fixed">Ef</option></select></label>
+<label id="energyLabel" class="fixed-beam-internal" aria-hidden="true">Ef (meV)<input id="energy" step="any" type="number" value="14.7" tabindex="-1"/></label>
+</div>
+<div class="instrument-crystal-row" id="instrumentCrystalRow">
+<label>Monochromator<select id="sidebarMonoCrystal" aria-label="Monochromator crystal (linked to Resolution)"></select></label>
+<label id="sidebarAnalyzerCrystalWrap">Analyzer<select id="sidebarAnaCrystal" aria-label="Analyzer crystal (linked to Resolution)"></select></label>
 </div>
 <div class="grid3" id="tasConventionRow">
 <label id="geometryRow">Geometry<select id="geometry"><option>W</option><option>anti-W</option></select></label>
@@ -258,9 +269,9 @@
 <aside class="resolution-instrument-details" id="resolutionInstrumentDetails">
 <div class="resolution-detail-title">Instrument details</div>
 <section class="instrument-fixed-section"><div class="instrument-fixed-heading">Focusing conditions</div>
-<div class="grid2 compact-checks">
+<div class="grid2 compact-checks" id="resolutionFocusingGrid">
 <div><b>Monochromator</b><label><input id="monoHF" type="checkbox"/> Horizontal</label><label><input checked="" id="monoVF" type="checkbox"/> Vertical</label><label>H blades<input id="monoHB" min="1" type="number" value="1"/></label><label>V blades<input id="monoVB" min="1" type="number" value="1"/></label></div>
-<div><b>Analyzer</b><label><input id="anaHF" type="checkbox"/> Horizontal</label><label><input checked="" id="anaVF" type="checkbox"/> Vertical</label><label>H blades<input id="anaHB" min="1" type="number" value="1"/></label><label>V blades<input id="anaVB" min="1" type="number" value="1"/></label></div>
+<div id="resolutionAnalyzerFocusing"><b>Analyzer</b><label><input id="anaHF" type="checkbox"/> Horizontal</label><label><input checked="" id="anaVF" type="checkbox"/> Vertical</label><label>H blades<input id="anaHB" min="1" type="number" value="1"/></label><label>V blades<input id="anaVB" min="1" type="number" value="1"/></label></div>
 </div>
 </section>
 <section class="instrument-fixed-section"><div class="instrument-fixed-heading">Collimator conditions <small>(min)</small></div><div class="grid2">
@@ -269,18 +280,18 @@
 <details><summary>Crystal &amp; Mosaic <small>(min)</small></summary>
 <h3>Monochromator</h3><div class="grid2"><label>Crystal<select id="monoCrystal"></select></label><label>d (Å)<input id="dMono" step="0.001" type="number" value="3.355"/></label><label>Mosaic H<input id="mosMonoH" type="number" value="30"/></label><label>Mosaic V<input id="mosMonoV" type="number" value="30"/></label></div>
 <h3>Sample</h3><div class="grid2"><label>Mosaic H<input id="mosSamH" type="number" value="60"/></label><label>Mosaic V<input id="mosSamV" type="number" value="60"/></label></div>
-<h3>Analyzer</h3><div class="grid2"><label>Crystal<select id="anaCrystal"></select></label><label>d (Å)<input id="dAna" step="0.001" type="number" value="3.355"/></label><label>Mosaic H<input id="mosAnaH" type="number" value="30"/></label><label>Mosaic V<input id="mosAnaV" type="number" value="30"/></label></div>
+<div id="resolutionAnalyzerCrystalSection"><h3>Analyzer</h3><div class="grid2"><label>Crystal<select id="anaCrystal"></select></label><label>d (Å)<input id="dAna" step="0.001" type="number" value="3.355"/></label><label>Mosaic H<input id="mosAnaH" type="number" value="30"/></label><label>Mosaic V<input id="mosAnaV" type="number" value="30"/></label></div></div>
 </details>
 <details><summary>Component size <small>(m)</small></summary>
-<h3>Distance</h3><div class="grid4"><label>L0<input id="L0" step="0.01" type="number" value="1.5"/></label><label>L1<input id="L1" step="0.01" type="number" value="1.5"/></label><label>L2<input id="L2" step="0.01" type="number" value="1.5"/></label><label>L3<input id="L3" step="0.01" type="number" value="1.5"/></label></div>
+<h3>Distance</h3><div class="grid4 resolution-distance-grid" id="resolutionDistanceGrid"><label>L0<input id="L0" step="0.01" type="number" value="1.5"/></label><label>L1<input id="L1" step="0.01" type="number" value="1.5"/></label><label class="resolution-tas-distance">L2 (Sample–Analyzer)<input id="L2" step="0.01" type="number" value="1.5"/></label><label class="resolution-tas-distance">L3 (Analyzer–Detector)<input id="L3" step="0.01" type="number" value="1.5"/></label><label class="resolution-diffraction-distance hidden" id="resolutionSampleDetectorDistanceLabel">Sample–Detector<input id="sampleDetectorDistance" aria-label="Sample to detector distance in metres" min="0" step="0.01" type="number" placeholder="Not specified"/></label></div>
 <h3>Beam</h3><div class="grid2"><label>Width<input id="beamW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="beamH" step="0.001" type="number" value="0.02"/></label></div>
 <h3>Monochromator per piece</h3><div class="grid3"><label>Width<input id="monoW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="monoH" step="0.001" type="number" value="0.02"/></label><label>Thickness<input id="monoT" step="0.001" type="number" value="0.002"/></label></div>
-<h3>Analyzer per piece</h3><div class="grid3"><label>Width<input id="anaW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="anaH" step="0.001" type="number" value="0.02"/></label><label>Thickness<input id="anaT" step="0.001" type="number" value="0.002"/></label></div>
-<h3>Detector</h3><div class="grid2"><label>Width<input id="detW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="detH" step="0.001" type="number" value="0.02"/></label></div>
+<div id="resolutionAnalyzerSizeSection"><h3>Analyzer per piece</h3><div class="grid3"><label>Width<input id="anaW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="anaH" step="0.001" type="number" value="0.02"/></label><label>Thickness<input id="anaT" step="0.001" type="number" value="0.002"/></label></div></div>
+<h3>Detector</h3><div class="grid3"><label>Width<input id="detW" step="0.001" type="number" value="0.02"/></label><label>Height<input id="detH" step="0.001" type="number" value="0.02"/></label><label>Detector type<input id="detectorType" type="text" value="single" readonly aria-label="Detector type, defined by instrument JSON" title="Detector type specified by the instrument JSON"/></label></div>
 </details>
 </aside>
 <div class="resolution-main-column">
-<section class="calc-card" id="resolutionCalculation">
+<section class="calc-card" id="resolutionCalculation"><p id="diffractometerResolutionNote" class="diffractometer-resolution-note hidden">Diffractometer mode: the TAS resolution calculation is an unvalidated approximation, not an instrument-specific diffraction resolution model.</p>
 <h2>Calculation point</h2>
 <div class="toolbar"><label>Approximation<select id="method"><option>Cooper-Nathans</option><option>Popovici</option></select></label><label>Mode<select id="calcMode"><option>single</option><option>scan</option></select></label><label>Unit<select id="unit"><option value="rlu">r.l.u.</option><option value="ainv">Å⁻¹</option></select></label></div>
 <div class="grid4" id="singleInputs"><label>H<input id="h" step="0.001" type="number" value="1"/></label><label>K<input id="k" step="0.001" type="number" value="0"/></label><label>L<input id="l" step="0.001" type="number" value="0"/></label><label>ℏω (meV)<input id="hw" step="0.001" type="number" value="0"/></label></div>

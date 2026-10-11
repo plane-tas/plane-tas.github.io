@@ -469,6 +469,11 @@ function restoreLeftPanelState(){
   try{saved=JSON.parse(localStorage.getItem(LEFT_PANEL_STORAGE_KEY)||'null');}catch(_e){return false;}
   if(!saved || !saved.values || typeof saved.values!=='object') return false;
   const v=saved.values;
+  // Migrate HB-3A's former filename without discarding saved user parameters.
+  if(v.instrument==='08_HB3A_DEMAND.json' &&
+     [...($('instrument')?.options||[])].some(option=>option.value==='08_HB3A.json')){
+    v.instrument='08_HB3A.json';
+  }
   restoringLeftPanel=true;
   try{
     // 1) The instrument must exist before its dependent defaults can be applied.

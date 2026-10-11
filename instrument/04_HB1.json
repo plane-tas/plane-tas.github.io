@@ -43,7 +43,8 @@
   },
   "detector": {
     "width": 0.04,
-    "height": 0.12
+    "height": 0.12,
+    "type": "single"
   },
   "configuration": {
     "energy_mode": "Ef fixed",
@@ -73,5 +74,14 @@
       "S2limit": 100,
       "Ei": 13.5
     }
-  ]
+  ],
+  "instrument_type": "tas",
+  "available_crystals": {
+    "monochromator": [
+      "Heusler"
+    ],
+    "analyzer": [
+      "Heusler"
+    ]
+  }
 }

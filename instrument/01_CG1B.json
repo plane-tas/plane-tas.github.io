@@ -43,7 +43,8 @@
   },
   "detector": {
     "width": 0.032,
-    "height": 0.12
+    "height": 0.12,
+    "type": "single"
   },
   "configuration": {
     "energy_mode": "Ei fixed",
@@ -56,7 +57,8 @@
     "L0": 53,
     "L1": 1.6,
     "L2": 1.06,
-    "L3": 0.5
+    "L3": 0.5,
+    "sample_detector": null
   },
   "beam": {
     "width": 0.07,
@@ -69,5 +71,12 @@
       "S2limit": 150.0,
       "Ei": 14.0
     }
-  ]
+  ],
+  "instrument_type": "diffractometer",
+  "available_crystals": {
+    "monochromator": [
+      "PG002"
+    ]
+  },
+  "_legacy_resolution_analyzer_note": "Analyzer parameters are retained only for TAS-resolution compatibility; this diffractometer does not use a physical analyzer."
 }

@@ -11,6 +11,7 @@ export function createResolutionUI(deps){
     checkedValue,
     clamp,
     clearError,
+    currentInstrument,
     deg2rad,
     hklInCurrentScatteringPlane,
     hklToQ,
@@ -72,6 +73,23 @@ function collectResolutionBase(){
   const col={gm_1st:$('gm1').checked,div_1st_m:num('div1m'),div_1st_h:num('div1h'),div_1st_v:num('div1v'),div_2nd_h:num('div2h'),div_2nd_v:num('div2v'),div_3rd_h:num('div3h'),div_3rd_v:num('div3v'),div_4th_h:num('div4h'),div_4th_v:num('div4v')};
   const mos={d_mono:num('dMono'),mos_mono_h:num('mosMonoH'),mos_mono_v:num('mosMonoV'),mos_sam_h:num('mosSamH'),mos_sam_v:num('mosSamV'),d_ana:num('dAna'),mos_ana_h:num('mosAnaH'),mos_ana_v:num('mosAnaV')};
   const geom={L0:num('L0'),L1:num('L1'),L2:num('L2'),L3:num('L3'),beam_width:num('beamW'),beam_height:num('beamH'),mono_width:num('monoW'),mono_height:num('monoH'),mono_thickness:num('monoT'),ana_width:num('anaW'),ana_height:num('anaH'),ana_thickness:num('anaT'),det_width:num('detW'),det_height:num('detH')};
+  if(currentInstrument()?.instrument_type==='diffractometer'){
+    // Analyzer-free diffraction instruments have no PG analyzer.  The existing
+    // TAS-only Cooper-Nathans/Popovici model still requires an analyzer slot:
+    // use the CURRENT monochromator settings there as a clearly provisional
+    // mathematical proxy, including its mosaic, focusing and dimensions.
+    // Never read hidden/stale PG analyzer fields for a diffractometer.
+    mos.d_ana=mos.d_mono;
+    mos.mos_ana_h=mos.mos_mono_h;
+    mos.mos_ana_v=mos.mos_mono_v;
+    focusing.analyzer={
+      horizontal:{...focusing.monochromator.horizontal},
+      vertical:{...focusing.monochromator.vertical}
+    };
+    geom.ana_width=geom.mono_width;
+    geom.ana_height=geom.mono_height;
+    geom.ana_thickness=geom.mono_thickness;
+  }
   return {lc,rl,col,mos,config,approximation,focusing,geom,unitMode:$('unit').value};
 }
 // wrap180() / angleDiffDeg() are provided by tas-conventions.js.
@@ -79,6 +97,12 @@ function collectResolutionBase(){
 
 function calcOne(calc){
   const b=collectResolutionBase();
+  // An unspecified monochromator (e.g. the minimal HB-2D instrument files)
+  // must not silently inherit the previous instrument's PG crystal.
+  if(currentInstrument()?.instrument_type==='diffractometer' &&
+     (!$('monoCrystal')?.value || !(b.mos.d_mono>0))) {
+    throw new Error('Resolution unavailable: this diffractometer has no configured monochromator crystal/d-spacing. Specify it in the instrument JSON.');
+  }
 
   // Resolution sense convention:
   // The resolution core already defines the physical +-+ / -+- branches.

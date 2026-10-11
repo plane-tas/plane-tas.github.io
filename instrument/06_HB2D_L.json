@@ -11,5 +11,26 @@
       "S2limit": 60.0,
       "Ei": 13.9
     }
-  ]
+  ],
+  "instrument_type": "diffractometer",
+  "available_crystals": {
+    "monochromator": [
+      "Si(220)"
+    ]
+  },
+  "detector": {
+    "type": "single"
+  },
+  "distance": {
+    "sample_detector": null,
+    "L1": 3.36
+  },
+  "monochromator": {
+    "crystal": "Si(220)",
+    "width": 0.178,
+    "height": 0.2,
+    "thickness": 0.02,
+    "hfocus": true,
+    "vfocus": true
+  }
 }

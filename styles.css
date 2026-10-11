@@ -2150,9 +2150,11 @@ main{
 .geometry-scan-table tbody tr{cursor:pointer}
 .geometry-scan-table tbody tr:hover td{background:#fff9e8}
 .geometry-scan-table tbody tr.geometry-scan-warning-row:hover td{background:#f9ddd3 !important}
+/* Keep Angle calculation > Scan in the same five aligned columns on narrow screens.
+   Initial: H, K, L, energy, Points; final: H, K, L, energy, blank.
+   The blank fifth cell below Points is intentional for visual clarity. */
 @media(max-width:900px){
-  .geometry-scan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .geometry-scan-empty{display:none}
+  .geometry-scan-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 
 /* v105: Resolution Scan is explicitly calculated to keep common editing responsive. */
@@ -6329,4 +6331,45 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   #cifGeneratorPanel .cif-generator-message,
   #structurePanel .generator-reflections-notice,
   #cifGeneratorPanel .generator-reflections-notice {font-size:17px;}
+}
+
+/* Shared mono/analyzer crystal selectors immediately below fixed energy. */
+.instrument-crystal-row{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(5px * var(--tas-density)); align-items:end;
+  margin-top:calc(7px * var(--tas-density));
+  margin-bottom:calc(7px * var(--tas-density));
+}
+.instrument-crystal-row label,.instrument-crystal-row select{min-width:0;width:100%;max-width:100%}
+
+/* Instrument type: omit analyzer controls for diffractometers. */
+.diffractometer-resolution-note{font-size:var(--tas-font-control,13px);line-height:1.45;color:#8a5317;background:#fff8e9;border:1px solid #edd8ad;border-radius:6px;padding:8px 10px;margin:0 0 12px}
+
+/* Six fixed-beam unit choices share one existing Fixed and one value slot.
+   The hidden legacy fields retain the canonical meV interface used by TAS calculations. */
+.instrument-primary-row > .fixed-beam-internal{display:none!important;}
+#fixedBeamQuantity,#fixedBeamValue{width:100%;min-width:0;}
+#fixedBeamLabel{min-width:0;}
+
+/* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
+#resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
+#resolutionDistanceGrid .resolution-diffraction-distance{min-width:0}
+#resolutionInstrumentDetails #detectorType[readonly]{background:#f8fafc;color:#263238}
+@media(max-width:760px){
+  #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* The remaining monochromator focusing controls use the full width. */
+#resolutionFocusingGrid.resolution-is-diffractometer{grid-template-columns:minmax(0,1fr)}
+
+/* Angle calculation > Scan > TAS geometry: readable slider index & counter.
+   Only text sizing changes; the responsive input and geometry scaling remain intact. */
+.geometry-scan-point-row > label,
+.geometry-scan-point-row > output {
+  font-size:max(14px,calc(16px * var(--tas-density)));
+  line-height:1.35;
+}
+.geometry-scan-point-row > output {
+  min-width:6ch;
+  font-variant-numeric:tabular-nums;
 }

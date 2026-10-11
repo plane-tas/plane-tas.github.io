@@ -235,7 +235,8 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(3)).join(', ')})</div>`
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
-  const angleLine=`M1=${formatAngle(shown.m1)}°, M2=${formatAngle(shown.m2)}°, S1=${formatAngle(shown.s1)}°, S2=${formatAngle(shown.s2)}°, A1=${formatAngle(shown.a1)}°, A2=${formatAngle(shown.a2)}°`+
+  const diffractometer=currentInstrument()?.instrument_type==='diffractometer';
+  const angleLine=`M1=${formatAngle(shown.m1)}°, M2=${formatAngle(shown.m2)}°, S1=${formatAngle(shown.s1)}°, S2=${formatAngle(shown.s2)}°${diffractometer?'':`, A1=${formatAngle(shown.a1)}°, A2=${formatAngle(shown.a2)}°`}`+
     (!isPowder && a.warning?` &nbsp; | &nbsp; ${a.warning}`:'');
   const darkWarnings=!isPowder
     ? qeDarkBlockWarningsForHKLE(cache,[target.calc.h,target.calc.k,target.calc.l],target.calc.hw)
@@ -254,6 +255,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
 
 function renderGeometry(cache,index=0){
   const isPowder=checkedValue("sampleMode")==="powder" || !!cache?.powder;
+  const isDiffractometer=currentInstrument()?.instrument_type==='diffractometer';
   const i=Math.max(0,Math.min(index,Math.max(0,(cache.hwList?.length||1)-1)));
   // Powder has no crystallographic sample orientation, but the TAS scattering
   // sign still determines the displayed motor-angle branch exactly as it does
@@ -328,7 +330,12 @@ function renderGeometry(cache,index=0){
     thetaKf=thetaKi+deg2rad(s2Draw);
     analyzer=[sample[0]+0.90*L*Math.cos(thetaKf),sample[1]+0.90*L*Math.sin(thetaKf)];
     thetaOut=thetaKf+deg2rad(angles.a2);
-    detector=[analyzer[0]+0.80*L*Math.cos(thetaOut),analyzer[1]+0.80*L*Math.sin(thetaOut)];
+    // Diffractometer: schematic flight paths on either side of the sample
+    // must have equal displayed lengths.  This does NOT alter the L1/L2
+    // distances in instrument JSON or any scattering-angle calculation.
+    detector=isDiffractometer
+      ? [sample[0]+L*Math.cos(thetaKf),sample[1]+L*Math.sin(thetaKf)]
+      : [analyzer[0]+0.80*L*Math.cos(thetaOut),analyzer[1]+0.80*L*Math.sin(thetaOut)];
     monoPlaneAngle=deg2rad(angles.m1);
     anaPlaneAngle=thetaKf+deg2rad(angles.a1);
 
@@ -355,6 +362,7 @@ function renderGeometry(cache,index=0){
   }else{
     // Previous idealized fallback.
     sample=[0,0]; mono=[0,L]; source=[-L,L]; analyzer=[-mirror*0.75*L,0]; detector=[-mirror*0.75*L,0.5*L];
+    if(isDiffractometer) detector=[-mirror*L,0];
     thetaKi=-Math.PI/2; thetaKf=mirror>0?Math.PI:-0; thetaOut=-Math.PI/2;
     monoPlaneAngle=mirror*deg2rad(45); anaPlaneAngle=mirror*deg2rad(45);
     qAngle=-mirror*Math.PI/4;
@@ -394,7 +402,10 @@ function renderGeometry(cache,index=0){
   const traces=[];
   const addLine=(a,b,color,width=3,dash="solid")=>traces.push({x:[a[0],b[0]],y:[a[1],b[1]],mode:"lines",line:{color,width,dash},hoverinfo:"skip",showlegend:false});
   const flightColor="#cfcfcf";
-  addLine(source,mono,flightColor,4); addLine(mono,sample,flightColor,4); addLine(sample,analyzer,flightColor,4); addLine(analyzer,detector,flightColor,4);
+  addLine(source,mono,flightColor,4);
+  addLine(mono,sample,flightColor,4);
+  if(isDiffractometer) addLine(sample,detector,flightColor,4);
+  else { addLine(sample,analyzer,flightColor,4); addLine(analyzer,detector,flightColor,4); }
 
   // Fixed, compact display radius: independent of instrument/angle auto-scaling.
   // The guide circle belongs to the dark-angle overlay, so hide it together
@@ -504,7 +515,7 @@ function renderGeometry(cache,index=0){
   }
 
   const crystal=(c,ang,len=0.58)=>{const dx=.5*len*Math.cos(ang),dy=.5*len*Math.sin(ang);addLine([c[0]-dx,c[1]-dy],[c[0]+dx,c[1]+dy],"black",3);};
-  crystal(mono,monoPlaneAngle); crystal(analyzer,anaPlaneAngle);
+  crystal(mono,monoPlaneAngle); if(!isDiffractometer) crystal(analyzer,anaPlaneAngle);
   traces.push({x:[detector[0]],y:[detector[1]],mode:"markers",marker:{size:24,symbol:"circle",color:"orange",line:{color:"black",width:1}},hovertext:["Detector"],hovertemplate:"%{hovertext}<extra></extra>",showlegend:false});
   traces.push({x:[sample[0]],y:[sample[1]],mode:"markers",marker:{size:8,symbol:"circle",color:"black"},hovertext:["Sample"],hovertemplate:"%{hovertext}<extra></extra>",showlegend:false});
 
@@ -550,44 +561,73 @@ function renderGeometry(cache,index=0){
     vEnd=vectorEnd(vArrowAngle);
   }
 
-  // Component-label placement only; the TAS geometry/calculation is untouched.
-  // Keep labels on the outside of the mirrored TAS drawing: Analyzer is left
-  // for +-+ and right for -+-.  Give Monochromator a little more clearance
-  // from the crystal in both senses.
-  const monoLabel=[mono[0]+(displaySense==="+-+"?-1.28:1.28),mono[1]];
-  const anaLabel=[analyzer[0]+(displaySense==="+-+"?-1.05:1.05),analyzer[1]];
-  const sampleLabelRadius=1.55;
-  const sampleLabel=[
-    sample[0]-sampleLabelRadius*Math.cos(qAngle),
-    sample[1]-sampleLabelRadius*Math.sin(qAngle)
-  ];
-  const detLabel=[detector[0],detector[1]-0.58];
-  const kiMid=pointAlong(kiArrow.tail,kiArrow.head,.5),kfMid=pointAlong(kfArrow.tail,kfArrow.head,.5),qMid=pointAlong(sample,qEnd,.5);
-
+  // Presentation only. Anchor equipment labels to their actual components,
+  // then use *pixel* shifts to keep spacing consistent when the card resizes.
+  // In particular, avoid positioning labels in data units (those apparent gaps
+  // changed whenever the geometry's auto-fit range changed).
+  const componentFont={family:'Arial, sans-serif',size:20,color:'#243246'};
+  const vectorFontSize=21;
+  const outward=displaySense==='+-+' ? -1 : 1;
+  const equipmentLabel=(point,text,dx,dy,xanchor='center',yanchor='middle')=>({
+    x:point[0],y:point[1],xref:'x',yref:'y',text,showarrow:false,
+    xshift:dx,yshift:dy,xanchor,yanchor,font:componentFont,
+    captureevents:false
+  });
+  const vectorLabel=(point,text,angle,side,color)=>({
+    x:point[0],y:point[1],xref:'x',yref:'y',text,showarrow:false,
+    // The perpendicular is measured in display pixels, not plot coordinates.
+    // This keeps k_i / k_f / Q away from their arrow shafts at every width.
+    xshift:Math.round(-Math.sin(angle)*side*17),
+    yshift:Math.round( Math.cos(angle)*side*17),
+    xanchor:'center',yanchor:'middle',
+    font:{family:'Arial, sans-serif',size:vectorFontSize,color},
+    captureevents:false
+  });
+  // Put the vector labels at different ends of their arrows.  In particular,
+  // k_f near its *tip* prevents the overlap with Q near the sample origin.
+  const kiNearStart=pointAlong(kiArrow.tail,kiArrow.head,0.18);
+  const kfNearEnd=pointAlong(kfArrow.tail,kfArrow.head,0.84);
+  // Place Q at its arrow tip, not beside the sample.  Select the side of
+  // the Q shaft *away* from k_f when their directions are close, so the
+  // labels are less likely to overlap. Only annotations change, not vectors.
+  const qLabelSide=Math.sin(thetaKf-qAngle)>=0 ? -1 : 1;
+  const qNearTip=pointAlong(sample,qEnd,0.96);
+  const qTipLabel=vectorLabel(qNearTip,'<i>Q</i>',qAngle,qLabelSide,'#202020');
   const annotations=[];
   if(!isPowder && uEnd && vEnd){
     annotations.push(
-      {x:uEnd[0],y:uEnd[1],ax:sample[0],ay:sample[1],xref:"x",yref:"y",axref:"x",ayref:"y",text:"",showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:uColor},
-      {x:vEnd[0],y:vEnd[1],ax:sample[0],ay:sample[1],xref:"x",yref:"y",axref:"x",ayref:"y",text:"",showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:vColor},
-      {x:uEnd[0]+0.16*Math.cos(uArrowAngle),y:uEnd[1]+0.16*Math.sin(uArrowAngle),text:"U",showarrow:false,font:{color:uColor,size:14}},
-      {x:vEnd[0]+0.16*Math.cos(vArrowAngle),y:vEnd[1]+0.16*Math.sin(vArrowAngle),text:"V",showarrow:false,font:{color:vColor,size:14}}
+      {x:uEnd[0],y:uEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:uColor},
+      {x:vEnd[0],y:vEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:vColor},
+      {x:uEnd[0]+0.16*Math.cos(uArrowAngle),y:uEnd[1]+0.16*Math.sin(uArrowAngle),text:'U',showarrow:false,font:{color:uColor,size:19}},
+      {x:vEnd[0]+0.16*Math.cos(vArrowAngle),y:vEnd[1]+0.16*Math.sin(vArrowAngle),text:'V',showarrow:false,font:{color:vColor,size:19}}
     );
   }
   annotations.push(
-    {x:monoLabel[0],y:monoLabel[1],text:"Monochromator",showarrow:false},
-    {x:sampleLabel[0],y:sampleLabel[1],text:"Sample",showarrow:false},
-    {x:anaLabel[0],y:anaLabel[1],text:"Analyzer",showarrow:false},
-    {x:detLabel[0],y:detLabel[1],text:"Detector",showarrow:false},
-    {x:kiArrow.head[0],y:kiArrow.head[1],ax:kiArrow.tail[0],ay:kiArrow.tail[1],xref:"x",yref:"y",axref:"x",ayref:"y",text:"",showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:"#7ac943"},
-    {x:kfArrow.head[0],y:kfArrow.head[1],ax:kfArrow.tail[0],ay:kfArrow.tail[1],xref:"x",yref:"y",axref:"x",ayref:"y",text:"",showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:"#58c7e8"},
-    {x:kiMid[0]+0.18*Math.sin(thetaKi),y:kiMid[1]-0.18*Math.cos(thetaKi),text:"ki",showarrow:false,font:{color:"#7ac943"}},
-    {x:kfMid[0]+0.18*Math.sin(thetaKf),y:kfMid[1]-0.18*Math.cos(thetaKf),text:"kf",showarrow:false,font:{color:"#58c7e8"}},
-    {x:qEnd[0],y:qEnd[1],ax:sample[0],ay:sample[1],xref:"x",yref:"y",axref:"x",ayref:"y",text:"",showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:"#000"},
-    {x:qMid[0]-0.18*Math.sin(qAngle),y:qMid[1]+0.18*Math.cos(qAngle),text:"Q",showarrow:false,font:{color:"#000"}}
+    equipmentLabel(mono,'Monochromator',outward*16,13,outward<0?'right':'left'),
+    // Shift the sample name farther away from the U/V arrows and their tip
+    // labels. Keep the placement symmetric for the two scattering senses.
+    equipmentLabel(sample,'Sample',-outward*27,79,'center','bottom'),
+    ...(!isDiffractometer ? [equipmentLabel(analyzer,'Analyzer',outward*15,12,outward<0?'right':'left')] : []),
+    equipmentLabel(detector,'Detector',0,-22,'center','top'),
+    {x:kiArrow.head[0],y:kiArrow.head[1],ax:kiArrow.tail[0],ay:kiArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#7ac943'},
+    {x:kfArrow.head[0],y:kfArrow.head[1],ax:kfArrow.tail[0],ay:kfArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#58c7e8'},
+    vectorLabel(kiNearStart,'<i>k</i><sub>i</sub>',thetaKi,+1,'#398a12'),
+    vectorLabel(kfNearEnd,'<i>k</i><sub>f</sub>',thetaKf,-1,'#1386a9'),
+    {x:qEnd[0],y:qEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#000'},
+    qTipLabel
   );
 
+  // Reserve room in the data-space auto-fit for text whose actual offset is
+  // specified in pixels above.  These are guard points, NOT physical geometry.
+  // They prevent labels at the outside of the drawing from being clipped.
+  const monoLabel=[mono[0]+outward*2.2,mono[1]+0.45];
+  const anaLabel=[analyzer[0]+outward*1.6,analyzer[1]+0.4];
+  const sampleLabel=[sample[0]-outward*1.15,sample[1]+1.15];
+  const detLabel=[detector[0],detector[1]-0.95];
+
   // Auto-fit the full TAS drawing to the geometry card.
-  const fitPoints=[source,mono,sample,analyzer,detector,kiArrow.tail,kiArrow.head,kfArrow.head,qEnd,monoLabel,anaLabel,sampleLabel,detLabel];
+  const fitPoints=[source,mono,sample,detector,kiArrow.tail,kiArrow.head,kfArrow.head,qEnd,monoLabel,sampleLabel,detLabel];
+  if(!isDiffractometer) fitPoints.push(analyzer,anaLabel);
   if(!isPowder && uEnd && vEnd) fitPoints.push(uEnd,vEnd);
   // Reserve the same orientation-guide envelope for both sample modes. Powder
   // hides U/V, but retaining this fit radius keeps the TAS drawing scale and
@@ -598,10 +638,9 @@ function renderGeometry(cache,index=0){
     [sample[0],sample[1]-radial],[sample[0],sample[1]+radial]
   );
   // Display layout only.
-  // Keep +-+ at its established left-side anchor.  The mirrored -+- drawing was
-  // effectively pushed to ~90% of the card width (0.85 anchor + 5% viewport
-  // shift), which could clip labels.  Bring it back to a safer ~80% position.
-  const monoFracX=displaySense==="+-+" ? 0.23 : 0.80;
+  // Keep the drawing away from the chart edges so the longer component
+  // names remain visible in narrow cards, including both mirrored senses.
+  const monoFracX=displaySense==="+-+" ? 0.35 : 0.65;
   const monoFracY=0.78;
 
   // Reduce the auto-fit whitespace by about 1.5x.  Fit constraints below still

@@ -43,7 +43,8 @@
   },
   "detector": {
     "width": 0.0508,
-    "height": 0.0508
+    "height": 0.0508,
+    "type": "single"
   },
   "configuration": {
     "energy_mode": "Ei fixed",
@@ -73,5 +74,14 @@
       "S2limit": 130,
       "Ei": 0.1
     }
-  ]
+  ],
+  "instrument_type": "tas",
+  "available_crystals": {
+    "monochromator": [
+      "PG002"
+    ],
+    "analyzer": [
+      "PG002"
+    ]
+  }
 }

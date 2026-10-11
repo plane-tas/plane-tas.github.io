@@ -32,11 +32,13 @@ import {createUIShell} from "./ui-shell.js";
 import {createDarkAngle} from "./dark-angle.js";
 import {createQESingleCrystal} from "./qe-single-crystal.js";
 import {createTasAngleCalculation} from "./tas-angle-calculation.js";
+import {createFixedBeamControls} from "./fixed-beam-units.js";
 
 const $ = id => document.getElementById(id);
 const instruments = new Map();
 const backgroundMaterials = new Map();
 const sampleEnvironments = new Map();
+let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
 let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults;
@@ -643,8 +645,122 @@ function normalizeCrystalName(name){ const aliases={PG002:"PG(002)",PG004:"PG(00
 function setIf(id,x){ if($(id)&&x!==undefined&&x!==null&&Number.isFinite(Number(x))) $(id).value=x; }
 function setBool(id,x){ if($(id)&&x!==undefined&&x!==null) $(id).checked=!!x; }
 function setSelect(id,x){ if(!$(id)||x===undefined||x===null) return; if([...$(id).options].some(o=>o.value===String(x))) $(id).value=String(x); }
-const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
-function fillCrystal(selectId,dId){ const s=$(selectId); s.innerHTML=''; for(const k of Object.keys(CRYSTALS)){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);} s.value='PG(002)'; s.addEventListener('change',()=>{const d=CRYSTALS[s.value];if(d!=null) $(dId).value=d; $(dId).disabled=false;}); $(dId).disabled=false; }
+const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
+// DEMAND (HB-3A) operates at fixed monochromator angle, so a Si reflection
+// change selects one of its nominal incident wavelengths. Preserve the existing
+// TAS convention internally (Ei fixed, meV) and reflect it in the chosen UI unit.
+const DEMAND_MONO_WAVELENGTHS={'Si(331)':1.005,'Si(220)':1.546,'Si(111)':2.541,'Si(440)':1.546/2,'Si(333)':2.541/3};
+function syncDEMANDIncidentEnergy(crystal){
+  const inst=currentInstrument();
+  if(!/DEMAND|HB[- ]?3A/i.test(String(inst?.name||''))) return;
+  const lambda=DEMAND_MONO_WAVELENGTHS[crystal];
+  if(!(lambda>0)) return;
+  $('energyMode').value='Ei fixed';
+  $('energy').value=String(Number((81.8042/(lambda*lambda)).toPrecision(12)));
+  fixedBeamControls?.syncFromCanonical({preferredQuantity:'lambda_i'});
+  $('energyMode').dispatchEvent(new Event('change',{bubbles:true}));
+  $('energy').dispatchEvent(new Event('change',{bubbles:true}));
+}
+
+function fillCrystal(selectId,dId){ const s=$(selectId); s.innerHTML=''; for(const k of Object.keys(CRYSTALS)){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);} s.value='PG(002)'; s.addEventListener('change',()=>{const d=CRYSTALS[s.value];if(d!=null) $(dId).value=d; $(dId).disabled=false; if(selectId==='monoCrystal') syncDEMANDIncidentEnergy(s.value);}); $(dId).disabled=false; }
+
+// The sidebar and Resolution use the same underlying selectors/d-spacing.
+// Resolution's selector remains authoritative so all existing calculations,
+// persistence and instrument JSON defaults continue to use the same state.
+function initializeSidebarCrystalSelectors(){
+  for(const [sidebarId,resolutionId] of [
+    ['sidebarMonoCrystal','monoCrystal'],['sidebarAnaCrystal','anaCrystal']
+  ]){
+    const sidebar=$(sidebarId), resolution=$(resolutionId);
+    if(!sidebar||!resolution) continue;
+    sidebar.replaceChildren(...[...resolution.options].map(option=>option.cloneNode(true)));
+    sidebar.value=resolution.value;
+    sidebar.addEventListener('change',()=>{
+      if(resolution.value===sidebar.value) return;
+      resolution.value=sidebar.value;
+      // Keep the original d-spacing, resolution plot, cache and persistence
+      // updates in the established handler path.
+      resolution.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    resolution.addEventListener('change',()=>{
+      if(sidebar.value!==resolution.value) sidebar.value=resolution.value;
+    });
+  }
+}
+function syncSidebarCrystalSelectors(){
+  for(const [sidebarId,resolutionId] of [
+    ['sidebarMonoCrystal','monoCrystal'],['sidebarAnaCrystal','anaCrystal']
+  ]){
+    const sidebar=$(sidebarId), resolution=$(resolutionId);
+    if(sidebar&&resolution&&sidebar.value!==resolution.value) sidebar.value=resolution.value;
+  }
+}
+// Restrict both linked crystal selectors to the installed crystals listed in
+// each instrument JSON. Unknown/missing crystal data is NOT inferred.
+function instrumentIsDiffractometer(inst=currentInstrument()){
+  return inst?.instrument_type==='diffractometer';
+}
+function installedCrystalNames(inst,part){
+  const raw=inst?.available_crystals?.[part] ?? inst?.[part]?.available_crystals ??
+    (inst?.[part]?.crystal ? [inst[part].crystal] : []);
+  return [...new Set((Array.isArray(raw)?raw:[raw]).map(normalizeCrystalName))]
+    .filter(name=>Object.prototype.hasOwnProperty.call(CRYSTALS,name) && CRYSTALS[name]!=null);
+}
+function setCrystalOptions(part,inst,{preserveCurrent=false}={}){
+  const mono=part==='monochromator';
+  const main=$(mono?'monoCrystal':'anaCrystal');
+  const sidebar=$(mono?'sidebarMonoCrystal':'sidebarAnaCrystal');
+  const dInput=$(mono?'dMono':'dAna');
+  const allowed=installedCrystalNames(inst,part);
+  const old=main?.value;
+  const preferred=normalizeCrystalName(inst?.[part]?.crystal);
+  const selected=(preserveCurrent && allowed.includes(old) ? old :
+    (allowed.includes(preferred) ? preferred : (allowed[0]||'')));
+  const options=allowed.length ? allowed : [''];
+  for(const select of [main,sidebar]){
+    if(!select) continue;
+    select.replaceChildren(...options.map(name=>{
+      const option=document.createElement('option');
+      option.value=name;
+      option.textContent=name || 'Not specified in instrument JSON';
+      return option;
+    }));
+    select.value=selected;
+    select.disabled=!allowed.length;
+  }
+  if(dInput){
+    if(selected && CRYSTALS[selected]!=null) dInput.value=CRYSTALS[selected];
+    dInput.readOnly=!!selected;
+    dInput.disabled=!selected;
+  }
+}
+function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
+  if(!$('instrument')?.value || !instruments.has($('instrument').value)) return;
+  const inst=currentInstrument();
+  const diffraction=instrumentIsDiffractometer(inst);
+  for(const id of ['sidebarAnalyzerCrystalWrap','resolutionAnalyzerFocusing',
+    'resolutionAnalyzerCrystalSection','resolutionAnalyzerSizeSection']){
+    $(id)?.classList.toggle('hidden',diffraction);
+  }
+  $('diffractometerResolutionNote')?.classList.toggle('hidden',!diffraction);
+  $('resolutionFocusingGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
+  $('resolutionDistanceGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
+  for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))
+    el.classList.toggle('hidden',diffraction);
+  $('resolutionSampleDetectorDistanceLabel')?.classList.toggle('hidden',!diffraction);
+  // Detector type is instrument JSON metadata (read-only for now), not an
+  // analyzer setting nor an input into the existing TAS resolution model.
+  const detectorType=$('detectorType');
+  if(detectorType) detectorType.value=String(inst.detector?.type||'single');
+  setCrystalOptions('monochromator',inst,{preserveCurrent});
+  if(!diffraction) setCrystalOptions('analyzer',inst,{preserveCurrent});
+  else {
+    // Keep hidden legacy Resolution parameters for compatibility; no physical analyzer selection.
+    const sidebar=$('sidebarAnaCrystal');
+    if(sidebar){ sidebar.replaceChildren(); sidebar.disabled=true; }
+    if($('anaCrystal')) $('anaCrystal').disabled=true;
+  }
+}
 function updateSupermirrorUI(){ const on=$("gm1").checked; $("div1m").disabled=!on; $("div1h").disabled=on; $("div1v").disabled=on; }
 
 function applyInstrumentDefaults(){
@@ -680,12 +796,26 @@ function applyInstrumentDefaults(){
   const mono=inst.monochromator||{}, ana=inst.analyzer||{}, col=inst.collimator||{}, sm=inst.supermirror||{}, dist=inst.distance||{}, beam=inst.beam||{}, det=inst.detector||{};
   setBool("gm1",sm.enabled); setIf("div1m",sm.m_value); setIf("div1h",col['1st_h']);setIf("div1v",col['1st_v']);setIf("div2h",col['2nd_h']);setIf("div2v",col['2nd_v']);setIf("div3h",col['3rd_h']);setIf("div3v",col['3rd_v']);setIf("div4h",col['4th_h']);setIf("div4v",col['4th_v']);
   setBool("monoHF",mono.hfocus);setBool("monoVF",mono.vfocus);setBool("anaHF",ana.hfocus);setBool("anaVF",ana.vfocus);setIf("monoHB",mono.blade_h);setIf("monoVB",mono.blade_v);setIf("anaHB",ana.blade_h);setIf("anaVB",ana.blade_v);
-  const mc=normalizeCrystalName(mono.crystal), ac=normalizeCrystalName(ana.crystal);
-  if(mc&&CRYSTALS[mc]!==undefined){$("monoCrystal").value=mc;$("monoCrystal").dispatchEvent(new Event("change"));} if(ac&&CRYSTALS[ac]!==undefined){$("anaCrystal").value=ac;$("anaCrystal").dispatchEvent(new Event("change"));}
-  if(CRYSTALS[mc]===undefined&&mono.d){$("monoCrystal").value="Other";$("dMono").disabled=false;setIf("dMono",mono.d);} if(CRYSTALS[ac]===undefined&&ana.d){$("anaCrystal").value="Other";$("dAna").disabled=false;setIf("dAna",ana.d);}
+  applyInstrumentCrystalAvailability();
   setIf("mosMonoH",mono.mosaic_h);setIf("mosMonoV",mono.mosaic_v);setIf("mosAnaH",ana.mosaic_h);setIf("mosAnaV",ana.mosaic_v);
-  setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);setIf("beamW",beam.width);setIf("beamH",beam.height);setIf("monoW",mono.width);setIf("monoH",mono.height);setIf("monoT",mono.thickness);setIf("anaW",ana.width);setIf("anaH",ana.height);setIf("anaT",ana.thickness);setIf("detW",det.width);setIf("detH",det.height);
-  updateEnergyLabel();updateSupermirrorUI();updateAutoW();setStatus(`${inst.name || $("instrument").value} loaded`);
+  setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);
+  const sampleDetector=$('sampleDetectorDistance');
+  if(sampleDetector) {
+    // Prefer an explicit diffractometer leg. Old JSON used the L2 slot for
+    // this distance; show it as a provisional fallback, not a new measured value.
+    const fallbackDistance=Object.prototype.hasOwnProperty.call(dist,'sample_detector')
+      ? dist.sample_detector : (instrumentIsDiffractometer(inst)?dist.L2:null);
+    sampleDetector.value=fallbackDistance!=null && Number.isFinite(Number(fallbackDistance))
+      ? String(fallbackDistance) : '';
+  }
+  if($('detectorType')) $('detectorType').value=String(det.type||'single');
+  setIf("beamW",beam.width);setIf("beamH",beam.height);setIf("monoW",mono.width);setIf("monoH",mono.height);setIf("monoT",mono.thickness);setIf("anaW",ana.width);setIf("anaH",ana.height);setIf("anaT",ana.thickness);setIf("detW",det.width);setIf("detH",det.height);
+  updateEnergyLabel();
+  // Use wavelength by default for incident-fixed diffractometers, while
+  // conventional TAS instruments retain meV. User choices are restored later.
+  const pref=(inst.instrument_type==='diffractometer' && energyMode==='Ei fixed') ? 'lambda_i' : (energyMode==='Ei fixed'?'Ei':'Ef');
+  fixedBeamControls?.syncFromCanonical({preferredQuantity:pref});
+  updateSupermirrorUI();updateAutoW();setStatus(`${inst.name || $("instrument").value} loaded`);
 }
 
 function darkAssetIds(slot){
@@ -3003,7 +3133,8 @@ function mergeLegacyRangeData(){
   }
 }
 async function initialize(){
-  clearError(); fillCrystal('monoCrystal','dMono');fillCrystal('anaCrystal','dAna');updateModeVisibility();updateEnergyLabel();updateCalcMode();updateSupermirrorUI();updateAutoW();
+  fixedBeamControls = createFixedBeamControls();
+  clearError(); fillCrystal('monoCrystal','dMono');fillCrystal('anaCrystal','dAna');initializeSidebarCrystalSelectors();updateModeVisibility();updateEnergyLabel();updateCalcMode();updateSupermirrorUI();updateAutoW();
   initializeScriptWorkspaceUI();
   try{
     const savedUnit=localStorage.getItem('tas-qe-map-unit-v1');
@@ -3028,6 +3159,11 @@ async function initialize(){
   try{ nNeutron=await initializeNeutronData(); }
   catch(err){ console.warn('Neutron data load warning:',err); }
   const nInstrument=await loadJsonDirectory('instrument',instruments);
+  // Migration: avoid listing DEMAND twice when the old HB-3A filename from
+  // earlier releases coexists with the newly supplied 08_HB3A.json.
+  if(instruments.has('08_HB3A.json') && instruments.has('08_HB3A_DEMAND.json')){
+    instruments.delete('08_HB3A_DEMAND.json');
+  }
   const [nBG,nSE]=await Promise.all([
     // Optional data directories are loaded on every host.  GitHub Pages uses
     // the repository contents API, so no directory/index.json probe is needed.
@@ -3052,6 +3188,11 @@ async function initialize(){
   // JSON configuration is now fully loaded.  Only at this point is it safe to
   // overlay browser-local user parameters (including the selected instrument).
   const restoredLocalState=restoreLeftPanelState();
+  // Restored energyMode/energy (meV) are authoritative. The new visible unit
+  // selection is remembered, while legacy saves default to the matching E unit.
+  fixedBeamControls?.syncFromCanonical({preferredQuantity:$('fixedBeamQuantity')?.value});
+  applyInstrumentCrystalAvailability({preserveCurrent:true});
+  syncSidebarCrystalSelectors();
   if(currentGeometryCardTab()==='time') validateAllTimeScanRows({showMessage:true});
   // Restoring sidebar values can change Dark-angle Reference after the sample-
   // environment defaults were applied.  Re-sync the h/k/l row explicitly.
@@ -3064,6 +3205,8 @@ async function initialize(){
   // Right-side controls are restored only after dynamic Toolbox controls exist and
   // after the default geometry target has been initialized, so saved values win.
   const restoredRightState=restoreRightPanelState();
+  applyInstrumentCrystalAvailability({preserveCurrent:true});
+  syncSidebarCrystalSelectors();
   // Re-apply the geometry tab state at the end of right-panel restoration.
   // This is deliberately late: dynamic controls and saved numeric values are
   // already in place, so no subsequent initialization step can overwrite the
@@ -3234,7 +3377,7 @@ async function initialize(){
   powderGeometryTarget,
   hasScanResults
 }=createResolutionUI({
-  $, tasMotorAngles, PI, RLRes, add, calcResolution, checkedValue, clamp, clearError, deg2rad,
+  $, tasMotorAngles, PI, RLRes, add, calcResolution, checkedValue, clamp, clearError, currentInstrument, deg2rad,
   hklInCurrentScatteringPlane:(...args)=>hklInCurrentScatteringPlane(...args), hklToQ, inferOutOfPlaneHKL, latticeParams,
   linspace, markResolutionScanDirty, norm, num, parseNumericValue, powderS2ForQAtHW,
   propagationVectorIndices, rad2deg, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
