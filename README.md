@@ -78,7 +78,9 @@ Instrument definitions and other optional static data live in project directorie
 
 ## User manual
 
-Open [`PLANE-TAS_Manual.html`](PLANE-TAS_Manual.html) for the illustrated user guide. The manual may contain screenshots from an earlier UI and should be checked against the live application when interface details differ.
+Read the **[PLANE-TAS User Manual](https://plane-tas.github.io/PLANE-TAS_Manual.html)** online, or view the [`PLANE-TAS_Manual.html`](PLANE-TAS_Manual.html) source file in this repository.
+
+The manual includes illustrations; if an interface detail differs from the current application, follow the live application.
 
 ## Data and validation
 
