@@ -199,9 +199,12 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   // Display the signed S2 motor angle produced by the common convention.
   const s2Display=angles.s2;
 
+  // Use the energies returned by the resolution calculation itself.  This
+  // works for both fixed-Ei and fixed-Ef modes without recomputing energies.
+  const {Ei,Ef}=r.energies;
   $('summary').innerHTML=
-    `<div><b>Calculation point</b> ℏω=${calc.hw.toFixed(3)} meV, `+
-    `h=${calc.h.toFixed(3)}, k=${calc.k.toFixed(3)}, l=${calc.l.toFixed(3)} ${indexInfo}</div>`+
+    `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
+    `ℏω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
     `<div><b>Resolution</b> δQ//${fmtAxis(ax.U)}=${r.display.U.toFixed(4)} (${r.display.Ucoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.V)}=${r.display.V.toFixed(4)} (${r.display.Vcoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.W)}=${r.display.W.toFixed(4)} (${r.display.Wcoh.toFixed(4)}) ${qUnit}, `+

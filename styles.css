@@ -6376,3 +6376,39 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
    outside its own card after the page switches between narrow/wide layouts. */
 #toolboxAttenuationPane .absorption-right{min-width:0;max-width:100%;}
 #toolboxAttenuationPane .absorption-plot{min-width:0;max-width:100%;overflow:hidden;}
+
+/* Resolution subheadings should match the main Resolution tab's text size,
+   not exceed it on small screens. Includes the matrices heading. */
+#resolutionPanel #resolutionCalculation > h2,
+#resolutionPanel #result > h2{
+  font-size:var(--tas-tab-text-size);
+  line-height:1.3;
+}
+
+/* Shared output readability: Resolution summary and Angle calculation Single/Scan
+   results all use the Single result text size. Keep the Scan point selector
+   consistent too, without changing input labels or plotting fonts. */
+:root{--tas-calculation-output-font-size:max(14px,calc(19px * var(--tas-density)));}
+#resolutionPanel #summary,
+#geometryAnglesPane #geometryAngles{
+  font-size:var(--tas-calculation-output-font-size);
+  line-height:1.55;
+}
+/* The Scan table has an upstream !important font rule; override the table,
+   its cells and its point indicator so both Scan views match Single. */
+#geometryAnglesPane .geometry-scan-table,
+#geometryAnglesPane .geometry-scan-table th,
+#geometryAnglesPane .geometry-scan-table td,
+#geometryAnglesPane .geometry-scan-point-row > label,
+#geometryAnglesPane .geometry-scan-point-row > output{
+  font-size:var(--tas-calculation-output-font-size)!important;
+  line-height:1.45;
+}
+
+/* Resolution result: the four bold summary labels match the actual
+   "Resolution" result heading, not the main navigation tab or summary text. */
+#resolutionPanel #result #summary > div > b{
+  font-size:var(--tas-tab-text-size);
+}
+
+
