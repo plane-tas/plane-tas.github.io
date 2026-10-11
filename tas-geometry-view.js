@@ -78,6 +78,12 @@ function geometryDisplayedMotorAngles(target,isPowder,sense,displaySense){
   };
 }
 
+// Angle calculation output only: display motor angles to two decimals.
+// Leave the underlying angles and the Resolution formatter unchanged.
+function geometryResultMotorAngle(value){
+  return formatAngle(value)==='' ? '' : Number(value).toFixed(2);
+}
+
 function geometryScanStatusWarnings(target,displayedAngles){
   const warnings=[];
   const s1=Number(displayedAngles?.s1), s2=Math.abs(Number(displayedAngles?.s2));
@@ -139,7 +145,7 @@ function renderGeometryScanTable(cache,points,sense,displaySense,selectedIndex){
       if(target.angles?.warning) warnings.push(target.angles.warning);
       warnings.push(...geometryScanStatusWarnings(target,a));
       warnings.push(...qeDarkBlockWarningsForHKLE(cache,[calc.h,calc.k,calc.l],calc.hw));
-      const f=v=>Number.isFinite(v)?formatAngle(v):'—';
+      const f=v=>Number.isFinite(v)?geometryResultMotorAngle(v):'—';
       const status=warnings.length?warnings.join(' / '):'';
       const rowClasses=[];
       if(i===selectedIndex) rowClasses.push('geometry-scan-selected-row');
@@ -238,7 +244,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
   const diffractometer=currentInstrument()?.instrument_type==='diffractometer';
-  const angleLine=`M1=${formatAngle(shown.m1)}°, M2=${formatAngle(shown.m2)}°, S1=${formatAngle(shown.s1)}°, S2=${formatAngle(shown.s2)}°${diffractometer?'':`, A1=${formatAngle(shown.a1)}°, A2=${formatAngle(shown.a2)}°`}`+
+  const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
     (!isPowder && a.warning?` &nbsp; | &nbsp; ${a.warning}`:'');
   const darkWarnings=!isPowder
     ? qeDarkBlockWarningsForHKLE(cache,[target.calc.h,target.calc.k,target.calc.l],target.calc.hw)
