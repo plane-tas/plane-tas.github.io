@@ -1,3 +1,5 @@
+import {darkDirectBeamZeroShiftDeg} from "./tas-conventions.js";
+
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
 export function createTasGeometryView(deps){
@@ -480,9 +482,11 @@ function renderGeometry(cache,index=0){
       const directBeamCorrection=asset.ref==="Direct beam"
         ? directBeamOrientationCorrection(cache.rl,cache.energyMode,cache.Ei,cache.Ef,sense) : 0;
 
-      // TAS Geometry display only: keep the Direct-beam zero in the physical frame.
+      // Share the same physical Direct-beam zero correction with the Q-E
+      // polygon builder; both sense choices must agree with the direct beam.
+      // Leave the entered ranges and motor/encoder conventions untouched.
       const geometryDirectBeamCorrection=asset.ref==="Direct beam"
-        ? -directBeamCorrection
+        ? darkDirectBeamZeroShiftDeg(directBeamCorrection,displaySense)
         : directBeamCorrection;
 
       // Keep the reference zero/calibration exactly where it is, but make the
@@ -577,22 +581,32 @@ function renderGeometry(cache,index=0){
     x:point[0],y:point[1],xref:'x',yref:'y',text,showarrow:false,
     // The perpendicular is measured in display pixels, not plot coordinates.
     // This keeps k_i / k_f / Q away from their arrow shafts at every width.
-    xshift:Math.round(-Math.sin(angle)*side*17),
-    yshift:Math.round( Math.cos(angle)*side*17),
+    xshift:Math.round(-Math.sin(angle)*side*11),
+    yshift:Math.round( Math.cos(angle)*side*11),
     xanchor:'center',yanchor:'middle',
     font:{family:'Arial, sans-serif',size:vectorFontSize,color},
     captureevents:false
   });
-  // Put the vector labels at different ends of their arrows.  In particular,
-  // k_f near its *tip* prevents the overlap with Q near the sample origin.
-  const kiNearStart=pointAlong(kiArrow.tail,kiArrow.head,0.18);
-  const kfNearEnd=pointAlong(kfArrow.tail,kfArrow.head,0.84);
-  // Place Q at its arrow tip, not beside the sample.  Select the side of
-  // the Q shaft *away* from k_f when their directions are close, so the
-  // labels are less likely to overlap. Only annotations change, not vectors.
+  // Keep the k_i, k_f and Q captions inside the Dark-angle guide circle,
+  // closer to its centre (the sample), instead of near the arrow tips where
+  // captions can collide with Dark-angle sector arcs.  This changes only
+  // annotation anchors: the physical vector endpoints are untouched.
+  const vectorLabelNearSample=(tip,relativeDistance)=>{
+    const length=Math.hypot(tip[0]-sample[0],tip[1]-sample[1]);
+    if(!Number.isFinite(length) || length<1e-10) return sample.slice();
+    const distance=Math.min(relativeDistance*length,0.50*darkRadius);
+    return pointAlong(sample,tip,distance/length);
+  };
+  const kiNearCenter=vectorLabelNearSample(kiArrow.tail,0.52);
+  const kfNearCenter=vectorLabelNearSample(kfArrow.head,0.52);
+  // Q is slightly closer to the sample than k_f to maintain visual separation
+  // in configurations where the vectors point in similar directions.
+  const qNearCenter=vectorLabelNearSample(qEnd,0.44);
+  // Place k_i on the side away from Q, so bringing both labels closer to
+  // the circle centre does not cause them to bunch together.
+  const kiLabelSide=Math.sin(qAngle-thetaKi)>=0 ? -1 : 1;
   const qLabelSide=Math.sin(thetaKf-qAngle)>=0 ? -1 : 1;
-  const qNearTip=pointAlong(sample,qEnd,0.96);
-  const qTipLabel=vectorLabel(qNearTip,'<i>Q</i>',qAngle,qLabelSide,'#202020');
+  const qCenterLabel=vectorLabel(qNearCenter,'<i>Q</i>',qAngle,qLabelSide,'#202020');
   const annotations=[];
   if(!isPowder && uEnd && vEnd){
     annotations.push(
@@ -606,15 +620,15 @@ function renderGeometry(cache,index=0){
     equipmentLabel(mono,'Monochromator',outward*16,13,outward<0?'right':'left'),
     // Shift the sample name farther away from the U/V arrows and their tip
     // labels. Keep the placement symmetric for the two scattering senses.
-    equipmentLabel(sample,'Sample',-outward*27,79,'center','bottom'),
+    equipmentLabel(sample,'Sample',-outward*20,59,'center','bottom'),
     ...(!isDiffractometer ? [equipmentLabel(analyzer,'Analyzer',outward*15,12,outward<0?'right':'left')] : []),
     equipmentLabel(detector,'Detector',0,-22,'center','top'),
     {x:kiArrow.head[0],y:kiArrow.head[1],ax:kiArrow.tail[0],ay:kiArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#7ac943'},
     {x:kfArrow.head[0],y:kfArrow.head[1],ax:kfArrow.tail[0],ay:kfArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#58c7e8'},
-    vectorLabel(kiNearStart,'<i>k</i><sub>i</sub>',thetaKi,+1,'#398a12'),
-    vectorLabel(kfNearEnd,'<i>k</i><sub>f</sub>',thetaKf,-1,'#1386a9'),
+    vectorLabel(kiNearCenter,'<i>k</i><sub>i</sub>',thetaKi,kiLabelSide,'#398a12'),
+    vectorLabel(kfNearCenter,'<i>k</i><sub>f</sub>',thetaKf,-1,'#1386a9'),
     {x:qEnd[0],y:qEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#000'},
-    qTipLabel
+    qCenterLabel
   );
 
   // Reserve room in the data-space auto-fit for text whose actual offset is
@@ -622,7 +636,7 @@ function renderGeometry(cache,index=0){
   // They prevent labels at the outside of the drawing from being clipped.
   const monoLabel=[mono[0]+outward*2.2,mono[1]+0.45];
   const anaLabel=[analyzer[0]+outward*1.6,analyzer[1]+0.4];
-  const sampleLabel=[sample[0]-outward*1.15,sample[1]+1.15];
+  const sampleLabel=[sample[0]-outward*0.9,sample[1]+0.9];
   const detLabel=[detector[0],detector[1]-0.95];
 
   // Auto-fit the full TAS drawing to the geometry card.

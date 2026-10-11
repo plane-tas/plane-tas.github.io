@@ -10,6 +10,15 @@ export function normalizeTasSense(value){
   return (value==="-+-" || value==="---") ? "-+-" : "+-+";
 }
 
+// The physical Direct-beam Dark-angle zero has opposite handedness in the
+// two TAS Sense configurations. Keep this single rule shared by the TAS
+// geometry guide and the Q-E blocking polygons (and therefore Script warnings).
+// This is a geometric correction, not a sample S1 motor/encoder correction.
+export function darkDirectBeamZeroShiftDeg(rawOrientationOffsetDeg,sense){
+  const offset=Number(rawOrientationOffsetDeg);
+  return (normalizeTasSense(sense)==="-+-" ? +1 : -1)*offset;
+}
+
 export function normalizeS1Sign(value){
   return String(value??"").trim().toLowerCase()==="cw" ? "cw" : "ccw";
 }

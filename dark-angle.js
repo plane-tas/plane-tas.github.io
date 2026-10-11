@@ -1,3 +1,5 @@
+import {darkDirectBeamZeroShiftDeg} from "./tas-conventions.js";
+
 export function createDarkAngle(deps){
   const {
     $, num, darkAssetSlots, darkAssetIds, currentDarkRangeCount, checkedValue,
@@ -140,7 +142,11 @@ export function createDarkAngle(deps){
           const rawDirectBeamCorrection=asset.ref==="Direct beam"
             ? directBeamOrientationCorrection(rl,energyMode,Ei,Ef,convention)
             : 0;
-          const referenceCorrection=asset.ref==="Direct beam" ? -rawDirectBeamCorrection : 0;
+          // Match the physical 0° direction in TAS geometry for both senses.
+          // Reusing the +-+ sign for -+- previously rotated the Q-E blocked
+          // region by twice the virtual-reference Bragg angle.
+          const referenceCorrection=asset.ref==="Direct beam"
+            ? darkDirectBeamZeroShiftDeg(rawDirectBeamCorrection,convention.sense) : 0;
 
           const makePolygon=beam=>{
             const fromCurve=s2dark.map(s2=>boundaryPoint(s2,d0,phiBase,beam,referenceCorrection));
