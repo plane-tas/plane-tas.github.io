@@ -1192,16 +1192,21 @@ function refreshSinglePeakAppearance(cache,fullX,fullY){
   if(!axes?.xaxis || !axes?.yaxis || !gd?.data?.length) return;
   const zoom=singleMapZoomGeometry(gd,fullX,fullY);
   const peakCount=cache.Gpoints.length+cache.magPoints.length;
-  const sizes=singleMarkerSizes(zoom.fullSpan,zoom.visibleSpan,peakCount);
-  const labelStyle=singleNuclearLabelStyle(zoom.fullSpan,zoom.visibleSpan);
+  const sourceSizes=singleMarkerSizes(zoom.fullSpan,zoom.visibleSpan,peakCount);
+  const sourceLabelStyle=singleNuclearLabelStyle(zoom.fullSpan,zoom.visibleSpan);
+  const density=window.tasUIDensity?.() || 1;
+  // Plotly marker and text sizes are density-adjusted by tas-plot-density.js.
+  // Pixel-based collision/position calculations must use those actual sizes.
+  const sizes=Object.fromEntries(Object.entries(sourceSizes).map(([k,v])=>[k,v*density]));
+  const labelStyle={fontSize:sourceLabelStyle.fontSize*density};
   const markerIndices=[],markerSizes=[];
   for(let j=0;j<gd.data.length;j++){
     const tr=gd.data[j];
     if(tr.meta==='nuclear-data' || tr.meta==='nuclear-legend'){
-      markerIndices.push(j);markerSizes.push(sizes.nuclear);
+      markerIndices.push(j);markerSizes.push(sourceSizes.nuclear);
     }else if(/^Magnetic Bragg peaks: k\d+$/.test(tr.name||'')){
       const symbol=tr.marker?.symbol;
-      markerIndices.push(j);markerSizes.push(symbol==='star'?sizes.star:sizes.magnetic);
+      markerIndices.push(j);markerSizes.push(symbol==='star'?sourceSizes.star:sourceSizes.magnetic);
     }
   }
   if(markerIndices.length) Plotly.restyle(gd,{'marker.size':markerSizes},markerIndices);
@@ -1252,7 +1257,7 @@ function refreshSinglePeakAppearance(cache,fullX,fullY){
   });
   Plotly.restyle(gd,{
     x:[positions.map(p=>p.x)],y:[positions.map(p=>p.y)],
-    'textfont.size':labelStyle.fontSize
+    'textfont.size':sourceLabelStyle.fontSize
   },[labelIndex]);
 }
 
@@ -1297,18 +1302,19 @@ function positionSingleColorbarEntries(){
   const rect=bar?.getBoundingClientRect();
   const outer=frame.getBoundingClientRect();
   if(!rect || rect.height<1 || !outer.width) return;
-  // getBoundingClientRect() returns *visual* pixels under transform:scale(),
-  // whereas style.left/top expect the unscaled CSS layout coordinates.
-  const scale=Number.parseFloat(getComputedStyle(frame).getPropertyValue('--tas-ui-scale'))||1;
+  // Native layout: Plotly and overlay inputs now use the same CSS-pixel
+  // coordinate system. No inverse-transform correction is required.
   const max=$('sfColorMaxEntry'),min=$('sfColorMinEntry');
-  const entryWidth=58;
-  const width=outer.width/scale, height=outer.height/scale;
-  const x=Math.max(0,Math.min(width-entryWidth,(rect.right-outer.left)/scale+7));
-  const topY=(rect.top-outer.top)/scale, bottomY=(rect.bottom-outer.top)/scale;
+  const density=window.tasUIDensity?.() || 1;
+  const entryWidth=58*density;
+  const width=outer.width, height=outer.height;
+  const x=Math.max(0,Math.min(width-entryWidth,rect.right-outer.left+7*density));
+  const topY=rect.top-outer.top, bottomY=rect.bottom-outer.top;
   for(const [entry,cy] of [[max,topY],[min,bottomY]]){
     if(!entry) continue;
     entry.style.left=`${x}px`;
-    entry.style.top=`${Math.max(0,Math.min(height-26,cy-13))}px`;
+    const entryHeight=entry.getBoundingClientRect().height;
+    entry.style.top=`${Math.max(0,Math.min(height-entryHeight,cy-entryHeight/2))}px`;
   }
 }
 

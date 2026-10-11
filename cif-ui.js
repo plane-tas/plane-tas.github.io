@@ -2584,13 +2584,8 @@ function loadFigureOverlayImage(url){
 async function saveStructureFigure(){
   const plot=$("cifStructurePlot"), wrap=plot?.closest(".structure-plot-wrap");
   if(!plot || !wrap || !plot._fullLayout || typeof Plotly?.toImage!=="function") throw new Error("Draw the structure before saving a figure.");
-  // Export in plot CSS pixels, not in the smaller CSS-transform display pixels.
-  const zoom=Number.parseFloat(getComputedStyle(wrap).getPropertyValue('--tas-ui-scale'))||1;
-  const layoutRect=element=>{
-    const r=element.getBoundingClientRect();
-    return {left:r.left/zoom,top:r.top/zoom,right:r.right/zoom,bottom:r.bottom/zoom,
-      width:r.width/zoom,height:r.height/zoom};
-  };
+  // Layout and screen dimensions match because the UI is not transformed.
+  const layoutRect=element=>element.getBoundingClientRect();
   const bounds=layoutRect(wrap), pb=layoutRect(plot);
   if(bounds.width<1 || bounds.height<1) throw new Error("The structure is not visible.");
   const scale=1,canvas=document.createElement("canvas");
@@ -4383,8 +4378,7 @@ async function initializeCifGenerator(){
         outputPane.style.height="";
         return;
       }
-      const scale=Number.parseFloat(getComputedStyle(inputPane).getPropertyValue('--tas-ui-scale'))||1;
-      const h=Math.ceil(inputPane.getBoundingClientRect().height/scale);
+      const h=Math.ceil(inputPane.getBoundingClientRect().height);
       if(h>0) outputPane.style.height=`${h}px`;
     };
     if(typeof ResizeObserver!=="undefined" && inputPane){
