@@ -201,10 +201,10 @@ const ACTIVE_TAB_STORAGE_KEY='tas-simulator-active-tab-v1';
 let restoringRightPanel=false;
 
 function setupAppHeader(){
-  document.title='TAS Simulator';
+  document.title='PLANE-TAS';
   const header=document.querySelector('header');
   const h1=header?.querySelector('h1');
-  if(h1) h1.textContent='TAS Simulator';
+  if(h1) h1.textContent='PLANE-TAS';
   if(!header) return;
 
   // Keep the user manual next to the repository link in the top status bar.
