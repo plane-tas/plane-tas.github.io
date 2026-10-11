@@ -224,7 +224,7 @@ function setupAppHeader(){
   if(!document.getElementById('githubLink')){
     // Project repository: fixed URL so the GitHub link works identically on
     // localhost, GitHub Pages, and custom-domain deployments.
-    const repoUrl='https://github.com/Hodaka-Kikuchi/TAS_Simulator';
+    const repoUrl='https://github.com/plane-tas/plane-tas.github.io';
     const github=document.createElement('a');
     github.id='githubLink';
     github.href=repoUrl;

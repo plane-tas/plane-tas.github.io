@@ -5759,3 +5759,18 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   overflow-wrap:anywhere;
 }
 #structurePanel #magneticReflectionMessage[hidden]{display:none!important;}
+
+/* Desktop: allow the shared Time estimate table to scroll horizontally in both
+   Q-E range and Script. The table needs enough width for Details inputs; if
+   its pane is narrower, scroll the table rather than clipping its right side.
+   Keep the existing mobile layout and ten-row vertical scrolling unchanged. */
+@media (min-width:761px){
+  .time-scan-table-wrap,
+  #singleMain .chart-grid.time-estimate-active .time-scan-table-wrap,
+  .time-scan-table-wrap.time-scan-scroll{
+    overflow-x:auto;
+  }
+  .time-scan-table{
+    min-width:740px;
+  }
+}
