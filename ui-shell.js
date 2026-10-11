@@ -212,7 +212,7 @@ function setupAppHeader(){
   if(!document.getElementById('manualLink')){
     const manual=document.createElement('a');
     manual.id='manualLink';
-    manual.href='TAS_Simulator_Manual.html';
+    manual.href='PLANE-TAS_Manual.html';
     manual.target='_blank';
     manual.rel='noopener noreferrer';
     manual.textContent='Manual';

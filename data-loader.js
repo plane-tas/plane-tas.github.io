@@ -34,8 +34,9 @@ export function isLocalDirectoryListingHost(){
 export async function discoverJsonFilesFromGitHub(directory){
   const owner=window.location.hostname.split('.')[0];
   const parts=window.location.pathname.split('/').filter(Boolean);
-  const repo=parts[0];
-  if(!repo) throw new Error("GitHub Pages repository name could not be inferred. Add directory/index.json.");
+  // Organization/user Pages sites are served at /, with no repository segment.
+  const repo=(!parts.length || (parts.length===1 && /\.html?$/i.test(parts[0])))
+    ? `${owner}.github.io` : parts[0];
   const apiUrl=`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${directory}`;
   const response=await fetch(apiUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github+json"}});
   if(!response.ok) throw new Error(`GitHub API: ${directory}/ (HTTP ${response.status})`);
@@ -132,8 +133,9 @@ export function normalizeCifFileList(value){
 export async function discoverCifFilesFromGitHub(directory){
   const owner=window.location.hostname.split('.')[0];
   const parts=window.location.pathname.split('/').filter(Boolean);
-  const repo=parts[0];
-  if(!repo) throw new Error("GitHub Pages repository name could not be inferred. Add BG_material/index.json.");
+  // Organization/user Pages sites are served at /, with no repository segment.
+  const repo=(!parts.length || (parts.length===1 && /\.html?$/i.test(parts[0])))
+    ? `${owner}.github.io` : parts[0];
   const apiUrl=`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${directory}`;
   const response=await fetch(apiUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github+json"}});
   if(!response.ok) throw new Error(`GitHub API: ${directory}/ (HTTP ${response.status})`);

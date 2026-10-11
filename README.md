@@ -78,7 +78,7 @@ Instrument definitions and other optional static data live in project directorie
 
 ## User manual
 
-Open [`TAS_Simulator_Manual.html`](TAS_Simulator_Manual.html) for the illustrated user guide. The manual may contain screenshots from an earlier UI and should be checked against the live application when interface details differ.
+Open [`PLANE-TAS_Manual.html`](PLANE-TAS_Manual.html) for the illustrated user guide. The manual may contain screenshots from an earlier UI and should be checked against the live application when interface details differ.
 
 ## Data and validation
 
