@@ -5832,3 +5832,51 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   #singlePlot{height:560px;min-height:560px}
   #qeDisplayControls{gap:8px 16px}
 }
+
+/* Same accessible, clickable legend component for all three Q–E views. */
+.qe-external-legend{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:5px 13px;padding:10px 8px;min-height:38px;
+  border-bottom:1px solid #e3e7ed;background:#fff;
+}
+.qe-external-legend.hidden{display:none!important}
+.qe-external-legend .qe-legend-item{
+  display:inline-flex;gap:6px;align-items:center;
+  border:1px solid transparent;border-radius:4px;
+  padding:4px 5px;background:transparent;color:#202a37;
+  cursor:pointer;font-size:13px;line-height:1.25;text-align:left;
+}
+.qe-external-legend .qe-legend-item:hover,
+.qe-external-legend .qe-legend-item:focus-visible{background:#f2f5f9;border-color:#b7c2d0}
+.qe-external-legend .qe-legend-item[aria-pressed=false]{opacity:.45;text-decoration:line-through}
+.qe-external-legend .qe-legend-swatch{
+  display:inline-block;flex:0 0 16px;height:10px;border-radius:2px;
+  background:var(--legend-color);border:1px solid rgba(0,0,0,.15);
+}
+.qe-external-legend .qe-legend-line{
+  height:0;border:0;border-top:3px solid var(--legend-color);
+  border-radius:0;background:transparent;
+}
+.qe-external-legend .qe-legend-marker{display:block;flex:0 0 19px}
+
+/* Constant E map: edit the two colorbar endpoint values in-place. */
+#singlePlotFrame{position:relative;min-width:0;background:#fff}
+#sfColorbarRange{position:absolute;inset:0;pointer-events:none;z-index:5}
+#sfColorbarRange.hidden{display:none!important}
+#sfColorbarRange .qe-colorbar-value{
+  position:absolute;display:block;box-sizing:border-box;
+  width:58px;min-width:0;max-width:58px;height:26px;
+  margin:0;padding:0 2px;border:1px solid transparent;border-radius:3px;
+  background:transparent;color:#444;font:400 14px Arial,sans-serif;
+  text-align:left;line-height:24px;pointer-events:auto;cursor:text;
+  -moz-appearance:textfield;appearance:textfield;
+}
+#sfColorbarRange .qe-colorbar-value::-webkit-inner-spin-button,
+#sfColorbarRange .qe-colorbar-value::-webkit-outer-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+#sfColorbarRange .qe-colorbar-value:hover{border-bottom-color:#7991a7}
+#sfColorbarRange .qe-colorbar-value:focus{
+  outline:2px solid #477db0;outline-offset:0;
+  border-color:#7b97b2;background:#fff;
+}

@@ -1168,108 +1168,153 @@ function singleMarkerSizes(fullSpan,visibleSpan,peakCount){
 }
 
 function singleNuclearLabelStyle(fullSpan,visibleSpan){
-  // Scale both font size and marker-to-label clearance with zoom.  A fixed
-  // fraction of the visible Q span looks progressively tighter in screen pixels
-  // once the text/markers grow, so increase that fraction as we zoom in.
-  const span=Math.min(fullSpan,Math.max(1e-9,Number(visibleSpan)||fullSpan));
-  const zoom=Math.max(1,fullSpan/span);
-  const logZoom=Math.max(0,Math.log2(zoom));
-  const fontSize=Math.min(20,11+2.5*logZoom);
-  const offsetFraction=Math.min(0.055,0.022+0.006*logZoom);
-  const offset=Math.max(span*offsetFraction,fullSpan*0.0015);
-  return {offset,fontSize};
+  // Pixel-based labels: their distance from the peak must not depend on
+  // r.l.u. axis values or on a highly anisotropic reciprocal lattice.
+  const zoom=Math.max(1,fullSpan/Math.max(visibleSpan,1e-9));
+  return {fontSize:Math.min(20,11+2.5*Math.log2(zoom))};
 }
-
 
 // Unified Q-E Range calculation.
 
-
-function bindSingleZoomLabelScaling(cache,Qplot){
-  const gd=$("singlePlot");
-  if(!gd || typeof gd.on!=="function") return;
-  if(gd.__tasLabelRelayoutHandler && typeof gd.removeListener==="function")
-    gd.removeListener("plotly_relayout",gd.__tasLabelRelayoutHandler);
-  const fullSpan=2*Qplot;
-  const applyOffset=span=>{
-    const idx=(gd.data||[]).findIndex(tr=>tr.meta==="nuclear-labels");
-    if(idx<0) return;
-    const style=singleNuclearLabelStyle(fullSpan,span);
-    // Keep the label trace point-for-point aligned with the currently visible
-    // nuclear peaks.  Using all cache.Gpoints here caused Plotly reset/double-click
-    // to pair a shorter text array with a longer x/y array, visually piling labels
-    // against one side of the plot.
-    const pts=cache.Gpoints.filter(p=>p.label!=="");
-    const unit=currentQEMapUnit();
-    const qpts=pts.map(p=>qeXYForUnit(cache,[p.x,p.y],unit));
-    Plotly.restyle(gd,{
-      x:[qpts.map(p=>p[0])],
-      y:[qpts.map(p=>p[1]+style.offset)],
-      "textfont.size":style.fontSize
-    },[idx]);
-  };
-  const handler=ev=>{
-    if(ev?.["xaxis.autorange"]===true || ev?.["yaxis.autorange"]===true){ applyOffset(fullSpan); return; }
-    const x0=Number(ev?.["xaxis.range[0]"]),x1=Number(ev?.["xaxis.range[1]"]);
-    const y0=Number(ev?.["yaxis.range[0]"]),y1=Number(ev?.["yaxis.range[1]"]);
-    if(Number.isFinite(x0)&&Number.isFinite(x1)){ applyOffset(Math.abs(x1-x0)); return; }
-    if(Number.isFinite(y0)&&Number.isFinite(y1)){ applyOffset(Math.abs(y1-y0)); return; }
-    requestAnimationFrame(()=>{
-      const xRange=gd?._fullLayout?.xaxis?.range;
-      const yRange=gd?._fullLayout?.yaxis?.range;
-      if(Array.isArray(xRange) && xRange.length>=2 && Number.isFinite(Number(xRange[0])) && Number.isFinite(Number(xRange[1]))){
-        applyOffset(Math.abs(Number(xRange[1])-Number(xRange[0])));
-      }else if(Array.isArray(yRange) && yRange.length>=2 && Number.isFinite(Number(yRange[0])) && Number.isFinite(Number(yRange[1]))){
-        applyOffset(Math.abs(Number(yRange[1])-Number(yRange[0])));
-      }
-    });
-  };
-  gd.__tasLabelRelayoutHandler=handler;
-  gd.on("plotly_relayout",handler);
+// Use independent x/y viewport spans for zoom sizing. A change of units
+// cannot change the markers' initial pixel sizes or their relative spacing.
+function singleMapZoomGeometry(gd,fullX,fullY){
+  const xr=gd?._fullLayout?.xaxis?.range, yr=gd?._fullLayout?.yaxis?.range;
+  const w=Array.isArray(xr)&&xr.length===2 ? Math.abs(xr[1]-xr[0]) : fullX;
+  const h=Array.isArray(yr)&&yr.length===2 ? Math.abs(yr[1]-yr[0]) : fullY;
+  const fraction=Math.max(1e-7,Math.min(1,Math.sqrt((w/fullX)*(h/fullY))));
+  return {fullSpan:fullX,visibleSpan:fullX*fraction};
 }
 
-function bindSingleZoomMarkerScaling(cache,Qplot){
+function refreshSinglePeakAppearance(cache,fullX,fullY){
   const gd=$("singlePlot");
-  if(!gd || typeof gd.on!=="function") return;
-  if(gd.__tasMarkerRelayoutHandler && typeof gd.removeListener==="function")
-    gd.removeListener("plotly_relayout",gd.__tasMarkerRelayoutHandler);
-  const fullSpan=2*Qplot, peakCount=cache.Gpoints.length+cache.magPoints.length;
-  const applySizes=span=>{
-    // Never let a zoom-out span larger than the original view make markers smaller
-    // than their initial density-scaled size.
-    span=Math.min(fullSpan,Math.max(1e-9,Number(span)||fullSpan));
-    const sizes=singleMarkerSizes(fullSpan,span,peakCount);
-    const updates=[],indices=[];
-    (gd.data||[]).forEach((tr,j)=>{
-      if(tr.name==="Nuclear Bragg peaks"){updates.push(sizes.nuclear);indices.push(j);}
-      else if(/^Magnetic Bragg peaks: k\d+$/.test(tr.name||"")){
-        const k=Number((tr.name||"").match(/k([123])$/)?.[1]||1);
-        updates.push(k===3?sizes.star:sizes.magnetic);indices.push(j);
-      }
-    });
-    indices.forEach((idx,n)=>Plotly.restyle(gd,{"marker.size":updates[n]},[idx]));
-  };
-  const handler=ev=>{
-    // Reset/Autoscale events do not always contain explicit range[0]/range[1].
-    // Handle them explicitly, otherwise the enlarged zoom-in marker size can remain.
-    if(ev?.["xaxis.autorange"]===true || ev?.["yaxis.autorange"]===true){
-      applySizes(fullSpan);
-      return;
+  const axes=gd?._fullLayout;
+  if(!axes?.xaxis || !axes?.yaxis || !gd?.data?.length) return;
+  const zoom=singleMapZoomGeometry(gd,fullX,fullY);
+  const peakCount=cache.Gpoints.length+cache.magPoints.length;
+  const sizes=singleMarkerSizes(zoom.fullSpan,zoom.visibleSpan,peakCount);
+  const labelStyle=singleNuclearLabelStyle(zoom.fullSpan,zoom.visibleSpan);
+  const markerIndices=[],markerSizes=[];
+  for(let j=0;j<gd.data.length;j++){
+    const tr=gd.data[j];
+    if(tr.meta==='nuclear-data' || tr.meta==='nuclear-legend'){
+      markerIndices.push(j);markerSizes.push(sizes.nuclear);
+    }else if(/^Magnetic Bragg peaks: k\d+$/.test(tr.name||'')){
+      const symbol=tr.marker?.symbol;
+      markerIndices.push(j);markerSizes.push(symbol==='star'?sizes.star:sizes.magnetic);
     }
-    const x0=Number(ev?.["xaxis.range[0]"]),x1=Number(ev?.["xaxis.range[1]"]);
-    const y0=Number(ev?.["yaxis.range[0]"]),y1=Number(ev?.["yaxis.range[1]"]);
-    if(Number.isFinite(x0)&&Number.isFinite(x1)){ applySizes(Math.abs(x1-x0)); return; }
-    if(Number.isFinite(y0)&&Number.isFinite(y1)){ applySizes(Math.abs(y1-y0)); return; }
+  }
+  if(markerIndices.length) Plotly.restyle(gd,{'marker.size':markerSizes},markerIndices);
 
-    // Some Plotly zoom-out/reset paths only expose the final range through _fullLayout.
-    // Read it after Plotly has finished applying the relayout event.
+  const labelIndex=gd.data.findIndex(tr=>tr.meta==='nuclear-labels');
+  if(labelIndex<0) return;
+  const pts=cache.Gpoints.filter(p=>p.label!=='');
+  const unit=currentQEMapUnit();
+  const xaxis=axes.xaxis,yaxis=axes.yaxis;
+  const labelPts=pts.map(p=>{
+    const q=qeXYForUnit(cache,[p.x,p.y],unit);
+    return {x:q[0],y:q[1],label:String(p.label||'')};
+  });
+  // Plotly axis l2p/p2l work in *screen pixels*, not Q coordinates.
+  // Each candidate stays the same physical distance from its marker, even
+  // for very elongated crystals or after a zoom/pan/resize.
+  const plotted=labelPts.map(p=>({
+    px:xaxis.l2p(p.x),py:yaxis.l2p(p.y),label:p.label
+  }));
+  const xSpan=axes._size?.w || gd._fullLayout?._size?.w || 650;
+  const ySpan=axes._size?.h || gd._fullLayout?._size?.h || 600;
+  const gap=sizes.nuclear/2+labelStyle.fontSize/2+3;
+  const boxes=[];
+  const positions=plotted.map((point,index)=>{
+    const halfWidth=Math.max(8,point.label.length*labelStyle.fontSize*0.29);
+    const halfHeight=labelStyle.fontSize*0.6;
+    const options=[[0,-gap], [0,gap], [-(halfWidth+sizes.nuclear/2+5),0], [halfWidth+sizes.nuclear/2+5,0],
+      [-(halfWidth+sizes.nuclear/2+2),-gap], [halfWidth+sizes.nuclear/2+2,-gap]];
+    let best=options[0],bestScore=Infinity,bestBox=null;
+    for(const [dx,dy] of options){
+      const cx=point.px+dx,cy=point.py+dy;
+      const rect={left:cx-halfWidth-2,right:cx+halfWidth+2,top:cy-halfHeight-2,bottom:cy+halfHeight+2};
+      let score=0;
+      if(rect.left<2 || rect.right>xSpan-2 || rect.top<2 || rect.bottom>ySpan-2) score+=500;
+      for(const r of boxes){
+        const ix=Math.min(rect.right,r.right)-Math.max(rect.left,r.left);
+        const iy=Math.min(rect.bottom,r.bottom)-Math.max(rect.top,r.top);
+        if(ix>0&&iy>0) score+=ix*iy;
+      }
+      // Favor the traditional position above the marker when space allows.
+      score+=options.findIndex(item=>item[0]===dx&&item[1]===dy)*0.2;
+      if(score<bestScore){bestScore=score;best=[dx,dy];bestBox=rect;}
+      if(score<0.1) break;
+    }
+    // Do not reserve screen space for points outside the visible viewport.
+    if(point.px>=0&&point.px<=xSpan&&point.py>=0&&point.py<=ySpan) boxes.push(bestBox);
+    return {x:xaxis.p2l(point.px+best[0]),y:yaxis.p2l(point.py+best[1])};
+  });
+  Plotly.restyle(gd,{
+    x:[positions.map(p=>p.x)],y:[positions.map(p=>p.y)],
+    'textfont.size':labelStyle.fontSize
+  },[labelIndex]);
+}
+
+function bindSingleZoomPeakScaling(cache,fullX,fullY){
+  const gd=$("singlePlot");
+  if(!gd || typeof gd.on!=='function') return;
+  if(gd.__tasPeakRelayoutHandler && typeof gd.removeListener==='function')
+    gd.removeListener('plotly_relayout',gd.__tasPeakRelayoutHandler);
+  // Relayout may report new ranges before the SVG has finished updating.
+  let scheduled=false;
+  const handler=()=>{
+    if(scheduled) return;
+    scheduled=true;
     requestAnimationFrame(()=>{
-      const xr=gd?._fullLayout?.xaxis?.range, yr=gd?._fullLayout?.yaxis?.range;
-      if(Array.isArray(xr)&&xr.length===2&&xr.every(Number.isFinite)) applySizes(Math.abs(xr[1]-xr[0]));
-      else if(Array.isArray(yr)&&yr.length===2&&yr.every(Number.isFinite)) applySizes(Math.abs(yr[1]-yr[0]));
-      else applySizes(fullSpan);
+      scheduled=false;
+      refreshSinglePeakAppearance(cache,fullX,fullY);
+      positionSingleColorbarEntries();
     });
   };
-  gd.__tasMarkerRelayoutHandler=handler; gd.on("plotly_relayout",handler);
+  gd.__tasPeakRelayoutHandler=handler;
+  gd.on('plotly_relayout',handler);
+  if(!gd.__tasPeakResizeObserver && typeof ResizeObserver!=='undefined'){
+    gd.__tasPeakResizeObserver=new ResizeObserver(()=>{
+      requestAnimationFrame(()=>{
+        // Refer to the latest cache and spans, not the closure from the first render.
+        if(gd.__tasLatestPeakRefresh) gd.__tasLatestPeakRefresh();
+        positionSingleColorbarEntries();
+      });
+    });
+    gd.__tasPeakResizeObserver.observe(gd);
+  }
+  gd.__tasLatestPeakRefresh=()=>refreshSinglePeakAppearance(cache,fullX,fullY);
+  handler();
+}
+
+function positionSingleColorbarEntries(){
+  const frame=$('singlePlotFrame'),gd=$('singlePlot'),controls=$('sfColorbarRange');
+  if(!frame || !gd || !controls || controls.classList.contains('hidden')) return;
+  // Place editable text at the exact endpoints of Plotly's colorbar. The
+  // corresponding native endpoint labels are omitted via colorbar.ticktext.
+  const bar=gd.querySelector('.colorbar .cbfill') || gd.querySelector('.cbfill');
+  const rect=bar?.getBoundingClientRect();
+  const outer=frame.getBoundingClientRect();
+  if(!rect || rect.height<1 || !outer.width) return;
+  const max=$('sfColorMaxEntry'),min=$('sfColorMinEntry');
+  // Keep the hit area entirely within the plot frame, including on mobile.
+  const entryWidth=58;
+  const x=Math.max(0,Math.min(outer.width-entryWidth,rect.right-outer.left+7));
+  const topY=rect.top-outer.top, bottomY=rect.bottom-outer.top;
+  for(const [entry,cy] of [[max,topY],[min,bottomY]]){
+    if(!entry) continue;
+    entry.style.left=`${x}px`;
+    entry.style.top=`${Math.max(0,Math.min(outer.height-26,cy-13))}px`;
+  }
+}
+
+// Intermediate tick marks remain Plotly-native; only the end labels become
+// editable HTML numbers directly over the position of those tick labels.
+function singleColorbarTicks(min,max){
+  const values=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
+  const text=values.map((v,i)=>i===0||i===4?'':String(Number(v.toPrecision(3))));
+  return {tickmode:'array',tickvals:values,ticktext:text};
 }
 
 // Preserve the actual Plotly viewport across data recalculations.
@@ -1618,10 +1663,11 @@ function renderQEVectorMap(cache){
       ...yGridVals.map(y=>({type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:y,y1:y,layer:'above',line:{color:'rgba(105,115,125,0.50)',width:1}}))
     ];
 
+    renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);
     Plotly.react(plot,traces,{
       uirevision:'qeVector-hkl',
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
-      title:{text:qeMapHeaderTitle(cache),x:0.5,xanchor:'center',font:{size:16}},
+      showlegend:false,
       xaxis:{title:{text:'HKL along selected Q vector',font:{size:15}},tickmode:'array',tickvals:tickVals,ticktext:tickText,tickangle:0,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       yaxis:{title:{text:'ℏω (meV)',font:{size:15}},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
@@ -1633,12 +1679,12 @@ function renderQEVectorMap(cache){
         {x:0,xref:'x',y:1.002,yref:'paper',text:'HKL 1',showarrow:false,yanchor:'bottom',font:{size:12}},
         {x:endX,xref:'x',y:1.002,yref:'paper',text:'HKL 2',showarrow:false,yanchor:'bottom',font:{size:12}}
       ],
-      legend:{orientation:'h',x:0.5,xanchor:'center',y:-0.19,yanchor:'top'},
-      margin:{l:66,r:30,t:126,b:96}
-    },{responsive:true});
+      margin:{l:66,r:30,t:42,b:75}
+    },{responsive:true,doubleClick:'reset'});
     if(msg) msg.textContent='';
   }catch(err){
     if(msg) msg.textContent=err?.message||String(err);
+    $('qeVectorLegend')?.replaceChildren();
     try{Plotly.purge(plot);}catch(_e){}
   }
 }
@@ -1669,72 +1715,117 @@ function setQEMapTab(name){
   }));
 }
 
-// Separate the Constant-E display controls from its legend while retaining
-// click-to-toggle and double-click-to-isolate behavior of a Plotly legend.
-const qeLegendVisibility=new Map();
+// Shared legend UI for Constant E, Q-vector–E and Powder. Keep independent
+// show/hide states for each plot, and group dummy and data traces together.
+const qeLegendVisibilityByPlot=new Map();
 function qeLegendKey(trace){
-  if(trace.meta==='nuclear-data' || trace.meta==='nuclear-labels' || trace.meta==='nuclear-legend') return 'Nuclear Bragg peaks';
+  if(['nuclear-data','nuclear-labels','nuclear-legend'].includes(trace.meta)) return 'Nuclear Bragg peaks';
+  if(trace.name==='Accessible Q–E') return 'Accessible Q';
   return trace.legendgroup || trace.name || '';
 }
-function renderSingleExternalLegend(traces){
-  const host=$('qePlotLegend');
+function qeLegendSymbol(symbol,color){
+  // Use the same marker shapes as the corresponding magnetic peaks in the map.
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 20 20');
+  svg.setAttribute('width','19'); svg.setAttribute('height','19');
+  svg.classList.add('qe-legend-marker');
+  svg.setAttribute('aria-hidden','true');
+  const add=(tag,attrs)=>{
+    const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
+    svg.appendChild(el);
+  };
+  if(symbol==='x' || symbol==='cross'){
+    const lines=symbol==='x' ? [[4,4,16,16],[16,4,4,16]] : [[10,2.5,10,17.5],[2.5,10,17.5,10]];
+    for(const [x1,y1,x2,y2] of lines) add('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.6,'stroke-linecap':'round'});
+  }else if(symbol==='star' || symbol==='pentagon'){
+    const n=symbol==='star'?10:5;
+    const points=Array.from({length:n},(_,i)=>{
+      const angle=-Math.PI/2+i*Math.PI*2/n;
+      const radius=symbol==='star' && i%2 ? 3.7 : 8;
+      return `${10+radius*Math.cos(angle)},${10+radius*Math.sin(angle)}`;
+    }).join(' ');
+    add('polygon',{points,fill:color});
+  }else if(symbol==='diamond' || symbol==='diamond-open'){
+    add('polygon',{points:'10,2 18,10 10,18 2,10',fill:symbol==='diamond-open'?'none':color,stroke:color,'stroke-width':symbol==='diamond-open'?2:0});
+  }else if(symbol==='triangle-up' || symbol==='triangle-down'){
+    add('polygon',{points:symbol==='triangle-up'?'10,2 18,17 2,17':'2,3 18,3 10,18',fill:color});
+  }else if(symbol==='square'){
+    add('rect',{x:3,y:3,width:14,height:14,rx:0.5,fill:color});
+  }else{
+    add('circle',{cx:10,cy:10,r:6.7,fill:color});
+  }
+  return svg;
+}
+function renderQEExternalLegend(hostId,plotId,traces){
+  const host=$(hostId);
   if(!host) return;
   host.replaceChildren();
+  let visibility=qeLegendVisibilityByPlot.get(plotId);
+  if(!visibility){visibility=new Map();qeLegendVisibilityByPlot.set(plotId,visibility);}
   const keys=[];
   for(const trace of traces){
     const key=qeLegendKey(trace);
     if(key && trace.showlegend!==false && !keys.includes(key)) keys.push(key);
   }
+  const setVisibility=()=>{
+    const indices=traces.map((tr,i)=>keys.includes(qeLegendKey(tr))?i:-1).filter(i=>i>=0);
+    if(indices.length){
+      Plotly.restyle(plotId,{visible:indices.map(i=>visibility.get(qeLegendKey(traces[i]))===false?'legendonly':true)},indices);
+    }
+    host.querySelectorAll('.qe-legend-item').forEach(el=>{
+      el.setAttribute('aria-pressed',String(visibility.get(el.dataset.legendKey)!==false));
+    });
+  };
   for(const key of keys){
     const exemplar=traces.find(tr=>qeLegendKey(tr)===key && tr.showlegend!==false);
-    const visible=qeLegendVisibility.get(key)!==false;
     const button=document.createElement('button');
-    button.type='button';
-    button.className='qe-legend-item';
+    button.type='button';button.className='qe-legend-item';button.dataset.legendKey=key;
     button.title='Click to show/hide; double-click to isolate';
-    button.setAttribute('aria-pressed',String(visible));
-    const swatch=document.createElement('span');
-    swatch.className='qe-legend-swatch';
+    button.setAttribute('aria-pressed',String(visibility.get(key)!==false));
     const color=exemplar?.meta==='nuclear-legend' ? '#111'
       : (typeof exemplar?.marker?.color==='string' ? exemplar.marker.color
-      : exemplar?.line?.color || (key.startsWith('Accessible Q') ? '#e4be12'
-      : exemplar?.fillcolor || '#667085'));
-    swatch.style.setProperty('--legend-color',color);
-    if(exemplar?.mode?.includes('lines') && !exemplar?.fill && !key.startsWith('Accessible Q')) swatch.classList.add('qe-legend-line');
-    const label=document.createElement('span');
-    label.textContent=exemplar?.name || key;
+      : exemplar?.line?.color || exemplar?.fillcolor
+      || exemplar?.colorscale?.[exemplar.colorscale.length-1]?.[1]
+      || (key.startsWith('Accessible Q') ? '#e4be12' : '#667085'));
+    let swatch;
+    const isPoint=exemplar?.meta==='nuclear-legend' ||
+      (exemplar?.mode?.includes('markers') && !key.startsWith('Accessible Q'));
+    if(isPoint){
+      swatch=qeLegendSymbol(exemplar?.meta==='nuclear-legend'?'circle':(exemplar?.marker?.symbol||'circle'),color);
+    }else{
+      swatch=document.createElement('span');swatch.className='qe-legend-swatch';
+      swatch.style.setProperty('--legend-color',color);
+      if(exemplar?.mode?.includes('lines') && !exemplar?.fill && !key.startsWith('Accessible Q')) swatch.classList.add('qe-legend-line');
+    }
+    const label=document.createElement('span');label.textContent=exemplar?.name || key;
     button.append(swatch,label);
-    const applyVisibility=()=>{
-      const indices=traces.map((tr,i)=>qeLegendKey(tr)===key ? i : -1).filter(i=>i>=0);
-      Plotly.restyle('singlePlot',{visible:indices.map(()=>qeLegendVisibility.get(key)!==false ? true : 'legendonly')},indices);
-      button.setAttribute('aria-pressed',String(qeLegendVisibility.get(key)!==false));
-    };
-    button.addEventListener('click',()=>{
-      qeLegendVisibility.set(key,qeLegendVisibility.get(key)===false);
-      applyVisibility();
+    button.addEventListener('click',event=>{
+      if(event.detail>1) return;
+      visibility.set(key,visibility.get(key)!==false?false:true);
+      setVisibility();
     });
     button.addEventListener('dblclick',event=>{
       event.preventDefault();
-      const solo=keys.some(k=>k!==key && qeLegendVisibility.get(k)!==false);
-      for(const k of keys) qeLegendVisibility.set(k,!solo || k===key);
-      const indices=traces.map((tr,i)=>qeLegendKey(tr) && keys.includes(qeLegendKey(tr)) ? i : -1).filter(i=>i>=0);
-      Plotly.restyle('singlePlot',{visible:indices.map(i=>qeLegendVisibility.get(qeLegendKey(traces[i]))!==false ? true : 'legendonly')},indices);
-      for(const el of host.querySelectorAll('.qe-legend-item')){
-        const k=el.dataset.legendKey;
-        el.setAttribute('aria-pressed',String(qeLegendVisibility.get(k)!==false));
-      }
+      const alreadyIsolated=keys.every(k=>k===key || visibility.get(k)===false);
+      for(const k of keys) visibility.set(k,alreadyIsolated?true:k===key);
+      setVisibility();
     });
-    button.dataset.legendKey=key;
     host.appendChild(button);
   }
+  // Respect the selected legend visibility across recalculations.
   for(const trace of traces){
-    if(qeLegendVisibility.get(qeLegendKey(trace))===false) trace.visible='legendonly';
+    if(visibility.get(qeLegendKey(trace))===false) trace.visible='legendonly';
   }
+}
+function renderSingleExternalLegend(traces){
+  renderQEExternalLegend('qePlotLegend','singlePlot',traces);
 }
 
 function renderSingle(cache,index=0){
   const unit=currentQEMapUnit();
   const plotNode=$("singlePlot");
+  const drawToken=plotNode ? (plotNode.__tasMapDrawToken=(plotNode.__tasMapDrawToken||0)+1) : 0;
   const keptView=plotNode?.dataset?.qeUnit===unit ? currentPlotRanges("singlePlot") : {x:null,y:null};
   const i=Math.max(0,Math.min(index,cache.regions.length-1));
   const rawBoundary=cache.regions[i];
@@ -1748,7 +1839,11 @@ function renderSingle(cache,index=0){
   const s2Min = num("S2min");
   const s2Max = cache.S2list[i];
   const Qplot=Math.max(1e-6,1.15*Math.max(...allViewPoints.map(p=>Math.max(Math.abs(p[0]),Math.abs(p[1]))),1));
-  const initialMarkerSizes=singleMarkerSizes(2*Qplot,2*Qplot,cache.Gpoints.length+cache.magPoints.length);
+  // U and V are dimensionless coordinates, not equal-length Å⁻¹ vectors.
+  // Give each r.l.u. axis its own range; never enforce pixel-scale 1:1 here.
+  const QplotX=unit==='rlu' ? Math.max(1e-6,1.15*Math.max(0,...allViewPoints.map(p=>Math.abs(p[0])))) : Qplot;
+  const QplotY=unit==='rlu' ? Math.max(1e-6,1.15*Math.max(0,...allViewPoints.map(p=>Math.abs(p[1])))) : Qplot;
+  const initialMarkerSizes=singleMarkerSizes(2*QplotX,2*QplotX,cache.Gpoints.length+cache.magPoints.length);
 
   // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
   const visibleGpoints=transformedG;
@@ -1781,9 +1876,10 @@ function renderSingle(cache,index=0){
       marker:cache.cifStructure ? {
         color:visibleGpoints.map(p=>Number.isFinite(p.sfNorm)?p.sfNorm:0),
         colorscale:[[0,"rgb(245,245,245)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
-        cmin:0,cmax:Math.max(0.01,Math.min(1,Number($("sfColorMaxSlider")?.value)||1)),
+        cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
-        colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:15}},tickfont:{size:14},thickness:16,len:0.62,x:1.02,y:0.52},
+        colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:15}},tickfont:{size:14},thickness:16,len:0.62,x:1.02,y:0.52,
+          ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
         line:{color:"rgba(80,80,80,0.55)",width:0.4}
       } : {color:"black",size:initialMarkerSizes.nuclear},
@@ -1797,10 +1893,10 @@ function renderSingle(cache,index=0){
   ];
   if($("displayNuclearLabels")?.checked){
     const labelPts=visibleGpoints.filter(p=>p.label!=="");
-    const labelStyle=singleNuclearLabelStyle(2*Qplot,2*Qplot);
+    const labelStyle=singleNuclearLabelStyle(2*QplotX,2*QplotX);
     traces.push({
       x:labelPts.map(p=>p.x),
-      y:labelPts.map(p=>p.y+labelStyle.offset),
+      y:labelPts.map(p=>p.y), // positioned in screen pixels after Plotly renders
       mode:"text",
       text:labelPts.map(p=>p.label),
       textposition:"middle center",
@@ -1879,18 +1975,22 @@ function renderSingle(cache,index=0){
   }
 
   renderSingleExternalLegend(traces);
-  Plotly.react("singlePlot",traces,{
+  const singleDraw=Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.x||[-Qplot,Qplot],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
-    yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.y||[-Qplot,Qplot],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,scaleanchor:"x",scaleratio:1,constrain:"domain"},
+    xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.x||[-QplotX,QplotX],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
+    yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.y||[-QplotY,QplotY],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,...(unit==='rlu'?{}:{scaleanchor:"x",scaleratio:1,constrain:"domain"})},
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
-  },{responsive:true});
+  },{responsive:true,doubleClick:'reset'});
   if(plotNode) plotNode.dataset.qeUnit=unit;
-  bindSingleZoomMarkerScaling(cache,Qplot);
-  bindSingleZoomLabelScaling(cache,Qplot);
+  Promise.resolve(singleDraw).then(()=>{
+    if(plotNode?.__tasMapDrawToken!==drawToken) return;
+    bindSingleZoomPeakScaling(cache,2*QplotX,2*QplotY);
+    $('sfColorbarRange')?.classList.toggle('hidden',!cache.cifStructure);
+    positionSingleColorbarEntries();
+  }).catch(err=>console.warn('Constant E map drawing warning:',err));
 
   const hwDisplay=$("hwValue");
   if(hwDisplay) hwDisplay.textContent=`${cache.hwList[i].toFixed(1)} meV`;
@@ -2319,15 +2419,12 @@ function calculatePowder(){
   }
 
   const qMargin=0.1*Qlim;
-  const title=`${inst.name||"Instrument"} | ${energyMode==="Ef fixed"?"Ef":"Ei"}=${E.toFixed(2)} meV | `+
-    `a=${lc.a.toFixed(3)}, b=${lc.b.toFixed(3)}, c=${lc.c.toFixed(3)} Å<br>`+
-    `α=${lc.alpha.toFixed(1)}, β=${lc.beta.toFixed(1)}, γ=${lc.gamma.toFixed(1)}°`;
-
   const keptPowderView=currentPlotRanges("powderPlot");
 
+  renderQEExternalLegend('qePowderLegend','powderPlot',traces);
   Plotly.react("powderPlot",traces,{
     uirevision:"powderPlot-q",
-    title:{text:title,x:0.5,xanchor:"center",font:{size:16}},
+    showlegend:false,
     xaxis:{
       title:"Q (Å⁻¹)",
       // Powder Q is non-negative by definition.  Always anchor the displayed
@@ -2347,10 +2444,9 @@ function calculatePowder(){
       showline:true,mirror:"allticks",ticks:"outside",linecolor:"black",linewidth:1.5,automargin:true
     },
     plot_bgcolor:"white",paper_bgcolor:"white",
-    legend:{orientation:"h",x:0.5,xanchor:"center",y:-0.16,yanchor:"top"},
-    margin:{l:66,r:34,t:80,b:110},
+    margin:{l:66,r:34,t:30,b:65},
     hovermode:"closest"
-  },{responsive:true});
+  },{responsive:true,doubleClick:"reset"});
 
   return {
     inst,lc,energyMode,
@@ -2609,12 +2705,7 @@ function ensureQESliderControls(){
       s2Card.className='qe-range-control';
       s2Card.innerHTML='<label class="qe-control-entry">S2 (deg)<input id="s2Entry" type="number" step="0.1" value="0.0"></label><input id="s2Slider" type="range" min="0" max="180" step="0.1" value="0">';
 
-      const sfCard=document.createElement('div');
-      sfCard.id='sfColorMaxRow';
-      sfCard.className='qe-range-control sf-control hidden';
-      sfCard.innerHTML='<label class="qe-control-entry">Colorbar scale<input id="sfColorMaxEntry" type="number" min="0.01" max="1" step="0.01" value="1.00"></label><input id="sfColorMaxSlider" type="range" min="0.01" max="1" step="0.01" value="1"><output id="sfColorMaxValue" class="hidden">1.00</output>';
-
-      grid.append(hwCard,s2Card,sfCard);
+      grid.append(hwCard,s2Card);
       parent.insertBefore(grid,row);
       row.remove();
     }
@@ -2895,15 +2986,26 @@ async function initialize(){
   $('s2Entry').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
   $('displayNuclearLabels').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
   $('displayS2Ring').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
-  $('sfColorMaxSlider')?.addEventListener('input',()=>{
-    syncSfColorMaxControl("slider");
-    if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
-  });
-  $('sfColorMaxEntry')?.addEventListener('change',()=>{
-    syncSfColorMaxControl("entry");
-    if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
-    saveRightPanelState();
-  });
+  for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
+    const field=$(id);
+    field?.addEventListener('focus',()=>field.select());
+    field?.addEventListener('keydown',event=>{
+      if(event.key==='Enter'){
+        event.preventDefault();
+        field.blur(); // the change event applies the scale
+      } else if(event.key==='Escape'){
+        event.preventDefault();
+        const tr=$('singlePlot')?.data?.find(t=>t.meta==='nuclear-data');
+        field.value=String(source==='max'?(tr?.marker?.cmax ?? 1):(tr?.marker?.cmin ?? 0));
+        field.blur();
+      }
+    });
+    field?.addEventListener('change',()=>{
+      syncSfColorMaxControl(source);
+      if(singleCache) renderSingle(singleCache,Number($('hwSlider').value));
+      saveRightPanelState();
+    });
+  }
   $('cifSelectButton').addEventListener('click',()=>$('cifFileInput').click());
   $('cifClearButton')?.addEventListener('click',clearSelectedCif);
   $('cifFileInput').addEventListener('change',async()=>{

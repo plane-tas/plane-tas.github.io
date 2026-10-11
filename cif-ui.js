@@ -79,24 +79,31 @@ function updateCifUI(){
   if($("structureMcifShowCurrent")) $("structureMcifShowCurrent").disabled=!getSelectedCifText();
   const showCurrentButton=$("cifShowCurrent");
   if(showCurrentButton) showCurrentButton.disabled=!getSelectedCifText();
-  $("sfColorMaxRow")?.classList.toggle("hidden",!hasSelectedCif());
+  $("sfColorbarRange")?.classList.toggle("hidden",!hasSelectedCif());
   updateAbsorptionCalculator();
 }
 
-function syncSfColorMaxControl(source="slider"){
-  const slider=$("sfColorMaxSlider"), output=$("sfColorMaxValue"), entry=$("sfColorMaxEntry");
-  if(!slider || !entry) return;
-  let raw;
-  if(source==="entry") raw=Number(entry.value);
-  else if(source==="restore"){
-    const entryValue=Number(entry.value);
-    raw=Number.isFinite(entryValue) ? entryValue : Number(slider.value);
-  }else raw=Number(slider.value);
-  if(!Number.isFinite(raw)) raw=1;
-  const v=Math.max(0.01,Math.min(1,raw));
-  slider.value=String(v);
-  entry.value=v.toFixed(2);
-  if(output) output.textContent=v.toFixed(2);
+function syncSfColorMaxControl(source='restore'){
+  const minEntry=$("sfColorMinEntry"),maxEntry=$("sfColorMaxEntry");
+  if(!minEntry||!maxEntry) return;
+  // The intensity scale is |F_N|² relative to its computed maximum (0…1).
+  // Preserve the bound the user edited; adjust the other bound only if needed.
+  const step=0.0001;
+  const parse=(element,fallback)=>element.value.trim()==='' ? fallback : Number(element.value);
+  const clamp01=(raw,fallback)=>Number.isFinite(raw)?Math.max(0,Math.min(1,raw)):fallback;
+  let min=clamp01(parse(minEntry,0),0),max=clamp01(parse(maxEntry,1),1);
+  if(max-min<step){
+    if(source==='max') min=Math.max(0,max-step);
+    else if(source==='min') max=Math.min(1,min+step);
+    else {min=0;max=1;}
+  }
+  // At the endpoints, move the edited bound back inside the valid range.
+  if(max-min<step){
+    if(source==='max') max=Math.min(1,min+step);
+    else min=Math.max(0,max-step);
+  }
+  minEntry.value=String(Number(min.toFixed(4)));
+  maxEntry.value=String(Number(max.toFixed(4)));
 }
 
 function saveSelectedCifLocal(text,fileName){
