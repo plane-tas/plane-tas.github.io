@@ -114,10 +114,14 @@ function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null){
   const xl=safe(xlim), yl=safe(ylim);
   return {
     uirevision:plotId||'resolutionPlots',
-    title:{text:title,font:{size:14}},
-    margin:{l:60,r:20,t:45,b:55},
-    xaxis:{title:xlabel,range:[-xl,xl],zeroline:true,showgrid:true},
-    yaxis:{title:ylabel,range:[-yl,yl],zeroline:true,showgrid:true,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
+    title:{text:title,font:{size:16}},
+    // Leave space below the x-axis title at native compact density.  An
+    // automatic margin also accommodates longer axis names and mobile fonts.
+    margin:{l:88,r:22,t:48,b:94,autoexpand:true},
+    // The card border and the plot axes serve different purposes: the plot
+    // frame is confined to the data area; the card encloses each full chart.
+    xaxis:{title:{text:xlabel,standoff:13},automargin:true,tickfont:{size:21},range:[-xl,xl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
+    yaxis:{title:{text:ylabel,standoff:12},automargin:true,tickfont:{size:21},range:[-yl,yl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
     showlegend:false
   };
 }
@@ -173,11 +177,9 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
   // RM_U is the same matrix rotated to the U-based orthogonal frame.
   // In this display V denotes the automatically orthogonalized in-plane V.
-  const matrixHeader=$('matrix').previousElementSibling;
-  if(matrixHeader) matrixHeader.textContent='Resolution matrices';
   $('matrix').textContent=
     `Local matrix order (Q∥, Q⊥, E, Qout)\n${matrixText(r.RM)}\n\n`+
-    `U-based matrix order (U, V, E, W)\n${matrixText(r.RM_U)}`;
+    `U-based matrix order (U, U⊥ (in-plane), E, U⊥ (out-of-plane))\n${matrixText(r.RM_U)}`;
 
   Plotly.react(
     'plotUE',

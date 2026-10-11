@@ -1109,6 +1109,8 @@ function updateModeVisibility(){
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
+  // Powder has its own clickable legend below the Q–E plot.
+  $('qePowderLegend')?.classList.toggle('hidden',single);
   if(!single) syncPowderLinkedInputs();
   updateCifUI();
   requestAnimationFrame(scheduleVisiblePlotResize);
@@ -1279,6 +1281,33 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
   };
   gd.__tasPeakRelayoutHandler=handler;
   gd.on('plotly_relayout',handler);
+  // Plotly's built-in reset can restore stale axis ranges after the panel
+  // changes width, especially when the plot has different r.l.u. X/Y spans.
+  // Disable that implicit reset and restore the latest *data-derived* ranges
+  // ourselves on every double-click.  The two unit modes intentionally differ:
+  // Å⁻¹ preserves equal data units per pixel, whereas r.l.u. uses free axes.
+  if(gd.__tasSingleMapDoubleClickHandler && typeof gd.removeListener==='function')
+    gd.removeListener('plotly_doubleclick',gd.__tasSingleMapDoubleClickHandler);
+  const resetHandler=()=>{
+    const drawToken=gd.__tasMapDrawToken;
+    // Plotly's doubleclick event is emitted before its internal relayout.
+    // Defer our replacement relayout until the native event has completed.
+    requestAnimationFrame(()=>{
+      if(gd.__tasMapDrawToken!==drawToken || !gd.isConnected) return;
+      const view=gd.__tasSingleMapDefaultView;
+      if(!view || view.x?.length!==2 || view.y?.length!==2) return;
+      Plotly.relayout(gd,{
+        'xaxis.range':view.x.slice(),
+        'yaxis.range':view.y.slice(),
+        'xaxis.autorange':false,
+        'yaxis.autorange':false,
+        'yaxis.scaleanchor':view.unit==='rlu'?false:'x',
+        'yaxis.scaleratio':1
+      }).catch(err=>console.warn('Constant E map reset warning:',err));
+    });
+  };
+  gd.__tasSingleMapDoubleClickHandler=resetHandler;
+  gd.on('plotly_doubleclick',resetHandler);
   if(!gd.__tasPeakResizeObserver && typeof ResizeObserver!=='undefined'){
     gd.__tasPeakResizeObserver=new ResizeObserver(()=>{
       requestAnimationFrame(()=>{
@@ -1677,16 +1706,16 @@ function renderQEVectorMap(cache){
       uirevision:'qeVector-hkl',
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
       showlegend:false,
-      xaxis:{title:{text:'HKL along selected Q vector',font:{size:15}},tickmode:'array',tickvals:tickVals,ticktext:tickText,tickangle:0,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
-      yaxis:{title:{text:'ℏω (meV)',font:{size:15}},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      xaxis:{title:{text:'HKL along selected Q vector',font:{size:15}},tickfont:{size:17},tickmode:'array',tickvals:tickVals,ticktext:tickText,tickangle:0,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      yaxis:{title:{text:'ℏω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
         {type:'line',x0:0,x1:0,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}},
         {type:'line',x0:endX,x1:endX,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}}
       ],
       annotations:[
-        {x:0,xref:'x',y:1.002,yref:'paper',text:'HKL 1',showarrow:false,yanchor:'bottom',font:{size:12}},
-        {x:endX,xref:'x',y:1.002,yref:'paper',text:'HKL 2',showarrow:false,yanchor:'bottom',font:{size:12}}
+        {x:0,xref:'x',y:1.002,yref:'paper',text:'HKL 1',showarrow:false,yanchor:'bottom',font:{size:17}},
+        {x:endX,xref:'x',y:1.002,yref:'paper',text:'HKL 2',showarrow:false,yanchor:'bottom',font:{size:17}}
       ],
       margin:{l:66,r:30,t:42,b:75}
     },{responsive:true,doubleClick:'reset'});
@@ -1831,6 +1860,45 @@ function renderSingleExternalLegend(traces){
   renderQEExternalLegend('qePlotLegend','singlePlot',traces);
 }
 
+// Bragg-peak hover angles must follow the *same* reference calibration,
+// scattering sense and motor-sign conventions as Angle calculation.  Evaluate
+// at the currently selected constant-energy slice (not at elastic energy).
+// Prepare the shared resolution/instrument inputs only once per map draw.
+function singleMapBraggHoverAngles(cache,hw){
+  let base=null;
+  try{
+    base=collectResolutionBase();
+    base.config.energy_mode=cache.energyMode;
+    base.config.Ei=cache.energyMode==='Ei fixed' ? cache.Ei : null;
+    base.config.Ef=cache.energyMode==='Ef fixed' ? cache.Ef : null;
+    const convention=tasConvention(selectedTasSense(),selectedS1Sign());
+    base.config.sense=convention.sense;
+    base.config.s1sign=convention.s1sign;
+  }catch(_err){
+    // A peak can still be plotted if the motor-angle inputs are incomplete.
+  }
+  const resultCache=new Map();
+  const showAngle=angle=>Number.isFinite(angle)
+    ? `${(Math.abs(angle)<0.005?0:angle).toFixed(2)}°` : '—';
+  return peak=>{
+    if(!peak?.label || !Array.isArray(peak.hkl) || peak.hkl.length!==3)
+      return '';
+    const key=peak.hkl.map(v=>Number(v).toPrecision(14)).join(',');
+    let angleResult=resultCache.get(key);
+    if(!angleResult){
+      let angles=null;
+      if(base){
+        try{
+          angles=tasMotorAngles({h:peak.hkl[0],k:peak.hkl[1],l:peak.hkl[2],hw},base);
+        }catch(_err){ /* Outside the scattering triangle or invalid motor setting. */ }
+      }
+      angleResult=`S1=${showAngle(angles?.s1)}, S2=${showAngle(angles?.s2)}`;
+      resultCache.set(key,angleResult);
+    }
+    return angleResult;
+  };
+}
+
 function renderSingle(cache,index=0){
   const unit=currentQEMapUnit();
   const plotNode=$("singlePlot");
@@ -1856,6 +1924,7 @@ function renderSingle(cache,index=0){
 
   // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
   const visibleGpoints=transformedG;
+  const peakHoverAngles=singleMapBraggHoverAngles(cache,cache.hwList[i]);
 
   const traces=[
     {
@@ -1893,9 +1962,13 @@ function renderSingle(cache,index=0){
         line:{color:"rgba(80,80,80,0.55)",width:0.4}
       } : {color:"black",size:initialMarkerSizes.nuclear},
       hovertext:visibleGpoints.map(p=>{
-        if(!cache.cifStructure || !p.label) return p.label;
-        const raw=Number.isFinite(p.sf2)?p.sf2:0, rel=Number.isFinite(p.sfNorm)?p.sfNorm:0;
-        return `${p.label}<br>|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn<br>|F<sub>N</sub>|² / max = ${rel.toFixed(4)}`;
+        if(!p.label) return p.label;
+        const lines=[p.label,peakHoverAngles(p)];
+        if(cache.cifStructure){
+          const raw=Number.isFinite(p.sf2)?p.sf2:0, rel=Number.isFinite(p.sfNorm)?p.sfNorm:0;
+          lines.push(`|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn`,`|F<sub>N</sub>|² / max = ${rel.toFixed(4)}`);
+        }
+        return lines.join('<br>');
       }),
       hovertemplate:"%{hovertext}<extra></extra>"
     },
@@ -1928,7 +2001,8 @@ function renderSingle(cache,index=0){
     traces.push({
       x:pts.map(p=>p.x),y:pts.map(p=>p.y),mode:"markers",name:`Magnetic Bragg peaks: k${qIndex}`,
       marker:{color:"red",size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol},
-      hovertext:pts.map(p=>p.label),hovertemplate:"%{hovertext}<extra></extra>",
+      hovertext:pts.map(p=>p.label ? `${p.label}<br>${peakHoverAngles(p)}` : p.label),
+      hovertemplate:"%{hovertext}<extra></extra>",
       zorder:10
     });
   }
@@ -1984,15 +2058,20 @@ function renderSingle(cache,index=0){
   }
 
   renderSingleExternalLegend(traces);
+  // The canonical reset window must be calculated from the latest map, not
+  // recovered from Plotly's prior auto-range or its pre-resize dimensions.
+  if(plotNode) plotNode.__tasSingleMapDefaultView={
+    unit,x:[-QplotX,QplotX],y:[-QplotY,QplotY]
+  };
   const singleDraw=Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.x||[-QplotX,QplotX],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
-    yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:14},range:keptView.y||[-QplotY,QplotY],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,...(unit==='rlu'?{}:{scaleanchor:"x",scaleratio:1,constrain:"domain"})},
+    xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
+    yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,...(unit==='rlu'?{}:{scaleanchor:"x",scaleratio:1,constrain:"domain"})},
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
-  },{responsive:true,doubleClick:'reset'});
+  },{responsive:true,doubleClick:false});
   if(plotNode) plotNode.dataset.qeUnit=unit;
   Promise.resolve(singleDraw).then(()=>{
     if(plotNode?.__tasMapDrawToken!==drawToken) return;
@@ -2439,19 +2518,28 @@ function calculatePowder(){
       // Powder Q is non-negative by definition.  Always anchor the displayed
       // x-axis at Q = 0; preserve only a previously zoomed positive upper edge.
       range:[0,(keptPowderView.x && keptPowderView.x[1]>0) ? keptPowderView.x[1] : Qlim+qMargin],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,
-      // Draw a complete rectangular plotting frame on all four sides.
-      showline:true,mirror:"allticks",ticks:"outside",linecolor:"black",linewidth:1.5,automargin:true
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Use the same thin frame as the Q vector–E map.
+      showline:false,ticks:"outside",automargin:true
     },
     yaxis:{
       title:"ħω (meV)",
       // Keep the displayed hbar-omega range exactly on the generated
       // accessible-range endpoints; no extra top/bottom padding.
       range:[hwmin,hwmax],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,
-      // Match the x-axis with a complete rectangular plotting frame.
-      showline:true,mirror:"allticks",ticks:"outside",linecolor:"black",linewidth:1.5,automargin:true
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Match the Q vector–E map on all four sides.
+      showline:false,ticks:"outside",automargin:true
     },
+    // Draw the axes frame at the plot data boundary on all four sides.
+    // A paper-coordinate shape is independent of the trace type and survives
+    // dense Powder overlays. The redundant exterior CSS plot border is removed.
+    shapes:[{
+      type:"rect",xref:"paper",yref:"paper",
+      x0:0,y0:0,x1:1,y1:1,
+      layer:"above",fillcolor:"rgba(0,0,0,0)",
+      line:{color:"#555",width:1.2}
+    }],
     plot_bgcolor:"white",paper_bgcolor:"white",
     margin:{l:66,r:34,t:30,b:65},
     hovermode:"closest"
@@ -3061,7 +3149,7 @@ async function initialize(){
   saveLeftPanelState();
   saveRightPanelState();
   saveGlobalUIState();
-  setStatus(`${nInstrument} instrument(s), ${nBG} BG CIF material(s), ${nSE} sample environment(s), ${nNeutron} neutron-data record(s) loaded${(restoredLocalState||restoredRightState||restoredGlobalState) ? ' / local parameters restored' : ''}`);recalculate();
+  setStatus(`Configuration loaded${(restoredLocalState||restoredRightState||restoredGlobalState) ? ' · Saved settings restored' : ''}${nNeutron ? '' : ' · Neutron data unavailable'}`);recalculate();
 }
 
 // ---- Feature-module wiring -------------------------------------------------

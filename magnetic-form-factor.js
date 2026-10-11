@@ -167,8 +167,8 @@ export function initializeMagneticFormFactorUI(){
           {x:[q],y:[fSquared],customdata:[f],type:'scatter',mode:'markers',name:'Selected Q',
            marker:{size:10},hovertemplate:'Q = %{x:.3f} Å⁻¹<br>|f(Q)|² = %{y:.5f}<br>f(Q) = %{customdata:.5f}<extra></extra>'}
         ],{autosize:true,margin:{l:65,r:22,t:18,b:57},
-            xaxis:{title:'Q (Å⁻¹)',range:[0,GRAPH_Q_MAX],zeroline:false},
-            yaxis:{title:'|f(Q)|²',rangemode:'tozero',zeroline:false},
+            xaxis:{title:'Q (Å⁻¹)',range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
+            yaxis:{title:'|f(Q)|²',rangemode:'tozero',zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
             showlegend:false,uirevision:'magff-v40'
         },{responsive:true,displaylogo:false});
       }

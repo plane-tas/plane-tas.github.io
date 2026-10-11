@@ -1973,17 +1973,17 @@ main{
 .qe-map-pane{min-width:0}
 .qe-vector-inputs{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--tas-density));padding:calc(8px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #ddd;border-top:0;background:#fff}
 .qe-vector-point{display:grid;grid-template-columns:auto repeat(3,minmax(calc(64px * var(--tas-density)),1fr));align-items:end;gap:calc(6px * var(--tas-density));padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(7px * var(--tas-density));background:#fff}
-.qe-vector-point strong{align-self:center;white-space:nowrap;font-size:calc(13px * var(--tas-density))}
+.qe-vector-point strong{align-self:center;white-space:nowrap;font-size:calc(16px * var(--tas-density))}
 .qe-vector-point label{font-size:calc(12px * var(--tas-density))}
 .qe-vector-point input{width:100%;min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
 #qeVectorMessage{padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
 @media(max-width:760px){.qe-vector-inputs{grid-template-columns:1fr}.qe-vector-point{grid-template-columns:auto repeat(3,1fr)}}
 
-/* v60: clearer Q-E plot framing. Plotly also draws a mirrored axis frame;
-   this outer border keeps the graph area visible against the white UI. */
+/* Keep the Plotly axes frame, not a second border around the entire canvas.
+   This removes the redundant top/left lines in the three Q-E map views. */
 .qe-map-pane .qe-plot{
-  border:calc(1px * var(--tas-density)) solid #b8bec5;
-  border-radius:calc(4px * var(--tas-density));
+  border:0;
+  border-radius:0;
   background:#fff;
   box-sizing:border-box;
 }
@@ -5795,9 +5795,9 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   align-items:center;
   gap:calc(12px * var(--tas-density)) calc(22px * var(--tas-density));
   flex-wrap:wrap;
-  border:calc(1px * var(--tas-density)) solid #e3e7ed;
-  border-top:0;
-  border-radius:0 0 calc(6px * var(--tas-density)) calc(6px * var(--tas-density));
+  /* No partial border below the plot: keep controls on the same white background. */
+  border:0;
+  border-radius:0;
   padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
   margin-top:0;
   background:#fff;
@@ -5814,7 +5814,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   gap:calc(5px * var(--tas-density)) calc(13px * var(--tas-density));
   padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density));
   min-height:calc(38px * var(--tas-density));
-  border-bottom:calc(1px * var(--tas-density)) solid #e3e7ed;
+  /* The legend is the final element: no bottom divider. */
 }
 #qePlotLegend .qe-legend-item{
   display:inline-flex;gap:calc(6px * var(--tas-density));align-items:center;
@@ -5838,7 +5838,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .qe-external-legend{
   display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
   gap:calc(5px * var(--tas-density)) calc(13px * var(--tas-density));padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density));min-height:calc(38px * var(--tas-density));
-  border-bottom:calc(1px * var(--tas-density)) solid #e3e7ed;background:#fff;
+  background:#fff;
 }
 .qe-external-legend.hidden{display:none!important}
 .qe-external-legend .qe-legend-item{
@@ -5903,3 +5903,430 @@ html { font-size: calc(16px * var(--tas-density)); }
 
 /* Read each Time estimate Command diagnostic on its own line. */
 .time-estimate-message{white-space:pre-line}
+
+
+/* Readability tuning (native compact UI; no transform/zoom).
+   Adjust typography only. Existing responsive columns and graph geometry stay intact. */
+.sidebar section > h2,
+.sidebar .sidebar-section-title {
+  font-size: calc(19px * var(--tas-density));
+  line-height: 1.25;
+}
+.sidebar h3 {
+  font-size: calc(16px * var(--tas-density));
+  line-height: 1.3;
+}
+.sidebar label,
+.sidebar .checkbox-label {
+  font-size: calc(16px * var(--tas-density));
+  line-height: 1.3;
+}
+.sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
+.sidebar select {
+  font-size: calc(16px * var(--tas-density));
+}
+
+/* Resolution: input labels, calculation results, axis directions/angles, matrix. */
+#resolutionCalculation > h2,
+#result > h2 {
+  font-size: calc(19px * var(--tas-density));
+  line-height: 1.3;
+}
+#resolutionPanel label,
+#resolutionInstrumentDetails label {
+  font-size: calc(15.5px * var(--tas-density));
+  line-height: 1.3;
+}
+#resolutionInstrumentDetails h3 {
+  font-size: calc(15.5px * var(--tas-density));
+}
+#resolutionPanel .summary {
+  font-size: calc(16.5px * var(--tas-density));
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+#resolutionPanel .summary > div + div {
+  margin-top: calc(5px * var(--tas-density));
+}
+#result details > summary {
+  font-size: calc(16px * var(--tas-density));
+}
+#result details > div {
+  font-size: calc(15px * var(--tas-density));
+}
+#result #matrix {
+  font-size: calc(14.5px * var(--tas-density));
+  line-height: 1.5;
+  max-width: 100%;
+  overflow: auto;
+}
+
+/* Angle calculation: single-point and scan output, without resizing Plotly. */
+#geometryAnglesPane .geometry-angles {
+  font-size: calc(17px * var(--tas-density));
+  line-height: 1.55;
+}
+#geometryAnglesPane .geometry-target label,
+#geometryAnglesPane .geometry-scan-target label,
+#geometryAnglesPane .powder-geometry-target label,
+#qePanel .qe-range-control label {
+  font-size: calc(15.5px * var(--tas-density));
+}
+#geometryAnglesPane .geometry-scan-table {
+  font-size: calc(15px * var(--tas-density));
+}
+
+/* Input descriptions in Toolbox, and Q-E display checkboxes. */
+#toolboxPanel .toolbox-subpanel label,
+#qeDisplayControls .checkbox-label,
+#qeDisplayControls .qe-map-toolbar label {
+  font-size: calc(15.5px * var(--tas-density));
+  line-height: 1.3;
+}
+/* Keep Resolution's four compact mobile input labels readable as well. */
+@media (max-width: 600px) {
+  #resolutionCalculation #singleInputs label {
+    font-size: calc(14px * var(--tas-density));
+  }
+}
+
+
+/* Readability refinements – targeted typography without changing UI density,
+   Plotly hit-testing geometry, or the existing responsive grid layout. */
+/* Automatic W vector beside the scattering plane input. */
+.sidebar .auto-row .auto-vector{
+  font-size:calc(17px * var(--tas-density));
+  line-height:1.4;
+  font-weight:500;
+  overflow-wrap:anywhere;
+}
+/* Time estimate: labels/units were not covered by the shared sidebar rules. */
+#geometryTimePane .time-estimate-settings > label,
+.time-estimate-settings > label,
+.time-estimate-settings .time-setting-entry,
+.time-estimate-controls .time-datetime-title{
+  font-size:calc(17px * var(--tas-density));
+  line-height:1.35;
+}
+.time-estimate-controls .time-datetime-title{
+  font-weight:600;
+}
+/* Give long labels their natural height while preserving the input widths. */
+.time-estimate-controls .time-datetime-label{align-items:center}
+
+/* Resolution: no redundant title above the local/U-based matrix listings. */
+#result .resolution-matrix-display{
+  min-width:0;
+  margin-top:calc(12px * var(--tas-density));
+}
+#result .resolution-matrix-display #matrix{
+  font-size:calc(18.5px * var(--tas-density));
+  line-height:1.55;
+  white-space:pre;
+  overflow-x:auto;
+  max-width:100%;
+  margin:0;
+  padding:calc(5px * var(--tas-density)) 0;
+}
+
+/* CIF/mCIF Generator: match the legibility of the input labels elsewhere. */
+#structurePanel .cif-generator-input-pane label,
+#structurePanel .generator-unified-editor label,
+#structurePanel .generator-reflection-settings label,
+#structurePanel .generator-structure-view-controls > label,
+#structurePanel .structure-config-panel label,
+#structurePanel .structure-plot-toolbar label{
+  font-size:calc(17px * var(--tas-density));
+  line-height:1.35;
+}
+#structurePanel .structure-entry-label{
+  font-size:calc(17px * var(--tas-density))!important;
+  line-height:1.3!important;
+}
+/* Six side-by-side view-range fields have less room than editor fields. */
+#structurePanel .generator-structure-view-controls .structure-entry-label{
+  font-size:calc(15px * var(--tas-density))!important;
+  line-height:1.3!important;
+}
+@container generator-unified (max-width:660px){
+  #structurePanel .generator-structure-view-controls .structure-entry-label{
+    font-size:calc(13px * var(--tas-density))!important;
+  }
+}
+@media(max-width:420px){
+  #structurePanel .generator-structure-view-controls .structure-entry-label{
+    font-size:calc(13px * var(--tas-density))!important;
+  }
+}
+
+
+/* 2026-10-11: shared readable controls and Plotly panel refinements.
+   Native compact density remains unchanged; no CSS zoom or transforms. */
+:root{--tas-control-text-size:max(12px,calc(17px * var(--tas-density)));}
+/* Navigation tabs are headings, not form controls; preserve their hierarchy.
+   Form field text, select options and ordinary button labels share one size. */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),
+select,
+textarea:not(.script-spice-text),
+button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab) {
+  font-size:var(--tas-control-text-size)!important;
+}
+/* Inputs must be allowed to contract inside narrow grid cells. */
+:is(input,select,textarea,button){min-width:0;}
+#structurePanel :is(.structure-moment-axis-row,.structure-spin-mode-row,.structure-spin-editor-toolbar) select,
+#structurePanel :is(.structure-entry-field,.structure-plot-toolbar) :is(input,select){
+  font-size:var(--tas-control-text-size)!important;
+}
+
+/* Resolution: remove the faint partial-looking div borders. Each entire
+   panel receives a complete four-sided card border. Plotly draws its own
+   four-sided axes inside the plotting rectangle. */
+#resolutionPanel #result .plots > div{
+  box-sizing:border-box;
+  border:1px solid #d3dae4!important;
+  border-radius:calc(7px * var(--tas-density));
+  background:#fff;
+  overflow:hidden;
+  min-width:0;
+}
+
+/* The Atom editor headers and nuclear reflections are display labels, not
+   tiny tooltips. Keep the existing Atom column proportions unchanged. */
+#structurePanel .atoms-table-head{
+  font-size:max(12px,calc(17px * var(--tas-density)))!important;
+  line-height:1.35;
+}
+#structurePanel #generatorNuclearReflectionsPane .cif-reflection-plane-toggle{
+  font-size:max(12px,calc(17px * var(--tas-density)))!important;
+  line-height:1.3;
+}
+
+/* Unit conversion: both the column captions and each numeric output are
+   legible; only the table itself scrolls horizontally on narrower screens. */
+#toolboxUnitPane .harmonic-wrap{max-width:100%;overflow-x:auto;}
+#toolboxUnitPane .harmonic-table{
+  font-size:max(12px,calc(17px * var(--tas-density)))!important;
+  grid-template-columns:calc(105px * var(--tas-density)) repeat(7,minmax(calc(124px * var(--tas-density)),1fr));
+  min-width:calc(1020px * var(--tas-density));
+}
+#toolboxUnitPane .harmonic-table > div{
+  font-size:inherit!important;
+  line-height:1.35;
+}
+#toolboxUnitPane .harmonic-table > output,
+#toolboxUnitPane .harmonic-table > strong{font-size:inherit!important;line-height:1.35;}
+
+/* S2 conversion: remove the 6-column squeeze of the neutron beam input.
+   Both labels and their nested value/unit/default controls remain readable. */
+#toolboxS2Pane{overflow:visible!important;}
+#toolboxS2Pane .s2-conversion-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  min-width:0!important;
+  gap:calc(14px * var(--tas-density));
+  align-items:start;
+}
+#toolboxS2Pane .s2-conversion-grid > label{
+  display:flex!important;
+  flex-direction:column;
+  gap:calc(5px * var(--tas-density));
+  min-width:0;
+}
+#toolboxS2Pane .s2-beam-entry-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(calc(65px * var(--tas-density)),.4fr);
+  gap:calc(6px * var(--tas-density));
+  align-items:center;
+  width:100%;
+  min-width:0;
+  margin-top:0;
+}
+#toolboxS2Pane .s2-beam-entry-row-neutron{
+  grid-template-columns:minmax(0,1fr) minmax(calc(65px * var(--tas-density)),.45fr) auto;
+}
+#toolboxS2Pane .s2-beam-entry-row :is(input,select){
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%;
+  margin:0!important;
+}
+#toolboxS2Pane .s2-set-default{
+  width:auto!important;
+  white-space:nowrap;
+  padding-inline:calc(7px * var(--tas-density));
+}
+@media (max-width:1250px){
+  #toolboxS2Pane .s2-conversion-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+@media (max-width:620px){
+  #toolboxS2Pane .s2-conversion-grid{grid-template-columns:minmax(0,1fr)!important;}
+}
+
+/* 2026-10-11: finish the native compact readability pass.
+   Keep Plotly's geometry untransformed; axis-title fonts are handled by
+   tas-plot-density.js.  Uniform table and tab tokens prevent tiny outliers. */
+:root{
+  --tas-table-text-size:max(12px,calc(17px * var(--tas-density)));
+  --tas-tab-text-size:max(13px,calc(18px * var(--tas-density)));
+  --tas-spice-text-size:max(13px,calc(18px * var(--tas-density)));
+}
+
+/* Native HTML tables and custom CSS-grid tables use the same text size.
+   Wider rows can scroll within their own table wrappers if necessary. */
+:is(table,table th,table td,
+    .harmonic-table,.harmonic-table > *,
+    .time-scan-table,.time-scan-header,.time-scan-index,
+    .geometry-scan-table,.geometry-scan-table th,.geometry-scan-table td,
+    .s2-conversion-table,.s2-conversion-table th,.s2-conversion-table td,
+    .cif-atom-table,.cif-atom-header,.cif-atom-index,
+    .cif-thermal-table,.cif-thermal-header,
+    .dark-table,.dark-table > *,
+    .script-aset-table-header,.script-aset-index,
+    .atoms-table-head,.structure-moment-header){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+}
+/* Reflection numbers and headings should match the Unit Conversion table. */
+#structurePanel .cif-reflection-table :is(th,td),
+#toolboxAttenuationPane :is(table,th,td){
+  font-size:var(--tas-table-text-size)!important;
+}
+/* Internal script scan labels are part of the table, not tiny footnotes. */
+.time-scan-table .time-range-label{font-size:var(--tas-table-text-size);}
+
+/* Every navigation level (main tabs, sub-tabs, CIF/structure tabs) shares one
+   legible typographic baseline.  Keep the existing responsive columns. */
+:is(main > .main-tabs > .tab-button,
+    .toolbox-subtabs > .toolbox-subtab,
+    .geometry-card-tabs > .geometry-card-tab,
+    .cif-output-tabs > .cif-output-tab,
+    #structurePanel .structure-config-tabs > button,
+    #structurePanel .generator-mode-tabs > button,
+    #structurePanel .generator-reflection-tabs > button,
+    .qe-mode-tabs > button,.qe-subtabs > button){
+  font-size:var(--tas-tab-text-size)!important;
+  line-height:1.3;
+}
+
+/* Time estimate scan cells previously had a fixed 38*density pixel height and
+   overflow:hidden.  Those values clipped larger selects/input text.  Let grid
+   tracks grow to fit whichever control is tallest, preserving horizontal
+   scrolling and the index/command columns. */
+.time-scan-table .time-scan-cell{
+  box-sizing:border-box;
+  height:auto!important;
+  min-height:max(36px,calc(48px * var(--tas-density)));
+  overflow:visible;
+  padding:max(4px,calc(5px * var(--tas-density)));
+  align-content:center;
+}
+.time-scan-table .time-scan-cell :is(input:not([type=checkbox]),select,button){
+  box-sizing:border-box;
+  min-height:max(27px,calc(37px * var(--tas-density)));
+  height:auto;
+  line-height:1.3;
+}
+.time-scan-table .time-range-inputs{max-width:100%;width:100%;}
+.time-scan-table .time-range-field{min-width:0;}
+.time-scan-table .time-range-field input{min-width:0;max-width:100%;}
+.time-scan-table-wrap.time-scan-scroll{
+  max-height:max(410px,calc(600px * var(--tas-density)));
+  overflow-y:auto;
+}
+/* Contain horizontal overflow in Script's Command pane; not the entire page. */
+#scriptPanel .time-scan-table-wrap{overflow-x:auto;}
+
+/* Warning lines and Script editor are readable at both density breakpoints.
+   Overlay text and line-number gutter MUST share the same font metrics or
+   highlighted SPICE lines will drift away from the actual command lines. */
+.time-estimate-message.warning-text,
+.script-message.warning-text,
+.script-message.error-text{
+  font-size:max(13px,calc(18px * var(--tas-density)));
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+.script-spice-editor .script-spice-text,
+.script-spice-editor .script-spice-backdrop,
+.script-spice-editor .script-spice-line-numbers{
+  font-size:var(--tas-spice-text-size)!important;
+  line-height:1.55!important;
+}
+/* No new global zoom, Plotly hit-test adjustment, or body width changes. */
+
+/* Brand and readiness status. Native CSS sizes, no scale transform. */
+:root{--tas-header-height:56px;}
+#tasTopBar > header{
+  display:flex;align-items:center;flex-wrap:wrap;
+  gap:4px 12px!important;
+  padding:6px 12px;
+  min-height:var(--tas-header-height);
+}
+#tasTopBar .tas-brand{
+  flex:0 1 auto;min-width:0;
+  display:flex;flex-direction:column;justify-content:center;
+}
+#tasTopBar .tas-brand h1{
+  margin:0;color:#cf6914;font-size:23px;font-weight:800;letter-spacing:.025em;line-height:1.08;
+}
+#tasTopBar .tas-brand-subtitle{
+  margin-top:3px;font-size:11px;line-height:1.25;color:#495261;
+  letter-spacing:0;white-space:normal;
+}
+#tasTopBar .tas-brand-letter{color:#cf6914;font-weight:800;}
+#tasTopBar #status{
+  flex:1 1 145px;min-width:0;margin-left:auto;
+  font-size:12px;line-height:1.3;text-align:right;color:#596472;
+}
+#tasTopBar #manualLink,#tasTopBar #githubLink{
+  flex:0 0 auto;font-size:15px;font-weight:650;
+  line-height:1.3;padding:3px 1px;
+}
+/* HKL headings and H/K/L field labels were smaller than other input labels. */
+#qeVectorMapPane .qe-vector-point strong{font-size:max(13px,calc(20px * var(--tas-density)));}
+#qeVectorMapPane .qe-vector-point label{font-size:max(11px,calc(17px * var(--tas-density)));}
+@media(max-width:900px) and (min-width:761px){
+  #tasTopBar .tas-brand-subtitle{max-width:350px;}
+  #tasTopBar #status{flex-basis:130px;}
+}
+@media(max-width:760px){
+  :root{--tas-header-height:88px;}
+  #tasTopBar > header{padding:6px 10px;gap:5px 12px!important;}
+  #tasTopBar .tas-brand{flex:1 1 100%;}
+  #tasTopBar .tas-brand h1{font-size:26px;}
+  #tasTopBar .tas-brand-subtitle{font-size:11.5px;}
+  #tasTopBar #manualLink{order:2;font-size:15px;}
+  #tasTopBar #githubLink{order:3;font-size:15px;}
+  #tasTopBar #status{order:4;flex:1 1 auto;min-width:0;margin-left:auto!important;text-align:right;font-size:11.5px;}
+}
+@media(max-width:420px){
+  #tasTopBar #status{flex-basis:100%;text-align:left;}
+  :root{--tas-header-height:108px;}
+}
+
+/* 2026-10-11: CIF/mCIF text preview must remain readable in the native
+   compact UI. This overrides the older 12px mobile declaration without
+   changing the preview panel dimensions or its independent scrolling. */
+#cifGeneratorPanel .cif-preview-note{
+  font-size:max(13px,calc(17px * var(--tas-density)));
+  line-height:1.6;
+}
+#cifGeneratorPanel .cif-unified-preview-label{
+  font-size:max(12px,calc(16px * var(--tas-density)));
+}
+
+/* CIF/mCIF generation and reflection messages must remain legible even in the
+   compact desktop layout. Includes "Generate CIF first ..." and error notices. */
+#structurePanel .cif-generator-message,
+#cifGeneratorPanel .cif-generator-message,
+#structurePanel .generator-reflections-notice,
+#cifGeneratorPanel .generator-reflections-notice {
+  font-size:max(14px,calc(16px * var(--tas-density)));
+  line-height:1.5;
+}
+@media (max-width:760px){
+  #structurePanel .cif-generator-message,
+  #cifGeneratorPanel .cif-generator-message,
+  #structurePanel .generator-reflections-notice,
+  #cifGeneratorPanel .generator-reflections-notice {font-size:17px;}
+}

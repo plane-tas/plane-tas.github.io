@@ -11,7 +11,13 @@
 </head>
 <body>
 <div id="tasTopBar">
-<header><h1>PLANE-TAS</h1><div class="status" id="status"></div></header>
+<header>
+<div class="tas-brand" aria-label="PLANE-TAS — Planning Experiments with Triple-Axis Spectrometers">
+  <h1>PLANE-TAS</h1>
+  <div class="tas-brand-subtitle"><span class="tas-brand-letter">PLAN</span>ning <span class="tas-brand-letter">E</span>xperiments with <span class="tas-brand-letter">T</span>riple-<span class="tas-brand-letter">A</span>xis <span class="tas-brand-letter">S</span>pectrometers</div>
+</div>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+</header>
 </div>
 <div class="shell">
 <aside class="sidebar">
@@ -281,7 +287,7 @@
 <div class="scan hidden" id="scanInputs"><div class="grid5"><label>H initial<input id="h0" type="number" value="1"/></label><label>K initial<input id="k0" type="number" value="0"/></label><label>L initial<input id="l0" type="number" value="0"/></label><label>ℏω initial<input id="hw0" type="number" value="0"/></label><label>Points<input id="npts" min="2" type="number" value="11"/></label></div><div class="grid5"><label>H final<input id="h1" type="number" value="1"/></label><label>K final<input id="k1" type="number" value="0"/></label><label>L final<input id="l1" type="number" value="0"/></label><label>ℏω final<input id="hw1" type="number" value="10"/></label><button id="calcScanResolution" type="button">Calculate</button></div></div>
 <div aria-live="polite" class="orientation-plane-warning hidden" id="resolutionPlaneWarning"></div>
 </section>
-<section class="hidden" id="result"><h2>Resolution</h2><div class="summary" id="summary"></div><div class="scan-nav hidden" id="scanNav"><button id="prev">◀ Prev</button><input id="scanSlider" max="1" min="1" type="range" value="1"/><output id="scanIndex"></output><button id="next">Next ▶</button></div><div class="plots"><div id="plotUE"></div><div id="plotVE"></div><div id="plotUV"></div><div id="plotWE"></div></div><details><summary>Resolution Matrix</summary><div>Matrix order: (Q∥, Q⊥, E, Qout)</div><pre id="matrix"></pre></details></section>
+<section class="hidden" id="result"><h2>Resolution</h2><div class="summary" id="summary"></div><div class="scan-nav hidden" id="scanNav"><button id="prev">◀ Prev</button><input id="scanSlider" max="1" min="1" type="range" value="1"/><output id="scanIndex"></output><button id="next">Next ▶</button></div><div class="plots"><div id="plotUE"></div><div id="plotVE"></div><div id="plotUV"></div><div id="plotWE"></div></div><div class="resolution-matrix-display"><pre id="matrix" aria-label="Local and U-based resolution matrices"></pre></div></section>
 </div>
 </div>
 </div>
@@ -306,6 +312,7 @@
 <div></div><div>Wavelength (Å)</div><div>Energy (meV)</div><div>Wavevector k (Å⁻¹)</div><div>Frequency (THz)</div><div>Temperature (K)</div><div>Wavenumber (cm⁻¹)</div><div>Velocity (m/s)</div>
 <strong>1/3 λ</strong><output id="harmThirdLambda"></output><output id="harmThirdEnergy"></output><output id="harmThirdK"></output><output id="harmThirdTHz"></output><output id="harmThirdTemp"></output><output id="harmThirdCm"></output><output id="harmThirdVelocity"></output>
 <strong>1/2 λ</strong><output id="harmHalfLambda"></output><output id="harmHalfEnergy"></output><output id="harmHalfK"></output><output id="harmHalfTHz"></output><output id="harmHalfTemp"></output><output id="harmHalfCm"></output><output id="harmHalfVelocity"></output>
+<strong>λ</strong><output id="harmFundamentalLambda"></output><output id="harmFundamentalEnergy"></output><output id="harmFundamentalK"></output><output id="harmFundamentalTHz"></output><output id="harmFundamentalTemp"></output><output id="harmFundamentalCm"></output><output id="harmFundamentalVelocity"></output>
 <strong>2 λ</strong><output id="harmDoubleLambda"></output><output id="harmDoubleEnergy"></output><output id="harmDoubleK"></output><output id="harmDoubleTHz"></output><output id="harmDoubleTemp"></output><output id="harmDoubleCm"></output><output id="harmDoubleVelocity"></output>
 <strong>3 λ</strong><output id="harmTripleLambda"></output><output id="harmTripleEnergy"></output><output id="harmTripleK"></output><output id="harmTripleTHz"></output><output id="harmTripleTemp"></output><output id="harmTripleCm"></output><output id="harmTripleVelocity"></output>
 </div></div>
@@ -524,7 +531,6 @@
 <div class="structure-config-panel" data-structure-config-panel="bonds" hidden="">
 <div class="structure-rows-list" id="cifBondRows"></div>
 <button class="structure-add-bond-button" id="cifAddBondRule" type="button">+ Add bond</button>
-<div class="structure-help-text">Examples: Ni–Ni 0–5 Å, Ni–O 0–3 Å.</div>
 </div>
 </div></div></div><div class="generator-unified-right structure-viewer-main"><div aria-label="CIF/mCIF generator output" class="cif-output-tabs generator-unified-output-tabs" role="tablist"><button aria-controls="mcifStructurePane" aria-selected="true" class="cif-output-tab active" data-generator-output-tab="structure" id="mcifTabStructure" role="tab" type="button">Structure</button><button aria-controls="generatorReflectionsPane" aria-selected="false" class="cif-output-tab" data-cif-output-tab="reflections" data-generator-output-tab="reflections" id="cifOutputTabReflections" role="tab" type="button">Reflections</button><button aria-controls="cifPreviewPanel" aria-selected="false" class="cif-output-tab" data-cif-output-tab="preview" data-generator-output-tab="preview" id="cifOutputTabPreview" role="tab" type="button">CIF/mCIF Preview</button></div><div aria-labelledby="mcifTabStructure" class="generator-output-pane" id="mcifStructurePane" role="tabpanel">
 <div aria-label="Structure view direction and range" class="generator-structure-view-controls">

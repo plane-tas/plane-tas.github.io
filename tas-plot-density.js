@@ -55,6 +55,33 @@
     return out;
   }
 
+  // Axis titles are measurement labels and must remain legible even in the
+  // compact (0.67) layout.  Plotly's default axis title inherits a font which
+  // became ~8px after density scaling; enforce a CSS-pixel minimum without
+  // changing the axis coordinates, ticks, margins or event positions.
+  // Cover Cartesian axes, secondary axes, and scene axes on 3-D plots.
+  function readableAxisTitles(layout,factor){
+    if(!layout || typeof layout!=='object') return;
+    const minSize=factor<0.85 ? 13.5 : 16;
+    const walk=(parent)=>{
+      if(!parent || typeof parent!=='object') return;
+      for(const [name,axis] of Object.entries(parent)){
+        if(!/^[xyz]axis(?:[2-9]\d*)?$/.test(name) || !axis || typeof axis!=='object') continue;
+        const title=axis.title;
+        if(typeof title==='string'){
+          if(title.trim()) axis.title={text:title,font:{size:minSize}};
+        }else if(title && typeof title==='object' && typeof title.text==='string' && title.text.trim()){
+          const old=Number(title.font?.size);
+          axis.title={...title,font:{...(title.font||{}),size:Math.max(minSize,Number.isFinite(old)?old:0)}};
+        }
+      }
+      for(const [name,child] of Object.entries(parent)){
+        if(/^scene(?:[2-9]\d*)?$/.test(name)) walk(child);
+      }
+    };
+    walk(layout);
+  }
+
   // Annotations use font, markers use marker.size, and Plotly colorbars use
   // title.font and tickfont. All are handled by the same branch traversal.
   function adaptTraces(data,factor){
@@ -70,6 +97,7 @@
       if(compactLayout && typeof compactLayout==='object'){
         // Axis fonts without explicit sizes inherit this Plotly default.
         compactLayout.font={...compactLayout.font,size:(compactLayout.font?.size??12*factor)};
+        readableAxisTitles(compactLayout,factor);
       }
       return old(gd,adaptTraces(data,factor),compactLayout,config);
     };

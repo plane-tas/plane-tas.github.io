@@ -2000,7 +2000,6 @@ function updateStructureBondRows(elements,seedRules=null){
   host.replaceChildren();
   if(!elements.length){ const div=document.createElement("div"); div.className="structure-rows-empty"; div.textContent="No atoms available."; host.appendChild(div); return; }
   for(const rule of rules) host.appendChild(createBondRuleRow(rule,elements));
-  if(!host.children.length){ const div=document.createElement("div"); div.className="structure-rows-empty"; div.textContent="No bond rules yet."; host.appendChild(div); }
 }
 function addStructureBondRule(){
   const info=currentStructureForViewer(); const elements=structureElements(info?.structure||null); const host=$("cifBondRows");
@@ -2684,9 +2683,14 @@ function renderCifStructureView(){
   const liveCamera=currentStructureCamera();
   const mainCamera=copyStructureCamera(structureCameraState) || liveCamera || structureCameraForView(cifStructureViewMode,basis,currentStructureCameraDistance());
   structureCameraState=copyStructureCamera(mainCamera);
+  // Plotly's compact presentation adapter scales font sizes by the UI density.
+  // Keep the Structure 3D-axis tick numerals legible in actual screen pixels
+  // (desktop/tablet compact layout and the unscaled mobile layout alike).
+  const structureTickDensity=(typeof window.tasUIDensity==='function' ? window.tasUIDensity() : 1);
+  const structureTickFontSize=Math.max(15,13/Math.max(0.1,structureTickDensity));
   const layout={
     margin:{l:0,r:0,t:8,b:0},paper_bgcolor:"#fff",plot_bgcolor:"#fff",showlegend:false,
-    scene:{aspectmode:"data",dragmode:"orbit",xaxis:{visible:structureShowXYZ,title:{text:"x (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:12},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},yaxis:{visible:structureShowXYZ,title:{text:"y (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:12},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},zaxis:{visible:structureShowXYZ,title:{text:"z (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:12},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},camera:mainCamera},
+    scene:{aspectmode:"data",dragmode:"orbit",xaxis:{visible:structureShowXYZ,title:{text:"x (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:structureTickFontSize},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},yaxis:{visible:structureShowXYZ,title:{text:"y (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:structureTickFontSize},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},zaxis:{visible:structureShowXYZ,title:{text:"z (Å)",font:{size:18,color:"#222"}},showticklabels:structureShowXYZ,tickfont:{size:structureTickFontSize},ticks:"outside",showline:true,linecolor:"#666",backgroundcolor:"#fafafa",gridcolor:"#e5e5e5",zerolinecolor:"#ccc"},camera:mainCamera},
     // Changing a view preset must supersede Plotly's saved interactive camera.
     // Other redraws keep the revision and preserve the current manual rotation.
     uirevision:`cif-structure-interactive-${structureCameraPresetRevision}`

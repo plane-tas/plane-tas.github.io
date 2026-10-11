@@ -270,6 +270,7 @@ export function createQESingleCrystal(deps){
               x:dot(Gm,ex),
               y:dot(Gm,ey),
               qIndex:q.index,
+              hkl:hm,
               label:`k${q.index}: (${hm.map(x=>x.toFixed(2)).join(",")})`
             });
           }

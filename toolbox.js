@@ -107,11 +107,11 @@ export function createToolbox({
     if(table && !document.getElementById('harmThirdMass')){
       const old=[...table.children];
       const oldCols=8; // row label + 7 original quantities
-      const prefixes=['harmThird','harmHalf','harmDouble','harmTriple'];
+      const prefixes=['harmThird','harmHalf','harmFundamental','harmDouble','harmTriple'];
       const extraHeaders=['Mass equivalent (kg)','Magnetic field (T)','Energy (J)','Heat (cal)'];
       const suffixes=['Mass','Field','J','Cal'];
       const frag=document.createDocumentFragment();
-      for(let row=0;row<5;row++){
+      for(let row=0;row<=prefixes.length;row++){
         for(let col=0;col<oldCols;col++) frag.appendChild(old[row*oldCols+col]);
         if(row===0){
           for(const text of extraHeaders){ const d=document.createElement('div'); d.textContent=text; frag.appendChild(d); }
@@ -164,7 +164,7 @@ export function createToolbox({
         toolField:v.field.toExponential(6), toolJ:v.joule.toExponential(6), toolCal:v.cal.toExponential(6)
       };
       for(const [id,text] of Object.entries(formatted)){ if(id!==kind && $(id)) $(id).value=text; }
-      for(const [factor,prefix] of [[1/3,'harmThird'],[1/2,'harmHalf'],[2,'harmDouble'],[3,'harmTriple']]){
+      for(const [factor,prefix] of [[1/3,'harmThird'],[1/2,'harmHalf'],[1,'harmFundamental'],[2,'harmDouble'],[3,'harmTriple']]){
         const x=toolboxValues(lambda*factor);
         $(`${prefix}Lambda`).textContent=x.lambda.toFixed(6);
         $(`${prefix}Energy`).textContent=x.E.toFixed(6);
@@ -317,17 +317,9 @@ export function createToolbox({
       nLabel.replaceChildren(document.createTextNode('Neutron beam'),row);
     }
 
-    if(!document.getElementById('s2FlexibleBeamStyle')){
-      const style=document.createElement('style'); style.id='s2FlexibleBeamStyle';
-      style.textContent=`
-        .s2-beam-entry-row{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(66px,.55fr);gap:6px;align-items:center;margin-top:4px}
-        .s2-beam-entry-row-neutron{grid-template-columns:minmax(0,1fr) minmax(66px,.52fr) auto}
-        .s2-beam-entry-row input,.s2-beam-entry-row select{width:100%!important;min-width:0!important;margin:0!important}
-        .s2-set-default{white-space:nowrap;width:auto!important;padding-left:10px!important;padding-right:10px!important}
-        @media(max-width:1250px){.s2-beam-entry-row-neutron{grid-template-columns:minmax(105px,1fr) 66px;}.s2-set-default{grid-column:1/-1}}
-      `;
-      document.head.appendChild(style);
-    }
+    // The S2 input rows use the shared responsive styles in styles.css.
+    // Avoid injecting fixed-width grid columns which collapse the neutron field
+    // when the toolbox is used in a narrower workspace.
   }
 
   function updateS2Conversion(){
@@ -377,11 +369,6 @@ export function createToolbox({
     }
     if(dField){
       dField.value=rows.map(row=>Number.isFinite(row.d)?row.d.toFixed(6):'—').join(' ');
-    }
-    const blocked=rows.filter(r=>r.status).length;
-    if(blocked && info){
-      info.textContent=`${blocked} entr${blocked===1?'y':'ies'} cannot satisfy the neutron Bragg condition at the current neutron beam setting.`;
-      info.classList.add('warning');
     }
   }
 
@@ -753,8 +740,8 @@ export function createToolbox({
           {x:[thicknessMm],y:[overallTransPct],mode:'markers',name:'Selected thickness',marker:{size:10},hovertemplate:'Thickness %{x:.3f} mm<br>Transmission %{y:.3f}%<extra></extra>'}
         ],{
           margin:{l:68,r:20,t:28,b:58},
-          xaxis:{title:'Sample thickness (mm)',range:[0,sliderMax],zeroline:false},
-          yaxis:{title:'Transmission (%)',range:[0,100],zeroline:false},
+          xaxis:{title:'Sample thickness (mm)',range:[0,sliderMax],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
+          yaxis:{title:'Transmission (%)',range:[0,100],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
           showlegend:false,
           uirevision:'absorptionPlot'
         },{responsive:true,displaylogo:false});
