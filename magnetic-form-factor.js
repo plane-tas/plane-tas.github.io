@@ -101,13 +101,35 @@ export function initializeMagneticFormFactorUI(){
   const curvePoints=301;
   const grid=Array.from({length:curvePoints},(_,i)=>GRAPH_Q_MAX*i/(curvePoints-1));
 
-  function syncConfig(){
+  let syncedConfigIon=null;
+  function syncConfig(preferredConfig=null){
     const variants=MAGNETIC_ION_DATA[ion.value]||[];
     config.replaceChildren();
     for(const entry of variants)config.add(new Option(entry[0],entry[0]));
     configLabel.classList.toggle('hidden',variants.length<=1);
-    if(variants.length)config.value=variants[0][0];
+    const chosen=variants.some(entry=>entry[0]===preferredConfig)
+      ? preferredConfig : variants[0]?.[0];
+    if(chosen!==undefined)config.value=chosen;
+    syncedConfigIon=ion.value;
     syncFreeIonAvailability();
+  }
+  function ensureConfigMatchesIon(){
+    const variants=MAGNETIC_ION_DATA[ion.value]||[];
+    const optionsMatch=syncedConfigIon===ion.value &&
+      config.options.length===variants.length &&
+      variants.every((entry,index)=>config.options[index]?.value===entry[0]);
+    if(optionsMatch && variants.some(entry=>entry[0]===config.value))return;
+
+    // Right-panel persistence restores select values programmatically without
+    // firing a change event. Rebuild the electronic configurations for the
+    // restored ion before the first plot render, preserving its saved choice.
+    let preferred=config.value;
+    try{
+      const saved=JSON.parse(localStorage.getItem('tas-simulator-right-panel-v1')||'null')?.values;
+      if(saved?.magffIon===ion.value && variants.some(entry=>entry[0]===saved.magffConfig))
+        preferred=saved.magffConfig;
+    }catch(_err){}
+    syncConfig(preferred);
   }
   function syncFreeIonAvailability(){
     const selected=MAGNETIC_ION_DATA[ion.value]?.find(v=>v[0]===config.value);
@@ -148,6 +170,7 @@ export function initializeMagneticFormFactorUI(){
   function render(){
     clearError();download.disabled=true;
     try{
+      ensureConfigMatchesIon();
       const opts=currentOptions();
       const q=Number(qField.value);
       if(qField.value.trim()===''||!Number.isFinite(q)||q<0||q>GRAPH_Q_MAX)
@@ -168,8 +191,8 @@ export function initializeMagneticFormFactorUI(){
            marker:{size:10},hovertemplate:'Q = %{x:.3f} Å⁻¹<br>|f(Q)|² = %{y:.5f}<br>f(Q) = %{customdata:.5f}<extra></extra>'}
         ],{autosize:true,margin:{l:65,r:22,t:18,b:57},
             xaxis:{title:'Q (Å⁻¹)',range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            yaxis:{title:'|f(Q)|²',rangemode:'tozero',zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            showlegend:false,uirevision:'magff-v40'
+            yaxis:{title:'|f(Q)|²',range:[0,1],autorange:false,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
+            showlegend:false,uirevision:'magff-v41-ymax1'
         },{responsive:true,displaylogo:false});
       }
     }catch(error){
