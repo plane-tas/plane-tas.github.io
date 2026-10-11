@@ -125,7 +125,20 @@ function calcOne(calc){
   return {calc,...b,result,angles};
 }
 function matrixText(M){return M.map(r=>'[ '+r.map(x=>Number(x).toExponential(6).padStart(14)).join('  ')+' ]').join('\n');}
-function traceEllipse(p,name,dash='solid'){return{x:p.x,y:p.y,mode:'lines',name,line:{dash},hoverinfo:'skip'};}
+function formatResolutionCoordinate(v){
+  if(!Number.isFinite(v)) return '';
+  // A trigonometric ellipse often contains -1e-17 at a nominal zero crossing.
+  return Math.abs(v)<1e-12?'0':Number(v.toPrecision(5)).toString();
+}
+function traceEllipse(p,name,dash='solid'){
+  return {
+    x:p.x,y:p.y,mode:'lines',name,line:{dash},
+    // Report the curve's coordinates, with floating-point noise near zero
+    // suppressed only in the displayed values, not in the plotted points.
+    customdata:p.x.map((x,i)=>[formatResolutionCoordinate(x),formatResolutionCoordinate(p.y[i])]),
+    hovertemplate:'X: %{customdata[0]}<br>Y: %{customdata[1]}<extra></extra>'
+  };
+}
 
 // Resolution plots use explicit symmetric limits around the calculation point.
 // A single Calc always resets to the current ellipse size so the ellipse cannot
@@ -146,6 +159,7 @@ function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null){
     // frame is confined to the data area; the card encloses each full chart.
     xaxis:{title:{text:xlabel,standoff:13},automargin:true,tickfont:{size:21},range:[-xl,xl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
     yaxis:{title:{text:ylabel,standoff:12},automargin:true,tickfont:{size:21},range:[-yl,yl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
+    hovermode:'closest',hoverdistance:18,
     showlegend:false
   };
 }
@@ -248,6 +262,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     ),
     {responsive:true}
   );
+
 }
 function resolutionScanPoints(){
   const nRaw=Math.round(num('npts'));
