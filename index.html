@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" class="tas-ui-booting">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>PLANE-TAS</title>
 <link href="data:," rel="icon"/>
+<!-- Keep conditional controls out of the first paint while saved UI state loads. -->
+<style>html.tas-ui-booting .shell{visibility:hidden!important}</style>
 <link href="styles.css" rel="stylesheet"/>
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 </head>
@@ -16,7 +18,7 @@
   <h1>PLANE-TAS</h1>
   <div class="tas-brand-subtitle"><span class="tas-brand-letter">PLAN</span>ning <span class="tas-brand-letter">E</span>xperiments with <span class="tas-brand-letter">T</span>riple-<span class="tas-brand-letter">A</span>xis <span class="tas-brand-letter">S</span>pectrometers</div>
 </div>
-<div class="status" id="status" role="status" aria-live="polite"></div>
+<div class="status" id="status" role="status" aria-live="polite">Loading configuration…</div>
 </header>
 </div>
 <div class="shell">
@@ -183,7 +185,7 @@
 </div>
 <div class="geometry-target">
 <div id="singleGeometryTarget">
-<div class="geometry-target-row"><div class="grid4"><label>h<input id="geomH" step="0.1" type="number" value="1"/></label><label>k<input id="geomK" step="0.1" type="number" value="0"/></label><label>l<input id="geomL" step="0.1" type="number" value="0"/></label><label>ħω (meV)<input id="geomHW" step="0.1" type="number" value="0"/></label></div><div class="geometry-target-buttons"><div class="geometry-target-all-buttons"><button id="geomSetU" type="button">Set U</button><button id="geomSetV" type="button">Set V</button><button id="geomPerpU" type="button">ki ⟂ U</button><button id="geomPerpV" type="button">ki ⟂ V</button><button class="hidden" id="geomParallelU" type="button">ki ∥ U</button><button class="hidden" id="geomParallelV" type="button">ki ∥ V</button><button class="hidden" id="geomSetBragg" type="button">Set Bragg peak</button></div></div></div>
+<div class="geometry-target-row"><div class="grid4"><label>h<input id="geomH" step="0.1" type="number" value="1"/></label><label>k<input id="geomK" step="0.1" type="number" value="0"/></label><label>l<input id="geomL" step="0.1" type="number" value="0"/></label><label>ħω (meV)<input id="geomHW" step="0.1" type="number" value="0"/></label></div><div class="geometry-target-buttons"><div class="geometry-target-all-buttons"><button id="geomSetU" type="button">Set U</button><button id="geomSetV" type="button">Set V</button><button id="geomPerpU" type="button">ki ⟂ U</button><button class="hidden" id="geomPerpV" type="button">ki ⟂ V</button><button class="hidden" id="geomParallelU" type="button">ki ∥ U</button><button class="hidden" id="geomParallelV" type="button">ki ∥ V</button><button class="hidden" id="geomSetBragg" type="button">Set Bragg peak</button></div></div></div>
 </div>
 <div class="geometry-scan-target hidden" id="scanGeometryTarget">
 <div class="geometry-scan-grid geometry-scan-grid-initial"><label>H initial<input id="geomScanH0" step="0.1" type="number" value="1"/></label><label>K initial<input id="geomScanK0" step="0.1" type="number" value="0"/></label><label>L initial<input id="geomScanL0" step="0.1" type="number" value="0"/></label><label>ħω initial (meV)<input id="geomScanHW0" step="0.1" type="number" value="0"/></label><label>Points<input id="geomScanNpts" min="2" step="1" type="number" value="11"/></label></div>
@@ -425,8 +427,6 @@
 </div></section><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><div class="cif-generator-input-pane">
 <section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated">Show generate file</button></div></div>
 <div class="cif-unified-output-line">
-<label class="cif-output-format-label">Format
-<select id="cifOutputFormat" aria-label="Output file format"><option value="cif">CIF</option><option value="mcif" disabled>mCIF</option></select></label>
 <label class="cif-generator-file-name">File name
 <span class="cif-filename-entry"><input id="cifGeneratedName" type="text" value="generated_structure"/><span class="cif-filename-suffix" id="cifUnifiedFileSuffix">.cif</span></span>
 </label></div>
@@ -436,24 +436,8 @@
 <button disabled id="cifOutputDownload" type="button">Download CIF</button>
 <button disabled id="cifOutputSet" type="button">Set CIF</button>
 </div>
-<div class="cif-legacy-output-actions" aria-hidden="true"><div class="cif-source-button-row">
-<button class="primary-action" id="cifGenerate" type="button">Generate CIF</button>
-<button disabled id="cifDownload" type="button">Download CIF</button>
-<button disabled id="cifSet" type="button">Set CIF</button>
-</div></div>
 <div aria-live="polite" class="cif-generator-message hidden" id="cifGeneratorMessage"></div>
-<div class="generator-legacy-file-controls" hidden=""><div class="cif-pane-heading"><h3>CIF/mCIF file</h3><div class="cif-heading-actions"><button id="structureMcifShowCurrent" type="button">Show current file</button></div></div><div class="structure-cif-row">
-<button id="structureCifSelect" type="button">Select CIF/mCIF</button>
-<input aria-label="Selected CIF/mCIF file" class="cif-file-name" id="structureCifName" readonly="" type="text" value="No file selected"/>
-<button id="structureCifClear" type="button">Clear</button>
-</div></div><div class="mcif-export-group cif-legacy-output-actions">
-<div class="cif-source-button-row">
-<button class="primary-action" disabled="" id="structureMcifGenerate" title="mCIF export is temporarily disabled" type="button">Generate mCIF</button>
-<button disabled="" id="structureMcifDownload" title="mCIF export is temporarily disabled" type="button">Download mCIF</button>
-<button disabled="" id="structureMcifSet" title="mCIF export is temporarily disabled" type="button">Set mCIF</button>
-</div>
-<div aria-live="polite" class="cif-generator-message" id="structureMcifMessage"></div>
-</div></section>
+</section>
 
 </div><div class="structure-control-section structure-config-section">
 <h3 class="structure-section-title">Structure editor</h3>
@@ -610,8 +594,6 @@
 </div>
 </div></div><div aria-labelledby="generatorReflectionsMagnetic" class="generator-reflection-pane hidden" id="generatorMagneticReflectionsPane" role="tabpanel"><p class="cif-release-note" role="note">Note: Magnetic reflection calculations are under validation. Do not use the results.</p><div class="cif-reflection-toolbar"><button id="magneticCalculateTable" type="button">Calculate</button><button id="magneticDownloadTable" type="button" disabled>Download CSV</button><button id="magneticExportBnsInput" type="button" disabled>Export BNS</button></div><p id="magneticReflectionMessage" class="generator-reflections-notice" hidden></p><div class="cif-reflection-table-wrap"><table class="cif-reflection-table"><thead><tr><th>Index (h k l)</th><th class="magnetic-sortable-th cif-sortable-th" data-sort-key="formFactor" aria-sort="none" role="button" tabindex="0">Form factor <span class="cif-sort-indicator"></span></th><th class="magnetic-sortable-th cif-sortable-th" data-sort-key="intensity" aria-sort="descending" role="button" tabindex="0">|F<sub>M</sub>|² (barn) <span class="cif-sort-indicator">▼</span></th><th class="magnetic-sortable-th cif-sortable-th" data-sort-key="twoTheta" aria-sort="none" role="button" tabindex="0">2θ (deg) <span class="cif-sort-indicator"></span></th><th class="magnetic-sortable-th cif-sortable-th" data-sort-key="q" aria-sort="none" role="button" tabindex="0">Q (Å⁻¹) <span class="cif-sort-indicator"></span></th><th class="magnetic-sortable-th cif-sortable-th" data-sort-key="d" aria-sort="none" role="button" tabindex="0">d (Å) <span class="cif-sort-indicator"></span></th></tr></thead><tbody id="magneticReflectionRows"></tbody></table></div></div></div><div aria-labelledby="cifOutputTabPreview" class="cif-output-panel generator-output-pane hidden" id="cifPreviewPanel" role="tabpanel"><div class="cif-unified-preview-label" id="cifPreviewContext">No file selected</div>
 <pre class="cif-preview-note" id="cifPreview" tabindex="0">Press Generate to preview the CIF.</pre>
-</div><div aria-hidden="true" class="cif-output-panel generator-output-pane hidden" id="mcifPreviewPane" role="tabpanel" hidden>
-<pre class="cif-preview-note" id="mcifPreviewText" tabindex="0">Load an mCIF to preview its contents.</pre>
 </div></div></div></section></div>
 <div aria-labelledby="tabScript" class="tab-panel hidden" id="scriptPanel" role="tabpanel">
 <section class="calc-card script-card">

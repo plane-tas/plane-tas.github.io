@@ -2764,8 +2764,8 @@ function renderCifStructureView(){
 }
 
 function setCifGeneratedReady(ready){
-  if($("cifDownload")) $("cifDownload").disabled=!ready;
-  if($("cifSet")) $("cifSet").disabled=!ready;
+  if($("cifOutputDownload")) $("cifOutputDownload").disabled=!ready;
+  if($("cifOutputSet")) $("cifOutputSet").disabled=!ready;
   // Reflection CSV availability is independent of CIF Generate.  A selected
   // CIF/mCIF can provide reflections without generating any new CIF file.
 }
@@ -4249,51 +4249,12 @@ function generateMcifForReview(){
   mcifPreview(text);
   mcifMessage(`Generated ${lastGeneratedMcifName}; magnetic symmetry checked (${check.atoms.filter(a=>Array.isArray(a.magneticMoment)).length} magnetic atoms).`);
 }
-// A single output selector operates the existing format-specific actions.
+// mCIF export is not released. The Output format selector (with only CIF
+// selectable) is removed; the filename suffix still shows the output format.
 function initializeUnifiedOutputActions(){
-  const format=$("cifOutputFormat"), generate=$("cifOutputGenerate"),
-    download=$("cifOutputDownload"), set=$("cifOutputSet");
-  if(!format||!generate||!download||!set||format.dataset.outputBound) return;
-  format.dataset.outputBound="1";
-  // Public release: mCIF export is unavailable until BNS validation.
-  const mcifOption=format.querySelector('option[value="mcif"]');
-  if(mcifOption) mcifOption.disabled=true;
-  format.value="cif";
+  const suffix=$("cifUnifiedFileSuffix");
+  if(suffix) suffix.textContent=".cif";
   try{localStorage.setItem("tas-cif-output-format-v1","cif");}catch(_e){}
-  const ids={cif:["cifGenerate","cifDownload","cifSet"],
-    mcif:["structureMcifGenerate","structureMcifDownload","structureMcifSet"]};
-  const update=()=>{
-    // A saved or programmatic mCIF selection must not re-enable export.
-    if(format.value!=="cif") format.value="cif";
-    const mcif=false, word="CIF";
-    const [g,d,s]=ids[mcif?"mcif":"cif"].map(id=>$(id));
-    generate.textContent=`Generate ${word}`;
-    download.textContent=`Download ${word}`;
-    set.textContent=`Set ${word}`;
-    generate.disabled=!g||g.disabled;
-    download.disabled=!d||d.disabled;
-    set.disabled=!s||s.disabled;
-    const suffix=$("cifUnifiedFileSuffix");
-    if(suffix) suffix.textContent=mcif?".mcif":".cif";
-  };
-  format.addEventListener("change",()=>{
-    format.value="cif";
-    try{localStorage.setItem("tas-cif-output-format-v1","cif");}catch(_e){}
-    update();
-  });
-  for(const [index,el] of [generate,download,set].entries()){
-    el.addEventListener("click",()=>{
-      const id=ids.cif[index];
-      const original=$(id);
-      if(original&&!original.disabled)original.click();
-      queueMicrotask(update);
-    });
-  }
-  for(const id of [...ids.cif,...ids.mcif]){
-    const original=$(id);
-    if(original) new MutationObserver(update).observe(original,{attributes:true,attributeFilter:["disabled"]});
-  }
-  update();
 }
 function initMcifGeneratorActions(){
   // mCIF Generate is available; Download/Set remain disabled until generation.
@@ -4441,7 +4402,7 @@ async function initializeCifGenerator(){
       setCifGeneratorMessage(`Showing loaded file: ${fileName}.`);
     });
     $("cifShowGenerated")?.addEventListener("click",()=>{
-      const mcif=$("cifOutputFormat")?.value==="mcif";
+      const mcif=false; // CIF is the sole public output format.
       const text=mcif?lastGeneratedMcifText:lastGeneratedCifText;
       const fileName=mcif?lastGeneratedMcifName:lastGeneratedCifName;
       if(!text){setCifGeneratorMessage(`Generate ${mcif?"mCIF":"CIF"} first to show its output.`,true);return;}
@@ -4461,7 +4422,7 @@ async function initializeCifGenerator(){
       finally{ ev.target.value=""; }
     });
 
-    $("cifGenerate")?.addEventListener("click",()=>{
+    $("cifOutputGenerate")?.addEventListener("click",()=>{
       const nameInput=$("cifGeneratedName");
       const previousName=nameInput?.value ?? "generated_structure";
       if(nameInput) nameInput.value=nextCifGeneratedBaseName(previousName);
@@ -4472,7 +4433,7 @@ async function initializeCifGenerator(){
         setCifGeneratorMessage(err?.message||String(err),true);
       }
     });
-    $("cifDownload")?.addEventListener("click",()=>{
+    $("cifOutputDownload")?.addEventListener("click",()=>{
       if(!lastGeneratedCifText){ setCifGeneratorMessage("Press Generate before downloading.",true); return; }
       downloadGeneratedCif(lastGeneratedCifText,lastGeneratedCifName);
       setCifGeneratorMessage(`Downloaded ${lastGeneratedCifName}.`);
@@ -4481,7 +4442,7 @@ async function initializeCifGenerator(){
       try{ downloadCifReflectionTable(); }
       catch(err){ setCifGeneratorMessage(err?.message||String(err),true); }
     });
-    $("cifSet")?.addEventListener("click",()=>{
+    $("cifOutputSet")?.addEventListener("click",()=>{
       try{
         if(!lastGeneratedCifText) throw new Error("Press Generate before setting the CIF.");
         if($("sampleMode")?.value!=="single"){
@@ -4643,7 +4604,7 @@ async function initializeCifGenerator(){
     requestAnimationFrame(renderCifStructureIfVisible);
   }catch(err){
     select.innerHTML='<option value="">Space-group data unavailable</option>';
-    for(const id of ["cifLoadExisting","cifGenerate","cifDownload","cifDownloadTable","cifSet","cifSpaceGroupNumber"]){ if($(id)) $(id).disabled=true; }
+    for(const id of ["cifLoadExisting","cifOutputGenerate","cifOutputDownload","cifDownloadTable","cifOutputSet","cifSpaceGroupNumber"]){ if($(id)) $(id).disabled=true; }
     setCifGeneratorMessage(`CIF Generator could not load space-group data: ${err?.message||String(err)}`,true);
   }
 }

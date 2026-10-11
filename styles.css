@@ -511,7 +511,7 @@ textarea:disabled {
 .cif-generator-input-pane label{font-size:calc(13.5px * var(--tas-density))}
 .cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
 .cif-generator-input-pane select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
-#cifGenerate{font-size:inherit;font-weight:700;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));min-height:0}
+
 
 /* The preview remains bounded by its output pane; long CIFs scroll instead of
    stretching the entire page. */
@@ -4929,7 +4929,6 @@ main [role="tablist"] > button[role="tab"],
 #structurePanel .generator-mode-pane .cif-source-button-row > button{
   font-size:calc(14px * var(--tas-density));min-height:calc(36px * var(--tas-density));font-weight:600;
 }
-#structurePanel .generator-legacy-file-controls{display:none!important;}
 #structurePanel .generator-unified-output-tabs{
   display:grid!important;
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
@@ -5471,10 +5470,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 @media(max-width:620px){#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 
-/* Release UI correction: keep internal legacy output controls in the DOM
-   for existing JavaScript listeners, but never render duplicate buttons. */
-#structurePanel .cif-legacy-output-actions,
-#structurePanel .generator-legacy-file-controls { display: none !important; }
 
 /* Format + File name on one row, including narrow layouts. */
 #structurePanel .cif-unified-output-line {
@@ -6373,3 +6368,10 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   min-width:6ch;
   font-variant-numeric:tabular-nums;
 }
+
+/* UI startup: keep instrument-conditional controls from flashing before restore.
+   The class is removed in app.js in both success and failure cases. */
+html.tas-ui-booting .shell{visibility:hidden!important}
+
+/* CIF output has one supported file format: no unusable format selector. */
+#structurePanel .cif-unified-output-line{grid-template-columns:minmax(0,1fr)!important}
