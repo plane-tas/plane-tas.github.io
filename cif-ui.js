@@ -397,13 +397,45 @@ function setSampleSpaceGroup(number,{recalc=true}={}){
   return true;
 }
 
+// Space-group numbers are integers (International Tables Nos. 1–230).
+// The HTML step=1 attribute does not prevent typing a fraction, so also
+// reject non-digits and incomplete numeric syntax while the field is edited.
+function bindSpaceGroupIntegerEntry(entry){
+  if(!entry || entry.dataset.integerOnlyBound) return;
+  entry.dataset.integerOnlyBound="1";
+  let previous=entry.value;
+  entry.addEventListener("focus",()=>{ previous=entry.value; });
+  entry.addEventListener("beforeinput",ev=>{
+    if(ev.data && /\D/.test(ev.data)) ev.preventDefault();
+  });
+  entry.addEventListener("paste",ev=>{
+    const pasted=ev.clipboardData?.getData("text");
+    if(pasted != null && !/^\d{1,3}$/.test(pasted)) ev.preventDefault();
+  });
+  entry.addEventListener("input",()=>{
+    if(!entry.validity.badInput && (entry.value==="" || /^\d{1,3}$/.test(entry.value))){
+      previous=entry.value;
+    }else{
+      entry.value=previous;
+    }
+  },true);
+}
+function readSpaceGroupInteger(entry,fallback){
+  const raw=String(entry?.value??"");
+  const number=/^\d{1,3}$/.test(raw)?Number(raw):NaN;
+  if(!Number.isInteger(number) || !sampleSpaceGroupByNumber(number)){
+    if(entry) entry.value=String(fallback||1);
+    return null;
+  }
+  if(entry) entry.value=String(number);
+  return number;
+}
+
 function jumpToSampleSpaceGroupNumber(){
   const entry=$("sampleSpaceGroupNumber");
   if(!entry) return;
-  let n=Math.round(Number(entry.value));
-  if(!Number.isFinite(n)) n=Number($("sampleSpaceGroup")?.value)||1;
-  n=Math.max(1,Math.min(230,n));
-  if(!setSampleSpaceGroup(n)) entry.value=String(Number($("sampleSpaceGroup")?.value)||1);
+  const n=readSpaceGroupInteger(entry,Number($("sampleSpaceGroup")?.value)||1);
+  if(n!==null && !setSampleSpaceGroup(n)) entry.value=String(Number($("sampleSpaceGroup")?.value)||1);
 }
 
 function syncSampleSpaceGroupNumberFromSelect(){
@@ -429,12 +461,13 @@ function populateSampleSpaceGroupControls(){
   for(const sg of cifSpaceGroups){
     const opt=document.createElement("option");
     opt.value=String(sg.number);
-    opt.textContent=sg.hm;
+    opt.textContent=`${sg.number} — ${sg.hm}`;
     select.appendChild(opt);
   }
   restoreSampleSpaceGroupSelection();
   if(!select.dataset.bound){
     select.addEventListener("change",syncSampleSpaceGroupNumberFromSelect);
+    bindSpaceGroupIntegerEntry($("sampleSpaceGroupNumber"));
     $("sampleSpaceGroupNumber")?.addEventListener("change",jumpToSampleSpaceGroupNumber);
     $("sampleSpaceGroupNumber")?.addEventListener("keydown",ev=>{
       if(ev.key==="Enter"){ ev.preventDefault(); jumpToSampleSpaceGroupNumber(); }
@@ -2893,10 +2926,8 @@ function jumpToCifSpaceGroupNumber(){
   const entry=$("cifSpaceGroupNumber");
   const select=$("cifSpaceGroup");
   if(!entry || !select) return;
-  let n=Math.round(Number(entry.value));
-  if(!Number.isFinite(n)) n=Number(select.value)||1;
-  n=Math.max(1,Math.min(230,n));
-  entry.value=String(n);
+  const n=readSpaceGroupInteger(entry,Number(select.value)||1);
+  if(n===null) return;
   const sg=cifSpaceGroups.find(x=>x.number===n);
   if(!sg){
     setCifGeneratorMessage(`Space group #${n} is not available.`,true);
@@ -4425,6 +4456,7 @@ async function initializeCifGenerator(){
         invalidateGeneratedCif("");
       }
     });
+    bindSpaceGroupIntegerEntry($("cifSpaceGroupNumber"));
     $("cifSpaceGroupNumber")?.addEventListener("change",jumpToCifSpaceGroupNumber);
     $("cifSpaceGroupNumber")?.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); jumpToCifSpaceGroupNumber(); } });
     // Cell synchronization applies constraints on change, not each keystroke.
