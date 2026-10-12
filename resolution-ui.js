@@ -251,12 +251,9 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   const uvEqual=(unitMode!=='rlu');
   const uLim=uvEqual ? Math.max(limits.U,limits.V) : limits.U;
   const vLim=uvEqual ? uLim : limits.V;
-  const uline={x:[-uLim,uLim],y:[0,0],mode:'lines',line:{width:1},hoverinfo:'skip'};
-  const vline={x:[0,0],y:[-vLim,vLim],mode:'lines',line:{width:1},hoverinfo:'skip'};
-
   Plotly.react(
     'plotUV',
-    [traceEllipse(r.ellipses.projUV,'projection'),traceEllipse(r.ellipses.sliceUV,'slice','dash'),uline,vline],
+    [traceEllipse(r.ellipses.projUV,'projection'),traceEllipse(r.ellipses.sliceUV,'slice','dash')],
     baseLayout(
       'Scattering-plane resolution ellipse',
       `δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,
