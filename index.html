@@ -147,6 +147,7 @@
 <div class="energy-slider-row"><label>ħω<input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></label><output id="hwValue">0.0 meV</output></div>
 <div class="qe-plot-frame" id="singlePlotFrame">
   <div class="qe-plot" id="singlePlot"></div>
+  <div id="qeSpurionWarning" class="qe-spurion-warning qe-spurion-plot-warning" role="status" aria-live="polite"></div>
   <div class="qe-colorbar-range hidden" id="sfColorbarRange" aria-label="Nuclear structure-factor colorbar limits">
     <input class="qe-colorbar-value qe-colorbar-value-max" id="sfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit colorbar maximum" title="Click to edit colorbar maximum; press Enter to apply"/>
     <input class="qe-colorbar-value qe-colorbar-value-min" id="sfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit colorbar minimum" title="Click to edit colorbar minimum; press Enter to apply"/>
@@ -181,7 +182,6 @@
 <button aria-controls="geometryTimePane" aria-selected="false" class="geometry-card-tab" id="geometryTabTime" role="tab" type="button">Time estimate</button>
 </div>
 <div aria-labelledby="geometryTabAngles" class="geometry-card-pane" id="geometryAnglesPane" role="tabpanel">
-<div aria-live="polite" class="qe-spurion-warning geometry-spurion-warning" id="geometrySpurionWarning"></div>
 <div aria-label="Angle calculation mode" class="geometry-card-tabs geometry-inner-tabs" id="geometryCalcModeTabs" role="tablist">
 <button aria-controls="singleGeometryTarget" aria-selected="true" class="geometry-card-tab active" id="geometryModeSingle" role="tab" type="button">Single</button>
 <button aria-controls="scanGeometryTarget" aria-selected="false" class="geometry-card-tab" id="geometryModeScan" role="tab" type="button">Scan</button>

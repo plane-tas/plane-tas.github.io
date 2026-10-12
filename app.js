@@ -1227,6 +1227,7 @@ function updateModeVisibility(){
   // Only the left plot and the Angle-calculation target controls change with mode;
   // Time estimate and the TAS-geometry card remain in the same place and size.
   $("singlePlot")?.classList.toggle("hidden",!single);
+  $("qeSpurionWarning")?.classList.toggle("hidden",!single);
   $("powderPlot")?.classList.toggle("hidden",single);
   $("qeMapTabVector")?.classList.toggle("hidden",!single);
   if(!single && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
@@ -1236,7 +1237,6 @@ function updateModeVisibility(){
     // not overwrite the saved Single-crystal preference on mode switches.
   }
   updateGeometryCalculationModeVisibility();
-  $("geometrySpurionWarning")?.classList.toggle("hidden",!single);
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
@@ -1567,14 +1567,6 @@ function updateQESpurionWarning(cache,index){
   const i=Math.max(0,Math.min(Number(index)||0,cache.hwList.length-1));
   const hw=Number(cache.hwList[i]);
   const hits=qeSpurionWarnings(cache,hw);
-  box.textContent=hits.length ? `Spurion warning: ${hits.map(x=>x.label).join(", ")}` : "";
-  box.classList.toggle("active",hits.length>0);
-}
-
-function updateGeometrySpurionWarning(cache, hw){
-  const box=$("geometrySpurionWarning");
-  if(!box) return;
-  const hits=qeSpurionWarnings(cache,Number(hw));
   box.textContent=hits.length ? `Spurion warning: ${hits.map(x=>x.label).join(", ")}` : "";
   box.classList.toggle("active",hits.length>0);
 }
@@ -3045,7 +3037,7 @@ function ensureQESliderControls(){
 
       const hwCard=document.createElement('div');
       hwCard.className='qe-range-control';
-      hwCard.innerHTML='<div id="qeSpurionWarning" class="qe-spurion-warning" aria-live="polite"></div><label class="qe-control-entry">ħω (meV)<input id="hwEntry" type="number" step="0.1" value="0.0"></label>';
+      hwCard.innerHTML='<label class="qe-control-entry">ħω (meV)<input id="hwEntry" type="number" step="0.1" value="0.0"></label>';
       hwCard.appendChild($('hwSlider'));
       const hwOut=$('hwValue'); if(hwOut) hwOut.classList.add('hidden');
 
@@ -3535,7 +3527,7 @@ async function initialize(){
   makeSpiceScatteringPlaneBasis, norm, num, parseNumericValue, powderGeometryTarget, qeDarkBlockWarningsForHKLE,
   qeGeometryAngles, rad2deg, scale, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
   selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
-  tasConvention, updateGeometrySpurionWarning, userFacingTasMessage, getSingleCache:()=>singleCache
+  tasConvention, qeSpurionWarnings, userFacingTasMessage, getSingleCache:()=>singleCache
 }));
 
 ({

@@ -7061,3 +7061,49 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
     white-space:nowrap;
   }
 }
+
+/* Spurion notices: no longer consume a row or resize the Q-E workspace. */
+#singlePlotFrame .qe-spurion-plot-warning{
+  position:absolute;
+  top:calc(12px * var(--tas-density));
+  left:calc(70px * var(--tas-density));
+  z-index:7;
+  margin:0;
+  padding:calc(3px * var(--tas-density)) calc(7px * var(--tas-density));
+  max-width:calc(100% - 90px * var(--tas-density));
+  min-height:0;
+  border-radius:calc(4px * var(--tas-density));
+  background:rgba(255,255,255,.88);
+  box-shadow:0 0 0 1px rgba(176,0,32,.12);
+  pointer-events:none;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#singlePlotFrame .qe-spurion-plot-warning:not(.active){visibility:hidden}
+/* The geometry warning row is reserved even when there is no warning. */
+#geometryAngles .geometry-warning-line{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+
+/* Plot overlay: match the Constant E legend text without changing plot layout. */
+#singlePlotFrame .qe-spurion-plot-warning{
+  font-size:calc(14px * var(--tas-density));
+}
+
+/* Touch tablets: allow native pull-to-refresh to reach the viewport when the
+   independent sidebar / workspace scroller has reached its top.  The desktop
+   viewport lock and the <=760px single-page mobile layout are unchanged. */
+@media (min-width:761px) and (pointer:coarse){
+  html, body{
+    overflow-y:auto;
+    overscroll-behavior-y:auto;
+  }
+  body > .shell > .sidebar,
+  body > .shell > main{
+    overscroll-behavior-y:auto;
+  }
+}

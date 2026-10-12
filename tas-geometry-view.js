@@ -36,7 +36,7 @@ export function createTasGeometryView(deps){
     selectedTasSense,
     setScatteringPlaneWarning,
     tasConvention,
-    updateGeometrySpurionWarning,
+    qeSpurionWarnings,
     userFacingTasMessage,
     getSingleCache
   }=deps;
@@ -252,8 +252,12 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
   // Keep a dedicated warning row even when there is no current Dark-angle
   // warning.  Single and Scan TAS geometry therefore keep exactly the same
   // vertical footprint while the selected point changes.
-  const darkWarningText=darkWarnings.length
-    ? `Warning: ${darkWarnings.join(' / ')}`
+  const spurionWarnings=!isPowder
+    ? qeSpurionWarnings(cache,Number(target.calc.hw)).map(hit=>`Spurion ${hit.label}`)
+    : [];
+  const combinedWarnings=[...spurionWarnings,...darkWarnings];
+  const darkWarningText=combinedWarnings.length
+    ? `Warning: ${combinedWarnings.join(' / ')}`
     : '&nbsp;';
   const darkWarningLine=!isPowder
     ? `<div class="geometry-result-line geometry-warning-line warning-text">${darkWarningText}</div>`
@@ -278,12 +282,6 @@ function renderGeometry(cache,index=0){
   const scanIndex=scanMode ? syncGeometryScanPointSlider(scanPoints.length) : 0;
   const scanCalc=scanMode ? (scanPoints[scanIndex] || null) : null;
   const hw=isPowder ? parseNumericValue($("powderGeomHW")?.value) || 0 : (scanCalc?.hw ?? num("geomHW"));
-  if(isPowder){
-    $("geometrySpurionWarning")?.classList.add("hidden");
-  }else{
-    $("geometrySpurionWarning")?.classList.remove("hidden");
-    updateGeometrySpurionWarning(cache,hw);
-  }
   const mirror=displaySense==="+-+" ? 1 : -1;
 
   // A Single-crystal target is h,k,l,hw. Scan mode supplies the selected
