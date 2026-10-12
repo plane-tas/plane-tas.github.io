@@ -4156,29 +4156,54 @@ const GENERATOR_OUTPUT_TABS={
   reflections:['cifOutputTabReflections','generatorReflectionsPane'],
   preview:['cifOutputTabPreview','cifPreviewPanel']
 };
+// Keep the scrollable workspace stable while the output panes are exchanged.
+// With a short Structure Editor tab (Cell / Positions / Atoms / Style) a
+// temporary reduction in the output height can clamp scrollTop. Spins is
+// taller, so it used to mask this problem on narrow screens.
+function captureGeneratorWorkspaceScroll(){
+  return [document.querySelector('.shell > main'),document.scrollingElement]
+    .filter((el,index,array)=>el && array.indexOf(el)===index)
+    .map(el=>({el,top:el.scrollTop,left:el.scrollLeft}));
+}
+function restoreGeneratorWorkspaceScroll(positions){
+  for(const {el,top,left} of positions){
+    if(!el.isConnected) continue;
+    el.scrollTop=top;
+    el.scrollLeft=left;
+  }
+}
+let generatorOutputWidthAtResize=0;
+function protectGeneratorOutputHeight(){
+  const panel=document.querySelector('#structurePanel .generator-unified-right');
+  if(!panel) return;
+  // Discard the old pixel height when a narrower/wider viewport changes the
+  // responsive layout; do not leave an empty area after a window resize.
+  const width=panel.getBoundingClientRect().width;
+  if(Math.abs(width-generatorOutputWidthAtResize)>1){
+    panel.style.removeProperty('min-height');
+    generatorOutputWidthAtResize=width;
+  }
+  // Reserve the currently rendered height BEFORE switching visibility.
+  // This prevents an intermediate shorter pane from reducing the scrollable
+  // height of <main> (which cannot be repaired by setting scrollTop later).
+  const currentHeight=Math.ceil(Math.max(panel.getBoundingClientRect().height,panel.scrollHeight));
+  panel.style.minHeight=`${currentHeight}px`;
+}
+window.addEventListener('resize',()=>{
+  const panel=document.querySelector('#structurePanel .generator-unified-right');
+  panel?.style.removeProperty('min-height');
+  generatorOutputWidthAtResize=0;
+});
 function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   if(name==='cif-preview'||name==='mcif-preview') name='preview';
   if(!GENERATOR_OUTPUT_TABS[name]) name='structure';
 
-  // On narrow layouts the Generator panels appear below the editor. Changing
-  // their visibility can make the browser's scroll anchoring jump the main
-  // workspace (or the page on mobile) back upward. Preserve both scroll roots
-  // while changing tabs, including the frame after layout has settled.
   const previousTab=Object.entries(GENERATOR_OUTPUT_TABS)
     .find(([, [tabId]])=>$(tabId)?.classList.contains('active'))?.[0];
   const isSwitch=previousTab!==name;
-  const scrollPositions=isSwitch
-    ? [document.querySelector('.shell > main'),document.scrollingElement]
-        .filter((el,index,array)=>el && array.indexOf(el)===index)
-        .map(el=>({el,top:el.scrollTop,left:el.scrollLeft}))
-    : [];
-  const restoreScroll=()=>{
-    for(const {el,top,left} of scrollPositions){
-      if(!el.isConnected) continue;
-      el.scrollTop=top;
-      el.scrollLeft=left;
-    }
-  };
+  const scrollPositions=isSwitch?captureGeneratorWorkspaceScroll():[];
+  if(isSwitch && isStructurePanelVisible()) protectGeneratorOutputHeight();
+  const restoreScroll=()=>restoreGeneratorWorkspaceScroll(scrollPositions);
 
   for(const [key,[tabId,paneId]] of Object.entries(GENERATOR_OUTPUT_TABS)){
     const selected=key===name;
