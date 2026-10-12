@@ -1622,9 +1622,11 @@ function qeParsePathDetails(value){
     if(!matches.length || source.replace(/\([^()]*\)/g,'').replace(/[,;\s]/g,'')!=='')
       throw new Error('Enter HKL points as h k l, h k l, …');
     groups=matches.map(match=>match[1]);
-  }else groups=source.split(/[,;\n]+/);
-  if(groups.some(group=>!group.trim()))
-    throw new Error('Separate complete HKL triples with commas.');
+  }else {
+    // A trailing comma is normal while editing or adding the next point.
+    // Ignore empty groups rather than displaying a non-actionable warning.
+    groups=source.split(/[,;\n]+/).map(group=>group.trim()).filter(Boolean);
+  }
   const labels=[];
   const points=groups.map((group,index)=>{
     const named=group.trim().match(/^([^:,\s]+)\s*:\s*(.*)$/u);
@@ -1927,6 +1929,25 @@ function qeMapHeaderTitle(cache){
     `${spaceGroup} | ${lattice}`;
 }
 
+// Plotly's native double-click reset can restore a stale viewport after a
+// Q-path edit. Disable that built-in reset on this plot and always return to
+// the current path's calculated axes instead (without affecting Constant E).
+function installQEVectorDoubleClickReset(plot){
+  if(!plot || typeof plot.on!=='function' || plot.__tasQEVectorResetHandler) return;
+  const handler=()=>{
+    const view=plot.__tasQEVectorDefaultView;
+    if(!view || !plot.isConnected) return;
+    Plotly.relayout(plot,{
+      'xaxis.range':view.x.slice(),
+      'yaxis.range':view.y.slice(),
+      'xaxis.autorange':false,
+      'yaxis.autorange':false
+    }).catch(err=>console.warn('Q vector–E map reset:',err));
+  };
+  plot.__tasQEVectorResetHandler=handler;
+  plot.on('plotly_doubleclick',handler);
+}
+
 function renderQEVectorMap(cache){
   const plot=$('qeVectorPlot'), msg=$('qeVectorMessage');
   if(!plot || !cache || cache.powder) return;
@@ -1938,6 +1959,9 @@ function renderQEVectorMap(cache){
       setScatteringPlaneWarning('qeVectorPlaneWarning','');
       $('qeVectorLegend')?.replaceChildren();
       try{Plotly.purge(plot);}catch(_e){}
+      plot.__tasQEVectorPathKey=null;
+      plot.__tasQEVectorDefaultView=null;
+      plot.__tasQEVectorResetHandler=null;
       return;
     }
     const multiple=pathPoints.length>2;
@@ -1957,6 +1981,13 @@ function renderQEVectorMap(cache){
       paths.push({a:startHKL,b:endHKL,p0:startXY,p1:endXY,ux:dx/length,uy:dy/length,length,start:totalDistance});
       totalDistance+=length;
     }
+    const currentPathKey=pathPoints.map(p=>p.join(',')).join(';');
+    const pathChanged=plot.__tasQEVectorPathKey!==currentPathKey;
+    // A new path must get its own viewport, even if Plotly has a cached zoom
+    // from the old path. Recalculation with an unchanged path may keep zoom.
+    plot.__tasQEVectorPathKey=currentPathKey;
+    const renderToken=(plot.__tasQEVectorRenderToken||0)+1;
+    plot.__tasQEVectorRenderToken=renderToken;
     const first=pathPoints[0],last=pathPoints.at(-1),dh=last.map((v,i)=>v-first[i]);
     // Two points retain the h/k/l axis convention. For 3+ vertices, use
     // accumulated physical path length and mark the bends P1..Pn.
@@ -2166,8 +2197,10 @@ function renderQEVectorMap(cache){
     ];
 
     renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);
-    Plotly.react(plot,traces,{
-      uirevision:`qeVector-${pathPoints.map(p=>p.join(',')).join(';')}`, 
+    const defaultView={x:[hMin,hMax],y:[0,hwMax]};
+    plot.__tasQEVectorDefaultView=defaultView;
+    const renderPromise=Plotly.react(plot,traces,{
+      uirevision:`qeVector-${currentPathKey}`, 
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
       showlegend:false,
       xaxis:{title:{text:''},tickfont:{size:17},tickmode:'array',tickvals:tickVals,
@@ -2195,7 +2228,19 @@ function renderQEVectorMap(cache){
       ],
       margin:{l:sideMargin,r:sideMargin,t:multiple?52:45,
         b:multiple?80+21*pathLabelLayout.rowCount:158}
-    },{responsive:true,doubleClick:'reset'});
+    },{responsive:true,doubleClick:false});
+    Promise.resolve(renderPromise).then(()=>{
+      if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
+      installQEVectorDoubleClickReset(plot);
+      // Force the current path's axes when a vertex is added/removed/edited.
+      // Otherwise Plotly may reuse the last double-click/zoom state.
+      if(pathChanged) return Plotly.relayout(plot,{
+        'xaxis.range':defaultView.x.slice(),
+        'yaxis.range':defaultView.y.slice(),
+        'xaxis.autorange':false,
+        'yaxis.autorange':false
+      });
+    }).catch(err=>console.warn('Q vector–E map viewport:',err));
     // A responsive Plotly resize does not re-run the label row selection.
     // Recalculate the horizontal-label rows when the parent pane changes width
     // (for example when a tablet rotates or the browser becomes narrower).
@@ -2230,6 +2275,9 @@ function renderQEVectorMap(cache){
     if(msg) msg.textContent=err?.message||String(err);
     $('qeVectorLegend')?.replaceChildren();
     try{Plotly.purge(plot);}catch(_e){}
+    plot.__tasQEVectorPathKey=null;
+    plot.__tasQEVectorDefaultView=null;
+    plot.__tasQEVectorResetHandler=null;
   }
 }
 
@@ -2444,9 +2492,11 @@ function renderSingle(cache,index=0){
       mode:"lines",
       line:{width:0},
       fillcolor:"rgba(255,215,0,0.20)",
+      // Do not show Plotly's primary/secondary "Accessible Q" hover labels.
+      // Keep the fill visible and preserve clicks for Select Path.
+      hoverinfo:'skip',
       ...(unit==='rlu'?{
-        customdata:boundary.map(p=>qePhysicalRluCoordinates(cache,p)),
-        hovertemplate:'U = %{customdata[0]:.3f}, V = %{customdata[1]:.3f} r.l.u.<extra></extra>'
+        customdata:boundary.map(p=>qePhysicalRluCoordinates(cache,p))
       }:{})
     },
     {
@@ -2568,8 +2618,13 @@ function renderSingle(cache,index=0){
       textposition:'top center',textfont:{size:14,color:'#7e22ce'},
       marker:{size:13,color:'#9333ea',line:{color:'#fff',width:2}},
       line:{color:'#9333ea',width:2.5,dash:'dash'},
-      customdata:qeSelectedPathHKL.map(hkl=>hkl.map(v=>Number(v).toFixed(3)).join(', ')),
-      hovertemplate:'HKL = (%{customdata})<extra></extra>'});
+      // Match the nuclear/magnetic peak hover: use the shared TAS motor-angle
+      // calculation at the currently selected energy, sense and S1 sign.
+      customdata:qeSelectedPathHKL.map(hkl=>[
+        hkl.map(v=>Number(v).toFixed(3)).join(', '),
+        peakHoverAngles({label:'HKL',hkl})
+      ]),
+      hovertemplate:'HKL = (%{customdata[0]})<br>%{customdata[1]}<extra></extra>'});
   }
   // Plotly draws later traces on top. Keep the nuclear legend entry where it is,
   // but render the actual nuclear markers/labels last so BG1-BG4 and other
