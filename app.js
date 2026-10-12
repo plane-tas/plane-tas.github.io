@@ -41,7 +41,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults;
+let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, darkSampleRangeForConvention, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal, calculateSingleCrystalCore;
@@ -766,6 +766,10 @@ function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
     $(id)?.classList.toggle('hidden',diffraction);
   }
   $('diffractometerResolutionNote')?.classList.toggle('hidden',!diffraction);
+  // Only the TAS resolution model is implemented. Diffractometers must not
+  // display even a previously calculated TAS ellipse or matrix.
+  $('resolutionCalculation')?.classList.toggle('resolution-unavailable',diffraction);
+  if(diffraction) clearResolutionResults?.();
   $('resolutionFocusingGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
   $('resolutionDistanceGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
   for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))
@@ -3229,6 +3233,10 @@ function runScheduledRecalc(){
     updateModeVisibility();
     updateAutoW();
     updateResolutionPlaneWarning();
+    if(instrumentIsDiffractometer()){
+      clearResolutionResults?.();
+      return;
+    }
     if($("calcMode")?.value==="single") doSingleResolution();
     else markResolutionScanDirty();
     return;
@@ -3496,6 +3504,8 @@ function recalculate(){
 }
 
 $("instrument").addEventListener("change",()=>{
+  // Do not carry resolution plots or scan points across instruments.
+  clearResolutionResults?.();
   applyInstrumentDefaults();
   scheduleRecalc();
 });
@@ -3914,7 +3924,8 @@ async function initialize(){
   setPowderLinkDriver,
   syncPowderLinkedInputs,
   powderGeometryTarget,
-  hasScanResults
+  hasScanResults,
+  clearResolutionResults
 }=createResolutionUI({
   $, tasMotorAngles, PI, RLRes, add, calcResolution, checkedValue, clamp, clearError, currentInstrument, deg2rad,
   hklInCurrentScatteringPlane:(...args)=>hklInCurrentScatteringPlane(...args), hklToQ, inferOutOfPlaneHKL, latticeParams,

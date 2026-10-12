@@ -38,6 +38,27 @@ export function createResolutionUI(deps){
 
 let scanResults=[];
 let scanResolutionPlotLimits=null;
+function resolutionIsUnavailable(){
+  // updateCalcMode() calls this during startup before instrument JSON files
+  // have been loaded.  An instrument is not selectable at that point.
+  // Avoid aborting initialize() while still disabling TAS resolution once a
+  // diffractometer has actually been selected.
+  try{
+    return currentInstrument()?.instrument_type==='diffractometer';
+  }catch(_err){
+    return false;
+  }
+}
+function clearResolutionResults(){
+  scanResults=[];
+  scanResolutionPlotLimits=null;
+  $('result')?.classList.add('hidden');
+  $('scanNav')?.classList.add('hidden');
+  if($('summary')) $('summary').textContent='';
+  if($('matrix')) $('matrix').textContent='';
+  $('calcScanResolution')?.classList.remove('needs-calc');
+  $('calcSingleResolution')?.classList.remove('needs-calc');
+}
 function formatAutoHKL(v){return v.map(x=>{if(Math.abs(x)<1e-10)return '0';const r=Math.round(x);if(Math.abs(x-r)<1e-10)return String(r);return Number(x.toPrecision(6)).toString();}).join(', ');}
 function buildResolutionLattice(){
   const lc={...latticeParams(),sv1:[num('Uh'),num('Uk'),num('Ul')],sv2:[num('Vh'),num('Vk'),num('Vl')]};
@@ -185,6 +206,10 @@ function formatAngle(value,absolute=false){
 }
 
 function renderResolution(entry,indexInfo='',plotLimits=null){
+  if(resolutionIsUnavailable()){
+    clearResolutionResults();
+    return;
+  }
   const {result:r,calc,unitMode,lc,angles}=entry;
   const limits=plotLimits || r.lim;
   const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
@@ -272,6 +297,10 @@ function resolutionScanPoints(){
 }
 
 function updateResolutionPlaneWarning(){
+  if(resolutionIsUnavailable()){
+    setScatteringPlaneWarning('resolutionPlaneWarning','');
+    return;
+  }
   const scan=$('calcMode')?.value==='scan';
   if(!scan){
     setScatteringPlaneWarning('resolutionPlaneWarning',scatteringPlaneWarningMessage([num('h'),num('k'),num('l')]));
@@ -290,6 +319,10 @@ function updateResolutionPlaneWarning(){
 }
 
 function doSingleResolution(){
+  if(resolutionIsUnavailable()){
+    clearResolutionResults();
+    return;
+  }
   clearError();
   updateResolutionPlaneWarning();
   try{
@@ -302,6 +335,10 @@ function doSingleResolution(){
   }catch(e){showError(e);}
 }
 function doScanResolution(){
+  if(resolutionIsUnavailable()){
+    clearResolutionResults();
+    return;
+  }
   clearError();
   updateResolutionPlaneWarning();
   try{
@@ -323,6 +360,11 @@ function doScanResolution(){
   }
 }
 function renderResolutionScan(i){
+  if(resolutionIsUnavailable()){
+    clearResolutionResults();
+    return;
+  }
+  if(!scanResults.length) return;
   i=Math.max(1,Math.min(scanResults.length,Number(i)));
   $('scanSlider').value=i;
   $('scanIndex').textContent=`${i} / ${scanResults.length}`;
@@ -503,6 +545,7 @@ function powderGeometryTarget(uiSenseOverride=null,rawSenseForDrawing=false){
     setPowderLinkDriver,
     syncPowderLinkedInputs,
     powderGeometryTarget,
-    hasScanResults:()=>scanResults.length>0
+    hasScanResults:()=>scanResults.length>0,
+    clearResolutionResults
   };
 }
