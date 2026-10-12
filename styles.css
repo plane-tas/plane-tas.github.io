@@ -6934,7 +6934,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 @media (min-width: 761px){
   @container (min-width: 700px){
     #singleMain .chart-grid:not(.time-estimate-active){
-      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
       align-items:stretch;
     }
     #singleMain .chart-grid:not(.time-estimate-active) > .qe-main-plot-column,
@@ -6952,7 +6952,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   line-height:1.4;
 }
 
-/* 2026-10-12 — Q-E Range: one stable 55:45 split for BOTH right-hand tabs.
+/* 2026-10-12 — Q-E Range: one stable 50:50 split for BOTH right-hand tabs.
    Earlier Time estimate rules could silently override the Angle/TAS layout,
    making the right card change width or forcing a vertical stack on a tab click.
    Keep the wide table scrollable inside its own pane instead. */
@@ -6960,7 +6960,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   @container (min-width:700px){
     #singleMain .chart-grid,
     #singleMain .chart-grid.time-estimate-active{
-      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
       align-items:stretch;
     }
     #singleMain .chart-grid > .qe-main-plot-column,
