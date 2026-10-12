@@ -170,7 +170,13 @@ export function createScriptWorkspace(deps){
   function setScatteringPlaneWarning(boxId,message){
     const box=$(boxId);
     if(!box) return;
-    const text=String(message||'').trim();
+    let text=String(message||'').trim();
+    // In the Q-E map and TAS geometry panels, use the concise plane-status
+    // message. Retain detailed diagnostics for malformed U/V orientation data.
+    if((boxId==='qeVectorPlaneWarning' || boxId==='geometryPlaneWarning') &&
+       /outside the current U-V scattering plane/i.test(text)){
+      text='Warning: Out of plane';
+    }
     box.textContent=text;
     box.classList.toggle('hidden',!text);
   }

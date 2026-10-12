@@ -6872,3 +6872,77 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   margin:0;
   flex:none;
 }
+
+/* Q-E Range: keep the Constant E / Q vector plots alongside TAS geometry
+   until the usable MAIN content (not the entire window) becomes too narrow.
+   Below the threshold, preserve the original stacked layout. */
+@media (min-width: 761px){
+  @container (min-width: 700px){
+    #singleMain .chart-grid:not(.time-estimate-active){
+      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      align-items:stretch;
+    }
+    #singleMain .chart-grid:not(.time-estimate-active) > .qe-main-plot-column,
+    #singleMain .chart-grid:not(.time-estimate-active) > .geometry-card{
+      min-width:0;
+      max-width:100%;
+    }
+  }
+}
+/* Keep an out-of-plane warning legible, without resizing other controls. */
+#qeVectorPlaneWarning,
+#geometryPlaneWarning{
+  font-size:max(15px,calc(18px * var(--tas-density)));
+  font-weight:600;
+  line-height:1.4;
+}
+
+/* 2026-10-12 — Q-E Range: one stable 55:45 split for BOTH right-hand tabs.
+   Earlier Time estimate rules could silently override the Angle/TAS layout,
+   making the right card change width or forcing a vertical stack on a tab click.
+   Keep the wide table scrollable inside its own pane instead. */
+@media (min-width:761px){
+  @container (min-width:700px){
+    #singleMain .chart-grid,
+    #singleMain .chart-grid.time-estimate-active{
+      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      align-items:stretch;
+    }
+    #singleMain .chart-grid > .qe-main-plot-column,
+    #singleMain .chart-grid > .geometry-card{
+      min-width:0;
+      max-width:100%;
+    }
+    #singleMain .chart-grid.time-estimate-active .time-scan-table-wrap{
+      min-width:0;
+      max-width:100%;
+      overflow-x:auto;
+    }
+  }
+}
+
+/* CIF Generator: retain the left editor and right output next to each other
+   much longer than the previous 880px container cutoff.  Shrink only their
+   columns, not the inputs or 3D plot; keep the original mobile stack. */
+@media (min-width:761px){
+  @container generator-unified (min-width:660px){
+    #structurePanel #cifGeneratorPanel.generator-unified-grid{
+      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      align-items:start;
+    }
+    #structurePanel .generator-unified-left,
+    #structurePanel .generator-unified-right{
+      min-width:0;
+      max-width:100%;
+    }
+  }
+}
+
+/* Out-of-plane messages should be readable but not visually dominate
+   surrounding warnings and numerical output. */
+#qeVectorPlaneWarning,
+#geometryPlaneWarning{
+  font-size:max(13px,calc(16px * var(--tas-density)));
+  font-weight:600;
+  line-height:1.4;
+}
