@@ -1762,6 +1762,10 @@ function renderQEVectorMap(cache){
     const xVals=sVals.map(toH);
     const hMin=toH(sMin), hMax=toH(sMax);
     const hCoefficients=dh.map(d=>d/hEnd);
+    // Name the horizontal scan parameter after the first HKL component that
+    // varies: h for H, k for K, or l for L.  A three-component scan uses h.
+    const firstVaryingIndex=hCoefficients.findIndex(c=>Math.abs(c)>1e-10);
+    const axisSymbol=['h','k','l'][firstVaryingIndex] || 'h';
     const axisNumber=value=>{
       if(Math.abs(value)<1e-10) return '0';
       return String(Number(value.toPrecision(6)));
@@ -1771,7 +1775,7 @@ function renderQEVectorMap(cache){
       const abs=Math.abs(coefficient);
       if(abs<1e-10) return axisNumber(base);
       const coeff=Math.abs(abs-1)<1e-10 ? '' : axisNumber(abs);
-      const variable=`${coeff}h`;
+      const variable=`${coeff}${axisSymbol}`;
       if(Math.abs(base)<1e-10) return coefficient<0?`-${variable}`:variable;
       return `${axisNumber(base)}${sign}${variable}`;
     };
