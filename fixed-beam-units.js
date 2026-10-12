@@ -24,9 +24,12 @@ export function canonicalModeFromFixedBeam(quantity){
 }
 
 function displayNumber(value){
-  // Retain enough significant digits that repeated unit switches do not
-  // noticeably alter the canonical meV state.
+  // Keep the canonical meV value sufficiently precise for calculations.
   return Number(value.toPrecision(10)).toString();
+}
+function displayFixedValue(value){
+  // Only the visible Fixed entry is rounded; never round the canonical meV state.
+  return Number(value.toFixed(3)).toString();
 }
 
 export function createFixedBeamControls(doc=document){
@@ -45,7 +48,7 @@ export function createFixedBeamControls(doc=document){
     quantity.value=q;
     label.textContent=LABEL[q];
     const energy=Number(canonicalEnergy.value);
-    if(energy>0 && Number.isFinite(energy)) field.value=displayNumber(fixedBeamFromEnergy(q,energy));
+    if(energy>0 && Number.isFinite(energy)) field.value=displayFixedValue(fixedBeamFromEnergy(q,energy));
   }
 
   function updateCanonical(eventType){
@@ -73,11 +76,15 @@ export function createFixedBeamControls(doc=document){
 
   quantity.addEventListener('change',()=>{
     const q=coerceQuantity(quantity.value);
-    label.textContent=LABEL[q];
-    // Choice changes the unit, not the underlying physical beam energy.
-    const currentE=Number(canonicalEnergy.value);
-    if(currentE>0) field.value=displayNumber(fixedBeamFromEnergy(q,currentE));
-    updateCanonical('change');
+    // A unit switch must not re-parse the 3-decimal display value: doing so
+    // would change the physical energy after repeated unit switches.
+    const mode=canonicalModeFromFixedBeam(q);
+    if(canonicalMode.value!==mode){
+      canonicalMode.value=mode;
+      canonicalMode.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    syncFromCanonical({preferredQuantity:q});
+    canonicalEnergy.dispatchEvent(new Event('change',{bubbles:true}));
   });
   field.addEventListener('input',()=>updateCanonical('input'));
   field.addEventListener('change',()=>{

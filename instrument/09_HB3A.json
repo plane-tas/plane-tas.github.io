@@ -1,0 +1,49 @@
+{
+  "name": "DEMAND@HFIR",
+  "approximation": {
+    "method": "Cooper-Nathans"
+  },
+  "supermirror": {
+    "enabled": false
+  },
+  "monochromator": {
+    "crystal": "Si(220)"
+  },
+  "detector": {
+    "type": "Anger"
+  },
+  "configuration": {
+    "energy_mode": "Ei fixed",
+    "Ef": 34.226,
+    "geometry": "W",
+    "sense": "-+-",
+    "s1sign": "ccw",
+    "Ei": 34.226
+  },
+  "s2_dep_ei": "no",
+  "S2_min": 3,
+  "S2_limits": [
+    {
+      "S2limit": 155,
+      "Ei": 80.9923
+    },
+    {
+      "S2limit": 155,
+      "Ei": 34.226
+    },
+    {
+      "S2limit": 155,
+      "Ei": 12.6697
+    }
+  ],
+  "instrument_type": "diffractometer",
+  "available_crystals": {
+    "monochromator": [
+      "Si(111)",
+      "Si(220)",
+      "Si(331)",
+      "Si(333)",
+      "Si(440)"
+    ]
+  }
+}

@@ -645,7 +645,7 @@ function normalizeCrystalName(name){ const aliases={PG002:"PG(002)",PG004:"PG(00
 function setIf(id,x){ if($(id)&&x!==undefined&&x!==null&&Number.isFinite(Number(x))) $(id).value=x; }
 function setBool(id,x){ if($(id)&&x!==undefined&&x!==null) $(id).checked=!!x; }
 function setSelect(id,x){ if(!$(id)||x===undefined||x===null) return; if([...$(id).options].some(o=>o.value===String(x))) $(id).value=String(x); }
-const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
+const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(113)':1.705923,'Ge(115)':1.088865,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
 // DEMAND (HB-3A) operates at fixed monochromator angle, so a Si reflection
 // change selects one of its nominal incident wavelengths. Preserve the existing
 // TAS convention internally (Ei fixed, meV) and reflect it in the chosen UI unit.
@@ -662,7 +662,22 @@ function syncDEMANDIncidentEnergy(crystal){
   $('energy').dispatchEvent(new Event('change',{bubbles:true}));
 }
 
-function fillCrystal(selectId,dId){ const s=$(selectId); s.innerHTML=''; for(const k of Object.keys(CRYSTALS)){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);} s.value='PG(002)'; s.addEventListener('change',()=>{const d=CRYSTALS[s.value];if(d!=null) $(dId).value=d; $(dId).disabled=false; if(selectId==='monoCrystal') syncDEMANDIncidentEnergy(s.value);}); $(dId).disabled=false; }
+// WAND² has a fixed monochromator take-off angle.  Switching between its
+// documented Ge(113)/Ge(115) settings must update the fixed incident wavelength.
+// This is a nominal wavelength change, not an energy-resolved WAND² analysis.
+const WAND2_MONO_WAVELENGTHS={'Ge(113)':1.486,'Ge(115)':0.95};
+function syncWAND2IncidentEnergy(crystal){
+  const inst=currentInstrument();
+  if(!/WAND\s*(?:²|2)|HB[- ]?2C/i.test(String(inst?.name||''))) return;
+  const lambda=WAND2_MONO_WAVELENGTHS[crystal];
+  if(!(lambda>0)) return;
+  $('energyMode').value='Ei fixed';
+  $('energy').value=String(Number((81.8042/(lambda*lambda)).toPrecision(12)));
+  fixedBeamControls?.syncFromCanonical({preferredQuantity:'lambda_i'});
+  $('energyMode').dispatchEvent(new Event('change',{bubbles:true}));
+  $('energy').dispatchEvent(new Event('change',{bubbles:true}));
+}
+function fillCrystal(selectId,dId){ const s=$(selectId); s.innerHTML=''; for(const k of Object.keys(CRYSTALS)){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);} s.value='PG(002)'; s.addEventListener('change',()=>{const d=CRYSTALS[s.value];if(d!=null) $(dId).value=d; $(dId).readOnly=false; $(dId).disabled=false; if(selectId==='monoCrystal'){syncDEMANDIncidentEnergy(s.value);syncWAND2IncidentEnergy(s.value);}}); $(dId).readOnly=false;$(dId).disabled=false; }
 
 // The sidebar and Resolution use the same underlying selectors/d-spacing.
 // Resolution's selector remains authoritative so all existing calculations,
@@ -729,9 +744,17 @@ function setCrystalOptions(part,inst,{preserveCurrent=false}={}){
     select.disabled=!allowed.length;
   }
   if(dInput){
-    if(selected && CRYSTALS[selected]!=null) dInput.value=CRYSTALS[selected];
-    dInput.readOnly=!!selected;
-    dInput.disabled=!selected;
+    // Manual d-spacing overrides are allowed for both monochromator and
+    // analyzer.  Preserve an edited value across a UI refresh, but reload the
+    // new instrument's JSON default when the instrument itself changes.
+    const jsonD=Number(inst?.[part]?.d);
+    const defaultD=(inst?.[part]?.d!=null && Number.isFinite(jsonD) && jsonD>0)
+      ? jsonD : (selected ? CRYSTALS[selected] : null);
+    if(!preserveCurrent || old!==selected || dInput.value===''){
+      dInput.value=defaultD!=null?String(defaultD):'';
+    }
+    dInput.readOnly=false;
+    dInput.disabled=false;
   }
 }
 function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
@@ -748,10 +771,12 @@ function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
   for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))
     el.classList.toggle('hidden',diffraction);
   $('resolutionSampleDetectorDistanceLabel')?.classList.toggle('hidden',!diffraction);
-  // Detector type is instrument JSON metadata (read-only for now), not an
-  // analyzer setting nor an input into the existing TAS resolution model.
+  // Detector type is editable. Only reset it from JSON on instrument change;
+  // never overwrite a user's choice during a layout or local-state refresh.
   const detectorType=$('detectorType');
-  if(detectorType) detectorType.value=String(inst.detector?.type||'single');
+  if(detectorType && !preserveCurrent){
+    detectorType.value=String(inst.detector?.type||'single').toLowerCase()==='anger'?'anger':'single';
+  }
   setCrystalOptions('monochromator',inst,{preserveCurrent});
   if(!diffraction) setCrystalOptions('analyzer',inst,{preserveCurrent});
   else {
@@ -801,15 +826,45 @@ function applyInstrumentDefaults(){
   setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);
   const sampleDetector=$('sampleDetectorDistance');
   if(sampleDetector) {
-    // Prefer an explicit diffractometer leg. Old JSON used the L2 slot for
-    // this distance; show it as a provisional fallback, not a new measured value.
-    const fallbackDistance=Object.prototype.hasOwnProperty.call(dist,'sample_detector')
-      ? dist.sample_detector : (instrumentIsDiffractometer(inst)?dist.L2:null);
-    sampleDetector.value=fallbackDistance!=null && Number.isFinite(Number(fallbackDistance))
-      ? String(fallbackDistance) : '';
+    // LSD is an independent distance. Never substitute L2 when it is unspecified.
+    const lsd=dist.LSD;
+    sampleDetector.value=lsd!=null && String(lsd).trim()!=='' && Number.isFinite(Number(lsd))
+      ? String(lsd) : '';
   }
-  if($('detectorType')) $('detectorType').value=String(det.type||'single');
+  if($('detectorType')) $('detectorType').value=String(det.type||'single').toLowerCase()==='anger'?'anger':'single';
   setIf("beamW",beam.width);setIf("beamH",beam.height);setIf("monoW",mono.width);setIf("monoH",mono.height);setIf("monoT",mono.thickness);setIf("anaW",ana.width);setIf("anaH",ana.height);setIf("anaT",ana.thickness);setIf("detW",det.width);setIf("detH",det.height);
+  if(instrumentIsDiffractometer(inst)){
+    // A missing JSON value means "not specified", NOT a value inherited from
+    // the previous instrument or from static HTML defaults. This is critical
+    // for WAND² and DEMAND: their TAS-style resolution data are incomplete.
+    const optionalFields=[
+      ['div1m',sm.m_value],
+      ['div1h',col['1st_h']],['div1v',col['1st_v']],
+      ['div2h',col['2nd_h']],['div2v',col['2nd_v']],
+      ['div3h',col['3rd_h']],['div3v',col['3rd_v']],
+      ['div4h',col['4th_h']],['div4v',col['4th_v']],
+      ['monoHB',mono.blade_h],['monoVB',mono.blade_v],
+      ['anaHB',ana.blade_h],['anaVB',ana.blade_v],
+      ['mosMonoH',mono.mosaic_h],['mosMonoV',mono.mosaic_v],
+      ['mosAnaH',ana.mosaic_h],['mosAnaV',ana.mosaic_v],
+      ['L0',dist.L0],['L1',dist.L1],['L2',dist.L2],['L3',dist.L3],
+      ['beamW',beam.width],['beamH',beam.height],
+      ['monoW',mono.width],['monoH',mono.height],['monoT',mono.thickness],
+      ['anaW',ana.width],['anaH',ana.height],['anaT',ana.thickness],
+      ['detW',det.width],['detH',det.height]
+    ];
+    for(const [id,value] of optionalFields){
+      if(value===undefined || value===null || !Number.isFinite(Number(value))){
+        const input=$(id);
+        if(input) input.value='';
+      }
+    }
+    // Avoid inheriting a previous monochromator's focusing checkboxes when
+    // this diffractometer's JSON does not specify the corresponding setting.
+    for(const [id,value] of [['monoHF',mono.hfocus],['monoVF',mono.vfocus]]){
+      if(value===undefined || value===null){const control=$(id);if(control) control.checked=false;}
+    }
+  }
   updateEnergyLabel();
   // Use wavelength by default for incident-fixed diffractometers, while
   // conventional TAS instruments retain meV. User choices are restored later.

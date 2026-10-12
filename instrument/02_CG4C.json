@@ -4,18 +4,18 @@
     "method": "Popovici"
   },
   "supermirror": {
-    "enabled": true,
+    "enabled": false,
     "m_value": 1.2
   },
   "collimator": {
-    "1st_h": 80,
-    "1st_v": 240,
-    "2nd_h": 120,
-    "2nd_v": 240,
+    "1st_h": 40,
+    "1st_v": 120,
+    "2nd_h": 100,
+    "2nd_v": 120,
     "3rd_h": 80,
-    "3rd_v": 240,
+    "3rd_v": 120,
     "4th_h": 120,
-    "4th_v": 240
+    "4th_v": 120
   },
   "monochromator": {
     "crystal": "PG002",
@@ -31,8 +31,8 @@
   },
   "analyzer": {
     "crystal": "PG002",
-    "mosaic_h": 30,
-    "mosaic_v": 30,
+    "mosaic_h": 90,
+    "mosaic_v": 90,
     "width": 0.022,
     "height": 0.022,
     "thickness": 0.002,

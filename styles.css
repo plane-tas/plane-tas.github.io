@@ -6349,7 +6349,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 /* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
 #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
 #resolutionDistanceGrid .resolution-diffraction-distance{min-width:0}
-#resolutionInstrumentDetails #detectorType[readonly]{background:#f8fafc;color:#263238}
+
 @media(max-width:760px){
   #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

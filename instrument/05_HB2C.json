@@ -1,0 +1,44 @@
+{
+  "name": "WAND2@HFIR",
+  "instrument_type": "diffractometer",
+  "approximation": {
+    "method": "Cooper-Nathans"
+  },
+  "configuration": {
+    "energy_mode": "Ei fixed",
+    "Ei": 37.04571514,
+    "Ef": 37.04571514,
+    "geometry": "W",
+    "sense": "-+-",
+    "s1sign": "ccw"
+  },
+  "monochromator": {
+    "crystal": "Ge(113)",
+    "d": 1.705923,
+    "vfocus": true
+  },
+  "available_crystals": {
+    "monochromator": [
+      "Ge(113)",
+      "Ge(115)"
+    ]
+  },
+  "detector": {
+    "type": "single"
+  },
+  "distance": {
+    "LSD": 0.71
+  },
+  "s2_dep_ei": "no",
+  "S2_min": 1,
+  "S2_limits": [
+    {
+      "S2limit": 156,
+      "Ei": 37.04571514
+    },
+    {
+      "S2limit": 156,
+      "Ei": 90.64177285
+    }
+  ]
+}

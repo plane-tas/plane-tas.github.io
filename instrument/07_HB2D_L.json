@@ -22,15 +22,14 @@
     "type": "single"
   },
   "distance": {
-    "sample_detector": null,
-    "L1": 3.36
+    "L0": 10.9,
+    "L1": 3.36,
+    "LSD": null
   },
   "monochromator": {
     "crystal": "Si(220)",
-    "width": 0.178,
-    "height": 0.2,
-    "thickness": 0.02,
     "hfocus": true,
     "vfocus": true
-  }
+  },
+  "_unverified_resolution_fields_note": "Collimations, supermirror m-value, monochromator blade counts/mosaic/component dimensions, beam and detector dimensions, L0, L2, L3, and sample-detector distance (LSD) are not verified and are intentionally unspecified. L1=3.36 m is the documented monochromator-to-sample nominal separation; horizontal/vertical monochromator focusing is documented."
 }
