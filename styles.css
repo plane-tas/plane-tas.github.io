@@ -6837,3 +6837,38 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 #structurePanel #cifGeneratorPanel.generator-unified-grid{
   overflow-anchor:none;
 }
+
+/* Q vector–E: mode toggle remains on one readable line when there is room. */
+#qeVectorMapPane .qe-vector-range{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:calc(8px * var(--tas-density)) calc(16px * var(--tas-density));
+  min-width:0;
+  padding:calc(7px * var(--tas-density)) calc(12px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-top:0;
+  background:#fff;
+  box-sizing:border-box;
+}
+#qeVectorMapPane .qe-vector-range-caption{
+  font-size:max(12px,calc(16px * var(--tas-density)));
+  font-weight:600;
+  white-space:nowrap;
+}
+#qeVectorMapPane .qe-vector-range label{
+  display:inline-flex;
+  align-items:center;
+  gap:calc(5px * var(--tas-density));
+  min-width:0;
+  margin:0;
+  font-size:max(12px,calc(15px * var(--tas-density)));
+  white-space:nowrap;
+  cursor:pointer;
+}
+#qeVectorMapPane .qe-vector-range input[type="radio"]{
+  width:auto;
+  height:auto;
+  margin:0;
+  flex:none;
+}

@@ -1648,13 +1648,35 @@ function renderQEVectorMap(cache){
     const proj=p0[0]*ux+p0[1]*uy;
     const perp2=Math.max(0,p0[0]*p0[0]+p0[1]*p0[1]-proj*proj);
     const reach=Math.sqrt(Math.max(0,qLimit*qLimit-perp2));
-    const sMin=-proj-reach, sMax=-proj+reach;
+    // Full range keeps the current accessible-Q survey; HKL1–HKL2 samples
+    // exactly the requested segment even if part is inaccessible.
+    const rangeMode=document.querySelector('input[name="qeVectorRangeMode"]:checked')?.value==='segment' ? 'segment' : 'full';
+    const sMin=rangeMode==='segment' ? 0 : -proj-reach;
+    const sMax=rangeMode==='segment' ? lineLen : -proj+reach;
     const ns=260;
     const sVals=linspace(sMin,sMax,ns);
-    // Q vector–E uses the line parameter t directly:
-    // HKL(t) = HKL1 + t (HKL2 - HKL1).  This makes the horizontal
-    // coordinate independent of the Constant-E map unit selector.
-    const xVals=sVals.map(v=>v/lineLen);
+    // Use an HKL-increment coordinate h instead of the normalized t coordinate.
+    // HKL = HKL1 + h * (HKL2-HKL1) / max(|HKL2-HKL1|).
+    // Thus (-3,-1,0) -> (3,-1,0) reads (-3+h,-1,0) with h=0..6.
+    const hEnd=Math.max(...dh.map(Math.abs));
+    const toH=sv=>sv*hEnd/lineLen;
+    const xVals=sVals.map(toH);
+    const hMin=toH(sMin), hMax=toH(sMax);
+    const hCoefficients=dh.map(d=>d/hEnd);
+    const axisNumber=value=>{
+      if(Math.abs(value)<1e-10) return '0';
+      return String(Number(value.toPrecision(6)));
+    };
+    const axisTerm=(base,coefficient)=>{
+      const sign=coefficient<0?'-':'+';
+      const abs=Math.abs(coefficient);
+      if(abs<1e-10) return axisNumber(base);
+      const coeff=Math.abs(abs-1)<1e-10 ? '' : axisNumber(abs);
+      const variable=`${coeff}h`;
+      if(Math.abs(base)<1e-10) return coefficient<0?`-${variable}`:variable;
+      return `${axisNumber(base)}${sign}${variable}`;
+    };
+    const axisTitle=`(${a.map((v,i)=>axisTerm(v,hCoefficients[i])).join(', ')})`;
     const z=[], darkKiZ=[], darkKfZ=[], darkFixedZ=[], hover=[];
     for(let i=0;i<cache.hwList.length;i++){
       const row=[], kiRow=[], kfRow=[], fixedRow=[], hrow=[];
@@ -1690,38 +1712,21 @@ function renderQEVectorMap(cache){
       }
       z.push(row); darkKiZ.push(kiRow); darkKfZ.push(kfRow); darkFixedZ.push(fixedRow); hover.push(hrow);
     }
-    const endX=1;
-    const tMin=sMin/lineLen, tMax=sMax/lineLen;
-    let firstTick=Math.ceil(tMin-1e-9), lastTick=Math.floor(tMax+1e-9);
-    const tickCount=Math.max(0,lastTick-firstTick+1);
-    const tickStep=Math.max(1,Math.ceil(tickCount/9));
-    let tickTs=[];
-    for(let t=firstTick;t<=lastTick;t+=tickStep) tickTs.push(t);
-    for(const t of [0,1]) if(t>=tMin-1e-9 && t<=tMax+1e-9 && !tickTs.some(x=>Math.abs(x-t)<1e-8)) tickTs.push(t);
-
-    // Add every integer-HKL point across the full *displayed* horizontal range,
-    // not only between HKL1 (t=0) and HKL2 (t=1).  A point is labelled when
-    // h, k and l are all integers simultaneously.  Using the most strongly
-    // varying component to enumerate candidates also catches fractional t,
-    // e.g. (0,0,0)->(2,2,0) gives (1,1,0) at t=0.5.
-    const varying=dh.map((v,i)=>[Math.abs(v),i]).sort((x,y)=>y[0]-x[0])[0][1];
-    const hklAtTMin=a[varying]+tMin*dh[varying];
-    const hklAtTMax=a[varying]+tMax*dh[varying];
-    const lo=Math.ceil(Math.min(hklAtTMin,hklAtTMax)-1e-9);
-    const hi=Math.floor(Math.max(hklAtTMin,hklAtTMax)+1e-9);
-    for(let n=lo;n<=hi;n++){
-      const t=(n-a[varying])/dh[varying];
-      if(t<tMin-1e-9 || t>tMax+1e-9) continue;
-      const hkl=a.map((v,k)=>v+t*dh[k]);
-      if(hkl.every(v=>Math.abs(v-Math.round(v))<1e-8) && !tickTs.some(x=>Math.abs(x-t)<1e-8)) tickTs.push(t);
+    const endX=hEnd;
+    // Human-readable numeric h ticks: about 6–9 divisions regardless of the
+    // real-space lattice constants or how far Full range extends.
+    const span=hMax-hMin;
+    const roughStep=span/8;
+    const base10=Math.pow(10,Math.floor(Math.log10(roughStep)));
+    const tickStep=([1,2,2.5,5,10].find(s=>s*base10>=roughStep) || 10)*base10;
+    const tickVals=[];
+    const firstTick=Math.ceil(hMin/tickStep-1e-9);
+    for(let i=0;i<=12;i++){
+      const tick=(firstTick+i)*tickStep;
+      if(tick>hMax+tickStep*1e-9) break;
+      tickVals.push(Number(tick.toPrecision(12)));
     }
-    tickTs.sort((x,y)=>x-y);
-    const fmtHkl=v=>{
-      const r=Math.round(v);
-      return Math.abs(v-r)<1e-8 ? String(r) : Number(v.toFixed(3)).toString();
-    };
-    const tickVals=tickTs.slice();
-    const tickText=tickTs.map(t=>`(${a.map((v,k)=>fmtHkl(v+t*dh[k])).join(',')})`);
+    const tickText=tickVals.map(axisNumber);
     const traces=[{
       type:'heatmap',x:xVals,y:cache.hwList,z,
       zmin:0,zmax:1,showscale:false,hoverinfo:'text',text:hover,
@@ -1743,7 +1748,7 @@ function renderQEVectorMap(cache){
     // Overlay selected BG-material powder reflections on the Q-vector path.
     // A powder reflection is a |Q| = const ring/sphere.  Intersect that with
     // the selected reciprocal-space line p(s)=p0+s*u; each real intersection
-    // becomes a vertical line in the t (= s/lineLen) coordinate.  This is a
+    // becomes a vertical line in the h (= s*hEnd/lineLen) coordinate.  This is a
     // display-only overlay and reuses the same BG powder peak calculation and
     // intensity convention as the Powder Q-E map.
     const qVectorLimit=Math.max(
@@ -1776,7 +1781,7 @@ function renderQEVectorMap(cache){
               continue;
             }
             const hkl=a.map((v,k)=>v+t*dh[k]);
-            x.push(t); y.push(w);
+            x.push(t*hEnd); y.push(w);
             customdata.push([
               `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(peak)}<br>I/Imax = ${peak.relativeIntensity.toFixed(3)}<br>HKL path = (${hkl.map(v=>v.toFixed(3)).join(', ')})`,
               peak.q,
@@ -1833,10 +1838,10 @@ function renderQEVectorMap(cache){
 
     renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);
     Plotly.react(plot,traces,{
-      uirevision:'qeVector-hkl',
+      uirevision:`qeVector-hkl-${rangeMode}-${a.join(',')}-${b.join(',')}`, 
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
       showlegend:false,
-      xaxis:{title:{text:'HKL along selected Q vector',font:{size:15}},tickfont:{size:17},tickmode:'array',tickvals:tickVals,ticktext:tickText,tickangle:0,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      xaxis:{title:{text:axisTitle,font:{size:15}},tickfont:{size:17},tickmode:'array',tickvals:tickVals,ticktext:tickText,range:[hMin,hMax],tickangle:0,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       yaxis:{title:{text:'ℏω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
@@ -3033,6 +3038,10 @@ for(const id of QE_VECTOR_HKL_INPUT_IDS){
     if(event.key==='Enter') renderQEVectorMapImmediately();
   });
 }
+// Range mode switches redraw only the Q-vector plot, not the Q-E cache.
+for(const id of ['qeVectorRangeFull','qeVectorRangeSegment']){
+  $(id)?.addEventListener('change',renderQEVectorMapImmediately);
+}
 
 // Angle calculation Scan inputs are display-only.  Rebuilding the complete
 // single-crystal Q-E cache on every keypress made H/K/L/hw editing sluggish,
@@ -3091,6 +3100,7 @@ document.querySelectorAll("input,select").forEach(el=>{
     "geomScanPointSlider",
     "scanSlider",
     ...QE_VECTOR_HKL_INPUT_IDS,
+    'qeVectorRangeFull','qeVectorRangeSegment',
     ...GEOMETRY_SCAN_INPUT_IDS
   ].includes(el.id)) return;
 

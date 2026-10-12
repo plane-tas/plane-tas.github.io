@@ -165,6 +165,11 @@
 <div class="qe-vector-point"><strong>HKL 1</strong><label>H<input id="qeVecH0" step="0.1" type="number" value="-1"/></label><label>K<input id="qeVecK0" step="0.1" type="number" value="-1"/></label><label>L<input id="qeVecL0" step="0.1" type="number" value="0"/></label></div>
 <div class="qe-vector-point"><strong>HKL 2</strong><label>H<input id="qeVecH1" step="0.1" type="number" value="1"/></label><label>K<input id="qeVecK1" step="0.1" type="number" value="-2"/></label><label>L<input id="qeVecL1" step="0.1" type="number" value="0"/></label></div>
 </div>
+<div class="qe-vector-range" role="radiogroup" aria-label="Q vector–E map Q range">
+  <span class="qe-vector-range-caption">Q range</span>
+  <label><input id="qeVectorRangeFull" type="radio" name="qeVectorRangeMode" value="full" checked>Full range</label>
+  <label><input id="qeVectorRangeSegment" type="radio" name="qeVectorRangeMode" value="segment">HKL1–HKL2</label>
+</div>
 <div aria-live="polite" class="orientation-plane-warning hidden" id="qeVectorPlaneWarning"></div>
 <div class="qe-plot" id="qeVectorPlot"></div>
 <div class="qe-external-legend" id="qeVectorLegend" aria-label="Q vector–E map legend"></div>
@@ -542,7 +547,7 @@
 <label><input type="radio" name="cifStructureStyle" value="polyhedral"/> Polyhedral</label>
 <label><input type="radio" name="cifStructureStyle" value="both"/> Both</label>
 </div>
-
+<div class="structure-help-text">Rules specify center atom (first), surrounding atom (second), and distance range. Polyhedra require at least four non-coplanar surrounding atoms. Increase the structure range to include neighbours at cell boundaries.</div>
 <div class="structure-rows-list" id="cifBondRows"></div>
 <button class="structure-add-bond-button" id="cifAddBondRule" type="button">+ Add bond</button>
 </div>
