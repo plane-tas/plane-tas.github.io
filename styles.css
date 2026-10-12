@@ -6490,3 +6490,344 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   padding-right:calc(3px * var(--tas-density));
   font-size:calc(13px * var(--tas-density));
 }
+
+/* Independent sidebar / workspace scrolling for two-column layouts.
+   Size the shell from the space remaining beneath the actual header rather
+   than assuming a fixed header height (which can vary with wrapping/zoom). */
+@media (min-width: 761px) {
+  html { height: 100%; }
+  body {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+  }
+  #tasTopBar { flex: 0 0 auto; }
+  .shell {
+    flex: 1 1 auto;
+    height: 0;
+    min-height: 0;
+  }
+  .shell > .sidebar {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+  .shell > main {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+}
+
+/* CIF Generator Structure: use a square viewport instead of a viewport-height
+   minimum. Keep other Generator output tabs and their sizing unchanged. */
+#structurePanel #mcifStructurePane .structure-plot-wrap{
+  box-sizing:border-box;
+  position:relative;
+  display:block;
+  flex:0 0 auto;
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1 / 1;
+}
+#structurePanel #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%;
+}
+
+/* CIF Generator Structure: one continuous frame around the square viewport.
+   Draw the frame on the wrapper, not on the Plotly drawing surface. */
+#structurePanel #mcifStructurePane .structure-plot-wrap{
+  border:1px solid #d3dae4;
+  border-radius:calc(8px * var(--tas-density));
+  background:#fff;
+  overflow:hidden;
+}
+#structurePanel #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  border:0!important;
+  border-radius:0!important;
+}
+
+/* CIF Generator: avoid the tall empty lower area on Reflections / Preview.
+   The Structure view remains square; other tabs size to their actual content,
+   with the preview text viewport matching the Structure plot's width. */
+#structurePanel .generator-unified-right{
+  min-height:0;
+  align-self:start;
+}
+#structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel){
+  flex:0 0 auto;
+  min-height:0;
+  height:auto!important;
+}
+#structurePanel #generatorReflectionsPane :is(.generator-reflection-pane,.cif-reflection-table-wrap){
+  min-height:0;
+}
+#structurePanel #cifPreviewPanel #cifPreview{
+  flex:0 0 auto;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none;
+  aspect-ratio:1 / 1;
+  overflow:auto;
+}
+
+/* Viewport resizing: prevent the document from retaining an oversized scroll
+   area when the layout crosses the 760px breakpoint.  The shell should be
+   sized by the flex viewport on desktop, not by older vh-based minimums. */
+@media (min-width: 761px) {
+  html { height: 100%; overflow-y: hidden; }
+  body { min-height: 0; max-height: 100dvh; overflow-y: hidden; }
+  body > .shell { min-height: 0; max-height: 100%; }
+  body > .shell > main,
+  body > .shell > .sidebar { min-height: 0; max-height: 100%; }
+}
+@media (max-width: 760px) {
+  html { height: auto; overflow-y: auto; }
+  body { display: block; height: auto; min-height: 0; max-height: none; overflow-y: auto; }
+  body > .shell { display: block; height: auto; min-height: 0; max-height: none; }
+  body > .shell > main,
+  body > .shell > .sidebar { height: auto; max-height: none; overflow-y: visible; }
+}
+
+
+/* CIF Generator / Structure: six range entries and six view buttons in ONE row.
+   Only this toolbar scrolls horizontally if it cannot fit; the 3D plot does not shrink. */
+#structurePanel #mcifStructurePane .generator-structure-view-controls{
+  display:grid!important;
+  grid-template-columns:minmax(0, 3.3fr) minmax(0, 1.7fr);
+  align-items:end;
+  column-gap:calc(8px * var(--tas-density));
+  row-gap:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:thin;
+}
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-range-six{
+  min-width:0;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+}
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .cif-structure-view-buttons{
+  min-width:0;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+}
+@container generator-unified (max-width: 740px){
+  #structurePanel #mcifStructurePane .generator-structure-view-controls{
+    grid-template-columns:minmax(420px,3.3fr) minmax(210px,1.7fr);
+  }
+}
+
+
+/* CIF Generator output height alignment (Structure / Reflections / Preview).
+   Use the same square content viewport for all three tabs.  Reflections
+   keeps its own vertical scroll rather than clipping the reflection rows. */
+/* Reflections returns to the original compact, content-height table viewport. */
+#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  box-sizing:border-box;
+  display:block;
+  flex:none;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:calc(11 * calc(38px * var(--tas-density)))!important;
+  aspect-ratio:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+
+#structurePanel #cifPreviewPanel #cifPreview{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:1 / 1;
+  margin:0;
+  overflow:auto;
+}
+
+/* Structure Editor Style: display mode on a single horizontal line. */
+#structurePanel .structure-style-modes{
+  display:flex;align-items:center;gap:calc(16px * var(--tas-density));
+  flex-wrap:nowrap;white-space:nowrap;margin-bottom:calc(9px * var(--tas-density));
+}
+#structurePanel .structure-style-modes label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;min-width:0;}
+#structurePanel .structure-style-modes input{margin:0;accent-color:var(--accent-color,#337ab7);}
+
+/* Style: preserve the original select/distance/width allocations.  Only the
+   colour swatch and Remove column need adjustment.  The old stable scrollbar
+   gutter reserved a blank strip even with no Style-list scrollbar. */
+#structurePanel #cifBondRows{
+  padding-right:0;
+  scrollbar-gutter:auto;
+  scrollbar-width:thin;
+}
+#structurePanel .structure-bond-row{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:100%!important;
+  grid-template-columns:
+    minmax(calc(54px * var(--tas-density)),.8fr)
+    minmax(calc(54px * var(--tas-density)),.8fr)
+    minmax(calc(136px * var(--tas-density)),1.6fr)
+    calc(58px * var(--tas-density))
+    calc(40px * var(--tas-density))
+    minmax(calc(80px * var(--tas-density)),.3fr)!important;
+}
+#structurePanel .structure-bond-row > *{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+/* Same compact 30px-high native colour picker as the Atoms/Spins controls. */
+#structurePanel .structure-bond-row > input[type=color]{
+  box-sizing:border-box!important;
+  width:min(100%, calc(34px * var(--tas-density)))!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:calc(30px * var(--tas-density))!important;
+  padding:calc(2px * var(--tas-density))!important;
+  justify-self:center!important;
+  align-self:end;
+}
+#structurePanel .structure-bond-row > button{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  justify-self:stretch!important;
+  white-space:nowrap;
+  padding-inline:calc(4px * var(--tas-density))!important;
+}
+/* Keep the previous medium-width 2-row layout, using the full width of the
+   colour and Remove cells. */
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-bond-row{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:auto auto!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+  #structurePanel .structure-bond-range-pair{grid-column:3 / 5!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > .structure-entry-field{grid-column:1 / 3!important;grid-row:2!important;}
+  #structurePanel .structure-bond-row > input[type=color]{grid-column:3!important;grid-row:2!important;justify-self:end!important;}
+  #structurePanel .structure-bond-row > button{grid-column:4!important;grid-row:2!important;}
+}
+/* At split-screen/phone widths the inputs remain usable instead of colliding. */
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-bond-row{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto auto auto auto!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+  #structurePanel .structure-bond-range-pair{grid-column:1 / -1!important;grid-row:2!important;}
+  #structurePanel .structure-bond-row > .structure-entry-field{grid-column:1!important;grid-row:3!important;}
+  #structurePanel .structure-bond-row > input[type=color]{grid-column:2!important;grid-row:3!important;}
+  #structurePanel .structure-bond-row > button{grid-column:1 / -1!important;grid-row:4!important;}
+}
+
+/* Atoms: a tall expanded element/site list must scroll, not shrink all rows.
+   .structure-rows-list is a column flexbox; its children otherwise have the
+   default flex-shrink:1, compressing the 2-row colour palettes vertically. */
+#structurePanel #cifAtomColorRows > .atoms-table-head,
+#structurePanel #cifAtomColorRows > .atoms-table-row{
+  flex:0 0 auto;
+}
+#structurePanel #cifAtomColorRows{
+  overscroll-behavior-y:contain;
+}
+
+/* CIF Generator: keep the Structure viewer's natural square-height footprint
+   when switching output tabs.  The (non-interactive) hidden Structure pane is
+   retained in the grid solely as a sizing reference.  This prevents the
+   scroll container from shortening and jumping back toward the page top. */
+#structurePanel .generator-unified-right{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-content:start;
+}
+#structurePanel .generator-unified-right > .generator-unified-output-tabs{
+  grid-column:1;
+  grid-row:1;
+}
+#structurePanel .generator-unified-right > .generator-output-pane{
+  grid-column:1;
+  grid-row:2;
+  min-height:0!important;
+  height:100%!important;
+  align-self:stretch;
+}
+#structurePanel .generator-unified-right > #mcifStructurePane.hidden{
+  display:block!important;
+  visibility:hidden;
+  pointer-events:none;
+}
+#structurePanel .generator-unified-right > #mcifStructurePane:not(.hidden){
+  visibility:visible;
+}
+#structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel):not(.hidden){
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings,
+#structurePanel #generatorReflectionsPane .generator-reflection-tabs{
+  flex:0 0 auto;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane:not(.hidden){
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane > .cif-output-panel{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+#structurePanel #cifPreviewPanel #cifPreview{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto;
+  margin:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+
+/* CIF Generator: exclude output-tab visibility changes from the browser's
+   automatic scroll anchoring.  The surrounding main/page scroll position is
+   explicitly preserved by setUnifiedGeneratorOutputTab(). */
+#structurePanel .generator-unified-right{
+  overflow-anchor:none;
+}

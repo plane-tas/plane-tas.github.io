@@ -429,7 +429,7 @@ function populateSampleSpaceGroupControls(){
   for(const sg of cifSpaceGroups){
     const opt=document.createElement("option");
     opt.value=String(sg.number);
-    opt.textContent=`${sg.number} — ${sg.hm}`;
+    opt.textContent=sg.hm;
     select.appendChild(opt);
   }
   restoreSampleSpaceGroupSelection();
@@ -664,6 +664,7 @@ let structureMomentGlobalWidthBlank=false;
 let structureMomentGlobalHeadBlank=false;
 let structureUnitCellMode="one";
 let structureShowXYZ=true;
+let structureDisplayStyle="bonds";
 // Every CIF asymmetric site is available in the Spins tab.
 // Only transition-metal and rare-earth sites start enabled by default;
 // all other elements (for example O) remain available but start disabled.
@@ -761,6 +762,8 @@ function resetStructureViewerStateToDefaults(){
     structureUnitCellMode="one";
     structureShowXYZ=true;
     restoredStructureBondRules=[];
+    structureDisplayStyle="bonds";
+    syncStructureDisplayStyleRadios();
     structureControlSignature="";
     
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value="one";
@@ -803,7 +806,8 @@ function saveStructureViewerState(){
       momentGlobalHeadBlank:structureMomentGlobalHeadBlank,
       unitCellMode:structureUnitCellMode,
       showXYZ:structureShowXYZ,
-      bonds:readStructureBondRules()
+      bonds:readStructureBondRules(),
+      displayStyle:structureDisplayStyle
     };
     // Retain only the active structure, never an accumulating history.
     localStorage.setItem(STRUCTURE_VIEWER_STORAGE_KEY,JSON.stringify({
@@ -885,6 +889,8 @@ function restoreStructureViewerState(){
     else structureUnitCellMode="one";
     structureShowXYZ=saved.showXYZ!==false;
     restoredStructureBondRules=Array.isArray(saved.bonds)?saved.bonds.map(x=>({...x})):[];
+    structureDisplayStyle=["bonds","polyhedral","both"].includes(saved.displayStyle)?saved.displayStyle:"bonds";
+    syncStructureDisplayStyleRadios();
     structureControlSignature="";
     
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value=structureUnitCellMode;
@@ -1899,6 +1905,22 @@ function updateMagneticMomentRows(structure){
   });
   updateSpinElementToggles(structure);
 }
+function syncStructureDisplayStyleRadios(){
+  for(const input of document.querySelectorAll('input[name="cifStructureStyle"]')) input.checked=input.value===structureDisplayStyle;
+}
+function initStructureDisplayStyleRadios(){
+  syncStructureDisplayStyleRadios();
+  for(const input of document.querySelectorAll('input[name="cifStructureStyle"]')){
+    if(input.dataset.styleBound) continue;
+    input.dataset.styleBound="1";
+    input.addEventListener("change",()=>{
+      if(!input.checked) return;
+      structureDisplayStyle=input.value;
+      saveStructureViewerState();
+      renderCifStructureIfVisible();
+    });
+  }
+}
 function parseBondRange(value,fallbackMin=0,fallbackMax=3){
   const parts=String(value??"").trim().split(/[\s,]+/).filter(Boolean).map(Number);
   let min=Number.isFinite(parts[0])?parts[0]:fallbackMin;
@@ -2065,6 +2087,83 @@ function bondTraces(atoms,basis,rules){
       }
     }
     if(x.length) traces.push({type:"scatter3d",mode:"lines",x,y,z,name:`${rule.a}-${rule.b} ${rule.minDistance}–${rule.maxDistance} Å`,hoverinfo:"skip",showlegend:false,line:{color:rule.color,width:Math.max(1,Number(rule.width)||5)}});
+  }
+  return traces;
+}
+// Convex faces from ligand coordinates. Coplanar facets (e.g. cube faces)
+// are grouped into one polygon before triangulation to avoid overlapping faces.
+function polyhedronFaces(points){
+  const eps=1e-6, planes=new Map(), count=points.length;
+  for(let a=0;a<count-2;a++) for(let b=a+1;b<count-1;b++) for(let c=b+1;c<count;c++){
+    const normal=vecCross(vecSub(points[b],points[a]),vecSub(points[c],points[a]));
+    const magnitude=vecNorm(normal);
+    if(magnitude<eps) continue;
+    let n=vecScale(normal,1/magnitude), d=vecDot(n,points[a]);
+    let plus=false,minus=false;
+    for(let q=0;q<count;q++){
+      const v=vecDot(n,points[q])-d;
+      if(v>eps) plus=true;
+      if(v<-eps) minus=true;
+      if(plus&&minus) break;
+    }
+    if(plus&&minus) continue;
+    if(plus){n=vecScale(n,-1);d=-d;}
+    const vertexIds=[];
+    for(let q=0;q<count;q++) if(Math.abs(vecDot(n,points[q])-d)<eps*3) vertexIds.push(q);
+    const key=vertexIds.join(",");
+    if(!planes.has(key)) planes.set(key,{n,vertexIds});
+  }
+  const triangles=[];
+  for(const {n,vertexIds} of planes.values()){
+    if(vertexIds.length<3) continue;
+    const center=[0,0,0];
+    for(const id of vertexIds) for(let k=0;k<3;k++) center[k]+=points[id][k]/vertexIds.length;
+    const u=vecScale(vecSub(points[vertexIds[0]],center),1/vecNorm(vecSub(points[vertexIds[0]],center)));
+    const v=vecCross(n,u);
+    const sorted=vertexIds.slice().sort((a,b)=>{
+      const va=vecSub(points[a],center),vb=vecSub(points[b],center);
+      return Math.atan2(vecDot(va,v),vecDot(va,u))-Math.atan2(vecDot(vb,v),vecDot(vb,u));
+    });
+    for(let k=1;k<sorted.length-1;k++) triangles.push([sorted[0],sorted[k],sorted[k+1]]);
+  }
+  return triangles;
+}
+function polyhedralTraces(atoms,basis,rules){
+  const traces=[];
+  if(atoms.length>1100) return traces; // Avoid expensive quadratic processing on huge supercells.
+  const sites=atoms.map(atom=>({atom,point:fractionalToCartesian(basis,[atom.x,atom.y,atom.z])}));
+  let shown=0;
+  for(const rule of rules){
+    if(rule.maxDistance<=rule.minDistance||rule.a===rule.b) continue;
+    for(const center of sites){
+      if(String(center.atom.element)!==rule.a) continue;
+      const neighbors=[];
+      for(const site of sites){
+        if(String(site.atom.element)!==rule.b) continue;
+        const d=vecNorm(vecSub(site.point,center.point));
+        if(d>=rule.minDistance-1e-8 && d<=rule.maxDistance+1e-8 && d>1e-6) neighbors.push({point:site.point,d});
+      }
+      neighbors.sort((a,b)=>a.d-b.d);
+      // Cap to the nearest 12 vertices to avoid accidentally filling whole large clusters.
+      const unique=[];
+      for(const item of neighbors.slice(0,24)) if(!unique.some(p=>vecNorm(vecSub(item.point,p))<1e-5)) unique.push(item.point);
+      if(unique.length<4||unique.length>12) continue;
+      const faces=polyhedronFaces(unique);
+      if(faces.length<4) continue;
+      const edgeSet=new Set();
+      const x=unique.map(p=>p[0]),y=unique.map(p=>p[1]),z=unique.map(p=>p[2]);
+      const i=[],j=[],k=[];
+      for(const f of faces){
+        i.push(f[0]);j.push(f[1]);k.push(f[2]);
+        for(const [a,b] of [[f[0],f[1]],[f[1],f[2]],[f[2],f[0]]]) edgeSet.add([Math.min(a,b),Math.max(a,b)].join(','));
+      }
+      traces.push({type:"mesh3d",x,y,z,i,j,k,color:rule.color,opacity:0.27,flatshading:true,
+        hoverinfo:"skip",showlegend:false,name:`${rule.a}-${rule.b} polyhedron`,lighting:{ambient:0.72,diffuse:0.65,specular:0.08}});
+      const ex=[],ey=[],ez=[];
+      for(const edge of edgeSet){const [a,b]=edge.split(',').map(Number);ex.push(x[a],x[b],null);ey.push(y[a],y[b],null);ez.push(z[a],z[b],null);}
+      traces.push({type:"scatter3d",mode:"lines",x:ex,y:ey,z:ez,hoverinfo:"skip",showlegend:false,line:{color:rule.color,width:2}});
+      if(++shown>=120) return traces;
+    }
   }
   return traces;
 }
@@ -2659,7 +2758,9 @@ function renderCifStructureView(){
     grouped.get(key).atoms.push(atom);
   }
   const bondRules=readStructureBondRules();
-  const traces=[...unitCellTraces(basis,range),...bondTraces(displayedAtoms,basis,bondRules)];
+  const traces=[...unitCellTraces(basis,range)];
+  if(structureDisplayStyle!=="polyhedral") traces.push(...bondTraces(displayedAtoms,basis,bondRules));
+  if(structureDisplayStyle!=="bonds") traces.push(...polyhedralTraces(displayedAtoms,basis,bondRules));
   const orderedElements=structureElements(source.structure);
   const shownElements=new Set();
   for(const group of grouped.values()){
@@ -3017,17 +3118,6 @@ function setCifAtomRowSelection(row, event={}){
   }
   refreshCifAtomSelectionUI();
 }
-// Clear the Positions selection when clicking outside its table. Keep action
-// buttons exempt so Copy/Remove can still operate on the selected rows.
-document.addEventListener("pointerdown",event=>{
-  const target=event.target;
-  if(!(target instanceof Element)) return;
-  if(target.closest("#cifAtomTable, #cifCopyAtom, #cifRemoveAtom, #cifAddAtom")) return;
-  if(!cifSelectedAtomRows().length) return;
-  cifSelectedAtomRows().forEach(row=>row.classList.remove("cif-atom-selected"));
-  cifAtomSelectionAnchor=null;
-  refreshCifAtomSelectionUI();
-});
 function refreshCifAtomSelectionUI(){
   const selected=new Set(cifSelectedAtomRows().map(r=>r.dataset.cifAtomUid));
   document.querySelectorAll("#cifAtomDetailedRows .cif-thermal-row").forEach(r=>{
@@ -4069,6 +4159,27 @@ const GENERATOR_OUTPUT_TABS={
 function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   if(name==='cif-preview'||name==='mcif-preview') name='preview';
   if(!GENERATOR_OUTPUT_TABS[name]) name='structure';
+
+  // On narrow layouts the Generator panels appear below the editor. Changing
+  // their visibility can make the browser's scroll anchoring jump the main
+  // workspace (or the page on mobile) back upward. Preserve both scroll roots
+  // while changing tabs, including the frame after layout has settled.
+  const previousTab=Object.entries(GENERATOR_OUTPUT_TABS)
+    .find(([, [tabId]])=>$(tabId)?.classList.contains('active'))?.[0];
+  const isSwitch=previousTab!==name;
+  const scrollPositions=isSwitch
+    ? [document.querySelector('.shell > main'),document.scrollingElement]
+        .filter((el,index,array)=>el && array.indexOf(el)===index)
+        .map(el=>({el,top:el.scrollTop,left:el.scrollLeft}))
+    : [];
+  const restoreScroll=()=>{
+    for(const {el,top,left} of scrollPositions){
+      if(!el.isConnected) continue;
+      el.scrollTop=top;
+      el.scrollLeft=left;
+    }
+  };
+
   for(const [key,[tabId,paneId]] of Object.entries(GENERATOR_OUTPUT_TABS)){
     const selected=key===name;
     $(tabId)?.classList.toggle('active',selected);
@@ -4077,7 +4188,12 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
     $(paneId)?.classList.toggle('hidden',!selected);
   }
   if(persist && generatorOutputTabRestored) try{ localStorage.setItem(GENERATOR_OUTPUT_TAB_STORAGE_KEY,name); }catch(_e){}
-  if(name==='structure') requestAnimationFrame(renderCifStructureIfVisible);
+  restoreScroll();
+  requestAnimationFrame(()=>{
+    if(name==='structure') renderCifStructureIfVisible();
+    restoreScroll();
+    if(isSwitch) requestAnimationFrame(restoreScroll);
+  });
 }
 function setCifOutputTab(tab){
   setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
@@ -4626,6 +4742,7 @@ async function initializeCifGenerator(){
       });
     }
     prepareStructureViewerControls();
+    initStructureDisplayStyleRadios();
     $("cifAddBondRule")?.addEventListener("click",addStructureBondRule);
     // Split range controls bind themselves in createSplitRangeControls(). The
     // legacy combined inputs stay hidden and synchronized only for saved-state

@@ -62,7 +62,7 @@
 <h2>Sample</h2>
 <div class="sample-spacegroup-row">
 <label>Type<select id="sampleMode"><option selected="" value="single">Single crystal</option><option value="powder">Powder</option></select></label>
-<label>No.
+<label>Space group #
       <input id="sampleSpaceGroupNumber" inputmode="numeric" max="230" min="1" step="1" type="number" value="1"/>
 </label>
 <label>Space group
@@ -313,14 +313,14 @@
 <div class="toolbox-grid">
 <label>Wavelength (Å)<input id="toolLambda" min="0" step="0.001" type="number" value="2.359"/></label>
 <label>Energy (meV)<input id="toolEnergy" min="0" step="0.001" type="number"/></label>
-<label>Wavevector (Å⁻¹)<input id="toolK" min="0" step="0.001" type="number"/></label>
+<label>Wavevector k (Å⁻¹)<input id="toolK" min="0" step="0.001" type="number"/></label>
 <label>Frequency (THz)<input id="toolTHz" min="0" step="0.001" type="number"/></label>
 <label>Temperature (K)<input id="toolTemp" min="0" step="0.001" type="number"/></label>
 <label>Wavenumber (cm⁻¹)<input id="toolCm" min="0" step="0.001" type="number"/></label>
 <label>Velocity (m/s)<input id="toolVelocity" min="0" step="0.1" type="number"/></label>
 </div>
 <div class="harmonic-wrap"><div class="harmonic-table">
-<div></div><div>Wavelength (Å)</div><div>Energy (meV)</div><div>Wavevector (Å⁻¹)</div><div>Frequency (THz)</div><div>Temperature (K)</div><div>Wavenumber (cm⁻¹)</div><div>Velocity (m/s)</div>
+<div></div><div>Wavelength (Å)</div><div>Energy (meV)</div><div>Wavevector k (Å⁻¹)</div><div>Frequency (THz)</div><div>Temperature (K)</div><div>Wavenumber (cm⁻¹)</div><div>Velocity (m/s)</div>
 <strong>1/3 λ</strong><output id="harmThirdLambda"></output><output id="harmThirdEnergy"></output><output id="harmThirdK"></output><output id="harmThirdTHz"></output><output id="harmThirdTemp"></output><output id="harmThirdCm"></output><output id="harmThirdVelocity"></output>
 <strong>1/2 λ</strong><output id="harmHalfLambda"></output><output id="harmHalfEnergy"></output><output id="harmHalfK"></output><output id="harmHalfTHz"></output><output id="harmHalfTemp"></output><output id="harmHalfCm"></output><output id="harmHalfVelocity"></output>
 <strong>λ</strong><output id="harmFundamentalLambda"></output><output id="harmFundamentalEnergy"></output><output id="harmFundamentalK"></output><output id="harmFundamentalTHz"></output><output id="harmFundamentalTemp"></output><output id="harmFundamentalCm"></output><output id="harmFundamentalVelocity"></output>
@@ -445,7 +445,7 @@
 <div aria-label="Structure display controls" class="structure-config-tabs" role="tablist"><button aria-selected="true" class="active" data-structure-config-tab="cell" role="tab" type="button">Cell</button><button aria-selected="false" data-structure-config-tab="positions" role="tab" type="button">Positions</button>
 <button aria-selected="false" class="" data-structure-config-tab="appearance" role="tab" type="button">Atoms</button>
 <button aria-selected="false" data-structure-config-tab="spins" role="tab" type="button">Spins</button>
-<button aria-selected="false" data-structure-config-tab="bonds" role="tab" type="button">Bonds</button>
+<button aria-selected="false" data-structure-config-tab="bonds" role="tab" type="button">Style</button>
 </div><div class="structure-config-panel active" data-structure-config-panel="cell"><section class="cif-generator-section cif-lattice-information-section">
 <div class="cif-pane-heading cif-lattice-information-heading">
 <h3 class="cif-section-title">Unit cell &amp; symmetry</h3>
@@ -537,19 +537,17 @@
 <div class="structure-rows-list" id="cifMagMomentRows"></div>
 </div>
 <div class="structure-config-panel" data-structure-config-panel="bonds" hidden="">
+<div class="structure-style-modes" role="radiogroup" aria-label="Structure display style">
+<label><input type="radio" name="cifStructureStyle" value="bonds" checked/> Bonds</label>
+<label><input type="radio" name="cifStructureStyle" value="polyhedral"/> Polyhedral</label>
+<label><input type="radio" name="cifStructureStyle" value="both"/> Both</label>
+</div>
+
 <div class="structure-rows-list" id="cifBondRows"></div>
 <button class="structure-add-bond-button" id="cifAddBondRule" type="button">+ Add bond</button>
 </div>
 </div></div></div><div class="generator-unified-right structure-viewer-main"><div aria-label="CIF/mCIF generator output" class="cif-output-tabs generator-unified-output-tabs" role="tablist"><button aria-controls="mcifStructurePane" aria-selected="true" class="cif-output-tab active" data-generator-output-tab="structure" id="mcifTabStructure" role="tab" type="button">Structure</button><button aria-controls="generatorReflectionsPane" aria-selected="false" class="cif-output-tab" data-cif-output-tab="reflections" data-generator-output-tab="reflections" id="cifOutputTabReflections" role="tab" type="button">Reflections</button><button aria-controls="cifPreviewPanel" aria-selected="false" class="cif-output-tab" data-cif-output-tab="preview" data-generator-output-tab="preview" id="cifOutputTabPreview" role="tab" type="button">CIF/mCIF Preview</button></div><div aria-labelledby="mcifTabStructure" class="generator-output-pane" id="mcifStructurePane" role="tabpanel">
 <div aria-label="Structure view direction and range" class="generator-structure-view-controls">
-<div class="cif-structure-view-buttons structure-view-buttons-six">
-<button data-cif-structure-view="a" type="button">a</button>
-<button data-cif-structure-view="b" type="button">b</button>
-<button data-cif-structure-view="c" type="button">c</button>
-<button data-cif-structure-view="astar" type="button">a*</button>
-<button data-cif-structure-view="bstar" type="button">b*</button>
-<button data-cif-structure-view="cstar" type="button">c*</button>
-</div>
 <div class="structure-range-grid structure-range-six">
 <label class="structure-entry-field"><span class="structure-entry-label" data-short-label="x−">x min</span><input id="cifRangeXMin" step="0.1" type="number" value="0"/></label>
 <label class="structure-entry-field"><span class="structure-entry-label" data-short-label="x+">x max</span><input id="cifRangeXMax" step="0.1" type="number" value="1"/></label>
@@ -560,6 +558,14 @@
 <input id="cifRangeX" type="hidden" value="0 1"/>
 <input id="cifRangeY" type="hidden" value="0 1"/>
 <input id="cifRangeZ" type="hidden" value="0 1"/>
+</div>
+<div class="cif-structure-view-buttons structure-view-buttons-six">
+<button data-cif-structure-view="a" type="button">a</button>
+<button data-cif-structure-view="b" type="button">b</button>
+<button data-cif-structure-view="c" type="button">c</button>
+<button data-cif-structure-view="astar" type="button">a*</button>
+<button data-cif-structure-view="bstar" type="button">b*</button>
+<button data-cif-structure-view="cstar" type="button">c*</button>
 </div>
 </div>
 <div aria-live="polite" class="cif-structure-status" id="cifStructureStatus">Open the CIF/mCIF Generator to visualize the generated or selected structure.</div>
