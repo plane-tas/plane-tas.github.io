@@ -1232,7 +1232,8 @@ function updateModeVisibility(){
   if(!single && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
   if($('qeMapUnit')){
     $('qeMapUnit').disabled=!single;
-    if(!single) $('qeMapUnit').value='ainv';
+    // Keep the selected Q unit while viewing Powder. A disabled select must
+    // not overwrite the saved Single-crystal preference on mode switches.
   }
   updateGeometryCalculationModeVisibility();
   $("geometrySpurionWarning")?.classList.toggle("hidden",!single);
@@ -1349,7 +1350,7 @@ function refreshSinglePeakAppearance(cache,fullX,fullY){
   const unit=currentQEMapUnit();
   const xaxis=axes.xaxis,yaxis=axes.yaxis;
   const labelPts=pts.map(p=>{
-    const q=qeXYForUnit(cache,[p.x,p.y],unit);
+    const q=unit==='rlu' ? [p.x,p.y] : qeXYForUnit(cache,[p.x,p.y],unit);
     return {x:q[0],y:q[1],label:String(p.label||'')};
   });
   // Plotly axis l2p/p2l work in *screen pixels*, not Q coordinates.
@@ -1414,8 +1415,7 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
   // Plotly's built-in reset can restore stale axis ranges after the panel
   // changes width, especially when the plot has different r.l.u. X/Y spans.
   // Disable that implicit reset and restore the latest *data-derived* ranges
-  // ourselves on every double-click.  The two unit modes intentionally differ:
-  // Å⁻¹ preserves equal data units per pixel, whereas r.l.u. uses free axes.
+  // ourselves on every double-click. Both units now use physical Q coordinates.
   if(gd.__tasSingleMapDoubleClickHandler && typeof gd.removeListener==='function')
     gd.removeListener('plotly_doubleclick',gd.__tasSingleMapDoubleClickHandler);
   const resetHandler=()=>{
@@ -1431,7 +1431,7 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
         'yaxis.range':view.y.slice(),
         'xaxis.autorange':false,
         'yaxis.autorange':false,
-        'yaxis.scaleanchor':view.unit==='rlu'?false:'x',
+        'yaxis.scaleanchor':'x',
         'yaxis.scaleratio':1
       }).catch(err=>console.warn('Constant E map reset warning:',err));
     });
@@ -1598,6 +1598,113 @@ function qeXYForUnit(cache,p,unit=currentQEMapUnit()){
   const det=b.ux*b.vy-b.uy*b.vx;
   if(Math.abs(det)<1e-12) return [x,y];
   return [(x*b.vy-y*b.vx)/det,(b.ux*y-b.uy*x)/det];
+}
+
+// A r.l.u. map is drawn in the *physical* scattering plane, not with U and V
+// forced onto perpendicular plot axes.  The reciprocal-space basis determines
+// two oblique families of grid lines: u = integer and v = integer.
+// This preserves both the true aspect ratio and the sign of the U/V tilt.
+function qePhysicalRluCoordinates(cache,p){
+  const b=qePlaneRluBasis(cache);
+  const det=b.ux*b.vy-b.uy*b.vx;
+  if(!Number.isFinite(det) || Math.abs(det)<1e-12) return [NaN,NaN];
+  const x=Number(p[0]),y=Number(p[1]);
+  return [(x*b.vy-y*b.vx)/det,(b.ux*y-b.uy*x)/det];
+}
+
+function qeRluNiceStep(span){
+  const raw=Math.max(1e-12,Math.abs(span)/9);
+  const decade=Math.pow(10,Math.floor(Math.log10(raw)));
+  return [1,2,5,10].map(v=>v*decade).find(v=>v>=raw) || 10*decade;
+}
+
+function qeObliqueRluGrid(cache,xRange,yRange){
+  const b=qePlaneRluBasis(cache);
+  const det=b.ux*b.vy-b.uy*b.vx;
+  const empty={shapes:[],annotations:[],xTickVals:[],xTickText:[],yTickVals:[],yTickText:[]};
+  if(!Number.isFinite(det) || Math.abs(det)<1e-12) return empty;
+  const xmin=Math.min(...xRange),xmax=Math.max(...xRange);
+  const ymin=Math.min(...yRange),ymax=Math.max(...yRange);
+  const corners=[[xmin,ymin],[xmin,ymax],[xmax,ymin],[xmax,ymax]].map(p=>qePhysicalRluCoordinates(cache,p));
+  const umin=Math.min(...corners.map(p=>p[0])),umax=Math.max(...corners.map(p=>p[0]));
+  const vmin=Math.min(...corners.map(p=>p[1])),vmax=Math.max(...corners.map(p=>p[1]));
+  const ustep=qeRluNiceStep(umax-umin),vstep=qeRluNiceStep(vmax-vmin);
+  const shapes=[],xTickVals=[],xTickText=[],yTickVals=[],yTickText=[];
+  const gridLine=(origin,delta,zero)=>({
+    type:'line',xref:'x',yref:'y',
+    x0:origin[0]-delta[0],y0:origin[1]-delta[1],
+    x1:origin[0]+delta[0],y1:origin[1]+delta[1],
+    layer:'above',line:{color:zero?'rgba(80,90,105,0.67)':'rgba(105,115,130,0.31)',width:zero?1.4:0.85}
+  });
+  const toXY=(u,v)=>[b.ux*u+b.vx*v,b.uy*u+b.vy*v];
+  const fmt=v=>Math.abs(v)<1e-9?'0':String(Number(v.toPrecision(6)));
+  const spanU=(umax-umin)+2*ustep,spanV=(vmax-vmin)+2*vstep;
+  const nU0=Math.ceil(umin/ustep-1e-9),nU1=Math.floor(umax/ustep+1e-9);
+  const nV0=Math.ceil(vmin/vstep-1e-9),nV1=Math.floor(vmax/vstep+1e-9);
+  const eps=1e-8*Math.max(xmax-xmin,ymax-ymin,1);
+  // In r.l.u. mode the graph is still physically orthonormal (Å^-1), but
+  // u/v=constant grid lines are oblique.  Place Plotly's axis ticks exactly
+  // where those same grid lines intersect the BOTTOM and LEFT frame edges.
+  // This leaves both tick labels and axis titles outside the plot, like Å^-1.
+  for(let n=nU0;n<=nU1 && n<nU0+40;n++){
+    const u=n*ustep,zero=n===0;
+    shapes.push(gridLine(toXY(u,(vmin+vmax)/2),[b.vx*spanV/2,b.vy*spanV/2],zero));
+    if(Math.abs(b.vy)>1e-12){
+      const vAtBottom=(ymin-b.uy*u)/b.vy;
+      const xAtBottom=b.ux*u+b.vx*vAtBottom;
+      if(Number.isFinite(xAtBottom) && xAtBottom>=xmin-eps && xAtBottom<=xmax+eps){
+        xTickVals.push(Math.max(xmin,Math.min(xmax,xAtBottom)));
+        xTickText.push(fmt(u));
+      }
+    }
+  }
+  for(let n=nV0;n<=nV1 && n<nV0+40;n++){
+    const v=n*vstep,zero=n===0;
+    shapes.push(gridLine(toXY((umin+umax)/2,v),[b.ux*spanU/2,b.uy*spanU/2],zero));
+    if(Math.abs(b.ux)>1e-12){
+      const uAtLeft=(xmin-b.vx*v)/b.ux;
+      const yAtLeft=b.uy*uAtLeft+b.vy*v;
+      if(Number.isFinite(yAtLeft) && yAtLeft>=ymin-eps && yAtLeft<=ymax+eps){
+        yTickVals.push(Math.max(ymin,Math.min(ymax,yAtLeft)));
+        yTickText.push(fmt(v));
+      }
+    }
+  }
+  return {shapes,annotations:[],xTickVals,xTickText,yTickVals,yTickText};
+}
+
+function bindSingleRluGrid(cache){
+  const gd=$('singlePlot');
+  if(!gd || typeof gd.on!=='function') return;
+  if(gd.__tasRluGridHandler && typeof gd.removeListener==='function')
+    gd.removeListener('plotly_relayout',gd.__tasRluGridHandler);
+  gd.__tasRluGridHandler=null;
+  if(currentQEMapUnit()!=='rlu') return;
+  let scheduled=false,updating=false;
+  const handler=event=>{
+    if(updating || scheduled) return;
+    // Plotly.relayout(shapes/annotations) also fires plotly_relayout; do not
+    // recursively rebuild the grid in response to our own updates.
+    const keys=Object.keys(event||{});
+    if(!keys.some(k=>/^([xy]axis\.(range|autorange)|[xy]axis\.range\[)/.test(k))) return;
+    scheduled=true;
+    requestAnimationFrame(()=>{
+      scheduled=false;
+      if(!gd.isConnected || currentQEMapUnit()!=='rlu') return;
+      const xr=gd._fullLayout?.xaxis?.range,yr=gd._fullLayout?.yaxis?.range;
+      if(!Array.isArray(xr)||!Array.isArray(yr)) return;
+      updating=true;
+      const grid=qeObliqueRluGrid(cache,xr,yr);
+      Promise.resolve(Plotly.relayout(gd,{
+        shapes:grid.shapes,annotations:grid.annotations,
+        'xaxis.tickvals':grid.xTickVals,'xaxis.ticktext':grid.xTickText,
+        'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText
+      })).catch(err=>console.warn('Oblique RLU grid refresh warning:',err))
+        .finally(()=>{updating=false;});
+    });
+  };
+  gd.__tasRluGridHandler=handler;
+  gd.on('plotly_relayout',handler);
 }
 
 function qePointInPolygon(point,polygon){
@@ -2041,7 +2148,9 @@ function renderSingle(cache,index=0){
   const keptView=plotNode?.dataset?.qeUnit===unit ? currentPlotRanges("singlePlot") : {x:null,y:null};
   const i=Math.max(0,Math.min(index,cache.regions.length-1));
   const rawBoundary=cache.regions[i];
-  const T=p=>qeXYForUnit(cache,p,unit);
+  // Even in r.l.u. mode the drawing plane remains physical Qx/Qy (Å⁻¹).
+  // Lattice indices are conveyed by the oblique U/V grid, not by a distortion.
+  const T=p=>unit==='rlu' ? [Number(p[0]),Number(p[1])] : qeXYForUnit(cache,p,unit);
   const boundary=rawBoundary.map(T);
   const transformedG=cache.Gpoints.map(p=>({...p,...(()=>{const q=T([p.x,p.y]);return {x:q[0],y:q[1]};})()}));
   const transformedMag=cache.magPoints.map(p=>({...p,...(()=>{const q=T([p.x,p.y]);return {x:q[0],y:q[1]};})()}));
@@ -2051,10 +2160,11 @@ function renderSingle(cache,index=0){
   const s2Min = num("S2min");
   const s2Max = cache.S2list[i];
   const Qplot=Math.max(1e-6,1.15*Math.max(...allViewPoints.map(p=>Math.max(Math.abs(p[0]),Math.abs(p[1]))),1));
-  // U and V are dimensionless coordinates, not equal-length Å⁻¹ vectors.
-  // Give each r.l.u. axis its own range; never enforce pixel-scale 1:1 here.
-  const QplotX=unit==='rlu' ? Math.max(1e-6,1.15*Math.max(0,...allViewPoints.map(p=>Math.abs(p[0])))) : Qplot;
-  const QplotY=unit==='rlu' ? Math.max(1e-6,1.15*Math.max(0,...allViewPoints.map(p=>Math.abs(p[1])))) : Qplot;
+  // Identical physical ranges preserve circular Q contours and oblique U/V angles.
+  const QplotX=Qplot, QplotY=Qplot;
+  const initialXRange=keptView.x||[-Qplot,Qplot];
+  const initialYRange=keptView.y||[-Qplot,Qplot];
+  const rluGrid=unit==='rlu' ? qeObliqueRluGrid(cache,initialXRange,initialYRange) : null;
   const initialMarkerSizes=singleMarkerSizes(2*QplotX,2*QplotX,cache.Gpoints.length+cache.magPoints.length);
 
   // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
@@ -2069,7 +2179,11 @@ function renderSingle(cache,index=0){
       name:`Accessible Q (${s2Min.toFixed(0)}° ≤ S2 ≤ ${s2Max.toFixed(0)}°)`,
       mode:"lines",
       line:{width:0},
-      fillcolor:"rgba(255,215,0,0.20)"
+      fillcolor:"rgba(255,215,0,0.20)",
+      ...(unit==='rlu'?{
+        customdata:boundary.map(p=>qePhysicalRluCoordinates(cache,p)),
+        hovertemplate:'U = %{customdata[0]:.3f}, V = %{customdata[1]:.3f} r.l.u.<extra></extra>'
+      }:{})
     },
     {
       x:[null], y:[null], mode:"markers", name:"Nuclear Bragg peaks",
@@ -2202,8 +2316,9 @@ function renderSingle(cache,index=0){
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?"U coordinate (r.l.u.)":"Qx (Å⁻¹)",font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,constrain:"domain"},
-    yaxis:{title:{text:unit==='rlu'?"V coordinate (r.l.u.)":"Qy (Å⁻¹)",font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:"auto",nticks:10,showgrid:true,gridcolor:"#c3c9cf",gridwidth:1,zeroline:true,zerolinecolor:"#777",showline:true,linecolor:"#555",linewidth:1.2,mirror:true,...(unit==='rlu'?{}:{scaleanchor:"x",scaleratio:1,constrain:"domain"})},
+    xaxis:{title:{text:unit==='rlu'?'U (r.l.u.)':'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
+    yaxis:{title:{text:unit==='rlu'?'V (r.l.u.)':'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
+    ...(rluGrid?{shapes:rluGrid.shapes,annotations:rluGrid.annotations}:{}),
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
   },{responsive:true,doubleClick:false});
@@ -2211,6 +2326,7 @@ function renderSingle(cache,index=0){
   Promise.resolve(singleDraw).then(()=>{
     if(plotNode?.__tasMapDrawToken!==drawToken) return;
     bindSingleZoomPeakScaling(cache,2*QplotX,2*QplotY);
+    bindSingleRluGrid(cache);
     $('sfColorbarRange')?.classList.toggle('hidden',!cache.cifStructure);
     positionSingleColorbarEntries();
   }).catch(err=>console.warn('Constant E map drawing warning:',err));
