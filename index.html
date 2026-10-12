@@ -147,6 +147,7 @@
 <div class="energy-slider-row"><label>ħω<input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></label><output id="hwValue">0.0 meV</output></div>
 <div class="qe-plot-frame" id="singlePlotFrame">
   <div class="qe-plot" id="singlePlot"></div>
+  <div id="qePathHitLayer" class="qe-path-hit-layer" aria-label="Tap points in the Q-E map to select a reciprocal-space path"></div>
   <div id="qeSpurionWarning" class="qe-spurion-warning qe-spurion-plot-warning" role="status" aria-live="polite"></div>
   <div class="qe-colorbar-range hidden" id="sfColorbarRange" aria-label="Nuclear structure-factor colorbar limits">
     <input class="qe-colorbar-value qe-colorbar-value-max" id="sfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit colorbar maximum" title="Click to edit colorbar maximum; press Enter to apply"/>
@@ -155,21 +156,34 @@
 </div><div class="qe-plot powder hidden" id="powderPlot"></div>
 <div class="qe-external-legend hidden" id="qePowderLegend" aria-label="Powder Q–E map legend"></div>
 <div class="nuclear-label-control" id="qeDisplayControls" aria-label="Constant E map display controls">
-  <div class="qe-map-toolbar"><label>Q unit<select id="qeMapUnit"><option value="rlu">r.l.u.</option><option value="ainv">Å⁻¹</option></select></label></div>
-  <label class="checkbox-label"><input id="displayNuclearLabels" type="checkbox" checked><span>Nuclear Bragg labels</span></label>
-  <label class="checkbox-label"><input id="displayS2Ring" type="checkbox"><span>Show S2 ring</span></label>
+  <div class="qe-toolbar-leading">
+    <div class="qe-map-toolbar"><label>Q unit<select id="qeMapUnit"><option value="rlu">r.l.u.</option><option value="ainv">Å⁻¹</option></select></label></div>
+    <label class="checkbox-label" title="Show labels of nuclear Bragg peaks"><input id="displayNuclearLabels" type="checkbox" checked><span>Nuclear Bragg labels</span></label>
+  </div>
+  <div class="qe-path-tools" aria-label="Q path selection controls">
+    <button id="qePathPickToggle" class="qe-path-pick" type="button" aria-pressed="false">Select Path</button>
+    <button id="qePathUndo" type="button" disabled>Undo</button>
+    <button id="qePathClear" type="button" disabled>Clear</button>
+    <label class="qe-path-snap-label" for="qePathSnap">Snap
+      <select id="qePathSnap" aria-label="Snap Q path points to reciprocal-lattice fractions">
+        <option value="auto">Auto</option>
+        <option value="off">Free</option>
+        <option value="10">1/10</option>
+        <option value="12">1/12</option>
+      </select>
+    </label>
+  </div>
 </div>
 <div class="qe-external-legend" id="qePlotLegend" aria-label="Constant E map legend"></div>
 </div>
 <div aria-labelledby="qeMapTabVector" class="qe-map-pane hidden" id="qeVectorMapPane" role="tabpanel">
-<div class="qe-vector-inputs">
-<div class="qe-vector-point"><strong>HKL 1</strong><label>H<input id="qeVecH0" step="0.1" type="number" value="-1"/></label><label>K<input id="qeVecK0" step="0.1" type="number" value="-1"/></label><label>L<input id="qeVecL0" step="0.1" type="number" value="0"/></label></div>
-<div class="qe-vector-point"><strong>HKL 2</strong><label>H<input id="qeVecH1" step="0.1" type="number" value="1"/></label><label>K<input id="qeVecK1" step="0.1" type="number" value="-2"/></label><label>L<input id="qeVecL1" step="0.1" type="number" value="0"/></label></div>
-</div>
-<div class="qe-vector-range" role="radiogroup" aria-label="Q vector–E map Q range">
-  <span class="qe-vector-range-caption">Q range</span>
-  <label><input id="qeVectorRangeFull" type="radio" name="qeVectorRangeMode" value="full" checked>Full range</label>
-  <label><input id="qeVectorRangeSegment" type="radio" name="qeVectorRangeMode" value="segment">HKL1–HKL2</label>
+<div class="qe-vector-path-input">
+  <label for="qeVectorHKLPath">HKL</label>
+  <input id="qeVectorHKLPath" type="text" spellcheck="false" autocomplete="off"
+    value="-1 -1 0, 1 -2 0"
+    placeholder="-1 1 0, -1 2 0, 1 2 0, 1 2 3"
+    aria-label="HKL path as comma-separated H K L coordinates"
+    aria-describedby="qeVectorMessage"/>
 </div>
 <div aria-live="polite" class="orientation-plane-warning hidden" id="qeVectorPlaneWarning"></div>
 <div class="qe-plot" id="qeVectorPlot"></div>
