@@ -6602,29 +6602,59 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 }
 
 
-/* CIF Generator / Structure: six range entries and six view buttons in ONE row.
-   Only this toolbar scrolls horizontally if it cannot fit; the 3D plot does not shrink. */
+/* CIF Generator / Structure: all six range fields and six direction buttons
+   share a single row without creating a horizontal scrolling region.  Allow
+   the number fields to contract in a half-width viewer. */
 #structurePanel #mcifStructurePane .generator-structure-view-controls{
   display:grid!important;
-  grid-template-columns:minmax(0, 3.3fr) minmax(0, 1.7fr);
+  grid-template-columns:minmax(0,3fr) minmax(0,2fr);
   align-items:end;
-  column-gap:calc(8px * var(--tas-density));
+  column-gap:calc(6px * var(--tas-density));
   row-gap:0;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scrollbar-width:thin;
-}
-#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-range-six{
+  overflow:visible;
   min-width:0;
-  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  max-width:100%;
 }
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-range-six,
 #structurePanel #mcifStructurePane .generator-structure-view-controls > .cif-structure-view-buttons{
   min-width:0;
+  max-width:100%;
   grid-template-columns:repeat(6,minmax(0,1fr))!important;
 }
-@container generator-unified (max-width: 740px){
+#structurePanel #mcifStructurePane .structure-range-six .structure-entry-field,
+#structurePanel #mcifStructurePane .structure-range-six input[type=number],
+#structurePanel #mcifStructurePane .cif-structure-view-buttons > button{
+  box-sizing:border-box;
+  min-width:0!important;
+  max-width:100%!important;
+}
+@container generator-unified (max-width:900px){
   #structurePanel #mcifStructurePane .generator-structure-view-controls{
-    grid-template-columns:minmax(420px,3.3fr) minmax(210px,1.7fr);
+    column-gap:calc(3px * var(--tas-density));
+  }
+  #structurePanel #mcifStructurePane .structure-range-six,
+  #structurePanel #mcifStructurePane .cif-structure-view-buttons{
+    gap:calc(2px * var(--tas-density))!important;
+  }
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]{
+    padding-inline:calc(2px * var(--tas-density))!important;
+    font-size:max(10px,calc(12px * var(--tas-density)))!important;
+    appearance:textfield;
+    -moz-appearance:textfield;
+  }
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]::-webkit-inner-spin-button,
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  #structurePanel #mcifStructurePane .cif-structure-view-buttons > button{
+    padding-inline:0!important;
+    font-size:max(10px,calc(12px * var(--tas-density)))!important;
+    white-space:nowrap;
+  }
+  #structurePanel #mcifStructurePane .structure-entry-label{
+    font-size:max(10px,calc(11px * var(--tas-density)))!important;
+    white-space:nowrap;
   }
 }
 
@@ -6658,13 +6688,38 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   overflow:auto;
 }
 
-/* Structure Editor Style: display mode on a single horizontal line. */
+/* Structure Editor Style: three equal-width radio selections on one row. */
 #structurePanel .structure-style-modes{
-  display:flex;align-items:center;gap:calc(16px * var(--tas-density));
-  flex-wrap:nowrap;white-space:nowrap;margin-bottom:calc(9px * var(--tas-density));
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:center;
+  gap:calc(8px * var(--tas-density));
+  width:100%;
+  min-width:0;
+  margin-bottom:calc(9px * var(--tas-density));
 }
-#structurePanel .structure-style-modes label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;min-width:0;}
-#structurePanel .structure-style-modes input{margin:0;accent-color:var(--accent-color,#337ab7);}
+#structurePanel .structure-style-modes label{
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:calc(5px * var(--tas-density));
+  width:100%;
+  min-width:0;
+  padding:calc(5px * var(--tas-density)) 0;
+  white-space:nowrap;
+  cursor:pointer;
+}
+#structurePanel .structure-style-modes input{
+  margin:0;
+  flex:0 0 auto;
+  accent-color:var(--accent-color,#337ab7);
+}
+@container structure-viewer (max-width:360px){
+  #structurePanel .structure-style-modes{gap:calc(4px * var(--tas-density));}
+  #structurePanel .structure-style-modes label{gap:3px;font-size:12px;}
+}
 
 /* Style: preserve the original select/distance/width allocations.  Only the
    colour swatch and Remove column need adjustment.  The old stable scrollbar
@@ -6927,7 +6982,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 @media (min-width:761px){
   @container generator-unified (min-width:660px){
     #structurePanel #cifGeneratorPanel.generator-unified-grid{
-      grid-template-columns:minmax(0,11fr) minmax(0,9fr)!important;
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
       align-items:start;
     }
     #structurePanel .generator-unified-left,
