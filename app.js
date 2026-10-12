@@ -1701,6 +1701,18 @@ function qeParsePathDetails(value){
 }
 function qeParsePathText(value){return qeParsePathDetails(value).points;}
 function qePathInput(){return $('qeVectorHKLPath');}
+// Only an empty (including restored empty) HKL field gets a default path.
+// Build it from the CURRENT U/V rather than assuming a fixed (100)/(010) plane.
+function qeDefaultPathText(){
+  const coordinates=(ids,fallback)=>{
+    const values=ids.map(id=>num(id));
+    return values.every(Number.isFinite) ? values : fallback;
+  };
+  const U=coordinates(['Uh','Uk','Ul'],[1,0,0]);
+  const V=coordinates(['Vh','Vk','Vl'],[0,1,0]);
+  return [[0,0,0],U,V,[0,0,0]]
+    .map(point=>point.map(value=>String(value)).join(' ')).join(', ');
+}
 // Show HKL values to three decimal places without changing the unrounded
 // reciprocal-space coordinates used by the Q-E calculation or 1/12 snapping.
 function qeFormatPathNumber(value){
@@ -1782,7 +1794,7 @@ function redrawQEPathDisplay(){
     renderSingle(singleCache,Number($('hwSlider')?.value)||0);
   if(!$('qeVectorMapPane')?.classList.contains('hidden')) renderQEVectorMap(singleCache);
 }
-function qeCommitPathText(){
+function qeCommitPathText({markEdited=true}={}){
   let points;
   try{var parsed=qeParsePathDetails(qePathInput()?.value);points=parsed.points;}
   catch(error){
@@ -1791,7 +1803,7 @@ function qeCommitPathText(){
     return false;
   }
   qePathInput()?.removeAttribute('aria-invalid');
-  qePathWasEdited=true;
+  qePathWasEdited=markEdited;
   qeSelectedPathHKL.splice(0,qeSelectedPathHKL.length,...points);
   qeSelectedPathLabels.splice(0,qeSelectedPathLabels.length,...parsed.labels);
   redrawQEPathDisplay();
@@ -1833,6 +1845,12 @@ function addQEPathPointFromPhysical(x,y){
   const us=qeSnapReciprocalCoordinate(u,mode);
   const vs=qeSnapReciprocalCoordinate(v,mode);
   const hkl=U.map((val,i)=>val*us+V[i]*vs);
+  // The generated startup path is visible, but is not a user-picked path.
+  // Replace it on the first *valid map click*, not when Select Path is toggled.
+  if(!qePathWasEdited){
+    qeSelectedPathHKL.length=0;
+    qeSelectedPathLabels.length=0;
+  }
   const previous=qeSelectedPathHKL.at(-1);
   if(previous){
     const a=qePathPointXY(singleCache,previous),b=qePathPointXY(singleCache,hkl);
@@ -2670,7 +2688,7 @@ function renderSingle(cache,index=0){
 
   // Path is drawn over the physical Q map, even when Q unit is r.l.u.;
   // selections remain visible while the energy slider or Q unit changes.
-  if(qePathWasEdited && qeSelectedPathHKL.length){
+  if(qeSelectedPathHKL.length){
     const points=qeSelectedPathHKL.map(hkl=>qePathPointXY(cache,hkl));
     traces.push({type:'scatter',mode:'lines+markers+text',showlegend:false,meta:'qe-selected-path',zorder:100,
       x:points.map(p=>p[0]),y:points.map(p=>p[1]),text:points.map((_,j)=>qePathMapLabel(j,cache)),
@@ -3528,15 +3546,9 @@ $('qeMapUnit')?.addEventListener('change',()=>{
 });
 $('qePathPickToggle')?.addEventListener('click',()=>{
   qeSelectingPath=!qeSelectingPath;
-  // The initial example is not a picked path. First selection replaces it;
-  // subsequent selections can extend paths that the user typed or picked.
-  if(qeSelectingPath && !qePathWasEdited){
-    qeSelectedPathHKL.length=0;
-    qeSelectedPathLabels.length=0;
-    qeWritePathInput();
-    qePathWasEdited=true;
-    redrawQEPathDisplay();
-  }else updateQEPathControls();
+  // Keep the default path visible until the first valid map click replaces it.
+  // Saved/user-edited paths can still be extended as before.
+  updateQEPathControls();
 });
 $('qePathUndo')?.addEventListener('click',()=>{
   qeSelectedPathHKL.pop();
@@ -3832,11 +3844,14 @@ async function initialize(){
   // serializer, then start the catch-all listener only after initialization so
   // defaults cannot overwrite the user's previous browser-local state.
   const restoredGlobalState=restoreGlobalUIState();
-  // Generic local-state restoration assigns input.value directly without
-  // dispatching input/change. The Q path was previously parsed BEFORE that
-  // restoration, so after reload its visible text and plotted path diverged.
-  // Synchronize from the final restored field before the first calculation.
-  qeCommitPathText();
+  // Right/global persistence restores input.value without dispatching events.
+  // After BOTH restores, seed empty HKL (including a saved empty path) from
+  // the current sample U/V. Leave all nonempty saved paths untouched.
+  const restoredHKLIsEmpty=!(qePathInput()?.value||'').trim();
+  if(restoredHKLIsEmpty && qePathInput()) qePathInput().value=qeDefaultPathText();
+  // The generated startup path is an example, not a user-picked path: the
+  // first Select Path action should replace it rather than append to it.
+  qeCommitPathText({markEdited:!restoredHKLIsEmpty});
   enableGlobalUIPersistence();
   saveLeftPanelState();
   saveRightPanelState();
