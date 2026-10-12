@@ -3490,12 +3490,20 @@ async function initialize(){
   setDarkRangeCount, setGeometryCalculationMode, setGeometryCardTab, setGeometryScanOutputTab, setPropagationVectorCount,
   setQEMapTab, setupTasConventionUI, sub, updateAutoW, updateBackgroundSelectAvailability, updateDarkReferenceUI,
   updateEnergyLabel, updateModeVisibility, updateOrientationReferenceUI, updateResolutionPlaneWarning, updateS2MaxDisplay,
-  updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache, hasScanResults
+  updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
+  getSelectedCifStructure:()=>selectedCifStructure, hasScanResults
 }));
 
-// Initialize without hiding the interface while instrument/local state loads.
+// The initial HTML contains every conditional panel for later use, but only
+// reveal them after instrument data, local preferences and active tabs agree.
+// On an initialization failure reveal the error box instead of leaving a blank UI.
 initialize()
   .catch(err=>{
     showError(err);
     setStatus('Configuration loading failed. Open the project through an HTTP server.');
+  })
+  .finally(()=>{
+    document.documentElement.classList.remove('tas-ui-booting');
+    // Deferred plot measurement happens after the real layout is visible.
+    requestAnimationFrame(()=>scheduleVisiblePlotResize());
   });

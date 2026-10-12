@@ -54,6 +54,7 @@ export function createUIShell(deps){
     updateSupermirrorUI,
     getSingleCache,
     getPowderCache,
+    getSelectedCifStructure,
     hasScanResults
   }=deps;
 
@@ -374,7 +375,19 @@ function restoreGlobalUIState(){
   if(!saved || saved.version!==1 || !saved.controls || typeof saved.controls!=='object') return false;
   restoringGlobalUI=true;
   try{
+    // The selected CIF/mCIF is restored by initializeCifGenerator() BEFORE
+    // this generic snapshot. Its space group and cell belong to that file,
+    // not to an older global UI snapshot (which may still say P1).
+    // Do not undo the file import by restoring stale values over either editor.
+    const fileOwnsCell=!!getSelectedCifStructure?.();
+    const fileCellControls=new Set([
+      'sampleSpaceGroup','sampleSpaceGroupNumber',
+      'cifCrystalSystem','cifSpaceGroup','cifSpaceGroupNumber',
+      'a','b','c','alpha','beta','gamma',
+      'cifA','cifB','cifC','cifAlpha','cifBeta','cifGamma'
+    ]);
     for(const el of globalUIPersistentControls()){
+      if(fileOwnsCell && fileCellControls.has(el.id)) continue;
       const value=saved.controls[el.id];
       if(value===undefined) continue;
       if(el.type==='checkbox'||el.type==='radio') el.checked=!!value;

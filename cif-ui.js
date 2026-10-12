@@ -256,6 +256,10 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   // Loading a file is the one place where both editors acquire common values.
   // For generated magnetic supercells Sample already refers to the parent cell.
   if(findGeneratorSpaceGroup(parsed)) syncCrystallographicCell("sample",{refresh:false});
+  // Importing a file changes Sample programmatically, not through sidebar
+  // input/change events. Persist the imported group and cell together so the
+  // next reload cannot restore an older Sample space group (often P1).
+  if(persist) saveLeftPanelState();
   // The selected CIF/mCIF, not just a newly generated CIF, is a valid source
   // for the nuclear reflection table.  Drop any previous Generate snapshot and
   // recalculate from the newly selected structure (even when the editable CIF
@@ -425,7 +429,7 @@ function populateSampleSpaceGroupControls(){
   for(const sg of cifSpaceGroups){
     const opt=document.createElement("option");
     opt.value=String(sg.number);
-    opt.textContent=sg.hm;
+    opt.textContent=`${sg.number} — ${sg.hm}`;
     select.appendChild(opt);
   }
   restoreSampleSpaceGroupSelection();
@@ -2764,8 +2768,10 @@ function renderCifStructureView(){
 }
 
 function setCifGeneratedReady(ready){
-  if($("cifOutputDownload")) $("cifOutputDownload").disabled=!ready;
-  if($("cifOutputSet")) $("cifOutputSet").disabled=!ready;
+  // mCIF can be previewed as a future format, but BNS export is not released.
+  const canUseCif=ready && $("cifOutputFormat")?.value!=="mcif";
+  if($("cifOutputDownload")) $("cifOutputDownload").disabled=!canUseCif;
+  if($("cifOutputSet")) $("cifOutputSet").disabled=!canUseCif;
   // Reflection CSV availability is independent of CIF Generate.  A selected
   // CIF/mCIF can provide reflections without generating any new CIF file.
 }
@@ -2813,6 +2819,70 @@ function selectedCifGeneratorSpaceGroup(){
   return cifSpaceGroups.find(x=>x.number===n) || null;
 }
 
+// The bundled standard-setting data calls #143–167 trigonal.  For the
+// requested System selector, P-centered trigonal groups join the hexagonal
+// lattice family; R-centered groups are classified as rhombohedral.
+// "Custom" is P1 only: no imposed space-group symmetry (VESTA-style).
+function cifSpaceGroupSystem(sg){
+  const crystalSystem=String(sg?.crystal_system||"").toLowerCase();
+  if(crystalSystem==="trigonal"){
+    return centeringFromSpaceGroup(sg)==="R" ? "rhombohedral" : "hexagonal";
+  }
+  return crystalSystem;
+}
+
+function cifSystemIncludesSpaceGroup(system,sg){
+  return system==="custom" ? sg.number===1 : cifSpaceGroupSystem(sg)===system;
+}
+
+// Rebuild the list rather than hiding <option> nodes, which do not filter
+// consistently in native <select> controls on all browsers.
+function populateCifSpaceGroupOptions(requestedNumber,{adaptSystem=false}={}){
+  const select=$("cifSpaceGroup"),systemInput=$("cifCrystalSystem");
+  if(!select || !cifSpaceGroups.length) return null;
+  const wanted=cifSpaceGroups.find(sg=>sg.number===Number(requestedNumber));
+  let system=systemInput?.value||"custom";
+  if(adaptSystem && wanted && !cifSystemIncludesSpaceGroup(system,wanted)){
+    system=cifSpaceGroupSystem(wanted);
+    if(systemInput) systemInput.value=system;
+  }
+  const matching=cifSpaceGroups.filter(sg=>cifSystemIncludesSpaceGroup(system,sg));
+  select.replaceChildren();
+  for(const sg of matching){
+    const option=document.createElement("option");
+    option.value=String(sg.number);
+    option.textContent=`${sg.number} — ${sg.hm}`;
+    select.appendChild(option);
+  }
+  const selected=wanted && cifSystemIncludesSpaceGroup(system,wanted) ? wanted : matching[0];
+  if(selected) select.value=String(selected.number);
+  syncCifSpaceGroupNumberFromSelect();
+  return selected||null;
+}
+
+function selectCifSpaceGroup(number,{syncSystem=false}={}){
+  const sg=cifSpaceGroups.find(entry=>entry.number===Number(number));
+  const select=$("cifSpaceGroup"),systemInput=$("cifCrystalSystem");
+  if(!sg || !select) return null;
+  // A loaded CIF/mCIF defines its own crystal system, even when the picker
+  // currently shows Custom (which is restricted to P1).
+  // Rebuild the filtered options as well as updating the System label.
+  if(syncSystem){
+    if(systemInput) systemInput.value=cifSpaceGroupSystem(sg);
+    return populateCifSpaceGroupOptions(sg.number);
+  }
+  const system=systemInput?.value||"custom";
+  // Sample-cell edits synchronize continuously; avoid rebuilding hundreds of
+  // options unless the selected group is actually outside the current filter.
+  if(cifSystemIncludesSpaceGroup(system,sg) &&
+     [...select.options].some(option=>option.value===String(sg.number))){
+    select.value=String(sg.number);
+    syncCifSpaceGroupNumberFromSelect();
+    return sg;
+  }
+  return populateCifSpaceGroupOptions(number,{adaptSystem:true});
+}
+
 function syncCifSpaceGroupNumberFromSelect(){
   const n=Number($("cifSpaceGroup")?.value);
   const entry=$("cifSpaceGroupNumber");
@@ -2832,7 +2902,7 @@ function jumpToCifSpaceGroupNumber(){
     setCifGeneratorMessage(`Space group #${n} is not available.`,true);
     return;
   }
-  select.value=String(n);
+  selectCifSpaceGroup(n);
   updateCifSpaceGroupInfo();
 }
 
@@ -2881,8 +2951,7 @@ function copyCurrentLatticeToGenerator(){
   // group before applying constraints ensures the two sections use the same
   // standard crystal-system setting (a=b, gamma=120, etc.).
   const sg=selectedSampleSpaceGroup();
-  if(sg && $("cifSpaceGroup")) $("cifSpaceGroup").value=String(sg.number);
-  if(sg && $("cifSpaceGroupNumber")) $("cifSpaceGroupNumber").value=String(sg.number);
+  if(sg) selectCifSpaceGroup(sg.number);
   const map={cifA:"a",cifB:"b",cifC:"c",cifAlpha:"alpha",cifBeta:"beta",cifGamma:"gamma"};
   for(const [dst,src] of Object.entries(map)){
     const source=$(src);
@@ -2894,12 +2963,11 @@ function copyCurrentLatticeToGenerator(){
 }
 
 function updateCifSpaceGroupInfo(){
+  // The redundant text description was removed from the UI. Keep the number
+  // field and metric constraints synchronized with the selected group.
   const sg=selectedCifGeneratorSpaceGroup();
-  const box=$("cifSpaceGroupInfo");
-  if(!box) return;
-  if(!sg){ box.textContent="Select a space group."; return; }
+  if(!sg) return;
   syncCifSpaceGroupNumberFromSelect();
-  box.textContent=`#${sg.number} ${sg.hm} · ${sg.crystal_system} · standard setting · ${sg.operations.length} symmetry operation(s)`;
   applyCifLatticeConstraints();
 }
 
@@ -2949,6 +3017,17 @@ function setCifAtomRowSelection(row, event={}){
   }
   refreshCifAtomSelectionUI();
 }
+// Clear the Positions selection when clicking outside its table. Keep action
+// buttons exempt so Copy/Remove can still operate on the selected rows.
+document.addEventListener("pointerdown",event=>{
+  const target=event.target;
+  if(!(target instanceof Element)) return;
+  if(target.closest("#cifAtomTable, #cifCopyAtom, #cifRemoveAtom, #cifAddAtom")) return;
+  if(!cifSelectedAtomRows().length) return;
+  cifSelectedAtomRows().forEach(row=>row.classList.remove("cif-atom-selected"));
+  cifAtomSelectionAnchor=null;
+  refreshCifAtomSelectionUI();
+});
 function refreshCifAtomSelectionUI(){
   const selected=new Set(cifSelectedAtomRows().map(r=>r.dataset.cifAtomUid));
   document.querySelectorAll("#cifAtomDetailedRows .cif-thermal-row").forEach(r=>{
@@ -3703,7 +3782,8 @@ function syncCrystallographicCell(origin,{refresh=true,changedId="",commit=false
     }
     const n=Number(sourceSg?.value);
     if(!Number.isInteger(n) || !sampleSpaceGroupByNumber(n)) return;
-    if($(targetSgId)) $(targetSgId).value=String(n);
+    if(targetSgId==="cifSpaceGroup") selectCifSpaceGroup(n);
+    else if($(targetSgId)) $(targetSgId).value=String(n);
     for(const id of ["sampleSpaceGroupNumber","cifSpaceGroupNumber"]){
       if(id!==changedId && $(id)) $(id).value=String(n);
     }
@@ -4090,7 +4170,7 @@ function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{me
   if(!Array.isArray(parsed.asymmetricSites) || !parsed.asymmetricSites.length) return false;
   if(!$("cifSpaceGroup") || !$("cifAtomRows")) return false;
   if(message){ cifStructureSourcePreference="loaded"; saveStructureViewerState(); }
-  $("cifSpaceGroup").value=String(sg.number);
+  selectCifSpaceGroup(sg.number,{syncSystem:true});
   for(const [key,id] of Object.entries(CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(lattice[key]);
   replaceCifAtomRows(parsed.asymmetricSites.map(a=>({element:a.element,x:a.x,y:a.y,z:a.z,occupancy:a.occupancy,Biso:a.Biso ?? 0,Uaniso:a.Uaniso ?? null})));
   if($("cifGeneratedName")) $("cifGeneratedName").value=cleanCifBaseName(fileName);
@@ -4249,12 +4329,29 @@ function generateMcifForReview(){
   mcifPreview(text);
   mcifMessage(`Generated ${lastGeneratedMcifName}; magnetic symmetry checked (${check.atoms.filter(a=>Array.isArray(a.magneticMoment)).length} magnetic atoms).`);
 }
-// mCIF export is not released. The Output format selector (with only CIF
-// selectable) is removed; the filename suffix still shows the output format.
+// The format selector advertises planned mCIF support without releasing
+// incomplete P1-only export as general BNS magnetic-symmetry output.
 function initializeUnifiedOutputActions(){
-  const suffix=$("cifUnifiedFileSuffix");
-  if(suffix) suffix.textContent=".cif";
-  try{localStorage.setItem("tas-cif-output-format-v1","cif");}catch(_e){}
+  const format=$("cifOutputFormat"),generate=$("cifOutputGenerate");
+  if(!format || !generate || format.dataset.outputBound) return;
+  format.dataset.outputBound="1";
+  format.value="cif";
+  const update=()=>{
+    const mcif=format.value==="mcif";
+    const word=mcif?"mCIF":"CIF";
+    const notice=$("cifMcifBnsNotice");
+    if(notice) notice.hidden=!mcif;
+    generate.textContent=`Generate ${word}`;
+    if($("cifOutputDownload")) $("cifOutputDownload").textContent=`Download ${word}`;
+    if($("cifOutputSet")) $("cifOutputSet").textContent=`Set ${word}`;
+    const suffix=$("cifUnifiedFileSuffix");
+    if(suffix) suffix.textContent=mcif?".mcif":".cif";
+    // Never activate an incomplete mCIF generator through these public buttons.
+    generate.disabled=mcif || !cifSpaceGroups.length;
+    setCifGeneratedReady(!!lastGeneratedCifText);
+  };
+  format.addEventListener("change",update);
+  update();
 }
 function initMcifGeneratorActions(){
   // mCIF Generate is available; Download/Set remain disabled until generation.
@@ -4300,12 +4397,8 @@ async function initializeCifGenerator(){
     cifSpaceGroups=Array.isArray(data) ? data : data.space_groups;
     if(!Array.isArray(cifSpaceGroups) || cifSpaceGroups.length!==230) throw new Error("space-groups.json does not contain the expected 230 standard space groups.");
     populateSampleSpaceGroupControls();
-    select.replaceChildren();
-    for(const sg of cifSpaceGroups){
-      const opt=document.createElement("option"); opt.value=String(sg.number); opt.textContent=`${sg.number} — ${sg.hm}`; select.appendChild(opt);
-    }
-    select.value="1";
-    syncCifSpaceGroupNumberFromSelect();
+    if($("cifCrystalSystem")) $("cifCrystalSystem").value="custom";
+    populateCifSpaceGroupOptions(1);
     if(!getSelectedCifStructure()) restoreSelectedCifLocal();
     // Keep the editor's own initial cell until a structure is loaded.
     addCifAtomRow({element:"",x:0,y:0,z:0,occupancy:1},{invalidate:false});
@@ -4315,12 +4408,34 @@ async function initializeCifGenerator(){
     else restoreCifGeneratorAtomsState();
 
     setCifGeneratedReady(false);
+    $("cifOutputFormat")?.dispatchEvent(new Event("change"));
     recalculateGeneratedReflections();
     setUnifiedGeneratorOutputTab(readSavedGeneratorOutputTab());
     generatorOutputTabRestored=true;
     restoreStructureViewerState();
+    // The loaded CIF/mCIF is authoritative after ALL editor/viewer restores.
+    // The saved sidebar settings may predate the file import, and the editor
+    // may initially start in Custom. Align both SG controls to the file.
+    const restoredFileGroup=getSelectedCifStructure() &&
+      findGeneratorSpaceGroup(getSelectedCifStructure());
+    if(restoredFileGroup){
+      setSampleSpaceGroup(restoredFileGroup.number,{recalc:false});
+      selectCifSpaceGroup(restoredFileGroup.number,{syncSystem:true});
+      updateCifSpaceGroupInfo();
+    }
 
     select.addEventListener("change",updateCifSpaceGroupInfo);
+    $("cifCrystalSystem")?.addEventListener("change",()=>{
+      const before=Number(select.value);
+      const selected=populateCifSpaceGroupOptions(before);
+      updateCifSpaceGroupInfo();
+      if(selected?.number!==before){
+        // A new System may select a different group. Reuse the existing
+        // change listeners for Sample synchronization and recalculation.
+        select.dispatchEvent(new Event("change",{bubbles:true}));
+        invalidateGeneratedCif("");
+      }
+    });
     $("cifSpaceGroupNumber")?.addEventListener("change",jumpToCifSpaceGroupNumber);
     $("cifSpaceGroupNumber")?.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); jumpToCifSpaceGroupNumber(); } });
     // Cell synchronization applies constraints on change, not each keystroke.
@@ -4402,10 +4517,13 @@ async function initializeCifGenerator(){
       setCifGeneratorMessage(`Showing loaded file: ${fileName}.`);
     });
     $("cifShowGenerated")?.addEventListener("click",()=>{
-      const mcif=false; // CIF is the sole public output format.
-      const text=mcif?lastGeneratedMcifText:lastGeneratedCifText;
-      const fileName=mcif?lastGeneratedMcifName:lastGeneratedCifName;
-      if(!text){setCifGeneratorMessage(`Generate ${mcif?"mCIF":"CIF"} first to show its output.`,true);return;}
+      if($("cifOutputFormat")?.value==="mcif"){
+        setCifGeneratorMessage("mCIF export with BNS magnetic space-group classification is planned for a future update.",true);
+        return;
+      }
+      const text=lastGeneratedCifText;
+      const fileName=lastGeneratedCifName;
+      if(!text){setCifGeneratorMessage("Generate CIF first to show its output.",true);return;}
       showUnifiedCifPreview(text,`Generated file: ${fileName}`);
       setCifGeneratorMessage(`Showing generated file: ${fileName}.`);
     });
@@ -4423,6 +4541,7 @@ async function initializeCifGenerator(){
     });
 
     $("cifOutputGenerate")?.addEventListener("click",()=>{
+      if($("cifOutputFormat")?.value!=="cif") return;
       const nameInput=$("cifGeneratedName");
       const previousName=nameInput?.value ?? "generated_structure";
       if(nameInput) nameInput.value=nextCifGeneratedBaseName(previousName);
@@ -4434,6 +4553,7 @@ async function initializeCifGenerator(){
       }
     });
     $("cifOutputDownload")?.addEventListener("click",()=>{
+      if($("cifOutputFormat")?.value!=="cif") return;
       if(!lastGeneratedCifText){ setCifGeneratorMessage("Press Generate before downloading.",true); return; }
       downloadGeneratedCif(lastGeneratedCifText,lastGeneratedCifName);
       setCifGeneratorMessage(`Downloaded ${lastGeneratedCifName}.`);
@@ -4443,6 +4563,7 @@ async function initializeCifGenerator(){
       catch(err){ setCifGeneratorMessage(err?.message||String(err),true); }
     });
     $("cifOutputSet")?.addEventListener("click",()=>{
+      if($("cifOutputFormat")?.value!=="cif") return;
       try{
         if(!lastGeneratedCifText) throw new Error("Press Generate before setting the CIF.");
         if($("sampleMode")?.value!=="single"){

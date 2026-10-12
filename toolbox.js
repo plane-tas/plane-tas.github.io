@@ -82,7 +82,7 @@ export function createToolbox({
     const grid=document.querySelector('#toolboxPanel .toolbox-grid');
     if(!grid) return;
     const fields=[
-      ['toolMass','Mass equivalent (kg)','any'],
+      ['toolMass','Mass (kg)','any'],
       ['toolField','Magnetic field (T)','any'],
       ['toolJ','Energy (J)','any'],
       ['toolCal','Heat (cal)','any']
@@ -108,7 +108,7 @@ export function createToolbox({
       const old=[...table.children];
       const oldCols=8; // row label + 7 original quantities
       const prefixes=['harmThird','harmHalf','harmFundamental','harmDouble','harmTriple'];
-      const extraHeaders=['Mass equivalent (kg)','Magnetic field (T)','Energy (J)','Heat (cal)'];
+      const extraHeaders=['Mass (kg)','Magnetic field (T)','Energy (J)','Heat (cal)'];
       const suffixes=['Mass','Field','J','Cal'];
       const frag=document.createDocumentFragment();
       for(let row=0;row<=prefixes.length;row++){
@@ -126,7 +126,7 @@ export function createToolbox({
     }
     ensureFlexibleS2Controls();
     const note=document.querySelector('#toolboxPanel .tool-note');
-    if(note) note.textContent='Editing any one of λ, E, k, THz, K, cm⁻¹, velocity, mass equivalent, magnetic field, J, or cal updates all other values and the wavelength-multiple table.';
+    if(note) note.textContent='Editing any one of λ, E, k, THz, K, cm⁻¹, velocity, mass, magnetic field, J, or cal updates all other values and the wavelength-multiple table.';
   }
 
   function toolboxValues(lambda){

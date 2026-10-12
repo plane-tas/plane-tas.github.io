@@ -199,7 +199,6 @@ textarea:disabled {
 .cif-pane-heading,.cif-atom-heading{display:flex;justify-content:space-between;gap:calc(12px * var(--tas-density));align-items:flex-end}
 .cif-pane-heading h3,.cif-atom-heading h3{margin:0 0 calc(4px * var(--tas-density))}
 .cif-generator-setup{display:grid;grid-template-columns:1fr;gap:calc(8px * var(--tas-density));align-items:end;margin-top:calc(12px * var(--tas-density))}
-.cif-space-group-info{font-size:calc(12px * var(--tas-density));color:#555;padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));background:#f7f7f7;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(5px * var(--tas-density));min-height:calc(31px * var(--tas-density))}
 .cif-space-group-picker{display:grid;grid-template-columns:calc(78px * var(--tas-density)) minmax(0,1fr);gap:calc(8px * var(--tas-density));align-items:end}
 .cif-space-group-picker label{min-width:0}
 .cif-space-group-picker select,.cif-space-group-picker input{width:100%;max-width:none}
@@ -6370,8 +6369,36 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   font-variant-numeric:tabular-nums;
 }
 
-/* CIF output has one supported file format: no unusable format selector. */
-#structurePanel .cif-unified-output-line{grid-template-columns:minmax(0,1fr)!important}
+/* Restore the output format selector beside the filename. */
+#structurePanel .cif-unified-output-line{
+  grid-template-columns:minmax(calc(105px * var(--tas-density)),1fr) minmax(0,2fr)!important;
+}
+#structurePanel .cif-unified-output-line .cif-output-format-label select{
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box;
+  margin-top:calc(5px * var(--tas-density));
+}
+/* Structure editor: System precedes No. and filters the existing 230 space groups.
+   The Space group selector retains enough width for Hermann-Mauguin symbols. */
+#structurePanel .cif-space-group-picker{
+  grid-template-columns:minmax(0,1.1fr) minmax(0,.56fr) minmax(0,1.75fr);
+  gap:calc(8px * var(--tas-density));
+}
+#structurePanel .cif-space-group-picker label{min-width:0}
+#structurePanel .cif-space-group-picker select,
+#structurePanel .cif-space-group-picker input{
+  min-width:0;width:100%;max-width:100%;box-sizing:border-box;
+}
+/* The narrower layout keeps System immediately to the left of No. while
+   moving the full space-group symbol to its own line for readability. */
+@media(max-width:520px){
+  #structurePanel .cif-space-group-picker{
+    grid-template-columns:minmax(0,1.6fr) minmax(0,.8fr);
+  }
+  #structurePanel .cif-space-group-picker > label:last-child{grid-column:1/-1}
+}
+/* Do not show an mCIF future-support notice for ordinary CIF output,
+   including on the first paint before scripts initialize. */
+#structurePanel #cifMcifBnsNotice[hidden]{display:none!important}
 
 /* Neutron attenuation: the Plotly SVG must not retain a stale wide canvas
    outside its own card after the page switches between narrow/wide layouts. */
@@ -6432,4 +6459,34 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 }
 #tasTopBar .tas-brand-letter{
   text-shadow:0 1px 0 rgba(255,233,195,.92),0 2px 2px rgba(131,64,24,.22);
+}
+
+/* Sidebar: make No. compact and give the space-group selector more room.
+   Override the legacy equal-width columns without changing sidebar width. */
+.sample-spacegroup-row{
+  grid-template-columns:minmax(0,1fr) minmax(0,.825fr) minmax(0,1.375fr)!important;
+}
+@media(max-width:760px){
+  .sample-spacegroup-row{
+    grid-template-columns:minmax(0,1fr) minmax(0,.825fr) minmax(0,1.375fr)!important;
+  }
+}
+
+/* Reflections: keep Energy, Wavelength and Wavevector on a single row,
+   including half-width browser windows. Override the 620px two-column rule. */
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:calc(5px * var(--tas-density));
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
+  min-width:0;
+  font-size:calc(12px * var(--tas-density));
+  overflow-wrap:anywhere;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
+  min-width:0;
+  width:100%;
+  padding-left:calc(5px * var(--tas-density));
+  padding-right:calc(3px * var(--tas-density));
+  font-size:calc(13px * var(--tas-density));
 }
