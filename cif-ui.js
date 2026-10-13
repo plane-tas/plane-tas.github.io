@@ -2748,6 +2748,72 @@ function syncImportedMomentStructureType(){
   syncSpinModifyLock();
 }
 
+// Confine the CIF Generator to the portion of the main workspace that is
+// actually visible. Width-based (square) Structure sizing must not force a
+// second, page-level scroll on wide/short monitors. Single-column layouts
+// keep their natural height so small screens do not hide essential controls.
+let generatorViewportFrame=0;
+function requestGeneratorViewportHeightSync(){
+  if(generatorViewportFrame) return;
+  generatorViewportFrame=requestAnimationFrame(()=>{
+    generatorViewportFrame=0;
+    const card=document.querySelector('#structurePanel .generator-unified-card');
+    const grid=$('cifGeneratorPanel');
+    if(!card || !grid) return;
+    const active=!!card.getClientRects().length;
+    const columns=getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean);
+    const desktop=active && columns.length>=2;
+    // Extremely short viewports cannot safely contain the editor controls;
+    // preserve ordinary scrolling in that exceptional case.
+    const main=card.closest('main');
+    const viewportBottom=Math.min(window.innerHeight,main?.getBoundingClientRect().bottom||window.innerHeight);
+    const freeHeight=Math.floor(viewportBottom-card.getBoundingClientRect().top-12);
+    const fit=desktop && freeHeight>=330;
+    const prevHeight=card.style.getPropertyValue('--generator-visible-height');
+    const wasFit=card.classList.contains('generator-height-limited');
+    if(!fit){
+      card.classList.remove('generator-height-limited');
+      card.style.removeProperty('--generator-visible-height');
+    }else{
+      if(prevHeight!==`${freeHeight}px`) card.style.setProperty('--generator-visible-height',`${freeHeight}px`);
+      card.classList.add('generator-height-limited');
+    }
+    if(wasFit!==fit || (fit && prevHeight!==`${freeHeight}px`)) requestStructureTableHeightSync();
+  });
+}
+function prepareGeneratorViewportHeightSync(){
+  if(document.documentElement.dataset.generatorViewportBound) return;
+  document.documentElement.dataset.generatorViewportBound='1';
+  window.addEventListener('resize',requestGeneratorViewportHeightSync);
+  window.visualViewport?.addEventListener('resize',requestGeneratorViewportHeightSync);
+  const panel=$('structurePanel');
+  if(typeof MutationObserver==='function' && panel){
+    new MutationObserver(requestGeneratorViewportHeightSync).observe(panel,{attributes:true,attributeFilter:['class','hidden']});
+  }
+  if(typeof ResizeObserver==='function'){
+    const card=document.querySelector('#structurePanel .generator-unified-card');
+    const main=card?.closest('main');
+    const observer=new ResizeObserver(requestGeneratorViewportHeightSync);
+    if(main) observer.observe(main);
+    if(card) observer.observe(card);
+    // The plot will be resized when its actual container dimensions change.
+    const wrap=panel?.querySelector('#mcifStructurePane .structure-plot-wrap');
+    if(wrap){
+      let plotResizeFrame=0;
+      new ResizeObserver(()=>{
+        if(plotResizeFrame) return;
+        plotResizeFrame=requestAnimationFrame(()=>{
+          plotResizeFrame=0;
+          const plot=$('cifStructurePlot');
+          if(plot?._fullLayout && typeof Plotly!=='undefined' && typeof Plotly.Plots?.resize==='function'){
+            Promise.resolve(Plotly.Plots.resize(plot)).catch(()=>{});
+          }
+        });
+      }).observe(wrap);
+    }
+  }
+  requestGeneratorViewportHeightSync();
+}
 // The right-hand Structure plot sets the available height of the editor.
 // Only the TABLE scrolls; output format, mode controls, and action buttons stay visible.
 let structureTableHeightFrame=0;
@@ -2855,6 +2921,7 @@ function prepareStructureViewerControls(){
     });
   }
   prepareStructureTableHeightSync();
+  prepareGeneratorViewportHeightSync();
   refreshMomentPropagationVectorSelect();
   syncSpinModifyLock();
   const propagationSelect=$("cifMomentPropagationVector");
@@ -4752,6 +4819,7 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
     $(paneId)?.classList.toggle('hidden',!selected);
   }
   if(persist && generatorOutputTabRestored) try{ localStorage.setItem(GENERATOR_OUTPUT_TAB_STORAGE_KEY,name); }catch(_e){}
+  requestGeneratorViewportHeightSync();
   if(name==='structure') requestAnimationFrame(renderCifStructureIfVisible);
   if(name==='reflections' && $('generatorReflectionsMagnetic')?.classList.contains('active'))
     calculateMagneticReflectionTable();

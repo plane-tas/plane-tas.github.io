@@ -8225,3 +8225,114 @@ input[type="number"]::-webkit-outer-spin-button{
   color: #66717b;
   background: #e4e8ed;
 }
+
+/* CIF Generator desktop viewport fitting (wide but short displays).
+   Apply only while JS has measured a usable two-column workspace.  The card
+   occupies the visible part of the main pane; long atomic/magnetic tables
+   and Reflections/Preview scroll inside the card, never enlarging the page. */
+#structurePanel .generator-unified-card.generator-height-limited{
+  height:var(--generator-visible-height);
+  min-height:0;
+  max-height:var(--generator-visible-height);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited #cifGeneratorPanel.generator-unified-grid{
+  flex:1 1 0;
+  height:100%;
+  min-height:0;
+  max-height:100%;
+  align-items:stretch!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited .generator-unified-left,
+#structurePanel .generator-height-limited .generator-unified-right{
+  height:100%;
+  min-height:0!important;
+  max-height:100%;
+  align-self:stretch!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited .generator-unified-left{
+  display:flex;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited .generator-shared-file{
+  flex:0 0 auto;
+}
+#structurePanel .generator-height-limited .generator-unified-left > .generator-mode-pane:not(.hidden){
+  flex:1 1 0;
+  min-height:0;
+  max-height:100%;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#structurePanel .generator-height-limited .generator-unified-right{
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  align-content:stretch!important;
+}
+#structurePanel .generator-height-limited .generator-unified-right > .generator-output-pane{
+  min-height:0!important;
+  max-height:100%;
+  height:100%!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #mcifStructurePane,
+#structurePanel .generator-height-limited #mcifStructurePane.hidden{
+  display:flex!important;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .generator-structure-view-controls,
+#structurePanel .generator-height-limited #mcifStructurePane .cif-structure-status{
+  flex:0 0 auto;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .structure-plot-wrap{
+  flex:1 1 0!important;
+  aspect-ratio:auto!important;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:100%;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  width:100%;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+}
+#structurePanel .generator-height-limited #generatorReflectionsPane,
+#structurePanel .generator-height-limited #cifPreviewPanel{
+  min-height:0!important;
+  max-height:100%;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  flex:1 1 0!important;
+  height:0!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+#structurePanel .generator-height-limited #cifPreviewPanel #cifPreview{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  aspect-ratio:auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+/* The selection/editing tables stay independently scrollable even when the
+   main workspace is capped. The manual Uij splitter still controls both. */
+#structurePanel .generator-height-limited :is(.cif-atom-table-wrap,
+    #cifAtomColorRows,.structure-spin-table-wrap,.structure-style-table-wrap,
+    .cif-thermal-table-wrap){
+  overscroll-behavior:contain;
+}
