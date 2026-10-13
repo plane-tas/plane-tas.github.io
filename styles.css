@@ -7386,3 +7386,842 @@ input[type="number"]::-webkit-outer-spin-button{
 /* Diffractometers have no supported TAS resolution model: display the notice only.
    Keep calculation input visibility states unchanged for a later TAS selection. */
 #resolutionCalculation.resolution-unavailable > :not(#diffractometerResolutionNote){display:none!important;}
+
+
+/* 2026-10-13: tab typography aligned to the Instrument configuration sidebar.
+   Keep layout dimensions and Plotly canvas sizes unchanged.  The minimum sizes
+   stop desktop compact-density settings from making labels unreadable. */
+:root {
+  --plane-tab-label-font: max(12px, calc(16px * var(--tas-density)));
+  --plane-tab-heading-font: calc(19px * var(--tas-density));
+  --plane-tab-warning-font: var(--tas-font-control, 13px);
+}
+
+/* Text next to entries, selects, checkboxes and sliders in all main tabs.
+   Also cover the value/output text beside Q–E and TAS Geometry sliders. */
+.tab-panel label,
+.tab-panel .checkbox-label,
+.tab-panel .qe-control-entry,
+.tab-panel .qe-s2-control-entry > span,
+.tab-panel .qe-path-snap-label,
+.tab-panel .energy-slider-row output,
+.tab-panel .geometry-hw-slider-row output,
+.tab-panel .geometry-scan-point-row > output,
+.tab-panel .cif-reflection-plane-toggle,
+.tab-panel .structure-entry-label,
+.tab-panel .cif-unified-preview-label {
+  font-size: var(--plane-tab-label-font) !important;
+  line-height: 1.35;
+}
+/* Reflections > Energy / Wavelength / Wavevector is a four-column row:
+   allow multiline captions instead of shrinking their font to fit. */
+#structurePanel #generatorReflectionsPane .cif-generator-beam-grid > label {
+  font-size: var(--plane-tab-label-font) !important;
+  overflow-wrap: anywhere;
+}
+
+/* Section headings, including Input/Output file and Structure editor. */
+.tab-panel h2,
+.tab-panel h3,
+.tab-panel .cif-section-title,
+.tab-panel .script-pane-heading,
+.tab-panel .geometry-card-title,
+.tab-panel .structure-section-title {
+  font-size: var(--plane-tab-heading-font) !important;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Warnings/status notices have the exact text size of the diffractometer
+   Resolution unavailable message. Keep their original colors and borders. */
+.diffractometer-resolution-note,
+.tab-panel .orientation-plane-warning,
+.tab-panel .cif-generator-message,
+.tab-panel .generator-reflections-notice,
+.tab-panel .cif-release-note,
+.tab-panel .s2-conversion-info.warning,
+.tab-panel .qe-spurion-warning,
+.tab-panel .time-estimate-message {
+  font-size: var(--plane-tab-warning-font) !important;
+  line-height: 1.45;
+}
+
+/* Propagation vector toggles should be the same native size as the parent
+   'show' checkbox. The slightly wider first column keeps the k_i legend
+   legible; the three HKL fields continue to flex and can display four digits. */
+.sidebar .propagation-row {
+  grid-template-columns: calc(88px * var(--tas-density)) repeat(3, minmax(0,1fr)) calc(70px * var(--tas-density));
+}
+.sidebar .propagation-enable input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  min-height: 13px;
+  flex: 0 0 13px;
+  padding: 0;
+  margin: 0;
+}
+.sidebar .propagation-enable {
+  gap: calc(6px * var(--tas-density));
+  align-items: center;
+  padding-top: calc(15px * var(--tas-density));
+}
+/* Previously forced-small CIF file headings and view-control captions. */
+#structurePanel .generator-shared-file > .cif-pane-heading h3,
+#structurePanel #cifGeneratorPanel .cif-generator-source-section .cif-pane-heading h3 {
+  font-size: var(--plane-tab-heading-font) !important;
+}
+#structurePanel .generator-structure-view-controls label {
+  font-size: var(--plane-tab-label-font) !important;
+}
+
+/* Slider/checkbox/combobox captions match Angle calculation > Scan slider. */
+.tab-panel label:has(> input[type="range"]),
+.tab-panel label:has(> input[type="checkbox"]),
+.tab-panel label:has(> select),
+.tab-panel .geometry-scan-point-row > :is(label,output),
+.tab-panel .energy-slider-row > :is(label,output),
+.tab-panel .geometry-hw-slider-row > :is(label,output),
+#qeConstantMapPane .qe-control-entry,
+#qeConstantMapPane .qe-control-entry > :is(span,label),
+#qeDisplayControls .qe-map-toolbar label,
+#qeDisplayControls .qe-path-snap-label,
+#qeDisplayControls .checkbox-label {
+  font-size: max(14px, calc(16px * var(--tas-density))) !important;
+  line-height: 1.35;
+}
+
+
+/* 2026-10-13 follow-up: sidebar-like, regular-weight field captions.
+   Do not change chart geometry or tab headings; the earlier selector which
+   raised select/slider/checkbox captions to a 14px minimum was too large. */
+:root {
+  --plane-tab-select-caption-font: calc(16px * var(--tas-density));
+}
+
+/* Labels that belong to a control should never become headings in bold.
+   Keep entry labels legible, and match select captions to the sidebar's
+   Instrument caption (16px * density) instead of enlarging to >=14px. */
+.tab-panel :is(label, .checkbox-label, .structure-entry-label, .qe-control-entry,
+               .qe-s2-control-entry > span, .qe-path-snap-label,
+               .cif-reflection-plane-toggle, .cif-unified-preview-label),
+.tab-panel .energy-slider-row output,
+.tab-panel .geometry-hw-slider-row output,
+.tab-panel .geometry-scan-point-row output,
+#qeDisplayControls :is(.qe-map-toolbar label, .checkbox-label, .qe-path-snap-label),
+#qeConstantMapPane .qe-control-entry > :is(span,label) {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+/* Selects get the same caption size as the Instrument select in the sidebar;
+   their option/selected-value type is left unchanged. */
+.tab-panel label:has(> select),
+#qeDisplayControls .qe-map-toolbar label:has(> select),
+#qeDisplayControls .qe-path-snap-label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+  font-weight: 400 !important;
+}
+/* A few compound controls carry the bold weight on their inner caption. */
+.tab-panel label :is(span, b, strong),
+.tab-panel .checkbox-label :is(span, b, strong),
+#qeDisplayControls .qe-control-entry :is(span, b, strong),
+#qeDisplayControls .qe-map-toolbar label :is(span, b, strong) {
+  font-weight: 400 !important;
+}
+/* Buttons are actions, not titles.  Navigation tabs remain visually separate
+   because they function as headings. */
+.tab-panel button:not([role="tab"]):not(.tab-button):not(.toolbox-subtab):not(.geometry-card-tab):not(.cif-output-tab):not(.generator-reflection-tab),
+.sidebar button,
+#qeDisplayControls button {
+  font-weight: 400 !important;
+}
+.tab-panel button:not([role="tab"]) :is(b,strong),
+.sidebar button :is(b,strong) {
+  font-weight: 400 !important;
+}
+
+/* Resolution Instrument details uses the same section-heading size as the
+   Instrument configuration card in the sidebar, including collapsed sections. */
+#resolutionInstrumentDetails :is(.resolution-detail-title, .instrument-fixed-heading),
+#resolutionInstrumentDetails details > summary {
+  font-size: var(--plane-tab-heading-font) !important;
+  font-weight: 650 !important;
+  line-height: 1.3;
+}
+#resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
+  font-size: 0.9em;
+  font-weight: 400;
+}
+/* Crystal's dropdown caption and neighboring d-entry label should not have
+   different weights.  The label with the select is never oversized. */
+#resolutionInstrumentDetails label {
+  font-weight: 400 !important;
+}
+#resolutionInstrumentDetails label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+
+/* View range x/y/z min/max are data-entry captions, not 10px footnotes.
+   This also covers Unit cell and XYZ axes in the Structure viewer toolbar. */
+#structurePanel .generator-structure-view-controls .structure-entry-label,
+#structurePanel .generator-structure-view-controls label,
+#structurePanel .generator-structure-view-controls label > span,
+#structurePanel .structure-plot-toolbar label,
+#structurePanel .structure-plot-toolbar label > span {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.3;
+}
+#structurePanel .generator-structure-view-controls label:has(> select),
+#structurePanel .structure-plot-toolbar label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+/* At extreme phone widths keep the established short xmin/xmax equivalents. */
+@media (max-width: 340px) {
+  #structurePanel .generator-structure-view-controls .structure-entry-label {
+    font-size: 0 !important;
+  }
+  #structurePanel .generator-structure-view-controls .structure-entry-label::after {
+    font-size: var(--plane-tab-label-font) !important;
+    font-weight: 400 !important;
+  }
+}
+
+/* Toolbox / Neutron attenuation's summary captions (Cell volume, scattering
+   cross section, abs/coh/incoh, penetration depth, transmission) were not
+   covered by the shared label selectors: they are DIV/SPAN elements. */
+#toolboxAttenuationPane :is(.absorption-summary-label, .absorption-summary-subgrid span),
+#toolboxAttenuationPane :is(.absorption-beam-controls, .absorption-thickness-control,
+                            .absorption-input-mode-row, .absorption-manual-row,
+                            .absorption-cif-row) label {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+#toolboxAttenuationPane .absorption-summary-subgrid strong,
+#toolboxAttenuationPane .absorption-summary-value {
+  font-size: max(13px, calc(17px * var(--tas-density))) !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+#toolboxAttenuationPane label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+
+/* Field/select captions are uniformly sidebar-sized in every tab even when an
+   older, ID-qualified Toolbox or Resolution layout rule specified larger text. */
+.tab-panel[id] label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+  font-weight: 400 !important;
+}
+/* Inside Resolution Instrument details, Crystal and d must be equivalent. */
+#resolutionInstrumentDetails label {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+#toolboxAttenuationPane .absorption-input-mode-row label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+  font-weight: 400 !important;
+}
+
+
+/* 2026-10-13 Constant E map toolbar and Resolution unit headings.
+   Display settings and path tools occupy two centered rows, never a
+   horizontally scrolling strip. Narrow views wrap items within their row. */
+#qeDisplayControls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: calc(8px * var(--tas-density));
+  width: 100%;
+  min-width: 0;
+  overflow-x: visible;
+  overflow-y: visible;
+  padding: calc(9px * var(--tas-density)) calc(5px * var(--tas-density));
+}
+#qeDisplayControls > .qe-toolbar-leading,
+#qeDisplayControls > .qe-path-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: calc(7px * var(--tas-density)) calc(15px * var(--tas-density));
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  flex: 0 1 auto;
+}
+#qeDisplayControls > .qe-path-tools {
+  gap: calc(7px * var(--tas-density));
+}
+#qeDisplayControls .qe-toolbar-leading .qe-map-toolbar {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+#qeDisplayControls .qe-toolbar-leading > .checkbox-label,
+#qeDisplayControls .qe-path-tools > :is(button,label) {
+  flex: 0 0 auto;
+}
+/* λ/2 uses the same middle-column placement and caption styling as the
+   Show S2 ring checkbox.  Both sit between their caption and number entry. */
+#qeConstantMapPane .qe-range-control .qe-hw-control-entry {
+  display: grid;
+  grid-template-columns: max-content minmax(0,1fr) calc(82px * var(--tas-density));
+  align-items: center;
+  gap: calc(5px * var(--tas-density));
+  min-width: 0;
+}
+#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
+  gap: calc(4px * var(--tas-density));
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.35;
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+}
+#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label > span {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: calc(14px * var(--tas-density));
+  height: calc(14px * var(--tas-density));
+  margin: 0;
+}
+#qeConstantMapPane .qe-hw-control-entry #hwEntry {
+  justify-self: end;
+  width: calc(82px * var(--tas-density));
+  min-width: 0;
+  box-sizing: border-box;
+}
+@media (max-width: 460px) {
+  #qeConstantMapPane .qe-range-control .qe-hw-control-entry {
+    grid-template-columns: max-content minmax(0,1fr) calc(73px * var(--tas-density));
+  }
+  #qeConstantMapPane .qe-hw-control-entry #hwEntry {
+    width: calc(73px * var(--tas-density));
+  }
+}
+/* The unit text is part of the heading, not a small footnote. */
+#resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
+  font-size: 1em !important;
+  font-weight: 650 !important;
+  line-height: inherit;
+}
+/* Keep the Snap value fully visible with the sidebar-matched caption size. */
+#qeDisplayControls #qePathSnap {
+  height: max(30px, calc(34px * var(--tas-density)));
+  min-height: max(30px, calc(34px * var(--tas-density)));
+  line-height: normal;
+  padding-block: calc(2px * var(--tas-density));
+}
+
+/* Constant E map: enforce the requested visual order independent of any
+   earlier CSS rules: ħω caption | λ/2 checkbox | numeric entry. */
+#qeConstantMapPane .qe-hw-control-entry > span:first-child {
+  grid-column: 1 !important;
+  grid-row: 1;
+}
+#qeConstantMapPane .qe-hw-control-entry > .qe-lambda-half-toggle {
+  grid-column: 2 !important;
+  grid-row: 1;
+}
+#qeConstantMapPane .qe-hw-control-entry > #hwEntry {
+  grid-column: 3 !important;
+  grid-row: 1;
+}
+
+
+/* 2026-10-13: enlarge the three Constant E map path-edit buttons to match
+   neighboring actions without changing the two-row centered toolbar layout. */
+#qeDisplayControls .qe-path-tools :is(#qePathPickToggle, #qePathUndo, #qePathClear) {
+  box-sizing: border-box;
+  min-height: calc(36px * var(--tas-density));
+  height: auto;
+  padding: calc(6px * var(--tas-density)) calc(12px * var(--tas-density));
+  font-size: max(13px, calc(15px * var(--tas-density)));
+  font-weight: 400;
+  line-height: 1.25;
+}
+/* The generated filename suffix should read at least as clearly as the
+   output format / filename controls, including at compact UI densities. */
+#structurePanel #cifUnifiedFileSuffix {
+  font-size: max(15px, calc(17px * var(--tas-density)));
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+
+/* Spins: same dense, aligned table idiom as Positions. The header checkbox
+   toggles the whole Display selection, including individual magnetic sites. */
+#structurePanel .structure-spin-table-wrap {
+  width:100%;max-width:100%;min-width:0;
+  max-height:calc(320px * var(--tas-density));
+  overflow:auto;-webkit-overflow-scrolling:touch;
+  margin-top:calc(7px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #c9cdd1;
+  scrollbar-gutter:stable;
+}
+#structurePanel #cifSpinTable {
+  display:grid;
+  grid-template-columns:calc(38px * var(--tas-density)) calc(53px * var(--tas-density)) minmax(calc(67px * var(--tas-density)),.8fr) repeat(3,minmax(calc(72px * var(--tas-density)),1fr)) calc(53px * var(--tas-density));
+  min-width:calc(475px * var(--tas-density));
+  width:100%;box-sizing:border-box;
+  gap:calc(1px * var(--tas-density));
+  background:#c9cdd1;
+  align-items:stretch;
+}
+#structurePanel #cifSpinTable .structure-spin-table-header {
+  box-sizing:border-box;min-width:0;
+  padding:calc(7px * var(--tas-density)) calc(2px * var(--tas-density));
+  background:#f7f7f7;
+  color:#41464c;
+  font-size:calc(11px * var(--tas-density));font-weight:650;
+  text-align:center;white-space:nowrap;
+  position:sticky;top:0;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+}
+#structurePanel #cifSpinTable .structure-spin-bulk-header label {
+  display:flex;align-items:center;justify-content:center;gap:calc(3px * var(--tas-density));
+  margin:0;cursor:pointer;font-size:inherit;font-weight:inherit;
+}
+#structurePanel #cifSpinTable .structure-spin-bulk-header input[type=checkbox] {
+  width:calc(14px * var(--tas-density));height:calc(14px * var(--tas-density));
+  min-width:0;margin:0;cursor:pointer;
+}
+#structurePanel #cifMagMomentRows,
+#structurePanel #cifMagMomentRows .structure-moment-row {
+  display:contents!important;
+}
+#structurePanel #cifSpinTable .structure-spin-cell {
+  min-width:0;box-sizing:border-box;
+  min-height:calc(34px * var(--tas-density));
+  padding:calc(3px * var(--tas-density));
+  background:#fff;
+  display:flex;align-items:center;justify-content:center;
+}
+#structurePanel #cifSpinTable .structure-spin-index {
+  background:#fafafa;font-weight:650;font-size:calc(11px * var(--tas-density));color:#555;
+}
+#structurePanel #cifSpinTable .structure-spin-atom {justify-content:flex-start;}
+#structurePanel #cifSpinTable .structure-moment-site {
+  display:block;max-width:none!important;width:100%;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  font-size:calc(12px * var(--tas-density));
+}
+#structurePanel #cifSpinTable .structure-spin-use input[type=checkbox] {
+  width:calc(15px * var(--tas-density));height:calc(15px * var(--tas-density));
+  min-width:0;margin:0;cursor:pointer;
+}
+#structurePanel #cifSpinTable .structure-spin-value input[type=number] {
+  box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:none!important;
+  padding:calc(4px * var(--tas-density)) calc(3px * var(--tas-density))!important;
+  font-size:calc(12px * var(--tas-density));text-align:right;
+}
+#structurePanel #cifSpinTable .structure-spin-color input[type=color] {
+  width:calc(32px * var(--tas-density))!important;
+  min-width:0!important;max-width:100%;height:calc(26px * var(--tas-density))!important;
+  padding:calc(2px * var(--tas-density));margin:0;cursor:pointer;
+  align-self:center!important;justify-self:center!important;
+}
+#structurePanel #cifSpinTable .structure-spin-table-empty {
+  grid-column:1/-1;background:#fff;padding:calc(10px * var(--tas-density));
+  font-size:calc(12px * var(--tas-density));color:#555;
+}
+
+/* 2026-10-13 — Positions / Atoms / Spins / Style: shared table metrics.
+   Table height is capped by the adjacent Structure view; never cap at four rows.
+   The JS writes --editor-table-height from the actual plot bottom on desktop. */
+#structurePanel .cif-atom-table-wrap,
+#structurePanel #cifAtomColorRows,
+#structurePanel .structure-spin-table-wrap,
+#structurePanel .structure-style-table-wrap {
+  box-sizing:border-box;
+  max-width:100%;
+  max-height:var(--editor-table-height, min(62vh, calc(540px * var(--tas-density)))) !important;
+  overflow:auto !important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  -webkit-overflow-scrolling:touch;
+}
+#structurePanel .cif-atom-table-wrap {width:100%;}
+/* Match the Atomic positions header exactly, rather than enlarging Atoms captions. */
+#structurePanel #cifSpinTable .structure-spin-table-header,
+#structurePanel .structure-style-table .structure-style-header {
+  box-sizing:border-box;
+  font-size:calc(12px * var(--tas-density)) !important;
+  font-weight:650 !important;
+  color:#41464c;
+  line-height:1.35;
+  padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));
+  min-height:calc(33px * var(--tas-density));
+  background:#f7f7f7;
+}
+#structurePanel #cifSpinTable .structure-spin-cell,
+#structurePanel .structure-style-table .structure-style-cell {
+  box-sizing:border-box;
+  min-height:calc(37px * var(--tas-density));
+  font-size:calc(12px * var(--tas-density));
+}
+/* Native input and header dimensions match the Positions cells. */
+#structurePanel #cifSpinTable .structure-spin-value input[type=number],
+#structurePanel .structure-style-cell :is(input[type=number],select) {
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  font-size:calc(13px * var(--tas-density)) !important;
+  padding:calc(4px * var(--tas-density)) calc(4px * var(--tas-density));
+}
+
+/* Style: Positions-style seven-column selection/reordering table. */
+#structurePanel .structure-style-table-wrap {
+  width:100%;
+  margin-top:calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #dfe3e7;
+}
+#structurePanel .structure-style-table {
+  display:grid;
+  grid-template-columns:
+    calc(43px * var(--tas-density))
+    repeat(2,minmax(calc(76px * var(--tas-density)),1fr))
+    repeat(3,minmax(calc(72px * var(--tas-density)),1fr))
+    calc(54px * var(--tas-density));
+  min-width:calc(487px * var(--tas-density));
+  width:100%;
+  background:#dfe3e7;
+  gap:calc(1px * var(--tas-density));
+}
+#structurePanel .structure-style-table .structure-style-header {
+  display:flex;align-items:center;justify-content:center;
+  position:sticky;top:0;z-index:3;white-space:nowrap;
+  text-align:center;
+}
+/* Neutralize older container layout and grid rules for the previous card-style rows. */
+#structurePanel #cifBondRows {
+  display:contents !important;
+  max-height:none !important;
+  overflow:visible !important;
+  padding:0 !important;
+  container-type:normal !important;
+  scrollbar-gutter:auto !important;
+}
+#structurePanel #cifBondRows .structure-bond-row {
+  display:contents !important;
+}
+#structurePanel .structure-style-table .structure-style-cell {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  background:#fff;
+  padding:calc(4px * var(--tas-density));
+  cursor:pointer;
+}
+#structurePanel .structure-style-table .structure-style-index {
+  color:#555;background:#fafafa;font-weight:650;cursor:grab;user-select:none;touch-action:pan-y;
+}
+#structurePanel .structure-style-table .structure-style-index:active {cursor:grabbing;}
+#structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]) {
+  width:100%;height:auto;min-height:calc(29px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) !important;
+}
+#structurePanel .structure-style-table .structure-style-color input[type=color]{
+  width:calc(32px * var(--tas-density));
+  height:calc(26px * var(--tas-density));
+  min-width:0;padding:calc(1px * var(--tas-density));cursor:pointer;
+}
+#structurePanel #cifBondRows .structure-bond-row.style-row-selected > .structure-style-cell{
+  background:#e8f2fc;
+}
+#structurePanel #cifBondRows .structure-bond-row.style-row-selected > .structure-style-cell :is(input,select){background:#fff;}
+#structurePanel #cifBondRows .structure-bond-row.style-row-dragging > .structure-style-cell{opacity:.5;}
+#structurePanel #cifBondRows .structure-bond-row.style-drop-before > .structure-style-cell{box-shadow:inset 0 calc(2px * var(--tas-density)) 0 #4488bd;}
+#structurePanel #cifBondRows .structure-bond-row.style-drop-after > .structure-style-cell{box-shadow:inset 0 calc(-2px * var(--tas-density)) 0 #4488bd;}
+#structurePanel .structure-style-table .structure-rows-empty {
+  grid-column:1/-1;background:#fff;padding:calc(12px * var(--tas-density));
+}
+#structurePanel .structure-style-actions {
+  margin-top:calc(8px * var(--tas-density));
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(6px * var(--tas-density));
+}
+#structurePanel .structure-style-actions button {width:100%;min-width:0;}
+#structurePanel .structure-style-actions button:disabled {opacity:.45;cursor:not-allowed;}
+/* Align the Fix header and each scan's Fix checkbox to the regular 17px controls. */
+.time-scan-table .time-fix-header input[type=checkbox],
+.time-scan-table .time-fix-cell input[type=checkbox] {
+  appearance:auto;
+  box-sizing:border-box;
+  flex:0 0 auto;
+  width:calc(17px * var(--tas-density)) !important;
+  height:calc(17px * var(--tas-density)) !important;
+  min-width:calc(17px * var(--tas-density)) !important;
+  min-height:calc(17px * var(--tas-density)) !important;
+  padding:0!important;
+  margin:0!important;
+  cursor:pointer;
+}
+
+
+/* 2026-10-13: final editor legibility and selection adjustments.
+   Atoms retains its ORIGINAL labels, expanded-site rows, input sizes and
+   two-row color palette. Only the table's height/scroll behavior changes. */
+/* Match Positions text and input dimensions in both Spins and Style. */
+#structurePanel #cifSpinTable .structure-spin-table-header,
+#structurePanel .structure-style-table .structure-style-header{
+  font-size:max(15px,calc(17px * var(--tas-density)))!important;
+  min-height:max(35px,calc(36px * var(--tas-density)));
+  line-height:1.35;
+}
+#structurePanel #cifSpinTable .structure-spin-cell,
+#structurePanel .structure-style-table .structure-style-cell{
+  font-size:max(15px,calc(17px * var(--tas-density)))!important;
+  min-height:max(42px,calc(42px * var(--tas-density)));
+}
+#structurePanel #cifSpinTable .structure-spin-index,
+#structurePanel #cifSpinTable .structure-moment-site,
+#structurePanel .structure-style-table .structure-style-index{
+  font-size:max(15px,calc(17px * var(--tas-density)))!important;
+}
+#structurePanel #cifSpinTable .structure-spin-value input[type=number],
+#structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]){
+  font-size:max(15px,calc(17px * var(--tas-density)))!important;
+  min-height:max(32px,calc(33px * var(--tas-density)));
+  padding:calc(5px * var(--tas-density)) calc(5px * var(--tas-density))!important;
+}
+#structurePanel #cifSpinTable .structure-spin-bulk-header input[type=checkbox],
+#structurePanel #cifSpinTable .structure-spin-use input[type=checkbox]{
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+}
+#structurePanel #cifSpinTable .structure-spin-cell{cursor:pointer;}
+#structurePanel #cifSpinTable .structure-moment-row.spin-row-selected > .structure-spin-cell{
+  background:#e8f2fc;
+}
+#structurePanel #cifSpinTable .structure-moment-row.spin-row-selected > .structure-spin-index{
+  color:#17578a;
+}
+#structurePanel #cifSpinTable .structure-moment-row.spin-row-selected > .structure-spin-value input{
+  background:#fff;
+}
+/* Keep enlarged fields usable: let the table scroll horizontally instead of
+   shrinking numeric input text or the native select arrow below usability. */
+#structurePanel #cifSpinTable{
+  grid-template-columns:45px 65px minmax(95px,.9fr) repeat(3,minmax(94px,1fr)) 60px;
+  min-width:630px;
+}
+#structurePanel .structure-style-table{
+  grid-template-columns:48px repeat(2,minmax(108px,1fr)) repeat(3,minmax(93px,1fr)) 60px;
+  min-width:655px;
+}
+
+
+/* 2026-10-13: Uij columns split into Index | Use | Atom | U11..U23.
+   Retain the ordinary Positions cell borders and scroll behavior. */
+#cifGeneratorPanel .cif-thermal-table{
+  grid-template-columns:
+    calc(42px * var(--tas-density))
+    calc(48px * var(--tas-density))
+    minmax(calc(88px * var(--tas-density)),1.25fr)
+    repeat(6,minmax(calc(61px * var(--tas-density)),1fr));
+  min-width:calc(630px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-header{
+  font-size:max(14px,calc(15px * var(--tas-density)))!important;
+  line-height:1.3;
+  white-space:normal;overflow-wrap:normal;
+  padding:calc(8px * var(--tas-density)) calc(3px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-index{
+  background:#fafafa;
+  color:#555;
+  font-weight:650;
+  font-size:calc(13px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-use{
+  padding:calc(3px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-toggle{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
+  padding:0;margin:0;
+}
+#cifGeneratorPanel .cif-thermal-toggle > input[type=checkbox]{
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+  min-width:calc(17px * var(--tas-density));
+  min-height:calc(17px * var(--tas-density));
+  margin:0;flex-shrink:0;
+}
+#cifGeneratorPanel .cif-thermal-atom{
+  justify-content:flex-start;
+  padding-left:calc(7px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-atom-name{
+  display:block;max-width:100%;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:calc(13px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-table-wrap{
+  max-height:var(--thermal-editor-table-height,calc(232px * var(--tas-density))) !important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+/* Reopening Uij shares the height budget with Positions. When collapsed the
+   JS removes the temporary override and restores the usual Positions cap. */
+
+/* Spins and Style: 75% of the preceding large-font/large-field treatment.
+   All select/input/pointer interactions are unchanged. */
+#structurePanel #cifSpinTable .structure-spin-table-header,
+#structurePanel .structure-style-table .structure-style-header{
+  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
+  min-height:max(26.25px,calc(27px * var(--tas-density)));
+  padding:calc(5px * var(--tas-density)) calc(3px * var(--tas-density));
+}
+#structurePanel #cifSpinTable .structure-spin-cell,
+#structurePanel .structure-style-table .structure-style-cell{
+  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
+  min-height:max(31.5px,calc(31.5px * var(--tas-density)));
+  padding:calc(3px * var(--tas-density));
+}
+#structurePanel #cifSpinTable .structure-spin-index,
+#structurePanel #cifSpinTable .structure-moment-site,
+#structurePanel .structure-style-table .structure-style-index{
+  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
+}
+#structurePanel #cifSpinTable .structure-spin-value input[type=number],
+#structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]){
+  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
+  min-height:max(24px,calc(24.75px * var(--tas-density)));
+  padding:calc(3.75px * var(--tas-density))!important;
+}
+#structurePanel #cifSpinTable{
+  grid-template-columns:
+    calc(34px * var(--tas-density))
+    calc(49px * var(--tas-density))
+    minmax(calc(72px * var(--tas-density)),.9fr)
+    repeat(3,minmax(calc(71px * var(--tas-density)),1fr))
+    calc(45px * var(--tas-density));
+  min-width:calc(475px * var(--tas-density));
+}
+#structurePanel .structure-style-table{
+  grid-template-columns:
+    calc(36px * var(--tas-density))
+    repeat(2,minmax(calc(81px * var(--tas-density)),1fr))
+    repeat(3,minmax(calc(70px * var(--tas-density)),1fr))
+    calc(45px * var(--tas-density));
+  min-width:calc(492px * var(--tas-density));
+}
+
+
+/* 2026-10-13 — Typography parity with Atomic positions. All four editor
+   tables inherit the same table/header font token, with native form controls
+   matching the actual Atomic positions inputs. Preserve row paddings/colors. */
+#structurePanel :is(.cif-atom-header,.cif-thermal-header,
+  #cifSpinTable .structure-spin-table-header,
+  .structure-style-table .structure-style-header){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+  font-weight:650;
+}
+#structurePanel :is(.cif-atom-cell,.cif-thermal-cell,
+  #cifSpinTable .structure-spin-cell,
+  .structure-style-table .structure-style-cell,
+  #cifSpinTable .structure-spin-index,
+  #cifSpinTable .structure-moment-site,
+  .structure-style-table .structure-style-index,
+  .cif-thermal-atom-name){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+}
+#structurePanel :is(.cif-atom-cell input,.cif-thermal-cell input[type=number],
+  #cifSpinTable .structure-spin-value input[type=number],
+  .structure-style-table .structure-style-cell select,
+  .structure-style-table .structure-style-cell input[type=number]){
+  font-size:var(--tas-control-text-size)!important;
+}
+/* The section title should be noticeably larger than its column labels. */
+#structurePanel #cifAtomDetailed > summary{
+  font-size:max(18px,calc(22px * var(--tas-density)))!important;
+  font-weight:700;
+  line-height:1.35;
+}
+
+/* Atomic positions shares the Spins Mode / Display control conventions. */
+#structurePanel .structure-position-editor-toolbar{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  margin:calc(7px * var(--tas-density)) 0;
+  align-items:end;
+}
+#structurePanel .structure-position-editor-toolbar .structure-entry-field{min-width:0;}
+#structurePanel .structure-position-editor-toolbar select{min-width:0;width:100%;}
+#structurePanel #cifAtomColorRows .atoms-table-row.atoms-row-selected{
+  background:#e8f2fc;
+  box-shadow:inset 3px 0 #2472ac;
+}
+#structurePanel #cifAtomColorRows .atoms-table-row{cursor:pointer;}
+/* Uij section heading matches the Atomic positions section heading. */
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(15px * var(--tas-density))!important;
+  font-weight:700;
+  line-height:1.3;
+}
+/* The atom / Uij row containers use display:contents; hidden filters must
+   override that so all cells of the same atom disappear together. */
+#structurePanel #cifAtomRows .cif-atom-row[hidden],
+#structurePanel #cifAtomDetailedRows .cif-thermal-row[hidden]{display:none!important;}
+/* One shared section-heading type size for Positions and Anisotropic Uij. */
+#structurePanel .cif-atom-heading h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(15px * var(--tas-density))!important;
+  font-weight:700;
+  line-height:1.3;
+}
+
+/* Atomic Positions / Anisotropic Uij: clearly legible section titles.
+   Matches the visual heading scale of the sidebar Lattice parameters section
+   without changing the compact table font or row heights. */
+/* Match the requested Lattice parameters heading in the sidebar. */
+.sidebar h3.lattice-parameters-heading,
+#structurePanel .cif-atom-heading > div > h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:max(17px,calc(18px * var(--tas-density)))!important;
+  font-weight:700!important;
+  line-height:1.35;
+}
+
+/* Atomic positions and Anisotropic Uij: one step below Structure editor
+   (17px vs its 19px), consistently across zoom and density settings. */
+#structurePanel .cif-atom-heading > div > h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(17px * var(--tas-density))!important;
+  font-weight:700!important;
+  line-height:1.35;
+}
+
+/* Magnetic reflections are unavailable until validated; keep the tab visible. */
+#structurePanel .generator-reflection-tabs > #generatorReflectionsMagnetic:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  color: #66717b;
+  background: #e4e8ed;
+}

@@ -2596,7 +2596,7 @@ function renderSingle(cache,index=0){
         colorscale:[[0,"rgb(245,245,245)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
-        colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:15}},tickfont:{size:14},thickness:16,len:0.62,x:1.02,y:0.52,
+        colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:0.62,x:1.01,xanchor:"left",y:0.52,
           ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
         line:{color:"rgba(80,80,80,0.55)",width:0.4}
@@ -3462,7 +3462,7 @@ function ensureQESliderControls(){
 
       const hwCard=document.createElement('div');
       hwCard.className='qe-range-control';
-      hwCard.innerHTML='<label class="qe-control-entry">ħω (meV)<input id="hwEntry" type="number" step="0.1" value="0.0"></label>';
+      hwCard.innerHTML='<div class="qe-control-entry qe-hw-control-entry"><span>ħω (meV)</span><input id="hwEntry" type="number" step="0.1" value="0.0"></div>';
       hwCard.appendChild($('hwSlider'));
       const hwOut=$('hwValue'); if(hwOut) hwOut.classList.add('hidden');
 
@@ -3474,6 +3474,23 @@ function ensureQESliderControls(){
       parent.insertBefore(grid,row);
       row.remove();
     }
+  }
+  // Always enforce the actual DOM order, including if the ħω entry already
+  // existed. The checkbox itself is moved (not cloned) to keep its ID, state,
+  // event listeners and local-storage behavior intact.
+  const hwEntry=$('hwEntry');
+  const hwControl=hwEntry?.closest('.qe-hw-control-entry');
+  const lambdaLabel=$('lambdaHalf')?.closest('label');
+  if(hwControl && lambdaLabel){
+    const formerRow=lambdaLabel.parentElement;
+    const caption=hwControl.querySelector(':scope > span');
+    lambdaLabel.classList.add('qe-lambda-half-toggle', 'qe-s2-ring-toggle');
+    if(caption) caption.after(lambdaLabel);
+    else hwControl.insertBefore(lambdaLabel,hwEntry);
+    lambdaLabel.after(hwEntry);
+    // Remove only the emptied wrapper from the old sidebar location.
+    if(formerRow!==hwControl && formerRow?.classList.contains('grid2') &&
+       !formerRow.querySelector('input,select,button')) formerRow.remove();
   }
 }
 function nearestHWIndex(cache,value){

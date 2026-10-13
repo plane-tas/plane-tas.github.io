@@ -479,6 +479,13 @@ function populateSampleSpaceGroupControls(){
   }
 }
 
+// Symmetry works on independent asymmetric sites; Manual exposes the full
+// expanded unit cell and exports a P1 structure when individually edited.
+let structurePositionEditingMode='sites';
+let structurePositionTableElement='*';
+const positionModeDrafts={sites:null,individual:null};
+let positionSavedSourcePreference=null;
+let positionManualSourceSignature=null;
 const CIF_GENERATOR_ATOMS_STORAGE_KEY="tas-simulator-cif-generator-atoms-v1";
 let restoringCifGeneratorAtoms=false;
 
@@ -487,15 +494,33 @@ function currentCifGeneratorAtomRows(){
 }
 function saveCifGeneratorAtomsState(){
   if(restoringCifGeneratorAtoms) return;
-  try{ localStorage.setItem(CIF_GENERATOR_ATOMS_STORAGE_KEY,JSON.stringify({version:1,atoms:currentCifGeneratorAtomRows()})); }catch(_e){}
+  positionModeDrafts[structurePositionEditingMode]=currentCifGeneratorAtomRows();
+  try{ localStorage.setItem(CIF_GENERATOR_ATOMS_STORAGE_KEY,JSON.stringify({version:2,
+    mode:structurePositionEditingMode,element:structurePositionTableElement,
+    drafts:positionModeDrafts,atoms:currentCifGeneratorAtomRows(),
+    sgNumber:Number($('cifSpaceGroup')?.value)||1,
+    manualSourceSignature:positionManualSourceSignature})); }catch(_e){}
 }
 function restoreCifGeneratorAtomsState(){
   let saved;
   try{ saved=JSON.parse(localStorage.getItem(CIF_GENERATOR_ATOMS_STORAGE_KEY)||"null"); }catch(_e){ return false; }
-  if(!saved || saved.version!==1 || !Array.isArray(saved.atoms) || !saved.atoms.length) return false;
+  if(!saved || ![1,2].includes(saved.version) || !Array.isArray(saved.atoms) || !saved.atoms.length) return false;
   restoringCifGeneratorAtoms=true;
-  try{ replaceCifAtomRows(saved.atoms); return true; }
-  finally{ restoringCifGeneratorAtoms=false; }
+  try{
+    if(saved.version===2){
+      positionModeDrafts.sites=Array.isArray(saved.drafts?.sites)?saved.drafts.sites:null;
+      positionModeDrafts.individual=Array.isArray(saved.drafts?.individual)?saved.drafts.individual:null;
+      structurePositionEditingMode=saved.mode==='individual'?'individual':'sites';
+      structurePositionTableElement=String(saved.element||'*');
+      positionManualSourceSignature=saved.manualSourceSignature||null;
+      if(Number.isInteger(Number(saved.sgNumber)) && Number(saved.sgNumber)>=1 && Number(saved.sgNumber)<=230){
+        selectCifSpaceGroup(Number(saved.sgNumber),{syncSystem:true});
+      }
+    }
+    replaceCifAtomRows(saved.atoms);
+    refreshPositionTableToolbar();
+    return true;
+  }finally{ restoringCifGeneratorAtoms=false; }
 }
 
 let lastGeneratedCifText="";
@@ -652,7 +677,7 @@ function syncSpinModifyLock(){
   const host=$("propagationVectors");
   if(host) for(const field of host.querySelectorAll("input,select,button")) field.disabled=false;
   const addQ=$("addPropagationVector"); if(addQ) addQ.disabled=false;
-  for(const id of ["cifMagMomentRows","cifSpinElementToggles"]){
+  for(const id of ["cifMagMomentRows","cifSpinBulkCheckbox"]){
     const host=$(id);
     if(host) for(const field of host.querySelectorAll("input,select,button")) field.disabled=false;
   }
@@ -681,6 +706,69 @@ let structureMomentDirectionMode="cartesian";
 let structureSpinEditingMode="sites";
 // Element only filters rows shown in Spins; it never changes moments or mCIF export.
 let structureSpinTableElement="*";
+// Visual row selection is UI-only: it does not enable/disable moments or
+// change any structure-factor or mCIF data. Keys refer to the current editor.
+const selectedSpinRowKeys=new Set();
+let spinSelectionAnchorKey=null;
+let visibleSpinSelectionSites=new Map();
+function clearSpinRowSelection({redraw=true}={}){
+  if(!selectedSpinRowKeys.size && !spinSelectionAnchorKey)return;
+  selectedSpinRowKeys.clear();
+  spinSelectionAnchorKey=null;
+  for(const row of document.querySelectorAll('#cifMagMomentRows .structure-moment-row')){
+    row.classList.remove('spin-row-selected');
+    row.setAttribute('aria-selected','false');
+  }
+  if(redraw)renderCifStructureIfVisible();
+}
+function syncSpinRowSelection(){
+  for(const row of document.querySelectorAll('#cifMagMomentRows .structure-moment-row')){
+    const active=selectedSpinRowKeys.has(row.dataset.momentKey);
+    row.classList.toggle('spin-row-selected',active);
+    row.setAttribute('aria-selected',String(active));
+  }
+}
+function selectSpinMomentRow(key,event={}){
+  const rows=[...document.querySelectorAll('#cifMagMomentRows .structure-moment-row')];
+  const order=rows.map(row=>row.dataset.momentKey);
+  if(!order.includes(key))return;
+  if(event.shiftKey && spinSelectionAnchorKey && order.includes(spinSelectionAnchorKey)){
+    if(!event.ctrlKey && !event.metaKey)selectedSpinRowKeys.clear();
+    const a=order.indexOf(spinSelectionAnchorKey),b=order.indexOf(key);
+    for(let i=Math.min(a,b);i<=Math.max(a,b);i++)selectedSpinRowKeys.add(order[i]);
+  }else if(event.ctrlKey || event.metaKey){
+    if(selectedSpinRowKeys.has(key))selectedSpinRowKeys.delete(key);
+    else selectedSpinRowKeys.add(key);
+    spinSelectionAnchorKey=key;
+  }else{
+    const wasSelected=selectedSpinRowKeys.has(key);
+    selectedSpinRowKeys.clear();
+    if(!wasSelected){selectedSpinRowKeys.add(key);spinSelectionAnchorKey=key;}
+    else spinSelectionAnchorKey=null;
+  }
+  syncSpinRowSelection();
+  renderCifStructureIfVisible();
+}
+// Manual rows correspond to one expanded atom/cell; symmetry-linked rows
+// correspond to the full orbit of the asymmetric source site.
+function selectedSpinContainsAtom(atom){
+  if(!selectedSpinRowKeys.size)return false;
+  for(const key of selectedSpinRowKeys){
+    const site=visibleSpinSelectionSites.get(key);
+    if(!site)continue;
+    if(site.individualKey){
+      if(atom.expandedAtomIndex!==site.individualIndex)continue;
+      if(!Array.isArray(atom.cell) || !site.individualCell?.every((v,i)=>v===atom.cell[i]))continue;
+      return true;
+    }
+    if(Number.isInteger(atom.sourceSiteIndex) && atom.sourceSiteIndex===site.siteIndex)return true;
+    // For manually specified CIFs without expanded-atom source indices.
+    if(!Number.isInteger(atom.sourceSiteIndex) &&
+       String(atom.sourceLabel||'')===String(site.label||''))return true;
+  }
+  return false;
+}
+
 const STRUCTURE_EDITOR_TAB_KEY="tas-simulator-structure-editor-active-tab-v1";
 const VALID_STRUCTURE_EDITOR_TABS=["cell","positions","appearance","spins","bonds"];
 function rememberedStructureEditorTab(){
@@ -753,12 +841,17 @@ function discardStructureEditingSession(){
   importedMagneticQSignature="";
   // Invalidate existing DOM rows, otherwise they may be harvested as edits
   // when the new structure is first rendered.
+  clearSpinRowSelection({redraw:false});
+  selectedAppearanceRowKeys.clear();
+  visibleSpinSelectionSites.clear();
   $("cifMagMomentRows")?.replaceChildren();
   $("cifBondRows")?.replaceChildren();
   $("cifAtomColorRows")?.replaceChildren();
   structureControlSignature="";
 }
 function resetStructureViewerStateToDefaults(){
+  clearSpinRowSelection({redraw:false});
+  visibleSpinSelectionSites.clear();
   restoringStructureViewer=true;
   try{
     cifStructureViewMode="a";
@@ -846,6 +939,8 @@ function saveStructureViewerState(){
 }
 function sourceIsMagneticCif(){return currentStructureForViewer()?.structure?.magnetic===true;}
 function restoreStructureViewerState(){
+  clearSpinRowSelection({redraw:false});
+  visibleSpinSelectionSites.clear();
   const identity=currentStructureStateIdentity();
   if(!identity){ resetStructureViewerStateToDefaults(); return false; }
   const store=readStructureViewerStateStore();
@@ -1019,6 +1114,27 @@ function atomDisplayColor(atom){
   const key=atomSiteKey(atom);
   return (key&&atomSiteColors.get(key)) || elementColor(atom.element);
 }
+// Complementary hue for the selection ring, calculated from the SAME displayed
+// atom color (including an individual site's override in the Atoms table).
+// Keep the existing selection ring size, gap and stroke independent of color.
+function complementaryAtomOutlineColor(color){
+  const value=String(color||'').trim();
+  const hex=value.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+  if(!hex)return '#000000';
+  const full=hex[1].length===3 ? [...hex[1]].map(ch=>ch+ch).join('') : hex[1];
+  const rgb=[0,2,4].map(i=>parseInt(full.slice(i,i+2),16)/255);
+  const max=Math.max(...rgb),min=Math.min(...rgb),delta=max-min;
+  const lightness=(max+min)/2;
+  // Grey and near-grey atoms have no well-defined hue: use brightness contrast.
+  if(delta<0.015)return lightness>0.55?'#252525':'#dedede';
+  let hue;
+  if(max===rgb[0])hue=((rgb[1]-rgb[2])/delta)%6;
+  else if(max===rgb[1])hue=(rgb[2]-rgb[0])/delta+2;
+  else hue=(rgb[0]-rgb[1])/delta+4;
+  hue=((hue*60+180)%360+360)%360;
+  const saturation=delta/(1-Math.abs(2*lightness-1));
+  return hslToHex(hue,saturation*100,lightness*100);
+}
 function atomDisplaySize(atom){
   const key=atomSiteKey(atom);
   return key&&atomSiteSizes.has(key) ? atomSiteSizes.get(key) : elementRadius(atom.element);
@@ -1035,6 +1151,13 @@ function elementRadius(element){
   return Number.isFinite(override) ? Math.max(2,Math.min(30,override)) : defaultElementRadius(element);
 }
 function currentStructureForViewer(){
+  // Manual Positions is an explicit P1 draft. The Structure preview must
+  // display that actual edited draft, even when an mCIF is also loaded.
+  if(structurePositionEditingMode==='individual'){
+    try{const generated=buildGeneratedCif();
+      return {structure:generated.parsed,label:generated.filename,kind:'draft'};
+    }catch(_err){/* fall back while an input field is incomplete */}
+  }
   if(cifStructureSourcePreference==="loaded" && loadedGeneratorCifStructure) return {structure:loadedGeneratorCifStructure,label:loadedGeneratorCifName||"loaded mCIF",kind:"loaded"};
   const preferSelected=cifStructureSourcePreference==="selected";
   if(preferSelected && getSelectedCifStructure()) return {structure:getSelectedCifStructure(), label:getSelectedCifFileName()||"selected CIF", kind:"selected"};
@@ -1334,6 +1457,38 @@ function unitCellTraces(basis,range){
   if(structureUnitCellMode==="none") return [];
   return [structureUnitCellMode==="all" ? buildAllCellEdgeTrace(basis,range) : buildOneCellEdgeTrace(basis,range)];
 }
+// mCIFs can describe a magnetic supercell rather than the parent nuclear cell.
+// If the file explicitly establishes the parent-to-magnetic cell mapping,
+// draw the parent-cell frame while keeping atoms/spins in magnetic coordinates.
+// Never infer an external mCIF's parent cell from its k-vector alone.
+function structureUnitCellFrame(source,basis,range){
+  const fallback={basis,range,parent:false};
+  if(!source?.structure?.magnetic || source.structure!==getSelectedCifStructure()) return fallback;
+  const text=getSelectedCifText();
+  const q=propagationVectorsFromMcif(text,source.structure);
+  if(q.length!==1) return fallback;
+  const parent=parentIndexingFromMcif(text,source.structure.lattice,[q[0].h,q[0].k,q[0].l]);
+  if(!parent) return fallback;
+  const parentBasis=directLatticeBasis(parent.lattice);
+  const rep=parent.replication;
+  if(!parentBasis || !Array.isArray(rep) || rep.length!==3 ||
+     !rep.every(v=>Number.isInteger(v)&&v>=1)) return fallback;
+  // The viewer range is expressed in magnetic-cell fractional coordinates.
+  // Express the same volume in parent-cell fractions before drawing its edges.
+  const parentRange=Object.fromEntries(['x','y','z'].map((axis,i)=>[
+    axis,{min:range[axis].min*rep[i],max:range[axis].max*rep[i]}
+  ]));
+  // For "One cell", prefer the parent cell at the crystallographic origin.
+  // For "All cells", show every parent-cell boundary in the selected range.
+  if(structureUnitCellMode==='one' && rep.some(n=>n>1)){
+    for(const axis of ['x','y','z']){
+      const bounds=parentRange[axis];
+      const first=bounds.min<=0 && bounds.max>=1 ? 0 : Math.floor(bounds.min);
+      parentRange[axis]={min:first,max:first+1};
+    }
+  }
+  return {basis:parentBasis,range:parentRange,parent:true};
+}
 function updateStructureAtomLegend(elements){
   const host=$("cifAtomLegend");
   if(!host) return;
@@ -1424,67 +1579,54 @@ function compressStructureSiteLabels(labels,element=""){
   return cleaned.join(", ");
 }
 
-function setSpinEnabledForElement(element,enabled){
+// The table header is the single bulk Use control. Its scope follows Display:
+// an element filters and edits ALL of that element's sites, not only mounted rows.
+function syncSpinTableBulkCheckbox(structure,candidates=null){
+  const checkbox=$("cifSpinBulkCheckbox");
+  const label=$("cifSpinBulkElement");
+  if(!checkbox || !label) return;
+  const selected=structureSpinTableElement;
+  label.textContent=selected==="*" ? "All" : selected;
+  checkbox.title=selected==="*" ? "Enable/disable every magnetic site" : `Enable/disable all ${selected} magnetic sites`;
+  checkbox.setAttribute("aria-label",checkbox.title);
+  let all=candidates;
+  if(!all){
+    try{ all=spinEditingIsIndividual(structure)?individualSpinCandidates(structure):magneticCandidateSites(structure); }
+    catch(_e){all=[];}
+  }
+  const visible=spinTableFilteredSites(all);
+  const live=currentMomentSettings();
+  const values=visible.map(site=>{
+    const key=site.individualKey||momentKey(site);
+    const setting=live.get(key)||structureMomentSettings.get(key)||
+      (site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure));
+    return !!setting.enabled;
+  });
+  checkbox.disabled=!values.length;
+  checkbox.checked=values.length>0 && values.every(Boolean);
+  checkbox.indeterminate=values.some(Boolean) && !checkbox.checked;
+}
+function setSpinEnabledForDisplayed(enabled){
   const structure=currentStructureForViewer()?.structure;
   if(!structure)return;
+  activateImportedMagneticEditing();
   const live=currentMomentSettings();
-  for(const [key,value] of live)structureMomentSettings.set(key,value);
-  for(const row of document.querySelectorAll("#cifMagMomentRows .structure-moment-row")){
-    if(row.dataset.momentElement===String(element)){
-      const checkbox=row.querySelector('[data-moment-field="enabled"]');
-      if(checkbox)checkbox.checked=!!enabled;
-    }
-  }
+  for(const [key,value] of live) structureMomentSettings.set(key,value);
   const candidates=spinEditingIsIndividual(structure)?individualSpinCandidates(structure):magneticCandidateSites(structure);
-  for(const site of candidates){
-    if(String(site.element)!==String(element))continue;
+  for(const site of spinTableFilteredSites(candidates)){
     const key=site.individualKey||momentKey(site);
-    const initial=site.individualKey?resolveIndividualSpin(site,structure,live):defaultMomentSetting(site,structure);
+    const initial=site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure);
     structureMomentSettings.set(key,{...initial,...(structureMomentSettings.get(key)||{}),enabled:!!enabled});
   }
+  // updateMagneticMomentRows() snapshots current DOM rows first. Reflect the
+  // bulk edit in those rows so it cannot be overwritten by stale checkboxes.
+  for(const row of document.querySelectorAll("#cifMagMomentRows .structure-moment-row")){
+    const checkbox=row.querySelector('[data-moment-field="enabled"]');
+    if(checkbox) checkbox.checked=!!enabled;
+  }
   updateMagneticMomentRows(structure);
-  syncSpinElementToggleStates();
-}
-function syncSpinElementToggleStates(){
-  const host=$("cifSpinElementToggles"),structure=currentStructureForViewer()?.structure;
-  if(!host||!structure)return;
-  let candidates=[];
-  try{candidates=spinEditingIsIndividual(structure)?individualSpinCandidates(structure):magneticCandidateSites(structure);}catch(_e){return;}
-  const live=currentMomentSettings();
-  for(const checkbox of host.querySelectorAll('input[data-spin-element]')){
-    const element=String(checkbox.dataset.spinElement||"");
-    const states=candidates.filter(site=>String(site.element)===element).map(site=>{
-      const key=site.individualKey||momentKey(site);
-      return !!(live.get(key)||structureMomentSettings.get(key)||(site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure))).enabled;
-    });
-    const checked=states.length>0&&states.every(Boolean);
-    checkbox.checked=checked;
-    checkbox.indeterminate=states.some(Boolean)&&!checked;
-  }
-}
-function updateSpinElementToggles(structure){
-  const host=$("cifSpinElementToggles");
-  if(!host) return;
-  host.replaceChildren();
-  const elements=structureElements(structure);
-  for(const element of elements){
-    const label=document.createElement("label");
-    label.className="structure-spin-element-toggle";
-    const checkbox=document.createElement("input");
-    checkbox.type="checkbox";
-    checkbox.dataset.spinElement=element;
-    const text=document.createElement("span");
-    text.textContent=`All ${element}`;
-    checkbox.addEventListener("change",()=>{
-      activateImportedMagneticEditing();
-      setSpinEnabledForElement(element,checkbox.checked);
-      saveStructureViewerState();
-      renderCifStructureIfVisible();
-    });
-    label.append(checkbox,text);
-    host.appendChild(label);
-  }
-  syncSpinElementToggleStates();
+  saveStructureViewerState();
+  renderCifStructureIfVisible();
 }
 // Backward-compatible *display-only* labels for mCIF files emitted by older
 // versions (A1, A2, ...).  Never rewrite the parsed source labels: magnetic
@@ -1502,6 +1644,29 @@ function structureSiteDisplayLabels(structure){
     labels.set(String(site.label),`${element}${number}`);
   }
   return labels;
+}
+const selectedAppearanceRowKeys=new Set();
+function clearAppearanceRowSelection(){
+  if(!selectedAppearanceRowKeys.size)return;
+  selectedAppearanceRowKeys.clear();
+  document.querySelectorAll('#cifAtomColorRows .atoms-table-row').forEach(row=>row.classList.remove('atoms-row-selected'));
+  renderCifStructureIfVisible();
+}
+function selectedAppearanceContainsAtom(atom){
+  return selectedAppearanceRowKeys.has(`element:${atom.element}`) ||
+    selectedAppearanceRowKeys.has(`site:${atom.sourceSiteIndex}`);
+}
+function selectAppearanceRow(key,row,event={}){
+  if(event.shiftKey || event.ctrlKey || event.metaKey){
+    if(selectedAppearanceRowKeys.has(key))selectedAppearanceRowKeys.delete(key);
+    else selectedAppearanceRowKeys.add(key);
+  }else{
+    const selected=selectedAppearanceRowKeys.has(key);
+    selectedAppearanceRowKeys.clear();if(!selected)selectedAppearanceRowKeys.add(key);
+  }
+  document.querySelectorAll('#cifAtomColorRows .atoms-table-row').forEach(item=>
+    item.classList.toggle('atoms-row-selected',selectedAppearanceRowKeys.has(item.dataset.selectionKey)));
+  renderCifStructureIfVisible();
 }
 function updateStructureAtomColorRows(elements,structure=null){
   const host=$("cifAtomColorRows");
@@ -1601,6 +1766,13 @@ function updateStructureAtomColorRows(elements,structure=null){
       updateStructureAtomColorRows(elements,structure);
     });
     row.dataset.element=element;
+    const selectionKey=isSite?key:`element:${element}`;
+    row.dataset.selectionKey=selectionKey;
+    row.classList.toggle('atoms-row-selected',selectedAppearanceRowKeys.has(selectionKey));
+    row.addEventListener('click',event=>{
+      if(event.target.closest('input,.atoms-color-cell,.atoms-size'))return;
+      selectAppearanceRow(selectionKey,row,event);
+    });
     row.append(name,visible,colorCell,size);
     return row;
   }
@@ -1822,115 +1994,126 @@ function updateMagneticMomentRows(structure){
   const live=currentMomentSettings();
   for(const [key,value] of live) structureMomentSettings.set(key,value);
   host.replaceChildren();
+  visibleSpinSelectionSites.clear();
   const individual=spinEditingIsIndividual(structure);
   let allSites=[];
   try{allSites=individual?individualSpinCandidates(structure):magneticCandidateSites(structure);}
-  catch(err){const notice=$('cifSpinIndividualInfo');if(notice){notice.hidden=false;notice.textContent=err.message;}return;}
-  const notice=$('cifSpinIndividualInfo');
+  catch(err){const notice=$("cifSpinIndividualInfo");if(notice){notice.hidden=false;notice.textContent=err.message;}syncSpinTableBulkCheckbox(structure,[]);return;}
+  const notice=$("cifSpinIndividualInfo");
   if(notice){notice.hidden=true;notice.textContent="";}
   refreshSpinTableToolbar(structure);
+  const polar=structureMomentDirectionMode==="polar";
+  const headings=polar?["θ (°)","φ (°)","μ (μB)"]:["X (μB)","Y (μB)","Z (μB)"];
+  for(const [i,name] of ["X","Y","Z"].entries()){
+    const cell=$("cifSpinHeader"+name);
+    if(cell) cell.textContent=headings[i];
+  }
   const sites=spinTableFilteredSites(allSites);
+  const displayedKeys=new Set(sites.map(site=>site.individualKey||momentKey(site)));
+  for(const key of [...selectedSpinRowKeys]) if(!displayedKeys.has(key))selectedSpinRowKeys.delete(key);
+  if(spinSelectionAnchorKey && !displayedKeys.has(spinSelectionAnchorKey))spinSelectionAnchorKey=null;
+  const siteIndices=new Map(allSites.map((site,index)=>[site.individualKey||momentKey(site),index+1]));
   if(!sites.length){
-    const div=document.createElement("div"); div.className="structure-rows-empty";
+    const div=document.createElement("div"); div.className="structure-spin-table-empty";
     div.textContent=allSites.length ? "No atoms match the selected element." : "No atomic sites were found.";
     host.appendChild(div);
-    updateSpinElementToggles(structure);
+    syncSpinTableBulkCheckbox(structure,allSites);
     return;
   }
-  sites.forEach((site,siteOrder)=>{
+  for(const site of sites){
     const key=site.individualKey||momentKey(site);
+    visibleSpinSelectionSites.set(key,site);
     const saved=structureMomentSettings.get(key)||{};
-    const base=site.parentSite||site;
-    const parentKey=momentKey({...base,siteIndex:site.siteIndex});
-    const parentSetting=structureMomentSettings.get(parentKey)||defaultMomentSetting(base,structure);
     const setting={...(site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure)),...saved};
-    // For mCIF, loaded components are physical Cartesian moments, not fractional coordinates.
-    // Keep the original physical components in XYZ; Length is a visual-only control.
+    // mCIF XYZ values are physical Cartesian moments, not fractional positions.
     if(!setting.colorCustomized && !saved.colorCustomized) setting.color=elementColor(site.element);
     const row=document.createElement("div");
     row.className="structure-moment-row";
+    row.setAttribute("role","row");
     row.dataset.momentKey=key;
+    row.setAttribute("aria-selected",String(selectedSpinRowKeys.has(key)));
+    row.classList.toggle("spin-row-selected",selectedSpinRowKeys.has(key));
+    row.addEventListener("click",event=>selectSpinMomentRow(key,event));
     row.dataset.momentElement=String(site.element||"");
     row.dataset.momentColorCustom=setting.colorCustomized?"1":"0";
     row.dataset.momentColor=setting.color;
-
+    const makeCell=(kind,child)=>{
+      const cell=document.createElement("div");
+      cell.className=`structure-spin-cell structure-spin-${kind}`;
+      cell.setAttribute("role","cell");
+      if(child!==undefined){
+        if(typeof child==="string") cell.textContent=child;
+        else cell.appendChild(child);
+      }
+      return cell;
+    };
+    const indexCell=makeCell("index",String(siteIndices.get(key)||""));
     const enabled=document.createElement("input");
     enabled.type="checkbox";
     enabled.checked=!!setting.enabled;
     enabled.dataset.momentField="enabled";
-    enabled.title="Use this magnetic site";
-
+    enabled.title=`Enable spin for ${site.label||site.element}`;
+    enabled.setAttribute("aria-label",enabled.title);
+    const useCell=makeCell("use",enabled);
     const siteLabel=document.createElement("span");
     siteLabel.className="structure-moment-site";
     siteLabel.textContent=structureSiteDisplayLabels(structure)?.get(String(site.label))||site.label||site.element;
     siteLabel.title=`${site.element} @ (${Number(site.x).toFixed(5)}, ${Number(site.y).toFixed(5)}, ${Number(site.z).toFixed(5)})`;
-
-    const makeField=(labelText,input)=>{
-      const label=document.createElement("label");
-      label.className="structure-entry-field";
-      const caption=document.createElement("span"); caption.className="structure-entry-label"; caption.textContent=labelText;
-      label.append(caption,input);
-      return label;
-    };
-
-    const xyz=document.createElement("div");
-    xyz.className="structure-moment-vector structure-entry-grid";
+    const atomCell=makeCell("atom",siteLabel);
     const momentInputs=[];
-    if(structureMomentDirectionMode==="polar"){
-      const polar=directionToPolar([setting.mx,setting.my,setting.mz]);
-      for(const [field,labelText,value] of [["theta","θ (z)",polar.theta],["phi","φ (xy)",polar.phi],["moment","μB",vecNorm([setting.mx,setting.my,setting.mz])]]){
-        const inp=document.createElement("input");
-        inp.type="number"; inp.step="0.01"; if(field==="moment") inp.min="0";
-        inp.value=formatSpinValue(value); inp.dataset.displayValue=inp.value; inp.dataset.fullPrecision=String(value);
-        inp.dataset.momentField=field;
-        inp.title=field==="theta"?"Polar angle from +z (degrees)":field==="phi"?"Azimuth from +x toward +y (degrees)":"Physical magnetic moment magnitude (μB); separate from Length display scale";
-        momentInputs.push(inp); xyz.appendChild(makeField(labelText,inp));
+    const fieldCells=[];
+    if(polar){
+      const angles=directionToPolar([setting.mx,setting.my,setting.mz]);
+      for(const [field,title,value] of [["theta","Polar angle from +z (degrees)",angles.theta],["phi","Azimuth from +x toward +y (degrees)",angles.phi],["moment","Physical magnetic moment magnitude (μB)",vecNorm([setting.mx,setting.my,setting.mz])]]){
+        const input=document.createElement("input");
+        input.type="number"; input.step="0.01"; if(field==="moment") input.min="0";
+        input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(value);
+        input.dataset.momentField=field;input.title=title;input.setAttribute("aria-label",`${site.label||site.element}: ${title}`);
+        momentInputs.push(input);fieldCells.push(makeCell("value",input));
       }
     }else{
-      for(const [field,labelText,value] of [["mx","x",setting.mx],["my","y",setting.my],["mz","z",setting.mz]]){
-        const inp=document.createElement("input");
-        inp.type="number"; inp.step="0.01"; inp.value=formatSpinValue(value); inp.dataset.displayValue=inp.value; inp.dataset.fullPrecision=String(value); inp.dataset.momentField=field;
-        inp.title=`${labelText} Cartesian magnetic moment component (μB)`; momentInputs.push(inp); xyz.appendChild(makeField(labelText,inp));
+      for(const [field,value] of [["mx",setting.mx],["my",setting.my],["mz",setting.mz]]){
+        const input=document.createElement("input");
+        input.type="number";input.step="0.01";
+        input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(value);
+        input.dataset.momentField=field;
+        input.title=`Cartesian magnetic moment component ${field.slice(1)} (μB)`;
+        input.setAttribute("aria-label",`${site.label||site.element}: ${input.title}`);
+        momentInputs.push(input);fieldCells.push(makeCell("value",input));
       }
     }
-
     const picker=makeMomentColorPicker(setting.color,color=>{
       row.dataset.momentColorCustom="1";
       row.dataset.momentColor=color;
       const cur=currentMomentSettings().get(key)||setting;
-      cur.color=color;
-      cur.colorCustomized=true;
+      cur.color=color;cur.colorCustomized=true;
       structureMomentSettings.set(key,cur);
-      saveStructureViewerState();
-      renderCifStructureIfVisible();
+      saveStructureViewerState();renderCifStructureIfVisible();
     });
-
+    picker.title=`Spin color palette for ${site.label||site.element}`;
+    picker.setAttribute("aria-label",picker.title);
+    const colorCell=makeCell("color",picker);
     const commit=()=>{
-      // A direct Spins edit must leave the imported mCIF display mode too.
-      // Previously only editing the left-hand k-vector activated this mode,
-      // so imported symmetry moments kept overriding these user inputs.
       activateImportedMagneticEditing();
       const cur=currentMomentSettings().get(key);
       if(cur) structureMomentSettings.set(key,cur);
-      saveStructureViewerState();
-      renderCifStructureIfVisible();
+      saveStructureViewerState();renderCifStructureIfVisible();
     };
-    enabled.addEventListener("change",()=>{ commit(); syncSpinElementToggleStates(); });
+    enabled.addEventListener("change",()=>{
+      commit();syncSpinTableBulkCheckbox(structure,allSites);
+    });
     for(const input of momentInputs){
       const autoEnable=()=>{
         if(!enabled.checked) enabled.checked=true;
-        commit();
+        commit();syncSpinTableBulkCheckbox(structure,allSites);
       };
       input.addEventListener("input",autoEnable);
       input.addEventListener("change",autoEnable);
     }
-
-    // Three numeric fields: Cartesian x/y/z or Polar θ/φ/μB.
-    xyz.classList.add("structure-moment-three-fields");
-    row.append(enabled,siteLabel,xyz,picker);
+    row.append(indexCell,useCell,atomCell,...fieldCells,colorCell);
     host.appendChild(row);
-  });
-  updateSpinElementToggles(structure);
+  }
+  syncSpinTableBulkCheckbox(structure,allSites);
 }
 function parseBondRange(value,fallbackMin=0,fallbackMax=3){
   const parts=String(value??"").trim().split(/[\s,]+/).filter(Boolean).map(Number);
@@ -1984,67 +2167,199 @@ function defaultBondColor(a,b){
     return (255-mixed).toString(16).padStart(2,"0");
   }).join("");
 }
+// Style uses the same select/copy/add/remove/drag semantics as Positions.
+let structureBondSelectionAnchor=null;
+let structureBondRowSerial=0;
+let structureBondDraggedRows=null;
+const selectedStructureBondRows=()=>[...document.querySelectorAll('#cifBondRows .structure-bond-row.style-row-selected')];
+function refreshStructureBondSelection(){
+  const hasSelection=selectedStructureBondRows().length>0;
+  for(const id of ['cifCopyBondRule','cifRemoveBondRule']){
+    const button=$(id);if(button)button.disabled=!hasSelection;
+  }
+}
+function clearStructureBondSelection(){
+  selectedStructureBondRows().forEach(row=>row.classList.remove('style-row-selected'));
+  structureBondSelectionAnchor=null;
+  refreshStructureBondSelection();
+}
+function selectStructureBondRow(row,event={}){
+  const rows=[...document.querySelectorAll('#cifBondRows .structure-bond-row')];
+  const idx=rows.indexOf(row);if(idx<0)return;
+  const multi=!!(event.ctrlKey||event.metaKey);
+  if(event.shiftKey){
+    const from=rows.findIndex(r=>r.dataset.styleUid===structureBondSelectionAnchor);
+    if(!multi)rows.forEach(r=>r.classList.remove('style-row-selected'));
+    for(let i=Math.min(from<0?idx:from,idx);i<=Math.max(from<0?idx:from,idx);i++)rows[i].classList.add('style-row-selected');
+  }else if(multi){
+    row.classList.toggle('style-row-selected');
+    structureBondSelectionAnchor=row.dataset.styleUid;
+  }else{
+    const wasSelected=row.classList.contains('style-row-selected');
+    rows.forEach(r=>r.classList.remove('style-row-selected'));
+    if(!wasSelected){row.classList.add('style-row-selected');structureBondSelectionAnchor=row.dataset.styleUid;}
+    else structureBondSelectionAnchor=null;
+  }
+  refreshStructureBondSelection();
+}
+function refreshStructureBondIndices(){
+  document.querySelectorAll('#cifBondRows .structure-bond-row').forEach((row,i)=>{
+    const cell=row.querySelector('.structure-style-index');if(cell)cell.textContent=String(i+1);
+  });
+}
+function clearStructureBondDropMarkers(){
+  document.querySelectorAll('#cifBondRows .style-drop-before,.style-drop-after').forEach(row=>row.classList.remove('style-drop-before','style-drop-after'));
+}
+function finishStructureBondDrag(){
+  clearStructureBondDropMarkers();
+  document.querySelectorAll('#cifBondRows .style-row-dragging').forEach(row=>row.classList.remove('style-row-dragging'));
+  structureBondDraggedRows=null;
+}
+function initializeStructureBondDrag(row){
+  const index=row.querySelector('.structure-style-index');if(!index)return;
+  index.draggable=true;index.title='Drag to reorder selected style rules';
+  index.addEventListener('dragstart',ev=>{
+    if(!row.classList.contains('style-row-selected'))selectStructureBondRow(row);
+    structureBondDraggedRows=selectedStructureBondRows();
+    if(!structureBondDraggedRows.length){ev.preventDefault();return;}
+    structureBondDraggedRows.forEach(r=>r.classList.add('style-row-dragging'));
+    ev.dataTransfer.effectAllowed='move';
+    ev.dataTransfer.setData('text/plain',row.dataset.styleUid);
+  });
+  index.addEventListener('dragend',finishStructureBondDrag);
+  for(const cell of row.querySelectorAll('.structure-style-cell')){
+    cell.addEventListener('dragover',ev=>{
+      if(!structureBondDraggedRows?.length)return;
+      ev.preventDefault();ev.dataTransfer.dropEffect='move';
+      clearStructureBondDropMarkers();
+      if(structureBondDraggedRows.includes(row))return;
+      const r=cell.getBoundingClientRect();
+      row.classList.add(ev.clientY>=r.top+r.height/2?'style-drop-after':'style-drop-before');
+    });
+    cell.addEventListener('drop',ev=>{
+      if(!structureBondDraggedRows?.length)return;
+      ev.preventDefault();
+      const host=$('cifBondRows');
+      const original=[...host.querySelectorAll('.structure-bond-row')];
+      const moving=new Set(structureBondDraggedRows);
+      const remaining=original.filter(r=>!moving.has(r));
+      const idx=remaining.indexOf(row);
+      if(idx>=0){
+        const bounds=cell.getBoundingClientRect();
+        const after=ev.clientY>=bounds.top+bounds.height/2;
+        const insertion=idx+(after?1:0);
+        host.append(...remaining.slice(0,insertion),...structureBondDraggedRows,...remaining.slice(insertion));
+        refreshStructureBondIndices();
+        saveStructureViewerState();renderCifStructureIfVisible();
+      }
+      finishStructureBondDrag();
+    });
+  }
+}
 function createBondRuleRow(rule={},elements=[]){
-  const row=document.createElement("div"); row.className="structure-bond-row";
-  const a=document.createElement("select"); a.dataset.bondField="a"; a.title="First atom";
-  const b=document.createElement("select"); b.dataset.bondField="b"; b.title="Second atom";
+  const row=document.createElement('div');row.className='structure-bond-row';
+  row.setAttribute('role','row');row.dataset.styleUid=String(++structureBondRowSerial);
+  const cell=(kind,contents)=>{
+    const el=document.createElement('div');el.className=`structure-style-cell structure-style-${kind}`;
+    el.setAttribute('role','cell');
+    if(typeof contents==='string')el.textContent=contents;
+    else if(contents)el.appendChild(contents);
+    // Select from any cell without stealing focus from its editable content.
+    el.addEventListener('click',ev=>selectStructureBondRow(row,ev));
+    return el;
+  };
+  const a=document.createElement('select');a.dataset.bondField='a';a.title='First atom';
+  const b=document.createElement('select');b.dataset.bondField='b';b.title='Second atom';
+  populateBondSelect(a,elements,rule.a||elements[0]||'');
+  populateBondSelect(b,elements,rule.b||elements[1]||elements[0]||'');
   const legacyMax=Number.isFinite(Number(rule.maxDistance))?Number(rule.maxDistance):Number(rule.distance);
   const minValue=Number.isFinite(Number(rule.minDistance))?Number(rule.minDistance):0;
   const maxValue=Number.isFinite(legacyMax)?legacyMax:3;
-  const makeNumber=(field,value,min,step,title)=>{
-    const input=document.createElement("input"); input.type="number"; input.min=String(min); input.step=String(step);
-    input.dataset.bondField=field; input.value=String(value); input.title=title; return input;
+  const number=(key,value,min,step,title)=>{
+    const el=document.createElement('input');el.type='number';el.min=String(min);el.step=String(step);
+    el.value=String(value);el.dataset.bondField=key;el.title=title;return el;
   };
-  const minDistance=makeNumber("minDistance",minValue,0,0.1,"Minimum bond distance (Å)");
-  const maxDistance=makeNumber("maxDistance",maxValue,0,0.1,"Maximum bond distance (Å)");
-  const bondWidth=Number.isFinite(Number(rule.width))?Number(rule.width):5;
-  const width=makeNumber("width",bondWidth,1,1,"Bond width (pixels; leave blank for default)");
-  width.max="30"; width.placeholder="5"; if(rule.widthBlank===true) width.value="";
-  const color=document.createElement("input"); color.type="color"; color.dataset.bondField="color"; color.value=rule.color||defaultBondColor(a.value,b.value); color.title="Bond color";
-  const field=(text,input)=>{ const label=document.createElement("label"); label.className="structure-entry-field"; const span=document.createElement("span"); span.className="structure-entry-label"; span.textContent=text; label.append(span,input); return label; };
-  const rangePair=document.createElement("div"); rangePair.className="structure-bond-range-pair";
-  rangePair.append(field("Min (Å)",minDistance),field("Max (Å)",maxDistance));
-  const widthField=field("Width",width);
-  const remove=document.createElement("button"); remove.type="button"; remove.textContent="Remove";
-  populateBondSelect(a,elements,rule.a||elements[0]||""); populateBondSelect(b,elements,rule.b||elements[1]||elements[0]||"");
-  if(!rule.color) color.value=defaultBondColor(a.value,b.value);
-  remove.addEventListener("click",()=>{ row.remove(); saveStructureViewerState(); renderCifStructureIfVisible(); if(!$("cifBondRows")?.children.length) updateStructureBondRows(elements); });
-  // Track explicit user color changes; automatically update the pair default otherwise.
+  const minDistance=number('minDistance',minValue,0,.1,'Minimum bond distance (Å)');
+  const maxDistance=number('maxDistance',maxValue,0,.1,'Maximum bond distance (Å)');
+  const width=number('width',Number.isFinite(Number(rule.width))?rule.width:5,1,1,'Bond width (pixels; blank = default)');
+  width.max='30';width.placeholder='5';if(rule.widthBlank===true)width.value='';
+  const color=document.createElement('input');color.type='color';color.dataset.bondField='color';
+  color.value=rule.color||defaultBondColor(a.value,b.value);color.title='Bond color';
+  const index=cell('index','');index.setAttribute('aria-label','Style rule index');
+  row.append(index,cell('select',a),cell('select',b),cell('number',minDistance),cell('number',maxDistance),cell('number',width),cell('color',color));
+  // Retain the original default pair-color behavior, unless customized.
   let customized=!!rule.color && rule.color.toLowerCase()!==defaultBondColor(a.value,b.value).toLowerCase();
-  color.addEventListener("input",()=>{customized=true;});
-  const updatePairColor=()=>{if(!customized) color.value=defaultBondColor(a.value,b.value);};
-  a.addEventListener("change",updatePairColor);
-  b.addEventListener("change",updatePairColor);
-  const commit=()=>{ saveStructureViewerState(); renderCifStructureIfVisible(); };
+  color.addEventListener('input',()=>{customized=true;});
+  const updatePairColor=()=>{if(!customized)color.value=defaultBondColor(a.value,b.value);};
+  a.addEventListener('change',updatePairColor);
+  b.addEventListener('change',updatePairColor);
+  const commit=()=>{saveStructureViewerState();renderCifStructureIfVisible();};
   for(const el of [a,b,minDistance,maxDistance,width,color]){
-    el.addEventListener("input",commit);
-    el.addEventListener("change",()=>{
-      if(el===minDistance || el===maxDistance){
-        let min=Number(minDistance.value), max=Number(maxDistance.value);
-        if(!Number.isFinite(min)) min=0; if(!Number.isFinite(max)) max=3;
-        min=Math.max(0,min); max=Math.max(0,max); if(max<min) [min,max]=[max,min];
-        minDistance.value=String(min); maxDistance.value=String(max);
+    el.addEventListener('input',commit);
+    el.addEventListener('change',()=>{
+      if(el===minDistance||el===maxDistance){
+        let min=Number(minDistance.value),max=Number(maxDistance.value);
+        if(!Number.isFinite(min))min=0;if(!Number.isFinite(max))max=3;
+        min=Math.max(0,min);max=Math.max(0,max);if(max<min)[min,max]=[max,min];
+        minDistance.value=String(min);maxDistance.value=String(max);
       }
       commit();
     });
   }
-  row.append(a,b,rangePair,widthField,color,remove);
+  initializeStructureBondDrag(row);
   return row;
 }
 function updateStructureBondRows(elements,seedRules=null){
-  const host=$("cifBondRows"); if(!host) return;
+  const host=$('cifBondRows');if(!host)return;
   const rules=Array.isArray(seedRules)?seedRules:readStructureBondRules();
   host.replaceChildren();
-  if(!elements.length){ const div=document.createElement("div"); div.className="structure-rows-empty"; div.textContent="No atoms available."; host.appendChild(div); return; }
-  for(const rule of rules) host.appendChild(createBondRuleRow(rule,elements));
+  structureBondSelectionAnchor=null;
+  if(!elements.length){
+    const div=document.createElement('div');div.className='structure-rows-empty';
+    div.textContent='No atoms available.';host.appendChild(div);refreshStructureBondSelection();return;
+  }
+  for(const rule of rules)host.appendChild(createBondRuleRow(rule,elements));
+  refreshStructureBondIndices();refreshStructureBondSelection();
 }
-function addStructureBondRule(){
-  const info=currentStructureForViewer(); const elements=structureElements(info?.structure||null); const host=$("cifBondRows");
-  if(!host||!elements.length) return;
-  if(host.firstElementChild?.classList.contains("structure-rows-empty")) host.replaceChildren();
-  host.appendChild(createBondRuleRow({a:elements[0],b:elements[Math.min(1,elements.length-1)]||elements[0],minDistance:0,maxDistance:3,width:5},elements));
-  saveStructureViewerState();
-  renderCifStructureIfVisible();
+function addStructureBondRule(rule=null){
+  const info=currentStructureForViewer();const elements=structureElements(info?.structure||null);
+  const host=$('cifBondRows');if(!host||!elements.length)return;
+  if(host.firstElementChild?.classList.contains('structure-rows-empty'))host.replaceChildren();
+  const newRule=rule&&typeof rule==='object'&&'a' in rule?rule:
+    {a:elements[0],b:elements[Math.min(1,elements.length-1)]||elements[0],minDistance:0,maxDistance:3,width:5};
+  const row=createBondRuleRow(newRule,elements);
+  clearStructureBondSelection();host.appendChild(row);
+  row.classList.add('style-row-selected');structureBondSelectionAnchor=row.dataset.styleUid;
+  refreshStructureBondIndices();refreshStructureBondSelection();
+  saveStructureViewerState();renderCifStructureIfVisible();
+  return row;
+}
+function copySelectedStructureBondRules(){
+  const selected=selectedStructureBondRows();if(!selected.length)return;
+  const elements=structureElements(currentStructureForViewer()?.structure||null);
+  const host=$('cifBondRows');
+  const copies=selected.map(row=>readBondRuleFromRow(row)).filter(Boolean);
+  clearStructureBondSelection();
+  for(const rule of copies){
+    const row=createBondRuleRow(rule,elements);host.appendChild(row);
+    row.classList.add('style-row-selected');structureBondSelectionAnchor=row.dataset.styleUid;
+  }
+  refreshStructureBondIndices();refreshStructureBondSelection();
+  saveStructureViewerState();renderCifStructureIfVisible();
+}
+function readBondRuleFromRow(row){
+  // This reuses readStructureBondRules so copies retain all edits and the
+  // precise same data shape as saved viewer rules.
+  const rows=[...document.querySelectorAll('#cifBondRows .structure-bond-row')];
+  const rules=readStructureBondRules();
+  return rules[rows.indexOf(row)]||null;
+}
+function removeSelectedStructureBondRules(){
+  if(!selectedStructureBondRows().length)return;
+  selectedStructureBondRows().forEach(row=>row.remove());
+  structureBondSelectionAnchor=null;
+  refreshStructureBondIndices();refreshStructureBondSelection();
+  saveStructureViewerState();renderCifStructureIfVisible();
 }
 function structureSignature(structure){
   if(!structure) return "";
@@ -2058,6 +2373,8 @@ function syncStructureControlRows(structure){
   const oldBondRules=restoredStructureBondRules!==null ? restoredStructureBondRules : readStructureBondRules();
   restoredStructureBondRules=null;
   structureControlSignature=sig;
+  clearSpinRowSelection({redraw:false});
+  visibleSpinSelectionSites.clear();
   const elements=structureElements(structure);
   assignDistinctElementColors(elements);
   updateStructureAtomColorRows(elements,structure);
@@ -2431,6 +2748,76 @@ function syncImportedMomentStructureType(){
   syncSpinModifyLock();
 }
 
+// The right-hand Structure plot sets the available height of the editor.
+// Only the TABLE scrolls; output format, mode controls, and action buttons stay visible.
+let structureTableHeightFrame=0;
+function requestStructureTableHeightSync(){
+  if(structureTableHeightFrame)return;
+  structureTableHeightFrame=requestAnimationFrame(()=>{
+    structureTableHeightFrame=0;
+    const generator=$('cifGeneratorPanel');
+    const reference=document.querySelector('#mcifStructurePane .structure-plot-wrap');
+    if(!generator||!reference)return;
+    const twoColumns=getComputedStyle(generator).gridTemplateColumns.split(' ').length>1;
+    const rightBottom=reference.getBoundingClientRect().bottom;
+    for(const [panelKey,selector] of [
+      ['positions','.cif-atom-table-wrap'],
+      ['appearance','#cifAtomColorRows'],
+      ['spins','.structure-spin-table-wrap'],
+      ['bonds','.structure-style-table-wrap']
+    ]){
+      const panel=document.querySelector(`#structurePanel [data-structure-config-panel="${panelKey}"]`);
+      const table=panel?.querySelector(selector);
+      if(!table)continue;
+      const detailed=panelKey==='positions' ? $('cifAtomDetailed') : null;
+      const thermal=detailed?.querySelector('.cif-thermal-table-wrap');
+      // When Uij is expanded, both atom tables share the vertical space.
+      // Their natural height is used for few rows, and both scroll at the
+      // same cap when many rows are present.  Collapsing restores the full
+      // original Positions height, without changing the source atom data.
+      if(!twoColumns||panel.hidden||!generator.getClientRects().length){
+        table.style.removeProperty('--editor-table-height');
+        if(thermal){
+          thermal.style.removeProperty('--thermal-editor-table-height');
+          if(detailed.open){
+            const compact='calc(232px * var(--tas-density))';
+            table.style.setProperty('--editor-table-height',compact);
+            thermal.style.setProperty('--thermal-editor-table-height',compact);
+          }
+        }
+        continue;
+      }
+      const rect=table.getBoundingClientRect();
+      if(detailed?.open && thermal){
+        const thermalRect=thermal.getBoundingClientRect();
+        // All fixed vertical elements excluding the two scrolling tables:
+        // Positions title, action buttons, Uij summary, gaps, etc.
+        const fixed=panel.getBoundingClientRect().bottom-rect.top-rect.height-thermalRect.height;
+        const budget=Math.floor(rightBottom-rect.top-fixed-10);
+        const shared=Math.max(96,Math.floor(budget/2));
+        table.style.setProperty('--editor-table-height',`${shared}px`);
+        thermal.style.setProperty('--thermal-editor-table-height',`${shared}px`);
+      }else{
+        if(thermal)thermal.style.removeProperty('--thermal-editor-table-height');
+        // The original full-height Positions calculation when Uij is closed.
+        const remaining=Math.max(0,panel.getBoundingClientRect().bottom-rect.bottom);
+        const available=Math.floor(rightBottom-rect.top-remaining-10);
+        table.style.setProperty('--editor-table-height',`${Math.max(132,available)}px`);
+      }
+    }
+  });
+}
+function prepareStructureTableHeightSync(){
+  if(document.documentElement.dataset.structureTableHeightBound)return;
+  document.documentElement.dataset.structureTableHeightBound='1';
+  window.addEventListener('resize',requestStructureTableHeightSync);
+  $('cifAtomDetailed')?.addEventListener('toggle',requestStructureTableHeightSync);
+  if(typeof ResizeObserver==='function'){
+    const observer=new ResizeObserver(requestStructureTableHeightSync);
+    for(const el of ['mcifStructurePane','cifGeneratorPanel'].map($).filter(Boolean))observer.observe(el);
+  }
+  requestStructureTableHeightSync();
+}
 function prepareStructureViewerControls(){
   ensureStructureViewerStyle();
   const viewButtons=[...document.querySelectorAll("[data-cif-structure-view]")];
@@ -2440,7 +2827,6 @@ function prepareStructureViewerControls(){
   const rangeWrappers=[...document.querySelectorAll(".structure-view-range-axis")];
   const rangeParents=[...new Set(rangeWrappers.map(wrapper=>wrapper.parentElement).filter(Boolean))];
   if(rangeWrappers.length===3 && rangeParents.length===1) rangeParents[0].classList.add("structure-view-range-grid");
-  hideLegacyStructureColumnHeaders("cifMagMomentRows",["use","site","mx","length","width","head"]);
   hideLegacyStructureColumnHeaders("cifAtomColorRows",["show","atom","marker","color"]);
   hideLegacyStructureColumnHeaders("cifBondRows",["atom1","atom2","range","width","color"]);
   for(const button of document.querySelectorAll("[data-structure-config-tab]")){
@@ -2465,8 +2851,10 @@ function prepareStructureViewerControls(){
       for(const panel of document.querySelectorAll("[data-structure-config-panel]")){
         const active=panel.dataset.structureConfigPanel===key; panel.classList.toggle("active",active); panel.hidden=!active;
       }
+      requestStructureTableHeightSync();
     });
   }
+  prepareStructureTableHeightSync();
   refreshMomentPropagationVectorSelect();
   syncSpinModifyLock();
   const propagationSelect=$("cifMomentPropagationVector");
@@ -2489,6 +2877,11 @@ function prepareStructureViewerControls(){
   const structureTypeSelect=$("cifMomentStructureType");
   const axisSelect=$("cifMomentRotationAxis");
   const chiralitySelect=$("cifMomentChirality");
+  const bulkSpinToggle=$("cifSpinBulkCheckbox");
+  if(bulkSpinToggle&&!bulkSpinToggle.dataset.structureBound){
+    bulkSpinToggle.dataset.structureBound="1";
+    bulkSpinToggle.addEventListener("change",()=>setSpinEnabledForDisplayed(bulkSpinToggle.checked));
+  }
   const spinTableElementSelect=$("cifSpinTableElement");
   if(spinTableElementSelect&&!spinTableElementSelect.dataset.structureBound){
     spinTableElementSelect.dataset.structureBound="1";
@@ -2684,15 +3077,35 @@ function renderCifStructureView(){
   const range=structureRange();
   const atoms=replicatedAtoms(source.structure,range);
   if(!atoms.length){ status.textContent="The current CIF contains no atoms to display."; Plotly.purge(plot); return; }
-  const grouped=new Map();
   const displayedAtoms=atoms.filter(atomIsVisible);
+  const selectedPositionSites=selectedPositionSourceSiteIndices(source.structure);
+  let highlighted=displayedAtoms.filter(atom=>
+    selectedSpinContainsAtom(atom) || selectedPositionContainsAtom(atom,selectedPositionSites) ||
+    selectedAppearanceContainsAtom(atom));
+  if(!selectedPositionSites.size && structureSpinEditingMode==='individual' && !spinEditingIsIndividual(source.structure)){
+    // The unmodified imported mCIF uses linked source rows even when Manual
+    // is selected. Highlight just one representative of each chosen site.
+    const seen=new Set();
+    highlighted=highlighted.filter(atom=>{
+      const id=Number.isInteger(atom.sourceSiteIndex)?`site:${atom.sourceSiteIndex}`
+        : `label:${atom.sourceLabel||atom.element}`;
+      if(seen.has(id))return false;
+      seen.add(id);return true;
+    });
+  }
+
+  const highlightedAtomSet=new Set(highlighted);
+  const grouped=new Map();
   for(const atom of displayedAtoms){
     const key=JSON.stringify([atom.element,atomDisplayColor(atom),atomDisplaySize(atom)]);
     if(!grouped.has(key))grouped.set(key,{element:String(atom.element),color:atomDisplayColor(atom),size:atomDisplaySize(atom),atoms:[]});
     grouped.get(key).atoms.push(atom);
   }
   const bondRules=readStructureBondRules();
-  const traces=[...unitCellTraces(basis,range),...bondTraces(displayedAtoms,basis,bondRules)];
+  const cellFrame=structureUnitCellFrame(source,basis,range);
+  const cellTraces=unitCellTraces(cellFrame.basis,cellFrame.range);
+  if(cellFrame.parent) for(const trace of cellTraces) trace.name='Parent unit cell';
+  const traces=[...cellTraces,...bondTraces(displayedAtoms,basis,bondRules)];
   const orderedElements=structureElements(source.structure);
   const shownElements=new Set();
   for(const group of grouped.values()){
@@ -2701,17 +3114,24 @@ function renderCifStructureView(){
     for(const atom of list){
       const cart=fractionalToCartesian(basis,[atom.x,atom.y,atom.z]);
       xs.push(cart[0]);ys.push(cart[1]);zs.push(cart[2]);
-      texts.push(`${atom.sourceLabel||element}<br>frac=(${atom.x.toFixed(3)}, ${atom.y.toFixed(3)}, ${atom.z.toFixed(3)})`);
+      // Put the selection status on the ORIGINAL atom hover label, not on the
+      // outline trace. The ring should never hide the site coordinates.
+      const selectionSuffix=highlightedAtomSet.has(atom)?' (selected)':'';
+      texts.push(`${atom.sourceLabel||element}${selectionSuffix}<br>frac=(${atom.x.toFixed(3)}, ${atom.y.toFixed(3)}, ${atom.z.toFixed(3)})`);
     }
     traces.push({type:"scatter3d",mode:"markers",name:element,showlegend:!shownElements.has(element),x:xs,y:ys,z:zs,text:texts,hovertemplate:"%{text}<extra></extra>",marker:{size,color,line:{color:"#333",width:0.8},opacity:0.92}});
     shownElements.add(element);
   }
   updateStructureAtomLegend(orderedElements.filter(element=>shownElements.has(element)));
+  // Selection outlines belong only to the viewer, never to magnetic calculations.
+  // Draw a complementary-color ring around each selected atom, retaining the
+  // original stroke width and small gap around the atom's surface.
   const magneticOverlays=magneticStructureTraces(displayedAtoms,basis,source.structure); traces.push(...magneticOverlays);
   const magneticSummary=enabledPropagationVectorsForStructure();
   const effectiveK=effectivePropagationVectorForStructure();
   const enabledMoments=[...currentMomentSettings().values()].filter(x=>x.enabled).length;
   status.textContent=`${source.label}: x ${range.x.min}–${range.x.max}, y ${range.y.min}–${range.y.max}, z ${range.z.min}–${range.z.max}; ${displayedAtoms.length} displayed atoms.`+
+    (cellFrame.parent && structureUnitCellMode!=='none' ? ' Parent crystallographic unit cell shown.' : '')+
     (bondRules.length?` ${bondRules.length} bond rule${bondRules.length===1?"":"s"}.`:"")+
     (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${structureMomentStructureType}${structureMomentStructureType==="helical"?` about ${structureMomentRotationAxis} (${structureMomentChirality})`:""}, k${effectiveK.index||1}=(${effectiveK.h}, ${effectiveK.k}, ${effectiveK.l})${effectiveK.count>1?" (selected propagation vector)":""}.`:"");
   // Keep an explicit camera state independent of Plotly.react.  This prevents
@@ -2720,6 +3140,25 @@ function renderCifStructureView(){
   const liveCamera=currentStructureCamera();
   const mainCamera=copyStructureCamera(structureCameraState) || liveCamera || structureCameraForView(cifStructureViewMode,basis,currentStructureCameraDistance());
   structureCameraState=copyStructureCamera(mainCamera);
+  // A thicker complementary-color ring, with its INNER edge at about 1.5x
+  // the displayed atom radius (i.e. a visible gap even with the thicker line).
+  // Plotly marker.size specifies diameter, so add the ring stroke once to the
+  // target inner diameter. This tracks site-specific changes in atom size.
+  if(highlighted.length){
+    const selectionOutlineWidth=9;
+    const x=[],y=[],z=[],sizes=[],outlineColors=[];
+    for(const atom of highlighted){
+      const cart=fractionalToCartesian(basis,[atom.x,atom.y,atom.z]);
+      x.push(cart[0]);y.push(cart[1]);z.push(cart[2]);
+      const atomDiameter=Math.max(2,Number(atomDisplaySize(atom))||10);
+      sizes.push(1.5*atomDiameter+selectionOutlineWidth);
+      outlineColors.push(complementaryAtomOutlineColor(atomDisplayColor(atom)));
+    }
+    traces.push({type:'scatter3d',mode:'markers',name:'Selected atomic sites',showlegend:false,
+      x,y,z,hoverinfo:'skip',
+      marker:{size:sizes,symbol:'circle-open',color:outlineColors,
+        line:{color:outlineColors,width:selectionOutlineWidth},opacity:1}});
+  }
   // Plotly's compact presentation adapter scales font sizes by the UI density.
   // Keep the Structure 3D-axis tick numerals legible in actual screen pixels
   // (desktop/tablet compact layout and the unscaled mobile layout alike).
@@ -2801,10 +3240,11 @@ function renderCifStructureView(){
 }
 
 function setCifGeneratedReady(ready){
-  // mCIF can be previewed as a future format, but BNS export is not released.
-  const canUseCif=ready && $("cifOutputFormat")?.value!=="mcif";
-  if($("cifOutputDownload")) $("cifOutputDownload").disabled=!canUseCif;
-  if($("cifOutputSet")) $("cifOutputSet").disabled=!canUseCif;
+  const mcif=$("cifOutputFormat")?.value==="mcif";
+  const hasGeneratedText=mcif ? !!lastGeneratedMcifText : !!lastGeneratedCifText;
+  const canUse=ready && hasGeneratedText;
+  if($("cifOutputDownload")) $("cifOutputDownload").disabled=!canUse;
+  if($("cifOutputSet")) $("cifOutputSet").disabled=!canUse;
   // Reflection CSV availability is independent of CIF Generate.  A selected
   // CIF/mCIF can provide reflections without generating any new CIF file.
 }
@@ -2826,6 +3266,7 @@ function invalidateGeneratedCif(message="Inputs changed — press Generate to re
   lastGeneratedCifText="";
   lastGeneratedCifParsed=null;
   lastGeneratedCifSpaceGroup=null;
+  invalidateGeneratedMcif();
   setCifGeneratedReady(false);
   if($("cifPreview")) $("cifPreview").textContent="Press Generate to preview the CIF.";
   // Keep Nuclear Reflections tied to the currently loaded CIF/mCIF even while
@@ -3023,6 +3464,97 @@ function validateCifAtomNumericInput(input){
   return valid;
 }
 
+// Position Display filters only the visible editor rows, never atom data.
+function refreshPositionTableToolbar(){
+  const mode=$('cifPositionEditingMode'),filter=$('cifPositionTableElement');
+  if(mode)mode.value=structurePositionEditingMode;
+  if(filter){
+    const elements=[...new Set(currentCifGeneratorAtomRows().map(a=>normalizeCifElement(a.element)).filter(Boolean))].sort();
+    if(structurePositionTableElement!=='*'&&!elements.includes(structurePositionTableElement))structurePositionTableElement='*';
+    filter.replaceChildren();
+    for(const [value,label] of [['*','All elements'],...elements.map(el=>[el,el])]){
+      const opt=document.createElement('option');opt.value=value;opt.textContent=label;filter.appendChild(opt);
+    }
+    filter.value=structurePositionTableElement;
+  }
+  for(const row of document.querySelectorAll('#cifAtomRows .cif-atom-row')){
+    const element=normalizeCifElement(row.querySelector('[data-cif-atom-field="element"]')?.value);
+    const visible=structurePositionTableElement==='*'||element===structurePositionTableElement;
+    row.hidden=!visible; row.style.display=visible?'':'none';
+    const paired=document.querySelector(`#cifAtomDetailedRows [data-cif-atom-uid="${row.dataset.cifAtomUid}"]`);
+    if(paired){paired.hidden=!visible;paired.style.display=visible?'':'none';}
+  }
+}
+function positionSymmetryDraftSignature(){
+  return JSON.stringify({sg:Number($('cifSpaceGroup')?.value),
+    cell:Object.values(CIF_LATTICE_FIELDS).map(id=>$(id)?.value),
+    atoms:currentCifGeneratorAtomRows()});
+}
+function expandPositionDraftToIndividual(){
+  // Called while still in Symmetry mode, so buildGeneratedCif() uses the
+  // selected space group to create the correct, deduplicated unit-cell orbit.
+  const parsed=buildGeneratedCif().parsed;
+  const sourceRows=currentCifGeneratorAtomRows();
+  const atoms=parsed?.atoms||[];
+  if(!atoms.length)throw new Error('No symmetry-expanded atomic positions are available.');
+  if(atoms.length>1500)throw new Error('Manual editor limit: 1500 atoms. Reduce the sites or use Symmetry operations.');
+  return atoms.map(atom=>{
+    const parent=sourceRows[atom.sourceSiteIndex]||{};
+    return {element:atom.element,x:atom.x,y:atom.y,z:atom.z,
+      occupancy:atom.occupancy??parent.occupancy??1,Biso:atom.Biso??parent.Biso??0,
+      // The displayed per-atom Uij starts from the source. The original
+      // independent site's Uij remains untouched in Symmetry mode.
+      Uaniso:atom.Uaniso??parent.Uaniso??null};
+  });
+}
+function changePositionEditingMode(mode){
+  mode=mode==='individual'?'individual':'sites';
+  if(mode===structurePositionEditingMode)return;
+  const sourceMode=structurePositionEditingMode;
+  // Recompute symmetry expansion if the space group, lattice or
+  // asymmetric-site draft has changed since the Manual snapshot was made.
+  const sourceSignature=mode==='individual'?positionSymmetryDraftSignature():null;
+  let next=positionModeDrafts[mode];
+  if(mode==='individual'&&positionManualSourceSignature!==sourceSignature)next=null;
+  if(!next){
+    if(mode==='individual'){
+      try{next=expandPositionDraftToIndividual();}
+      catch(err){const select=$('cifPositionEditingMode');if(select)select.value=sourceMode;
+        window.alert(err?.message||String(err));return;}
+      positionManualSourceSignature=sourceSignature;
+    }else next=positionModeDrafts.sites||currentCifGeneratorAtomRows();
+  }
+  positionModeDrafts[sourceMode]=currentCifGeneratorAtomRows();
+  structurePositionEditingMode=mode;
+  if(mode==='individual'){
+    positionSavedSourcePreference=cifStructureSourcePreference;
+    cifStructureSourcePreference='generated';
+  }else if(positionSavedSourcePreference){
+    cifStructureSourcePreference=positionSavedSourcePreference;
+    positionSavedSourcePreference=null;
+  }
+  const previous=structurePositionTableElement;
+  restoringCifGeneratorAtoms=true;
+  try{replaceCifAtomRows(next);}finally{restoringCifGeneratorAtoms=false;}
+  structurePositionTableElement=previous;
+  clearCifAtomRowSelection();
+  refreshPositionTableToolbar();
+  saveCifGeneratorAtomsState();
+  invalidateGeneratedCif('');
+  structureControlSignature='';
+  renderCifStructureIfVisible();
+  requestStructureTableHeightSync();
+}
+function initializePositionTableToolbar(){
+  const mode=$('cifPositionEditingMode'),display=$('cifPositionTableElement');
+  if(mode&&!mode.dataset.bound){mode.dataset.bound='1';mode.addEventListener('change',()=>changePositionEditingMode(mode.value));}
+  if(display&&!display.dataset.bound){display.dataset.bound='1';display.addEventListener('change',()=>{
+    structurePositionTableElement=display.value;
+    clearCifAtomRowSelection();refreshPositionTableToolbar();saveCifGeneratorAtomsState();
+  });}
+  refreshPositionTableToolbar();
+}
+
 // Script-style atom-row selection. The selection lives only in the UI;
 // stable row IDs keep the paired Uij data with each atom.
 let cifAtomSelectionAnchor=null;
@@ -3043,10 +3575,20 @@ function setCifAtomRowSelection(row, event={}){
     row.classList.toggle("cif-atom-selected");
     cifAtomSelectionAnchor=row.dataset.cifAtomUid;
   }else{
-    rows.forEach(r=>r.classList.toggle("cif-atom-selected",r===row));
-    cifAtomSelectionAnchor=row.dataset.cifAtomUid;
+    const wasSelected=row.classList.contains('cif-atom-selected');
+    rows.forEach(r=>r.classList.remove('cif-atom-selected'));
+    if(!wasSelected){row.classList.add('cif-atom-selected');cifAtomSelectionAnchor=row.dataset.cifAtomUid;}
+    else cifAtomSelectionAnchor=null;
   }
   refreshCifAtomSelectionUI();
+  renderCifStructureIfVisible();
+}
+function clearCifAtomRowSelection(){
+  if(!cifSelectedAtomRows().length) return;
+  for(const row of cifSelectedAtomRows()) row.classList.remove('cif-atom-selected');
+  cifAtomSelectionAnchor=null;
+  refreshCifAtomSelectionUI();
+  renderCifStructureIfVisible();
 }
 function refreshCifAtomSelectionUI(){
   const selected=new Set(cifSelectedAtomRows().map(r=>r.dataset.cifAtomUid));
@@ -3059,6 +3601,44 @@ function refreshCifAtomSelectionUI(){
   }
 
 }
+// Positions selections refer to asymmetric-site rows, not already expanded
+// atoms. Resolve against the actual Structure source before highlighting so a
+// loaded CIF, an mCIF, and an edited generator draft use the same rules.
+function selectedPositionSourceSiteIndices(structure){
+  const selected=cifSelectedAtomRows();
+  const sites=structure?.asymmetricSites || [];
+  if(!selected.length || !sites.length)return new Set();
+  const matches=(row,site)=>{
+    const get=field=>row.querySelector(`[data-cif-atom-field="${field}"]`)?.value;
+    if(normalizeCifElement(get('element'))!==normalizeCifElement(site.element))return false;
+    for(const coordinate of ['x','y','z']){
+      const a=parseNumericValue(get(coordinate)),b=Number(site[coordinate]);
+      if(!Number.isFinite(a)||!Number.isFinite(b))return false;
+      const delta=Math.abs(a-b);
+      if(Math.min(delta,Math.abs(delta-Math.round(delta)))>2e-4)return false;
+    }
+    return true;
+  };
+  const rows=[...document.querySelectorAll('#cifAtomRows .cif-atom-row')];
+  const indices=new Set();
+  for(const row of selected){
+    const index=rows.indexOf(row);
+    if(index>=0 && sites[index] && matches(row,sites[index])){
+      indices.add(index);
+      continue;
+    }
+    // A loaded structure can reorder its asymmetric sites. Prefer a unique
+    // coordinate/element match instead of highlighting an unrelated atom.
+    const equivalent=sites.map((site,i)=>matches(row,site)?i:-1).filter(i=>i>=0);
+    if(equivalent.length===1) indices.add(equivalent[0]);
+  }
+  return indices;
+}
+function selectedPositionContainsAtom(atom,sourceIndices){
+  if(!sourceIndices?.size)return false;
+  return Number.isInteger(atom.sourceSiteIndex) && sourceIndices.has(atom.sourceSiteIndex);
+}
+
 // Drag from an index cell, as in Script. One selected row or a Ctrl/Shift
 // selection moves together; the target can be above the first or below the last.
 let cifAtomDragRows=null;
@@ -3104,6 +3684,7 @@ function moveDraggedCifAtomRows(target,position){
   refreshCifAtomSelectionUI();
   saveCifGeneratorAtomsState();
   invalidateGeneratedCif();
+  renderCifStructureIfVisible();
 }
 function initializeCifAtomDragRow(row){
   const handle=row.querySelector(".cif-atom-index");
@@ -3155,6 +3736,7 @@ function copySelectedCifAtomRows(){
   cifAtomSelectionAnchor=$("cifAtomRows")?.lastElementChild?.dataset.cifAtomUid??null;
   refreshCifAtomSelectionUI();
   invalidateGeneratedCif();
+  renderCifStructureIfVisible();
 }
 function removeSelectedCifAtomRows(){
   const selected=cifSelectedAtomRows();
@@ -3170,6 +3752,7 @@ function removeSelectedCifAtomRows(){
   refreshCifAtomSelectionUI();
   saveCifGeneratorAtomsState();
   invalidateGeneratedCif();
+  renderCifStructureIfVisible();
 }
 
 let cifAtomDetailedSerial=0;
@@ -3186,10 +3769,13 @@ function addCifAtomDetailedRow(atomRow,values={}){
   const tableRow=document.createElement("div");
   tableRow.className="cif-thermal-row";
   tableRow.dataset.cifAtomUid=uid;
-  // Keep the Uij checkbox, row index and element together in the first
-  // column. The 6 numeric columns then remain directly aligned with U11–U23.
-  const atomCell=document.createElement("div");
-  atomCell.className="cif-thermal-cell cif-thermal-heading";
+  // Separate Index / Use / Atom columns, exactly as in Spins.  The Uij
+  // values stay associated with the source atom by their stable UID.
+  const indexCell=document.createElement("div");
+  indexCell.className="cif-thermal-cell cif-thermal-index";
+  tableRow.appendChild(indexCell);
+  const useCell=document.createElement("div");
+  useCell.className="cif-thermal-cell cif-thermal-use";
   const toggleLabel=document.createElement("label");
   toggleLabel.className="cif-thermal-toggle";
   const toggle=document.createElement("input");
@@ -3197,11 +3783,15 @@ function addCifAtomDetailedRow(atomRow,values={}){
   toggle.dataset.cifThermalField="useUij";
   toggle.checked=!!values.useUij || (Array.isArray(values.Uaniso) && values.Uaniso.length===3);
   toggle.setAttribute("aria-label","Use anisotropic Uij for this atom");
+  toggleLabel.appendChild(toggle);
+  useCell.appendChild(toggleLabel);
+  tableRow.appendChild(useCell);
+  const atomCell=document.createElement("div");
+  atomCell.className="cif-thermal-cell cif-thermal-atom";
   const atomName=document.createElement("span");
   atomName.className="cif-thermal-atom-name";
   atomName.textContent="Atom";
-  toggleLabel.append(toggle,atomName);
-  atomCell.appendChild(toggleLabel);
+  atomCell.appendChild(atomName);
   tableRow.appendChild(atomCell);
   const source=Array.isArray(values.Uij) ? values.Uij :
     (Array.isArray(values.Uaniso) ? [values.Uaniso[0]?.[0],values.Uaniso[1]?.[1],values.Uaniso[2]?.[2],values.Uaniso[0]?.[1],values.Uaniso[0]?.[2],values.Uaniso[1]?.[2]] : null);
@@ -3250,8 +3840,10 @@ function refreshCifAtomDetailedLabels(){
     const card=document.querySelector(`#cifAtomDetailedRows [data-cif-atom-uid="${rows[i].dataset.cifAtomUid}"]`);
     const label=rows[i].querySelector('[data-cif-atom-field="element"]')?.value.trim()||"Atom";
     if(card){
+      const index=card.querySelector(".cif-thermal-index");
+      if(index) index.textContent=String(i+1);
       const name=card.querySelector(".cif-thermal-atom-name");
-      if(name) name.textContent=`${i+1}. ${label}`;
+      if(name){name.textContent=label;name.title=label;}
       const checkbox=card.querySelector('[data-cif-thermal-field="useUij"]');
       if(checkbox) checkbox.setAttribute("aria-label",`Use anisotropic Uij for atom ${i+1}, ${label}`);
     }
@@ -3277,7 +3869,7 @@ function addCifAtomRow(values={}, {invalidate=true}={}){
   indexCell.setAttribute("aria-label","Atom row index");
   row.appendChild(indexCell);
   const specs=[
-    ["element","text",values.element ?? ""],
+    ["element","text",values.element ?? (structurePositionTableElement==='*'?'':structurePositionTableElement)],
     ["x","fraction",values.x ?? 0],
     ["y","fraction",values.y ?? 0],
     ["z","fraction",values.z ?? 0],
@@ -3298,7 +3890,7 @@ function addCifAtomRow(values={}, {invalidate=true}={}){
       input.addEventListener("change",()=>validateCifAtomNumericInput(input));
     }
     input.addEventListener("input",()=>{
-      if(key==="element") refreshCifAtomDetailedLabels();
+      if(key==="element") {refreshCifAtomDetailedLabels();refreshPositionTableToolbar();}
       saveCifGeneratorAtomsState();
     });
     input.addEventListener("change",saveCifGeneratorAtomsState);
@@ -3316,6 +3908,7 @@ function addCifAtomRow(values={}, {invalidate=true}={}){
   refreshCifAtomRowIndices();
   refreshCifAtomDetailedLabels();
   refreshCifAtomSelectionUI();
+  if(!restoringCifGeneratorAtoms)refreshPositionTableToolbar();
   saveCifGeneratorAtomsState();
   if(invalidate) invalidateGeneratedCif();
 }
@@ -3445,7 +4038,11 @@ function nextCifGeneratedBaseName(raw){
 
 function buildGeneratedCif(){
   applyCifLatticeConstraints();
-  const sg=selectedCifGeneratorSpaceGroup();
+  // Editing symmetry-equivalent atoms separately removes their symmetry
+  // constraint. Export a mathematically consistent P1 rather than applying
+  // the original operations to each explicit atom a second time.
+  const sg=structurePositionEditingMode==='individual'
+    ? cifSpaceGroups.find(item=>item.number===1) : selectedCifGeneratorSpaceGroup();
   if(!sg) throw new Error("Select a space group.");
   const lattice={
     a:cifGeneratorNumber("cifA","a",{positive:true}),
@@ -3731,6 +4328,15 @@ function renderCifReflectionTable(){
   }
 }
 
+function clearCifReflectionRowSelection(){
+  if(!selectedCifReflectionKey) return;
+  selectedCifReflectionKey='';
+  for(const row of document.querySelectorAll('#cifReflectionRows tr.cif-reflection-selected')){
+    row.classList.remove('cif-reflection-selected');
+    row.setAttribute('aria-selected','false');
+  }
+}
+
 // A reflection table describes the selected nuclear crystal, regardless of
 // whether the user has opened Nuclear or Magnetic or pressed Generate CIF.
 // A freshly generated (but not yet Set) CIF takes precedence so its preview
@@ -3926,16 +4532,46 @@ function setMagneticReflectionSort(key){
   updateMagneticSortHeaders();
   renderMagneticReflectionRows();
 }
+let selectedMagneticReflectionKey='';
+function clearMagneticReflectionRowSelection(){
+  if(!selectedMagneticReflectionKey) return;
+  selectedMagneticReflectionKey='';
+  for(const row of document.querySelectorAll('#magneticReflectionRows tr.cif-reflection-selected')){
+    row.classList.remove('cif-reflection-selected');
+    row.setAttribute('aria-selected','false');
+  }
+}
 function renderMagneticReflectionRows(){
   const body=$('magneticReflectionRows');if(!body)return;
   body.replaceChildren();
   const replication=lastMagneticParentIndexing?.replication || lastMagneticMotif?.replication || [1,1,1];
   const known=!!lastMagneticParentIndexing || lastMagneticMotif?.source!=='mCIF';
-  for(const row of sortedMagneticReflections(lastMagneticRows).slice(0,3000)){
-    const parentHkl=known?hklInParentCell(row.hkl,replication):null;
+  const indexHeader=$('magneticReflectionIndexHeader');
+  if(indexHeader) indexHeader.textContent=known?'HKL (parent cell)':'HKL (magnetic cell)';
+  const rows=sortedMagneticReflections(lastMagneticRows).slice(0,3000);
+  const available=new Set(rows.map(row=>hklKey(row.hkl)));
+  if(!available.has(selectedMagneticReflectionKey)) selectedMagneticReflectionKey='';
+  for(const row of rows){
+    const key=hklKey(row.hkl);
+    const indexHkl=known?hklInParentCell(row.hkl,replication):row.hkl;
     const tr=document.createElement('tr');
-    const values=[parentHkl?`(${parentHkl.map(v=>Number(v.toFixed(8))).join(' ')})`:'Unknown',row.formFactor??'1',Number(row.intensity).toFixed(7),Number(row.twoTheta).toFixed(4),Number(row.q).toFixed(5),Number(row.d).toFixed(5)];
+    tr.dataset.reflectionKey=key;
+    tr.tabIndex=0;
+    tr.classList.toggle('cif-reflection-selected',key===selectedMagneticReflectionKey);
+    tr.setAttribute('aria-selected',String(key===selectedMagneticReflectionKey));
+    const values=[`(${indexHkl.map(v=>Number(v.toFixed(8))).join(' ')})`,row.formFactor??'1',Number(row.intensity).toFixed(7),Number(row.twoTheta).toFixed(4),Number(row.q).toFixed(5),Number(row.d).toFixed(5)];
     for(const value of values){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}
+    const toggle=()=>{
+      selectedMagneticReflectionKey=selectedMagneticReflectionKey===key?'':key;
+      renderMagneticReflectionRows();
+      if(selectedMagneticReflectionKey){
+        body.querySelector(`tr[data-reflection-key="${CSS.escape(selectedMagneticReflectionKey)}"]`)?.focus({preventScroll:true});
+      }
+    };
+    tr.addEventListener('click',toggle);
+    tr.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();toggle();}
+    });
     body.appendChild(tr);
   }
 }
@@ -4020,9 +4656,10 @@ function downloadMagneticCsv(){
   if(!lastMagneticRows.length)return;
   const replication=lastMagneticParentIndexing?.replication || lastMagneticMotif?.replication || [1,1,1];
   const known=!!lastMagneticParentIndexing || lastMagneticMotif?.source!=='mCIF';
-  const lines=['parent_h,parent_k,parent_l,form_factor,FM2_barn,two_theta_deg,Q_inv_A,d_A',
+  const prefix=known?'parent':'magnetic';
+  const lines=[`${prefix}_h,${prefix}_k,${prefix}_l,form_factor,FM2_barn,two_theta_deg,Q_inv_A,d_A`,
     ...sortedMagneticReflections(lastMagneticRows).map(r=>[
-      ...(known?hklInParentCell(r.hkl,replication):['','','']),
+      ...(known?hklInParentCell(r.hkl,replication):r.hkl),
       `"${String(r.formFactor??'1').replace(/"/g,'""')}"`,r.intensity,r.twoTheta,r.q,r.d].join(','))];
   downloadGeneratedCif(lines.join('\n'),'magnetic_reflections.csv');
 }
@@ -4030,6 +4667,24 @@ function downloadBnsModel(){
   if(!lastMagneticMotif)return;
   const json=JSON.stringify({version:1,...lastMagneticMotif},null,2);
   downloadGeneratedCif(json,'magnetic_model_for_bns.json');
+}
+function initializeGeneratorTableOutsideClick(){
+  if(document.documentElement.dataset.cifTableOutsideClickBound) return;
+  document.documentElement.dataset.cifTableOutsideClickBound='1';
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element ? event.target : event.target?.parentElement;
+    if(!target) return;
+    // Reflection row click handlers replace their <tr> during rendering. Use
+    // the original propagation path, not closest(), so selection is not
+    // instantly cleared when the clicked row is detached from the DOM.
+    const path=typeof event.composedPath==='function'?event.composedPath():[];
+    if(!target.closest('#cifAtomRows .cif-atom-row, #mcifStructurePane, #mcifTabStructure')) clearCifAtomRowSelection();
+    if(!target.closest('#cifAtomColorRows .atoms-table-row, #mcifStructurePane, #mcifTabStructure'))clearAppearanceRowSelection();
+    if(!target.closest('#cifBondRows .structure-bond-row')) clearStructureBondSelection();
+    if(!target.closest('#cifMagMomentRows .structure-moment-row, #mcifStructurePane, #mcifTabStructure')) clearSpinRowSelection();
+    if(!path.some(node=>node?.id==='cifReflectionRows')) clearCifReflectionRowSelection();
+    if(!path.some(node=>node?.id==='magneticReflectionRows')) clearMagneticReflectionRowSelection();
+  });
 }
 function initializeMagneticReflections(){
   const button=$('magneticCalculateTable');
@@ -4098,6 +4753,8 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   }
   if(persist && generatorOutputTabRestored) try{ localStorage.setItem(GENERATOR_OUTPUT_TAB_STORAGE_KEY,name); }catch(_e){}
   if(name==='structure') requestAnimationFrame(renderCifStructureIfVisible);
+  if(name==='reflections' && $('generatorReflectionsMagnetic')?.classList.contains('active'))
+    calculateMagneticReflectionTable();
 }
 function setCifOutputTab(tab){
   setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
@@ -4113,12 +4770,22 @@ function setGeneratorMode(name){
   }
   try{localStorage.setItem('tas-simulator-generator-mode-v1',name);}catch(_e){}
 }
-function setGeneratorReflectionMode(name){
-  if(name!=='magnetic') name='nuclear';
+function setGeneratorReflectionMode(_requestedMode){
+  // Magnetic reflection intensity remains under validation. Disable the tab
+  // at the navigation layer, including persisted "magnetic" selections from
+  // older builds, without deleting any of the calculation implementation.
+  const name='nuclear';
+  const magneticTab=$('generatorReflectionsMagnetic');
+  if(magneticTab){
+    magneticTab.disabled=true;
+    magneticTab.setAttribute('aria-disabled','true');
+    magneticTab.tabIndex=-1;
+  }
   for(const [mode,tabId,paneId] of [['nuclear','generatorReflectionsNuclear','generatorNuclearReflectionsPane'],['magnetic','generatorReflectionsMagnetic','generatorMagneticReflectionsPane']]){
     const on=mode===name;
     $(tabId)?.classList.toggle('active',on);
     $(tabId)?.setAttribute('aria-selected',String(on));
+    $(tabId)?.setAttribute('tabindex',on?'0':'-1');
     $(paneId)?.classList.toggle('hidden',!on);
   }
   try{localStorage.setItem(GENERATOR_REFLECTION_MODE_KEY,name);}catch(_e){}
@@ -4192,7 +4859,13 @@ function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{me
   if(message){ cifStructureSourcePreference="loaded"; saveStructureViewerState(); }
   selectCifSpaceGroup(sg.number,{syncSystem:true});
   for(const [key,id] of Object.entries(CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(lattice[key]);
+  structurePositionEditingMode='sites';
+  structurePositionTableElement='*';
+  positionModeDrafts.sites=null;positionModeDrafts.individual=null;
+  positionManualSourceSignature=null;
+  positionSavedSourcePreference=null;
   replaceCifAtomRows(parsed.asymmetricSites.map(a=>({element:a.element,x:a.x,y:a.y,z:a.z,occupancy:a.occupancy,Biso:a.Biso ?? 0,Uaniso:a.Uaniso ?? null})));
+  refreshPositionTableToolbar();
   if($("cifGeneratedName")) $("cifGeneratedName").value=cleanCifBaseName(fileName);
   updateCifSpaceGroupInfo();
   if(parsed.magnetic) for(const [key,id] of Object.entries(CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(lattice[key]);
@@ -4247,6 +4920,7 @@ function nextMcifGeneratedBaseName(raw){
 function invalidateGeneratedMcif(){
   lastGeneratedMcifText=""; lastGeneratedMcifName="";
   for(const id of ["structureMcifDownload","structureMcifSet"]) if($(id)) $(id).disabled=true;
+  if($("cifOutputFormat")?.value==="mcif") setCifGeneratedReady(false);
 }
 function mcifMessage(message,error=false){
   const el=$("structureMcifMessage"); if(!el) return;
@@ -4349,8 +5023,51 @@ function generateMcifForReview(){
   mcifPreview(text);
   mcifMessage(`Generated ${lastGeneratedMcifName}; magnetic symmetry checked (${check.atoms.filter(a=>Array.isArray(a.magneticMoment)).length} magnetic atoms).`);
 }
-// The format selector advertises planned mCIF support without releasing
-// incomplete P1-only export as general BNS magnetic-symmetry output.
+// The public CIF/mCIF Generator exports all decorated atoms in magnetic P1.
+// BNS group classification is NOT inferred; the existing notice stays visible.
+function generateP1McifForReview(){
+  const generated=buildGeneratedCif();
+  const structure=generated.parsed;
+  const displayed=currentStructureForViewer()?.structure;
+  const sameSites=!!displayed && displayed.asymmetricSites?.length===structure.asymmetricSites?.length &&
+    structure.asymmetricSites.every((site,i)=>{
+      const other=displayed.asymmetricSites[i];
+      return other && site.element===other.element &&
+        ["x","y","z"].every(key=>Math.abs(((Number(site[key])-Number(other[key])+0.5)%1+1)%1-0.5)<1e-5);
+    });
+  const live=currentMomentSettings();
+  const settings=(structure.asymmetricSites||[]).map((site,siteIndex)=>{
+    const generatedKey=momentKey({...site,siteIndex});
+    const displayKey=sameSites?momentKey({...displayed.asymmetricSites[siteIndex],siteIndex}):null;
+    return live.get(generatedKey) || (displayKey && live.get(displayKey)) ||
+      structureMomentSettings.get(generatedKey) || (displayKey && structureMomentSettings.get(displayKey)) ||
+      defaultMomentSetting(site,structure);
+  });
+  const manual=spinEditingIsIndividual(structure);
+  const candidates=manual?individualSpinCandidates(structure):[];
+  const individualSettings=manual?Object.fromEntries(candidates.map(site=>[
+    site.individualKey.replace(/^individual:/,""),resolveIndividualSpin(site,structure,live)
+  ])):null;
+  const hasSpin=individualSettings ? Object.values(individualSettings).some(setting=>setting.enabled) :
+    settings.some(setting=>setting.enabled);
+  if(!hasSpin) throw new Error("Enable at least one magnetic site in Structure editor → Spins before generating an mCIF.");
+  const q=effectivePropagationVectorForStructure();
+  const basis=directLatticeBasis(structure.lattice);
+  const output=exportCommensurateMcif({
+    source:generated.text,structure,settings,individualSettings,
+    q:[q.h,q.k,q.l],mode:structureMomentStructureType,
+    axis:structureMomentRotationAxisVector(basis),chirality:structureMomentChirality,
+    p1Only:true
+  });
+  lastGeneratedMcifText=output.text;
+  lastGeneratedMcifName=`${cleanCifBaseName($("cifGeneratedName")?.value)}.mcif`;
+  if($("cifPreview")) $("cifPreview").textContent=output.text;
+  if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${lastGeneratedMcifName} (magnetic P1)`;
+  setCifGeneratedReady(true);
+  setCifGeneratorMessage(`Generated ${lastGeneratedMcifName}: magnetic P1, ${output.atomCount} atoms. Review before Download or Set.`);
+  return output;
+}
+
 function initializeUnifiedOutputActions(){
   const format=$("cifOutputFormat"),generate=$("cifOutputGenerate");
   if(!format || !generate || format.dataset.outputBound) return;
@@ -4366,9 +5083,8 @@ function initializeUnifiedOutputActions(){
     if($("cifOutputSet")) $("cifOutputSet").textContent=`Set ${word}`;
     const suffix=$("cifUnifiedFileSuffix");
     if(suffix) suffix.textContent=mcif?".mcif":".cif";
-    // Never activate an incomplete mCIF generator through these public buttons.
-    generate.disabled=mcif || !cifSpaceGroups.length;
-    setCifGeneratedReady(!!lastGeneratedCifText);
+    generate.disabled=!cifSpaceGroups.length;
+    setCifGeneratedReady(mcif ? !!lastGeneratedMcifText : !!lastGeneratedCifText);
   };
   format.addEventListener("change",update);
   update();
@@ -4403,8 +5119,22 @@ function initMcifGeneratorActions(){
       mcifMessage(`Set ${lastGeneratedMcifName} as the current mCIF.`);
     }catch(err){mcifMessage(err.message||String(err),true);}
   });
-  $("cifMagMomentRows")?.addEventListener("input",invalidateGeneratedMcif);
-  $("cifMagMomentRows")?.addEventListener("change",invalidateGeneratedMcif);
+  // Any change to the source cell, atomic positions, or magnetic model makes
+  // the previously reviewed mCIF stale (not just editing an XYZ spin field).
+  const magneticSourceChanged=ev=>{
+    const target=ev.target;
+    if(target?.closest?.('#cifAtomRows, #cifAtomDetailedRows, #cifMagMomentRows, #cifSpinBulkCheckbox') ||
+       ['cifA','cifB','cifC','cifAlpha','cifBeta','cifGamma',
+        'cifSpaceGroup','cifSpaceGroupNumber','cifCrystalSystem',
+        'cifMomentPropagationVector','cifMomentStructureType','cifMomentRotationAxis',
+        'cifMomentChirality','cifSpinEditingMode'].includes(target?.id)){
+      invalidateGeneratedMcif();
+    }
+  };
+  document.querySelector('.structure-control-section')?.addEventListener('input',magneticSourceChanged);
+  document.querySelector('.structure-control-section')?.addEventListener('change',magneticSourceChanged);
+  $('propagationVectors')?.addEventListener('input',invalidateGeneratedMcif);
+  $('propagationVectors')?.addEventListener('change',invalidateGeneratedMcif);
 }
 
 async function initializeCifGenerator(){
@@ -4421,11 +5151,16 @@ async function initializeCifGenerator(){
     populateCifSpaceGroupOptions(1);
     if(!getSelectedCifStructure()) restoreSelectedCifLocal();
     // Keep the editor's own initial cell until a structure is loaded.
-    addCifAtomRow({element:"",x:0,y:0,z:0,occupancy:1},{invalidate:false});
+    // A bootstrap placeholder must not overwrite a saved editor draft
+    // before restoreCifGeneratorAtomsState() has had a chance to read it.
+    restoringCifGeneratorAtoms=true;
+    try{addCifAtomRow({element:"",x:0,y:0,z:0,occupancy:1},{invalidate:false});}
+    finally{restoringCifGeneratorAtoms=false;}
     updateCifSpaceGroupInfo();
     syncCifReflectionBeamFromInstrument();
     if(getSelectedCifStructure()) loadParsedCifIntoGenerator(getSelectedCifStructure(),getSelectedCifFileName()||"selected_structure.cif",{message:false});
     else restoreCifGeneratorAtomsState();
+    initializePositionTableToolbar();
 
     setCifGeneratedReady(false);
     $("cifOutputFormat")?.dispatchEvent(new Event("change"));
@@ -4538,13 +5273,10 @@ async function initializeCifGenerator(){
       setCifGeneratorMessage(`Showing loaded file: ${fileName}.`);
     });
     $("cifShowGenerated")?.addEventListener("click",()=>{
-      if($("cifOutputFormat")?.value==="mcif"){
-        setCifGeneratorMessage("mCIF export with BNS magnetic space-group classification is planned for a future update.",true);
-        return;
-      }
-      const text=lastGeneratedCifText;
-      const fileName=lastGeneratedCifName;
-      if(!text){setCifGeneratorMessage("Generate CIF first to show its output.",true);return;}
+      const mcif=$("cifOutputFormat")?.value==="mcif";
+      const text=mcif?lastGeneratedMcifText:lastGeneratedCifText;
+      const fileName=mcif?lastGeneratedMcifName:lastGeneratedCifName;
+      if(!text){setCifGeneratorMessage(`Generate ${mcif?"mCIF":"CIF"} first to show its output.`,true);return;}
       showUnifiedCifPreview(text,`Generated file: ${fileName}`);
       setCifGeneratorMessage(`Showing generated file: ${fileName}.`);
     });
@@ -4562,51 +5294,55 @@ async function initializeCifGenerator(){
     });
 
     $("cifOutputGenerate")?.addEventListener("click",()=>{
-      if($("cifOutputFormat")?.value!=="cif") return;
+      const mcif=$("cifOutputFormat")?.value==="mcif";
       const nameInput=$("cifGeneratedName");
       const previousName=nameInput?.value ?? "generated_structure";
       if(nameInput) nameInput.value=nextCifGeneratedBaseName(previousName);
-      try{ generateCifForReview(); }
+      try{ if(mcif) generateP1McifForReview(); else generateCifForReview(); }
       catch(err){
         if(nameInput) nameInput.value=previousName;
-        invalidateGeneratedCif("");
+        if(mcif) invalidateGeneratedMcif(); else invalidateGeneratedCif("");
         setCifGeneratorMessage(err?.message||String(err),true);
       }
     });
     $("cifOutputDownload")?.addEventListener("click",()=>{
-      if($("cifOutputFormat")?.value!=="cif") return;
-      if(!lastGeneratedCifText){ setCifGeneratorMessage("Press Generate before downloading.",true); return; }
-      downloadGeneratedCif(lastGeneratedCifText,lastGeneratedCifName);
-      setCifGeneratorMessage(`Downloaded ${lastGeneratedCifName}.`);
+      const mcif=$("cifOutputFormat")?.value==="mcif";
+      const text=mcif?lastGeneratedMcifText:lastGeneratedCifText;
+      const name=mcif?lastGeneratedMcifName:lastGeneratedCifName;
+      if(!text){ setCifGeneratorMessage("Press Generate before downloading.",true); return; }
+      downloadGeneratedCif(text,name);
+      setCifGeneratorMessage(`Downloaded ${name}.`);
     });
     $("cifDownloadTable")?.addEventListener("click",()=>{
       try{ downloadCifReflectionTable(); }
       catch(err){ setCifGeneratorMessage(err?.message||String(err),true); }
     });
     $("cifOutputSet")?.addEventListener("click",()=>{
-      if($("cifOutputFormat")?.value!=="cif") return;
       try{
-        if(!lastGeneratedCifText) throw new Error("Press Generate before setting the CIF.");
+        const mcif=$("cifOutputFormat")?.value==="mcif";
+        const text=mcif?lastGeneratedMcifText:lastGeneratedCifText;
+        const name=mcif?lastGeneratedMcifName:lastGeneratedCifName;
+        if(!text) throw new Error(`Press Generate before setting the ${mcif?"mCIF":"CIF"}.`);
         if($("sampleMode")?.value!=="single"){
           $("sampleMode").value="single"; updateModeVisibility();
         }
-        const parsed=loadCifText(lastGeneratedCifText,lastGeneratedCifName);
+        const parsed=loadCifText(text,name);
         cifStructureSourcePreference="selected";
         saveStructureViewerState();
         renderCifStructureIfVisible();
-        setCifGeneratorMessage(`Set ${lastGeneratedCifName} as the selected CIF: ${parsed.atoms.length} expanded atom(s).`);
+        setCifGeneratorMessage(`Set ${name} as the selected ${mcif?"mCIF":"CIF"}: ${parsed.atoms.length} expanded atom(s).`);
       }catch(err){ setCifGeneratorMessage(err?.message||String(err),true); }
     });
 
     for(const button of document.querySelectorAll("[data-generator-output-tab]")){
       button.addEventListener("click",()=>setUnifiedGeneratorOutputTab(button.dataset.generatorOutputTab,{persist:true}));
     }
-    for(const [id,mode] of [['generatorReflectionsNuclear','nuclear'],['generatorReflectionsMagnetic','magnetic']]){
-      $(id)?.addEventListener('click',()=>setGeneratorReflectionMode(mode));
-    }
+    // Only Nuclear can be selected until magnetic reflections are validated.
+    $('generatorReflectionsNuclear')?.addEventListener('click',()=>setGeneratorReflectionMode('nuclear'));
     // Attach the actual Calculate / CSV / BNS buttons. The magnetic pane can
     // be visible without these listeners if only the tab switch is wired.
     initializeMagneticReflections();
+    initializeGeneratorTableOutsideClick();
     let savedReflectionMode='nuclear';
     try{savedReflectionMode=localStorage.getItem(GENERATOR_REFLECTION_MODE_KEY)||'nuclear';}catch(_e){}
     setGeneratorReflectionMode(savedReflectionMode);
@@ -4647,7 +5383,9 @@ async function initializeCifGenerator(){
       });
     }
     prepareStructureViewerControls();
-    $("cifAddBondRule")?.addEventListener("click",addStructureBondRule);
+    $("cifAddBondRule")?.addEventListener("click",()=>addStructureBondRule());
+    $("cifCopyBondRule")?.addEventListener("click",copySelectedStructureBondRules);
+    $("cifRemoveBondRule")?.addEventListener("click",removeSelectedStructureBondRules);
     // Split range controls bind themselves in createSplitRangeControls(). The
     // legacy combined inputs stay hidden and synchronized only for saved-state
     // compatibility; do not attach redraw handlers to them.

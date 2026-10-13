@@ -141,7 +141,7 @@ function nuclearOperationsFromMagnetic(ops){
   }
   return [...unique.values()];
 }
-export function exportCommensurateMcif({source,structure,settings,individualSettings=null,q=[0,0,0],mode='collinear',axis=[0,0,1],chirality='CCW',fallbackOperations=[]}){
+export function exportCommensurateMcif({source,structure,settings,individualSettings=null,q=[0,0,0],mode='collinear',axis=[0,0,1],chirality='CCW',fallbackOperations=[],p1Only=false}){
   if(structure?.magnetic)throw new Error('For an imported mCIF use the existing moment-update export.');
   if(!Array.isArray(structure?.atoms)||!structure.atoms.length)throw new Error('CIF atomic sites are missing.');
   if(!Array.isArray(q)||q.length!==3||q.some(x=>!Number.isFinite(x)))throw new Error('Invalid propagation vector.');
@@ -184,7 +184,10 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     if(ix>=0){if(!spinMatch(dedup[ix].moment,s.moment))throw new Error(`Conflicting moments at overlapping ${s.element} site. Reduce the input symmetry or use per-atom moment settings.`);}
     else dedup.push(s);
   }
-  const ops=catalogOps(dedup,parseSpatialOperations(source,fallbackOperations),N);
+  // Public Generator mCIF mode deliberately uses magnetic P1. Do not infer
+  // BNS symmetry from a nuclear space-group setting or from user-entered spins.
+  const ops=p1Only ? [{R:[[1,0,0],[0,1,0],[0,0,1]],t:[0,0,0],parity:1}] :
+    catalogOps(dedup,parseSpatialOperations(source,fallbackOperations),N);
   const seen=new Set(),reps=[];
   for(let i=0;i<dedup.length;i++){
     if(seen.has(i))continue;
@@ -197,6 +200,7 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     `_cell_length_a ${fmt(lattice.a)}` ,`_cell_length_b ${fmt(lattice.b)}` ,`_cell_length_c ${fmt(lattice.c)}`,
     `_cell_angle_alpha ${fmt(lattice.alpha)}`,`_cell_angle_beta ${fmt(lattice.beta)}`,`_cell_angle_gamma ${fmt(lattice.gamma)}`,
     ...parentGroup,
+    ...(p1Only ? ["_space_group_IT_number 1", "_space_group_name_H-M_alt 'P 1'"] : []),
     "_space_group_magn.name_BNS '?'",'',
     // Explicit ordinary-space-group operations let non-magnetic CIF readers
     // retain the nuclear symmetry instead of silently falling back to P1.

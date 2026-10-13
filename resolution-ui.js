@@ -318,6 +318,18 @@ function updateResolutionPlaneWarning(){
   setScatteringPlaneWarning('resolutionPlaneWarning',message);
 }
 
+// Resolution diagnostics belong to Calculation point, not the global error
+// banner above the main tabs.  The live HKL plane warning is already shown
+// there; keep that precise message instead of duplicating the core exception.
+function showResolutionCalculationWarning(error){
+  const message=userFacingTasMessage(error instanceof Error ? error.message : String(error));
+  const livePlaneWarning=$('resolutionPlaneWarning')?.textContent?.trim()||'';
+  const outOfPlane=/Calculation Q is out of plane/i.test(message);
+  setScatteringPlaneWarning('resolutionPlaneWarning',
+    outOfPlane && livePlaneWarning ? livePlaneWarning : `Warning: ${message.replace(/^Warning:\s*/i,'')}`);
+  clearResolutionResults();
+}
+
 function doSingleResolution(){
   if(resolutionIsUnavailable()){
     clearResolutionResults();
@@ -332,7 +344,7 @@ function doSingleResolution(){
     // Single-point Calc: always fit to this calculation's resolution ellipse.
     renderResolution(e,'',e.result.lim);
     $('calcSingleResolution')?.classList.remove('needs-calc');
-  }catch(e){showError(e);}
+  }catch(e){showResolutionCalculationWarning(e);}
 }
 function doScanResolution(){
   if(resolutionIsUnavailable()){
@@ -356,7 +368,7 @@ function doScanResolution(){
     renderResolutionScan(1);
   }catch(e){
     scanResolutionPlotLimits=null;
-    showError(e);
+    showResolutionCalculationWarning(e);
   }
 }
 function renderResolutionScan(i){
