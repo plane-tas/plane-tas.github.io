@@ -8336,3 +8336,59 @@ input[type="number"]::-webkit-outer-spin-button{
     .cif-thermal-table-wrap){
   overscroll-behavior:contain;
 }
+
+
+/* Style rule visibility (No | Show | Atom 1 | Atom 2 | Min | Max | Width | Color).
+   Keep the same Positions-style typography and per-table horizontal scrolling. */
+#structurePanel .structure-style-table {
+  grid-template-columns:
+    calc(36px * var(--tas-density))
+    calc(46px * var(--tas-density))
+    repeat(2,minmax(calc(81px * var(--tas-density)),1fr))
+    repeat(3,minmax(calc(70px * var(--tas-density)),1fr))
+    calc(45px * var(--tas-density));
+  min-width:calc(538px * var(--tas-density));
+}
+#structurePanel .structure-style-table .structure-style-enabled input[type=checkbox] {
+  box-sizing:border-box;
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+  margin:0;
+  cursor:pointer;
+  accent-color:#3479b6;
+  flex-shrink:0;
+}
+/* Preserve row-selection feedback while making temporarily hidden rules legible. */
+#structurePanel #cifBondRows .structure-bond-row.style-rule-hidden:not(.style-row-selected) >
+  .structure-style-cell:not(.structure-style-enabled) {
+  color:#858585;
+  background:#f7f7f7;
+}
+#structurePanel #cifBondRows .structure-bond-row.style-rule-hidden:not(.style-row-selected)
+  .structure-style-cell :is(select,input[type=number],input[type=color]) {
+  opacity:.68;
+}
+
+/* Style bulk visibility: match the Spins header's checkbox + All layout. */
+#structurePanel .structure-style-table .structure-style-bulk-header label {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:calc(3px * var(--tas-density));
+  margin:0;
+  cursor:pointer;
+  font-size:inherit;
+  font-weight:inherit;
+}
+#structurePanel .structure-style-table .structure-style-bulk-header input[type=checkbox] {
+  box-sizing:border-box;
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+  min-width:0;
+  margin:0;
+  cursor:pointer;
+  accent-color:#3479b6;
+}
+#structurePanel .structure-style-table .structure-style-bulk-header input[type=checkbox]:disabled {
+  cursor:not-allowed;
+}

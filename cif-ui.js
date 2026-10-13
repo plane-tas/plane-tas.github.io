@@ -2135,6 +2135,9 @@ function readStructureBondRules(){
     min=Math.max(0,min); max=Math.max(0,max);
     if(max<min) [min,max]=[max,min];
     return {
+      // Visibility is presentation only: keep disabled rules for editing, copy
+      // and restoring the structure-specific Style state.
+      enabled:row.querySelector('[data-bond-field="enabled"]')?.checked !== false,
       a:String(row.querySelector('[data-bond-field="a"]')?.value || "").trim(),
       b:String(row.querySelector('[data-bond-field="b"]')?.value || "").trim(),
       minDistance:min,
@@ -2172,6 +2175,27 @@ let structureBondSelectionAnchor=null;
 let structureBondRowSerial=0;
 let structureBondDraggedRows=null;
 const selectedStructureBondRows=()=>[...document.querySelectorAll('#cifBondRows .structure-bond-row.style-row-selected')];
+// Style's All header follows the same checked / mixed / unchecked rules as
+// Spins, without affecting the selected rows or deleting hidden rules.
+function syncStructureBondBulkCheckbox(){
+  const checkbox=$("cifStyleBulkCheckbox");
+  if(!checkbox)return;
+  const toggles=[...document.querySelectorAll('#cifBondRows [data-bond-field="enabled"]')];
+  const enabled=toggles.filter(toggle=>toggle.checked).length;
+  checkbox.disabled=toggles.length===0;
+  checkbox.checked=toggles.length>0 && enabled===toggles.length;
+  checkbox.indeterminate=enabled>0 && enabled<toggles.length;
+}
+function setAllStructureBondRulesVisible(visible){
+  for(const toggle of document.querySelectorAll('#cifBondRows [data-bond-field="enabled"]')){
+    toggle.checked=!!visible;
+    toggle.closest('.structure-bond-row')?.classList.toggle('style-rule-hidden',!visible);
+  }
+  syncStructureBondBulkCheckbox();
+  saveStructureViewerState();
+  renderCifStructureIfVisible();
+}
+
 function refreshStructureBondSelection(){
   const hasSelection=selectedStructureBondRows().length>0;
   for(const id of ['cifCopyBondRule','cifRemoveBondRule']){
@@ -2286,7 +2310,22 @@ function createBondRuleRow(rule={},elements=[]){
   const color=document.createElement('input');color.type='color';color.dataset.bondField='color';
   color.value=rule.color||defaultBondColor(a.value,b.value);color.title='Bond color';
   const index=cell('index','');index.setAttribute('aria-label','Style rule index');
-  row.append(index,cell('select',a),cell('select',b),cell('number',minDistance),cell('number',maxDistance),cell('number',width),cell('color',color));
+  // Explicit on/off flag; unrelated to row selection and never removes a rule.
+  // Legacy saved Style rules have no `enabled` field and remain visible.
+  const enabled=document.createElement('input');
+  enabled.type='checkbox';enabled.dataset.bondField='enabled';
+  enabled.checked=rule.enabled!==false;
+  enabled.title='Show or hide this Style rule';
+  enabled.setAttribute('aria-label','Show Style rule');
+  enabled.addEventListener('click',event=>event.stopPropagation());
+  enabled.addEventListener('change',()=>{
+    row.classList.toggle('style-rule-hidden',!enabled.checked);
+    syncStructureBondBulkCheckbox();
+    saveStructureViewerState();
+    renderCifStructureIfVisible();
+  });
+  row.classList.toggle('style-rule-hidden',!enabled.checked);
+  row.append(index,cell('enabled',enabled),cell('select',a),cell('select',b),cell('number',minDistance),cell('number',maxDistance),cell('number',width),cell('color',color));
   // Retain the original default pair-color behavior, unless customized.
   let customized=!!rule.color && rule.color.toLowerCase()!==defaultBondColor(a.value,b.value).toLowerCase();
   color.addEventListener('input',()=>{customized=true;});
@@ -2316,10 +2355,10 @@ function updateStructureBondRows(elements,seedRules=null){
   structureBondSelectionAnchor=null;
   if(!elements.length){
     const div=document.createElement('div');div.className='structure-rows-empty';
-    div.textContent='No atoms available.';host.appendChild(div);refreshStructureBondSelection();return;
+    div.textContent='No atoms available.';host.appendChild(div);refreshStructureBondSelection();syncStructureBondBulkCheckbox();return;
   }
   for(const rule of rules)host.appendChild(createBondRuleRow(rule,elements));
-  refreshStructureBondIndices();refreshStructureBondSelection();
+  refreshStructureBondIndices();refreshStructureBondSelection();syncStructureBondBulkCheckbox();
 }
 function addStructureBondRule(rule=null){
   const info=currentStructureForViewer();const elements=structureElements(info?.structure||null);
@@ -2330,7 +2369,7 @@ function addStructureBondRule(rule=null){
   const row=createBondRuleRow(newRule,elements);
   clearStructureBondSelection();host.appendChild(row);
   row.classList.add('style-row-selected');structureBondSelectionAnchor=row.dataset.styleUid;
-  refreshStructureBondIndices();refreshStructureBondSelection();
+  refreshStructureBondIndices();refreshStructureBondSelection();syncStructureBondBulkCheckbox();
   saveStructureViewerState();renderCifStructureIfVisible();
   return row;
 }
@@ -2344,7 +2383,7 @@ function copySelectedStructureBondRules(){
     const row=createBondRuleRow(rule,elements);host.appendChild(row);
     row.classList.add('style-row-selected');structureBondSelectionAnchor=row.dataset.styleUid;
   }
-  refreshStructureBondIndices();refreshStructureBondSelection();
+  refreshStructureBondIndices();refreshStructureBondSelection();syncStructureBondBulkCheckbox();
   saveStructureViewerState();renderCifStructureIfVisible();
 }
 function readBondRuleFromRow(row){
@@ -2358,7 +2397,7 @@ function removeSelectedStructureBondRules(){
   if(!selectedStructureBondRows().length)return;
   selectedStructureBondRows().forEach(row=>row.remove());
   structureBondSelectionAnchor=null;
-  refreshStructureBondIndices();refreshStructureBondSelection();
+  refreshStructureBondIndices();refreshStructureBondSelection();syncStructureBondBulkCheckbox();
   saveStructureViewerState();renderCifStructureIfVisible();
 }
 function structureSignature(structure){
@@ -2400,7 +2439,8 @@ function bondMatchesPair(rule,a,b){ return (rule.a===a&&rule.b===b)||(rule.a===b
 function bondTraces(atoms,basis,rules){
   const traces=[];
   for(const rule of rules){
-    if(rule.maxDistance<rule.minDistance) continue;
+    // Hidden rules stay in the editor and saved state, but contribute no bonds.
+    if(rule.enabled===false || rule.maxDistance<rule.minDistance) continue;
     const x=[],y=[],z=[];
     for(let i=0;i<atoms.length;i++){
       const ai=atoms[i];
@@ -5451,6 +5491,11 @@ async function initializeCifGenerator(){
       });
     }
     prepareStructureViewerControls();
+    const styleBulkToggle=$("cifStyleBulkCheckbox");
+    if(styleBulkToggle && !styleBulkToggle.dataset.structureBound){
+      styleBulkToggle.dataset.structureBound="1";
+      styleBulkToggle.addEventListener("change",()=>setAllStructureBondRulesVisible(styleBulkToggle.checked));
+    }
     $("cifAddBondRule")?.addEventListener("click",()=>addStructureBondRule());
     $("cifCopyBondRule")?.addEventListener("click",copySelectedStructureBondRules);
     $("cifRemoveBondRule")?.addEventListener("click",removeSelectedStructureBondRules);
