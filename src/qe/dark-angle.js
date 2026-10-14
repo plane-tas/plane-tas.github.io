@@ -1,4 +1,4 @@
-import {darkDirectBeamZeroShiftDeg} from "./tas-conventions.js";
+import {darkDirectBeamZeroShiftDeg} from "../core/tas-conventions.js";
 
 export function createDarkAngle(deps){
   const {

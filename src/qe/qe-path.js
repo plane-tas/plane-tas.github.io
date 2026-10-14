@@ -1,6 +1,6 @@
 // Q-E map units, spurion warnings and the Q-vector path editor (path text, picking, snapping).
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {dot} from '../tas-core.js';
+import {dot} from '../core/tas-core.js';
 
 export function createQEPath(deps){
   const {

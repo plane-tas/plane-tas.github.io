@@ -1,5 +1,16 @@
-export function createPowderQE(deps){
-  const {$, PI, deg2rad, rad2deg, clamp, linspace, arange, add, scale, norm, reciprocalVectors, num, checkedValue, currentInstrument, instrumentInterp, rangeTable, s2DependsOnEi, configuredConstantS2Max, effectiveS2MaxAtEi, validateEffectiveS2Max, backgroundMaterials, selectedBackgrounds, backgroundColor, currentPlotRanges, enabledPropagationVectors, formatHKL, selectedSampleCentering, selectedSampleSpaceGroup, centeringFromSpaceGroup, isAllowedByCentering, getSelectedCifStructure, nuclearStructureFactorSquared, hklToQ, latticeParams, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, syncPowderLinkedInputs, setPowderLinkDriver, powderLinkDriver}=deps;
+// Powder Q-E map: background powder peaks/curves and calculatePowder.
+// Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
+import {PI, add, arange, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '../core/tas-core.js';
+import {nuclearStructureFactorSquared} from '../cif/cif-structure.js';
+
+export function createPowder(deps){
+  const {
+    backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
+    effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
+    latticeParams, num, powderWavevectors, rangeTable, renderQEExternalLegend, selectedBackgrounds,
+    selectedSampleCentering, validateEffectiveS2Max, getNuclearCifStructure
+  }=deps;
+
 function powderS2ForQAtHW(q,hw){
   const wv=powderWavevectors(hw);
   if(!wv) return NaN;
@@ -177,7 +188,6 @@ function appendPowderBraggLine(target,q,hwList,detailHtml){
 }
 
 function calculatePowder(){
-  const selectedCifStructure=getSelectedCifStructure();
   const inst=currentInstrument();
   const lc=latticeParams();
   const rv=reciprocalVectors(lc.a,lc.b,lc.c,lc.alpha,lc.beta,lc.gamma);
@@ -243,6 +253,8 @@ function calculatePowder(){
   const kmax=Math.max(1,Math.ceil(lc.b*parentQlim/(2*PI))+1);
   const lmax=Math.max(1,Math.ceil(lc.c*parentQlim/(2*PI))+1);
 
+  // Nuclear intensities use the crystallographic cell (the parent cell of an mCIF).
+  const nuclearCifStructure=getNuclearCifStructure();
   const parentCandidates=[];
   for(let h=-hmax;h<=hmax;h++){
     for(let k=-kmax;k<=kmax;k++){
@@ -253,8 +265,8 @@ function calculatePowder(){
         const G=add(add(scale(rv.astar,h),scale(rv.bstar,k)),scale(rv.cstar,l));
         const q=norm(G);
         if(q>parentQlim+1e-10) continue;
-        const sf2=selectedCifStructure && !isOrigin
-          ? nuclearStructureFactorSquared(selectedCifStructure,hkl,q)
+        const sf2=nuclearCifStructure && !isOrigin
+          ? nuclearStructureFactorSquared(nuclearCifStructure,hkl,q)
           : null;
         parentCandidates.push({hkl,q,isOrigin,sf2:Number.isFinite(sf2)?sf2:null});
       }
@@ -264,7 +276,7 @@ function calculatePowder(){
   // Match the existing Single-crystal CIF extinction handling: remove
   // effectively extinct nuclear parents only when a CIF structure factor is
   // available.  Keep the origin as a valid magnetic-satellite parent.
-  if(selectedCifStructure){
+  if(nuclearCifStructure){
     const sfMax=Math.max(0,...parentCandidates.filter(p=>!p.isOrigin).map(p=>Number.isFinite(p.sf2)?p.sf2:0));
     if(sfMax>0){
       for(let i=parentCandidates.length-1;i>=0;i--){
@@ -381,38 +393,43 @@ function calculatePowder(){
   }
 
   const qMargin=0.1*Qlim;
-  const title=`${inst.name||"Instrument"} | ${energyMode==="Ef fixed"?"Ef":"Ei"}=${E.toFixed(2)} meV | `+
-    `a=${lc.a.toFixed(3)}, b=${lc.b.toFixed(3)}, c=${lc.c.toFixed(3)} Å<br>`+
-    `α=${lc.alpha.toFixed(1)}, β=${lc.beta.toFixed(1)}, γ=${lc.gamma.toFixed(1)}°`;
-
   const keptPowderView=currentPlotRanges("powderPlot");
 
+  renderQEExternalLegend('qePowderLegend','powderPlot',traces);
   Plotly.react("powderPlot",traces,{
     uirevision:"powderPlot-q",
-    title:{text:title,x:0.5,xanchor:"center",font:{size:16}},
+    showlegend:false,
     xaxis:{
       title:"Q (Å⁻¹)",
       // Powder Q is non-negative by definition.  Always anchor the displayed
       // x-axis at Q = 0; preserve only a previously zoomed positive upper edge.
       range:[0,(keptPowderView.x && keptPowderView.x[1]>0) ? keptPowderView.x[1] : Qlim+qMargin],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,
-      // Draw a complete rectangular plotting frame on all four sides.
-      showline:true,mirror:"allticks",ticks:"outside",linecolor:"black",linewidth:1.5,automargin:true
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Use the same thin frame as the Q vector–E map.
+      showline:false,ticks:"outside",automargin:true
     },
     yaxis:{
       title:"ħω (meV)",
       // Keep the displayed hbar-omega range exactly on the generated
       // accessible-range endpoints; no extra top/bottom padding.
       range:[hwmin,hwmax],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,
-      // Match the x-axis with a complete rectangular plotting frame.
-      showline:true,mirror:"allticks",ticks:"outside",linecolor:"black",linewidth:1.5,automargin:true
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Match the Q vector–E map on all four sides.
+      showline:false,ticks:"outside",automargin:true
     },
+    // Draw the axes frame at the plot data boundary on all four sides.
+    // A paper-coordinate shape is independent of the trace type and survives
+    // dense Powder overlays. The redundant exterior CSS plot border is removed.
+    shapes:[{
+      type:"rect",xref:"paper",yref:"paper",
+      x0:0,y0:0,x1:1,y1:1,
+      layer:"above",fillcolor:"rgba(0,0,0,0)",
+      line:{color:"#555",width:1.2}
+    }],
     plot_bgcolor:"white",paper_bgcolor:"white",
-    legend:{orientation:"h",x:0.5,xanchor:"center",y:-0.16,yanchor:"top"},
-    margin:{l:66,r:34,t:80,b:110},
+    margin:{l:66,r:34,t:30,b:65},
     hovermode:"closest"
-  },{responsive:true});
+  },{responsive:true,doubleClick:"reset"});
 
   return {
     inst,lc,energyMode,
@@ -424,13 +441,6 @@ function calculatePowder(){
 }
 
   return {
-    powderS2ForQAtHW,
-    powderSfText,
-    groupPowderReflectionsByQ,
-    backgroundPowderCorrectionAtElasticQ,
-    backgroundPowderPeaks,
-    representativePowderHklText,
-    powderS2HoverText,
-    calculatePowder,
+    backgroundPowderPeaks, calculatePowder, powderS2ForQAtHW, representativePowderHklText
   };
 }

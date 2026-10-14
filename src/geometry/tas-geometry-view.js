@@ -1,4 +1,4 @@
-import {darkDirectBeamZeroShiftDeg} from "./tas-conventions.js";
+import {darkDirectBeamZeroShiftDeg} from "../core/tas-conventions.js";
 
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.

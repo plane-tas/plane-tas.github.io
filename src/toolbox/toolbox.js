@@ -1,9 +1,9 @@
 // Toolbox feature module extracted from app.js.
 // DOM behavior is preserved; app.js injects the small UI/state boundary.
 
-import {deg2rad, rad2deg, clamp} from "./tas-core.js";
-import {initializeMagneticFormFactorUI} from "./magnetic-form-factor.js";
-import {neutronAbsorptionSummary, absorptionCrossSectionBarn, scatteringCrossSectionBarn, coherentCrossSectionBarn, incoherentCrossSectionBarn, neutronDataRecord} from "./cif-structure.js";
+import {deg2rad, rad2deg, clamp} from "../core/tas-core.js";
+import {initializeMagneticFormFactorUI} from "../magnetic/magnetic-form-factor.js";
+import {neutronAbsorptionSummary, absorptionCrossSectionBarn, scatteringCrossSectionBarn, coherentCrossSectionBarn, incoherentCrossSectionBarn, neutronDataRecord} from "../cif/cif-structure.js";
 
 export function createToolbox({
   $, num, checkedValue,

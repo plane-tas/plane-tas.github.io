@@ -1,6 +1,6 @@
 // Parent crystallographic cell reconstruction for imported mCIF files.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {parentIndexingFromMcif} from '../magnetic-reflections.js';
+import {parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 
 export function installMcifParentCell(ctx){
   const {deps:{

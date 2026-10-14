@@ -1,6 +1,6 @@
 // Static-data discovery/loading helpers extracted from app.js.
 
-import {parseCifStructure} from "./cif-structure.js";
+import {parseCifStructure} from "../cif/cif-structure.js";
 
 export async function fetchJson(url){
   const response = await fetch(url, {cache: "no-store"});

@@ -1,6 +1,6 @@
 // Magnetic reflection table (calculation, sorting, CSV/model download).
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {buildMagneticMotif, explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, parentIndexingFromMcif} from '../magnetic-reflections.js';
+import {buildMagneticMotif, explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 
 export function installMagneticReflectionsTable(ctx){
   const {deps:{

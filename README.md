@@ -65,24 +65,33 @@ Geometry calculations use the selected instrument configuration and the sign/geo
 
 ## Code organization
 
-The browser application uses ES modules, with responsibilities separated across files including:
+The browser application uses plain ES modules (no build step). All code lives in `src/`; `index.html` loads `src/app.js`.
 
-| File | Responsibility |
+| Path | Responsibility |
 | --- | --- |
-| `index.html`, `styles.css` | Application interface and responsive layout |
-| `app.js`, `app-bootstrap.js`, `app-runtime.js` | Application integration and calculation/event flow |
-| `ui-shell.js`, `sidebar-dynamic-ui.js` | Tab, panel and dynamic-interface behavior |
-| `data-loader.js`, `instrument-config.js` | Static project data and instrument configurations |
-| `tas-core.js`, `tas-conventions.js`, `tas-angle-calculation.js`, `tas-geometry-view.js` | Reciprocal-space/TAS geometry and instrument conventions |
-| `qe-plot.js`, `qe-single-crystal.js`, `powder-qe.js`, `dark-angle.js` | Q–E display, scattering accessibility and overlays |
-| `resolution-core.js`, `resolution-ui.js`, `matrix.js` | Resolution calculations and display |
-| `cif-ui.js`, `cif-structure.js`, `cif-symmetry.js` | CIF/mCIF input, Structure editor and nuclear reflections |
-| `mcif-export.js`, `magnetic-reflections.js` | Experimental mCIF export; magnetic-reflection calculation disabled in public interface |
-| `magnetic-form-factor.js`, `magnetic-form-factor-data.js` | Magnetic-ion form-factor calculation and coefficients |
-| `script-workspace.js`, `script-ui.js` | Measurement scripts, SPICE and time estimates |
-| `toolbox.js`, `toolbox-ui.js` | Unit conversion, attenuation and form-factor toolbox |
+| `index.html`, `styles/*.css` | Application interface and responsive layout. Stylesheets are linked in numeric order; the order is significant. |
+| `src/app.js` | Entry point: creates the feature modules, wires their dependencies, restores saved settings and runs the first calculation |
+| `src/app/` | Shared application UI: tabs and saved settings (`ui-shell.js`), data loading, fixed-beam units, sidebar rows, instrument setup, recalculation scheduling |
+| `src/core/` | Reciprocal-space/TAS geometry, instrument conventions, angle calculation and matrix helpers |
+| `src/qe/` | Q–E Range: single-crystal and powder maps, Q-vector map and path, dark-angle overlays |
+| `src/geometry/` | TAS geometry view and quick geometry targets |
+| `src/resolution/` | Resolution calculations and display |
+| `src/cif/` | CIF/mCIF parsing, symmetry, nuclear structure factors and mCIF export; `cif-ui.js` installs the Structure editor parts in `src/cif/ui/` |
+| `src/magnetic/` | Magnetic reflections and magnetic form factors (magnetic-reflection intensities are disabled in the public interface pending validation) |
+| `src/toolbox/` | Unit conversion, S2 conversion, attenuation and form-factor toolbox |
+| `src/script/` | Measurement scripts, SPICE and time estimates |
 
-Instrument definitions and other optional static data live in project directories such as `instrument/`, `BG_material/` and `sample_environments/`, where provided.
+Static data stays at the project root because it is loaded by path: `instrument/`, `BG_material/`, `sample_environments/`, `neutron-data.json` and `space-groups.json`.
+
+### Local development
+
+Serve the project directory over HTTP (ES modules and the data directories do not load from `file://`), for example:
+
+```
+python -m http.server 8888
+```
+
+Then open `http://localhost:8888/`. After changing code, force-reload the page (Ctrl + Shift + R) so the browser does not use cached modules.
 
 ## User manual
 

@@ -1,7 +1,7 @@
 // Instrument configuration: Q-E range tables, S2 limits, analyzer/monochromator crystals and defaults.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {interpExtrap} from '../tas-core.js';
-import {normalizeS1Sign, normalizeTasSense} from '../tas-conventions.js';
+import {interpExtrap} from '../core/tas-core.js';
+import {normalizeS1Sign, normalizeTasSense} from '../core/tas-conventions.js';
 
 export function createInstrumentSetup(deps){
   const {

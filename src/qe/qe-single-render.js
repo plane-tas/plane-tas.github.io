@@ -1,7 +1,7 @@
 // Constant-E map rendering (renderSingle), external legends, hw slider and navigation controls.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {PI, deg2rad, linspace} from '../tas-core.js';
-import {tasConvention} from '../tas-conventions.js';
+import {PI, deg2rad, linspace} from '../core/tas-core.js';
+import {tasConvention} from '../core/tas-conventions.js';
 
 export function createQESingleRender(deps){
   const {

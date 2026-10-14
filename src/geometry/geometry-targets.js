@@ -1,7 +1,7 @@
 // TAS Geometry quick targets: target HKL from U/V/Bragg/dark reference and ki orientation conditions.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {clamp, deg2rad, dot, makeSpiceScatteringPlaneBasis, norm, rad2deg} from '../tas-core.js';
-import {angleDiffDeg, tasConvention, tasCrystalPhiDegForConvention, tasPlotPhiFromCrystalPhiForConvention, wrap180} from '../tas-conventions.js';
+import {clamp, deg2rad, dot, makeSpiceScatteringPlaneBasis, norm, rad2deg} from '../core/tas-core.js';
+import {angleDiffDeg, tasConvention, tasCrystalPhiDegForConvention, tasPlotPhiFromCrystalPhiForConvention, wrap180} from '../core/tas-conventions.js';
 
 export function createGeometryTargets(deps){
   const {

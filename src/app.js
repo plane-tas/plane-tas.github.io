@@ -3,46 +3,46 @@ import {
   add, sub, scale, dot, norm, cross, normalize,
   RL_calc, UB_calc, makeSpiceScatteringPlaneBasis,
   linspace, arange
-} from "./tas-core.js";
-import {RL_calc as RLRes, inferOutOfPlaneHKL, calcResolution} from "./resolution-core.js";
+} from "./core/tas-core.js";
+import {RL_calc as RLRes, inferOutOfPlaneHKL, calcResolution} from "./resolution/resolution-core.js";
 import {
   parseCifStructure, nuclearStructureFactorSquared, setNeutronData
-} from "./cif-structure.js";
+} from "./cif/cif-structure.js";
 import {
   normalizeTasSense, normalizeS1Sign, tasConvention,
   wrap180, angleDiffDeg,
   tasPhiLabDegForConvention,
   tasCrystalPhiDegForConvention, tasPlotPhiFromCrystalPhiForConvention,
   calcQ0
-} from "./tas-conventions.js";
+} from "./core/tas-conventions.js";
 import {
   isGitHubPages, isLocalDirectoryListingHost,
   loadJsonDirectory, loadCifDirectory
-} from "./data-loader.js";
+} from "./app/data-loader.js";
 import {
   reciprocalSymmetryMatrices, hklKey, compareHkl,
   canonicalReflectionHkl, reflectionStar
-} from "./cif-symmetry.js";
-import {createToolboxUI} from "./toolbox-ui.js";
-import {createScriptUI} from "./script-ui.js";
-import {createCifUI} from "./cif-ui.js";
-import {createTasGeometryView} from "./tas-geometry-view.js";
-import {createResolutionUI} from "./resolution-ui.js";
-import {createUIShell} from "./ui-shell.js";
-import {createDarkAngle} from "./dark-angle.js";
-import {createQESingleCrystal} from "./qe-single-crystal.js";
-import {createTasAngleCalculation} from "./tas-angle-calculation.js";
-import {createFixedBeamControls} from "./fixed-beam-units.js";
+} from "./cif/cif-symmetry.js";
+import {createToolboxUI} from "./toolbox/toolbox-ui.js";
+import {createScriptUI} from "./script/script-ui.js";
+import {createCifUI} from "./cif/cif-ui.js";
+import {createTasGeometryView} from "./geometry/tas-geometry-view.js";
+import {createResolutionUI} from "./resolution/resolution-ui.js";
+import {createUIShell} from "./app/ui-shell.js";
+import {createDarkAngle} from "./qe/dark-angle.js";
+import {createQESingleCrystal} from "./qe/qe-single-crystal.js";
+import {createTasAngleCalculation} from "./core/tas-angle-calculation.js";
+import {createFixedBeamControls} from "./app/fixed-beam-units.js";
 import {createBackgroundRows} from './app/background-rows.js';
 import {createInstrumentSetup} from './app/instrument-setup.js';
 import {createSidebarRows} from './app/sidebar-rows.js';
-import {createQEPath} from './app/qe-path.js';
-import {createQESingleMap} from './app/qe-single-map.js';
-import {createPowder} from './app/powder.js';
-import {createQESingleRender} from './app/qe-single-render.js';
-import {createQEVectorMap} from './app/qe-vector-map.js';
+import {createQEPath} from './qe/qe-path.js';
+import {createQESingleMap} from './qe/qe-single-map.js';
+import {createPowder} from './qe/powder.js';
+import {createQESingleRender} from './qe/qe-single-render.js';
+import {createQEVectorMap} from './qe/qe-vector-map.js';
 import {createRecalc} from './app/recalc.js';
-import {createGeometryTargets} from './app/geometry-targets.js';
+import {createGeometryTargets} from './geometry/geometry-targets.js';
 
 const $ = id => document.getElementById(id);
 const instruments = new Map();
@@ -51,7 +51,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, darkSampleRangeForConvention, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal, calculateSingleCrystalCore;
@@ -843,6 +843,11 @@ async function initialize(){
   // The generated startup path is an example, not a user-picked path: the
   // first Select Path action should replace it rather than append to it.
   qeCommitPathText({markEdited:!restoredHKLIsEmpty});
+  // Every saved setting is now back in place. Outputs computed earlier during
+  // start-up (the Generator reflection tables) used the HTML defaults, so
+  // compute them again with the restored conditions. The Q-E calculation
+  // below (recalculate) already runs after this point.
+  refreshCifAfterStateRestore();
   enableGlobalUIPersistence();
   saveLeftPanelState();
   saveRightPanelState();
@@ -997,7 +1002,8 @@ async function initialize(){
   selectedSampleCentering,
   setCifOutputTab,
   initializeCifGenerator,
-  nuclearStructureForSelectedCif
+  nuclearStructureForSelectedCif,
+  refreshAfterStateRestore:refreshCifAfterStateRestore
 }=createCifUI({
   $, PI, RL_calc, add, canonicalReflectionHkl, checkedValue, clamp, clearError, compareHkl, cross,
   currentInstrument, dot, effectiveS2MaxAtEi, hklKey, hklToQ, makeSpiceScatteringPlaneBasis, norm,

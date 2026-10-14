@@ -1,6 +1,6 @@
 // Per-site atom colours, sizes and visibility, and the structure passed to the viewer.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {parentIndexingFromMcif} from '../magnetic-reflections.js';
+import {parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 
 export function installAtomAppearance(ctx){
   const {deps:{

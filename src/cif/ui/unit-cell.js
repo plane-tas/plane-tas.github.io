@@ -1,6 +1,6 @@
 // Unit-cell edges and the crystallographic/magnetic/parent cell reference.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {parentIndexingFromMcif} from '../magnetic-reflections.js';
+import {parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 
 export function installUnitCell(ctx){
   const {deps:{

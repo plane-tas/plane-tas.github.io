@@ -111,15 +111,12 @@ textarea:disabled {
 .cif-file-name{width:100%;min-width:0;font-size:calc(13px * var(--tas-density));color:#555;background:#f7f7f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sample-spacegroup-row{display:grid;grid-template-columns:minmax(calc(110px * var(--tas-density)),.8fr) minmax(calc(90px * var(--tas-density)),.55fr) minmax(calc(180px * var(--tas-density)),1.65fr);gap:calc(4px * var(--tas-density));align-items:end}
 
-#sfColorMaxRow{margin-top:calc(-4px * var(--tas-density))}
-
 /* Keep the nuclear structure-factor color control on one line and mirror the
    hbar-omega / S2 controls with a numeric entry on the right. */
 
 .qe-range-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(12px * var(--tas-density));padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density)) calc(12px * var(--tas-density));align-items:end}
 .qe-range-control{display:flex;flex-direction:column;gap:calc(6px * var(--tas-density));min-width:0}
 .qe-range-control input[type=range]{width:100%;padding:0}
-.sf-control{margin-top:0!important}
 
 /* Q-E readability refinements. */
 .qe-range-control .qe-control-entry{font-size:calc(14px * var(--tas-density));font-weight:600}
