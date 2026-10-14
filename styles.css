@@ -8461,3 +8461,6 @@ input[type="number"]::-webkit-outer-spin-button{
     justify-self:start;
   }
 }
+
+/* Uncertainty messages share the existing Cell Note typography. */
+#structurePanel #cifReflectionEstimateNotice{font-size:.85em;line-height:1.4;margin:4px 0 8px;}

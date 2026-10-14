@@ -157,13 +157,69 @@ function propagationVectorsFromMcif(text,parsed){
 // An app-generated commensurate mCIF stores its atomic motif in the magnetic
 // supercell. The Sample and nuclear reflections must instead use the parent
 // crystallographic cell. Generic external mCIF settings are not inferred.
+// A *candidate* parent is inferred only when repeated nuclear-site patterns
+// independently verify a diagonal translation period. BNS alone does NOT fix
+// the conventional parent setting, metric or origin. This path is explicitly
+// marked Estimated throughout the editor and nuclear-reflection output.
+function estimatedParentIndexingFromMcif(parsed,text){
+  if(!parsed?.magnetic || !Array.isArray(parsed.atoms) || !parsed.atoms.length)return null;
+  // If the author supplied a transform that we cannot handle, do not
+  // silently replace it with a different guessed diagonal transform.
+  if(/_parent_space_group\.(?:child_transform_Pp_abc|transform_Pp_abc)/i.test(String(text||'')))return null;
+  const q=propagationVectorsFromMcif(text,parsed);
+  if(q.length!==1)return null;
+  const nums=[q[0].h,q[0].k,q[0].l].map(Number);
+  if(!nums.every(Number.isFinite))return null;
+  // A finite parent supercell is not a valid construction for incommensurate q.
+  const denominator=v=>{
+    for(let d=1;d<=12;d++)if(Math.abs(v*d-Math.round(v*d))<1e-8*d)return d;
+    return null;
+  };
+  const replication=nums.map(denominator);
+  if(replication.some(n=>n===null)||replication.every(n=>n===1))return null;
+  const nCells=replication.reduce((x,y)=>x*y,1);
+  if(nCells>128||parsed.atoms.length>4000||parsed.atoms.length%nCells!==0)return null;
+  const wrap=v=>((v%1)+1)%1;
+  const quant=v=>Math.round(wrap(v)*1e6)%1000000;
+  const key=atom=>[
+    atom.element,Number(atom.occupancy??1).toFixed(6),
+    ...['x','y','z'].map((ax,i)=>quant(Number(atom[ax])*replication[i]))
+  ].join('|');
+  const groups=new Map();
+  for(const atom of parsed.atoms){
+    if(!['x','y','z'].every(ax=>Number.isFinite(Number(atom[ax]))))return null;
+    const k=key(atom);
+    const group=groups.get(k)||[];group.push(atom);groups.set(k,group);
+  }
+  if(groups.size*nCells!==parsed.atoms.length)return null;
+  // Check all magnetic images are present, not just their count. Missing
+  // centering operations or a misidentified period must fail closed.
+  for(const atoms of groups.values()){
+    if(atoms.length!==nCells)return null;
+    const codes=new Set(atoms.map(a=>['x','y','z'].map((ax,i)=>
+      ((Math.floor(wrap(Number(a[ax]))*replication[i]+1e-7)%replication[i])+replication[i])%replication[i]
+    ).join(',')));
+    if(codes.size!==nCells)return null;
+  }
+  const lattice={...parsed.lattice};
+  for(const [i,axis] of ['a','b','c'].entries()){
+    lattice[axis]=Number(lattice[axis])/replication[i];
+    if(!Number.isFinite(lattice[axis])||lattice[axis]<=0)return null;
+  }
+  return {replication,lattice,reference:'Estimated: verified nuclear translation periodicity (diagonal candidate)',estimated:true};
+}
+
 function parentNuclearStructureFromMcif(parsed,text){
   if(!parsed?.magnetic || !Array.isArray(parsed.atoms) || !parsed.atoms.length) return null;
   const q=propagationVectorsFromMcif(text,parsed);
   if(q.length!==1) return null;
-  const parent=parentIndexingFromMcif(text,parsed.lattice,[q[0].h,q[0].k,q[0].l]);
+  const parent=parentIndexingFromMcif(text,parsed.lattice,[q[0].h,q[0].k,q[0].l])
+    || estimatedParentIndexingFromMcif(parsed,text);
   if(!parent) return null;
   const rep=parent.replication;
+  // A child supercell must be a translation period of every commensurate k.
+  if(![q[0].h,q[0].k,q[0].l].every((v,i)=>
+       Number.isFinite(Number(v))&&Math.abs(Number(v)*rep[i]-Math.round(Number(v)*rep[i]))<1e-8))return null;
   const wrap=v=>{const w=((v%1)+1)%1;return Math.abs(w-1)<1e-8 || w<1e-8?0:w;};
   const dedup=new Map();
   for(const atom of parsed.atoms){
@@ -178,7 +234,8 @@ function parentNuclearStructureFromMcif(parsed,text){
     }
   }
   return {...parsed,lattice:parent.lattice,atoms:[...dedup.values()],magnetic:false,
-    parentCellReference:parent.reference};
+    parentCellReference:parent.reference,parentCellEstimated:!!parent.estimated,
+    parentReplication:parent.replication};
 }
 
 // mCIF may contain a magnetic supercell and a distinct parent (nuclear) cell.
@@ -243,26 +300,50 @@ function crystallographicStructureFromMcif(parsed,text){
   if(!nuclear)return null;
   const parent=originalParentSpaceGroup(text);
   const sg=cifSpaceGroups.find(g=>g.number===parent.number);
-  if(!sg)return null;
-  const sites=parentSiteOrbitRepresentatives(nuclear.atoms,sg.operations);
+  // When the actual parent setting is not documented, P1 is only an
+  // indexing/calculation fallback, NOT a claim that the parent SG is P1.
+  if(!sg && !nuclear.parentCellEstimated)return null;
+  const operations=sg?.operations||['x,y,z'];
+  const sites=parentSiteOrbitRepresentatives(nuclear.atoms,operations);
   if(!sites?.length)return null;
-  return {...nuclear,spaceGroupNumber:sg.number,spaceGroup:parent.name||sg.hm,
+  return {...nuclear,spaceGroupNumber:sg?.number||1,spaceGroup:sg?(parent.name||sg.hm):'P1 (calculation basis only)',
     asymmetricSites:sites,asymmetricSiteCount:sites.length,
-    symmetryOperationCount:sg.operations.length};
+    symmetryOperationCount:operations.length};
 }
 function updateImportedUnitCellPanels(parsed,text){
   const box=$("cifMagneticCellBox"),notice=$("cifParentCellNotice");
-  if(box)box.hidden=!parsed?.magnetic;
+  // Malformed/unsupported multi-q input may have no moments after parsing,
+  // but it is still a magnetic file whose limitation must be visible.
+  const magneticTags=/(?:_atom_site_moment(?:[._]|\s)|_cell_wave_vector_[xyz]|_space_group_symop_magn_ssg_)/i.test(String(text||''));
+  if(box)box.hidden=!(parsed?.magnetic||magneticTags);
+  const magneticNotice=$('cifMagneticCellNotice');
   if(notice)notice.hidden=true;
-  if(!parsed?.magnetic)return;
+  if(magneticNotice){magneticNotice.hidden=true;magneticNotice.textContent='';}
+  if(!parsed?.magnetic && !magneticTags)return;
+  if(magneticNotice){
+    const alerts=(parsed.warnings||[]).filter(w=>/incommensurate|superspace|single.q|fourier|wave vectors|modulat/i.test(String(w)));
+    if(parsed.incommensurateSingleQ || alerts.length){
+      magneticNotice.hidden=false;
+      magneticNotice.textContent=(parsed.incommensurateSingleQ
+        ?'Note: Incommensurate single-q mCIF. No exact finite magnetic supercell; the displayed Fourier modulation is supported only for recognized operations.'
+        :'Note: Magnetic modulation/superspace symmetry may be incomplete.')
+        +(alerts.length?' '+alerts.join(' '):'');
+    }
+  }
   // The mCIF has its own time-reversed magnetic symmetry operations. Do not
   // reinterpret its parent IT number as a magnetic space-group selector.
   for(const [key,id] of Object.entries(CIF_MAG_LATTICE_FIELDS)){
     if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(parsed.lattice[key]):'';
   }
-  if(!crystallographicStructureFromMcif(parsed,text) && notice){
-    notice.hidden=false;
-    notice.textContent='Parent-cell conversion is not defined in this mCIF. Nuclear-cell editing requires an explicit parent setting; no conversion was guessed.';
+  const crystallographic=crystallographicStructureFromMcif(parsed,text);
+  if(notice){
+    if(crystallographic?.parentCellEstimated){
+      notice.hidden=false;
+      notice.textContent='Note: Estimated crystallographic unit cell from verified atomic translations and k. Parent space-group setting may be uncertain; nuclear peaks are calculated from an estimated structure.';
+    }else if(!crystallographic){
+      notice.hidden=false;
+      notice.textContent='Note: Crystallographic unit cell could not be determined reliably. BNS alone does not specify the parent cell setting; nuclear peaks are disabled.';
+    }
   }
 }
 function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
@@ -1532,6 +1613,14 @@ function parseStructureRangeEntry(value){
   if(Math.abs(max-min)<1e-9) max=min+1;
   return {min,max};
 }
+// The UI range is always expressed in the *selected* cell's fractional
+// coordinates. Rendering uses the loaded magnetic-cell fractional coordinates.
+function structureRenderRange(uiRange,source,parent){
+  if(!source?.structure?.magnetic || structureUnitCellReference!=='crystallographic' || !parent)return uiRange;
+  return Object.fromEntries(['x','y','z'].map((axis,i)=>[
+    axis,{min:uiRange[axis].min/parent.rep[i],max:uiRange[axis].max/parent.rep[i]}
+  ]));
+}
 function structureRange(){
   const out={};
   for(const axis of ["x","y","z"]){
@@ -1807,7 +1896,10 @@ function resolvedViewerParent(source){
   const text=getSelectedCifText();
   const q=propagationVectorsFromMcif(text,selected);
   if(q.length!==1)return null;
-  const parent=parentIndexingFromMcif(text,selected.lattice,[q[0].h,q[0].k,q[0].l]);
+  const parent=parentIndexingFromMcif(text,selected.lattice,[q[0].h,q[0].k,q[0].l])
+    || estimatedParentIndexingFromMcif(selected,text);
+  if(parent?.replication && ![q[0].h,q[0].k,q[0].l].every((v,i)=>
+       Math.abs(Number(v)*parent.replication[i]-Math.round(Number(v)*parent.replication[i]))<1e-8))return null;
   if(!parent || !Array.isArray(parent.replication) || parent.replication.length!==3 ||
      !parent.replication.every(n=>Number.isInteger(n)&&n>=1))return null;
   const parentStructure=parentNuclearStructureFromMcif(selected,text);
@@ -3888,7 +3980,8 @@ function renderCifStructureView(){
   // in-progress marker until this Plotly render completes successfully.
   window.__tasStructureCrashGuard?.begin();
   syncStructureControlRows(source.structure);
-  const range=structureRange();
+  const parentFrame=updateStructureUnitCellReference(source);
+  const range=structureRenderRange(structureRange(),source,parentFrame);
   if(estimateStructureReplicationTests(source.structure,range)>STRUCTURE_MAX_REPLICATION_TESTS){
     status.textContent='Structure not drawn: display range is too large. Reduce X/Y/Z repeat ranges.';
     Plotly.purge(plot);window.__tasStructureCrashGuard?.complete();return;
@@ -3931,7 +4024,6 @@ function renderCifStructureView(){
   const styleCutoffWarning=oversizedRules.length
     ?` ${oversizedRules.length} Style rule(s) not drawn: Max must not exceed the unit-cell diagonal (${maxCellDistance.toFixed(3)} Å). Edit Max; values are saved.`
     :'';
-  const parentFrame=updateStructureUnitCellReference(source);
   const cellFrame=structureUnitCellFrame(source,basis,range,parentFrame);
   const cellTraces=unitCellTraces(cellFrame.basis,cellFrame.range);
   if(cellFrame.parent) for(const trace of cellTraces) trace.name='Parent unit cell';
@@ -3982,7 +4074,8 @@ function renderCifStructureView(){
   const magneticSummary=enabledPropagationVectorsForStructure();
   const effectiveK=effectivePropagationVectorForStructure();
   const enabledMoments=[...currentMomentSettings().values()].filter(x=>x.enabled).length;
-  status.textContent=`${source.label}: x ${range.x.min}–${range.x.max}, y ${range.y.min}–${range.y.max}, z ${range.z.min}–${range.z.max}; ${displayedAtoms.length} displayed atoms.`+
+  const uiRange=structureRange();
+  status.textContent=`${source.label}: x ${uiRange.x.min}–${uiRange.x.max}, y ${uiRange.y.min}–${uiRange.y.max}, z ${uiRange.z.min}–${uiRange.z.max} (${structureUnitCellReference} fractions); ${displayedAtoms.length} displayed atoms.`+
     (structureUnitCellMode!=='none' && source.structure.magnetic && !parentFrame ?
       ' Parent-cell setting unavailable: showing magnetic cell.':
       cellFrame.parent && structureUnitCellMode!=='none' ? ' Crystallographic unit cell shown.':
@@ -5303,7 +5396,8 @@ function nuclearReflectionSource(){
   if(!selected?.lattice || !selected?.atoms?.length) return null;
   // A generated mCIF uses a supercell: deduplicate translated atoms into
   // the parent nuclear cell before calculating peaks and indexing hkl.
-  const structure=selected.magnetic
+  const hasMagneticTags=/_space_group_symop_magn_|_cell_wave_vector_[xyz]|_atom_site_moment(?:[._]|\s)/i.test(String(getSelectedCifText()||''));
+  const structure=(selected.magnetic||hasMagneticTags)
     ? crystallographicStructureFromMcif(selected,getSelectedCifText())
     : selected;
   // Never silently compute nuclear reflections in the magnetic supercell.
@@ -5311,8 +5405,11 @@ function nuclearReflectionSource(){
   // Use the known nuclear space group for reflection-star multiplicities.
   // For unfamiliar groups fall back to Friedel-pair grouping instead of
   // preventing the structure-factor calculation altogether.
-  const spaceGroup=findGeneratorSpaceGroup(structure) || {operations:["x,y,z"]};
-  return {structure,spaceGroup,fileName:getSelectedCifFileName()||"selected_structure.cif"};
+  const spaceGroup=structure.parentCellEstimated
+    ? {number:1,hm:'P1 calculation basis',operations:['x,y,z']}
+    : (findGeneratorSpaceGroup(structure) || {operations:['x,y,z']});
+  return {structure,spaceGroup,fileName:getSelectedCifFileName()||'selected_structure.cif',
+    estimatedParent:!!structure.parentCellEstimated};
 }
 
 // Sample lattice parameters are a live calculation override. The CIF/mCIF
@@ -5657,6 +5754,8 @@ function initializeMagneticReflections(){
 }
 
 function recalculateGeneratedReflections(){
+  const estimateNotice=$('cifReflectionEstimateNotice');
+  if(estimateNotice){estimateNotice.hidden=true;estimateNotice.textContent='';}
   if(liveEditorNuclearInvalid){
     clearCifReflectionTable('Complete valid Unit Cell / Positions values to calculate nuclear reflections.');
     return;
@@ -5682,6 +5781,11 @@ function recalculateGeneratedReflections(){
     const liveSource=liveEditorNuclearSource || nuclearReflectionWithSampleLattice(source);
     lastGeneratedReflections=buildCifReflectionTable(liveSource.structure,liveSource.spaceGroup,beam.wavelength,filters,twoThetaMax);
     renderCifReflectionTable();
+    const resultNotice=$('cifReflectionEstimateNotice');
+    if(resultNotice){
+      resultNotice.hidden=!source.estimatedParent;
+      resultNotice.textContent=source.estimatedParent?'Note: Nuclear reflections use an estimated crystallographic cell; verify the parent space group and cell transformation before quantitative use.':'';
+    }
     if($("cifDownloadTable")) $("cifDownloadTable").disabled=!lastGeneratedReflections.length;
   }catch(err){
     clearCifReflectionTable(err?.message||String(err));
