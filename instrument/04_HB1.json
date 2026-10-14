@@ -68,11 +68,11 @@
   "S2_limits": [
     {
       "S2limit": 100,
-      "Ei": 38.5
+      "Ei": 45
     },
     {
       "S2limit": 100,
-      "Ei": 13.5
+      "Ei": 10
     }
   ],
   "instrument_type": "tas",

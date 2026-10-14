@@ -236,7 +236,22 @@ async function initializeCifGenerator(){
         if($("sampleMode")?.value!=="single"){
           $("sampleMode").value="single"; updateModeVisibility();
         }
+        // loadCifText() treats every loaded file as new and discards the
+        // generated CIF/mCIF. Setting the generated file must not: keep the
+        // generated text (and its preview) so it can still be downloaded or
+        // set again. Reflections keep following the selected file, so the
+        // generated *parsed* snapshot is deliberately not restored.
+        const kept={
+          cifText:cifState.lastGeneratedCifText, cifName:cifState.lastGeneratedCifName,
+          mcifText:cifState.lastGeneratedMcifText, mcifName:cifState.lastGeneratedMcifName,
+          preview:$("cifPreview")?.textContent, context:$("cifPreviewContext")?.textContent
+        };
         const parsed=fn.loadCifText(text,name);
+        cifState.lastGeneratedCifText=kept.cifText; cifState.lastGeneratedCifName=kept.cifName;
+        cifState.lastGeneratedMcifText=kept.mcifText; cifState.lastGeneratedMcifName=kept.mcifName;
+        if($("cifPreview") && kept.preview!==undefined) $("cifPreview").textContent=kept.preview;
+        if($("cifPreviewContext") && kept.context!==undefined) $("cifPreviewContext").textContent=kept.context;
+        fn.setCifGeneratedReady(true);
         cifState.cifStructureSourcePreference="selected";
         fn.saveStructureViewerState();
         fn.renderCifStructureIfVisible();

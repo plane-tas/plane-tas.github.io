@@ -146,11 +146,11 @@ function validateEffectiveS2Max(S2max,S2min,Ei){
   return S2max;
 }
 
-function normalizeCrystalName(name){ const aliases={PG002:"PG(002)",PG004:"PG(004)"}; return aliases[name]||name; }
+function normalizeCrystalName(name){ const aliases={PG002:"PG(002)",PG004:"PG(004)",Be002:"Be(002)",Si111:"Si(111)"}; return aliases[name]||name; }
 function setIf(id,x){ if($(id)&&x!==undefined&&x!==null&&Number.isFinite(Number(x))) $(id).value=x; }
 function setBool(id,x){ if($(id)&&x!==undefined&&x!==null) $(id).checked=!!x; }
 function setSelect(id,x){ if(!$(id)||x===undefined||x===null) return; if([...$(id).options].some(o=>o.value===String(x))) $(id).value=String(x); }
-const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(113)':1.705923,'Ge(115)':1.088865,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
+const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Be(002)':1.792,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(113)':1.705923,'Ge(115)':1.088865,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
 // DEMAND (HB-3A) operates at fixed monochromator angle, so a Si reflection
 // change selects one of its nominal incident wavelengths. Preserve the existing
 // TAS convention internally (Ei fixed, meV) and reflect it in the chosen UI unit.
