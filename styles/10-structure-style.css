@@ -1,0 +1,683 @@
+/* Structure editor: Atoms appearance and Style (bonds/polyhedra) tabs.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.structure-bond-row input,
+.structure-bond-row select{
+  width:100%;
+}
+.structure-bond-row{
+  grid-template-columns:minmax(calc(58px * var(--tas-density)),1fr) minmax(calc(58px * var(--tas-density)),1fr) calc(68px * var(--tas-density)) calc(68px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
+  gap:calc(6px * var(--tas-density));
+}
+@media (max-width:1450px){
+  .structure-bond-row{
+    grid-template-columns:minmax(calc(58px * var(--tas-density)),1fr) minmax(calc(58px * var(--tas-density)),1fr) calc(64px * var(--tas-density)) calc(64px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
+  }
+}
+.structure-bond-row{
+  grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(72px * var(--tas-density)) calc(72px * var(--tas-density)) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
+  gap:calc(6px * var(--tas-density));
+}
+.structure-bond-row{
+  grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(92px * var(--tas-density)) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) auto!important;
+  gap:calc(6px * var(--tas-density));
+}
+#structurePanel .structure-bond-row select{
+  min-width:0!important;
+  width:100%!important;
+}
+
+/* v53: Narrow mCIF Bonds editors use exactly two rows.
+   Row 1: element A, element B, minimum and maximum distance.
+   Row 2: bond width, color and Remove action. */
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-bond-row{
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:auto auto!important;
+    gap:calc(7px * var(--tas-density))!important;
+    align-items:end!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+  
+  #structurePanel .structure-bond-row > .structure-entry-field{
+    grid-column:1 / 3!important;
+    grid-row:2!important;
+    min-width:0!important;
+  }
+  #structurePanel .structure-bond-row > input[type=color]{
+    grid-column:3!important;
+    grid-row:2!important;
+    width:100%!important;
+    max-width:calc(55px * var(--tas-density))!important;
+    min-width:0!important;
+    justify-self:center!important;
+    align-self:end!important;
+  }
+  #structurePanel .structure-bond-row > button{
+    grid-column:4!important;
+    grid-row:2!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    padding:calc(6px * var(--tas-density)) calc(2px * var(--tas-density))!important;
+    font-size:calc(12px * var(--tas-density));
+    overflow-wrap:anywhere;
+    box-sizing:border-box!important;
+  }
+  #structurePanel .structure-bond-row .structure-entry-label{white-space:nowrap;font-size:calc(11px * var(--tas-density));}
+  #structurePanel .structure-bond-row select,
+  #structurePanel .structure-bond-row input[type=number]{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+    padding-left:calc(3px * var(--tas-density));
+    padding-right:calc(3px * var(--tas-density));
+  }
+}
+
+/* v54 patch: match Structure settings to View, and emphasize all tab labels. */
+#structurePanel .structure-config-section > .structure-section-title{
+  font-size:calc(15px * var(--tas-density));
+  font-weight:700;
+  line-height:normal;
+  margin:0 0 calc(8px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-generator-source-section .cif-generator-file-name{
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  line-height:1.35;
+}
+#structurePanel .generator-shared-file button{
+  box-sizing:border-box;
+  min-height:calc(36px * var(--tas-density));
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+}
+#structurePanel .generator-shared-file .cif-file-name{min-width:0;font-size:calc(14px * var(--tas-density));}
+#structurePanel .generator-reflection-tabs > button{
+  box-sizing:border-box;
+  min-width:0;
+  width:100%;
+  padding:calc(9px * var(--tas-density)) calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid transparent;
+  border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
+  background:#f3f5f7;
+  color:#222;
+  border-radius:0;
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.3;
+  font-weight:700;
+  text-align:center;
+  white-space:normal;
+}
+#structurePanel .generator-mode-pane .cif-generator-file-name{
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+}
+#structurePanel .generator-unified-output-tabs > .cif-output-tab{
+  box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-width:0;max-width:100%;
+  min-height:calc(46px * var(--tas-density));
+  padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
+  white-space:normal;
+  overflow-wrap:anywhere;
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.25;
+  font-weight:700;
+  border:calc(1px * var(--tas-density)) solid transparent;
+  border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
+}
+#structurePanel .generator-structure-view-controls .structure-entry-label{
+  font-size:calc(12px * var(--tas-density));
+  font-weight:600;
+}
+@container generator-unified (max-width:660px){
+  #structurePanel .generator-structure-view-controls .cif-structure-view-buttons,
+  #structurePanel .generator-structure-view-controls .structure-range-six{gap:calc(4px * var(--tas-density))!important;}
+  #structurePanel .generator-structure-view-controls .structure-range-six input[type=number]{
+    padding:calc(4px * var(--tas-density)) calc(2px * var(--tas-density));
+    font-size:calc(12px * var(--tas-density));
+  }
+  #structurePanel .generator-structure-view-controls .cif-structure-view-buttons > button{
+    padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));font-size:calc(12px * var(--tas-density));
+  }
+  #structurePanel .generator-structure-view-controls .structure-entry-label{font-size:calc(10px * var(--tas-density));}
+}
+#structurePanel .generator-unified-output-tabs > .cif-output-tab {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: calc(4px * var(--tas-density));
+}
+
+/* 2026-10: Bonds list scrolling and one-line Spins controls. */
+#structurePanel #cifBondRows {
+  max-height: calc(330px * var(--tas-density));
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: calc(4px * var(--tas-density));
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+}
+
+/* Collapsible element/site table in Structure editor > Atoms. */
+#structurePanel #cifAtomColorRows{max-height:calc(330px * var(--tas-density));overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-right:calc(4px * var(--tas-density));}
+#structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
+ display:grid;grid-template-columns:minmax(calc(76px * var(--tas-density)),1fr) calc(47px * var(--tas-density)) calc(46px * var(--tas-density)) calc(62px * var(--tas-density));gap:calc(6px * var(--tas-density));align-items:center;min-width:0;
+}
+#structurePanel .atoms-table-head span:not(:first-child){text-align:center;}
+#structurePanel .atoms-table-row{padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e8ebef;min-height:calc(36px * var(--tas-density));}
+#structurePanel .atoms-row-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font:inherit;}
+#structurePanel button.atoms-row-name{background:none;border:0;padding:calc(3px * var(--tas-density));cursor:pointer;font-weight:650;color:inherit;}
+#structurePanel .atoms-visible{justify-self:center;margin:0;}
+#structurePanel .atoms-color{width:calc(33px * var(--tas-density));height:calc(27px * var(--tas-density));min-width:0;padding:calc(1px * var(--tas-density));justify-self:center;cursor:pointer;}
+#structurePanel .atoms-size{width:100%;min-width:0;box-sizing:border-box;font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density));}
+@media(max-width:420px){#structurePanel .atoms-table-head,#structurePanel .atoms-table-row{grid-template-columns:minmax(calc(56px * var(--tas-density)),1fr) calc(43px * var(--tas-density)) calc(42px * var(--tas-density)) calc(53px * var(--tas-density));gap:calc(3px * var(--tas-density));}}
+
+/* Atoms: twelve always-visible preset colors (6 x 2), plus independent RGB picker. */
+#structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
+  grid-template-columns:minmax(calc(90px * var(--tas-density)),1fr) calc(50px * var(--tas-density)) minmax(calc(210px * var(--tas-density)),calc(235px * var(--tas-density))) calc(62px * var(--tas-density));
+  gap:calc(6px * var(--tas-density));
+}
+#structurePanel .atoms-color-cell{
+  display:flex;align-items:center;justify-content:flex-start;gap:0;min-width:0;
+}
+#structurePanel .atoms-preset-grid{
+  display:grid;grid-template-columns:repeat(6,calc(22px * var(--tas-density)));grid-template-rows:repeat(2,calc(22px * var(--tas-density)));
+  gap:calc(5px * var(--tas-density)) calc(4px * var(--tas-density));flex:0 0 auto;
+}
+#structurePanel .atoms-preset-color{
+  box-sizing:border-box;width:calc(22px * var(--tas-density));height:calc(22px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.22);border-radius:calc(4px * var(--tas-density));padding:0;cursor:pointer;
+}
+#structurePanel .atoms-preset-color.selected{
+  outline:calc(2px * var(--tas-density)) solid var(--text-color,#252f40);outline-offset:calc(1px * var(--tas-density));
+}
+#structurePanel .atoms-color-cell .atoms-rgb-picker{
+  box-sizing:border-box;flex:0 0 calc(32px * var(--tas-density));width:calc(32px * var(--tas-density));height:calc(27px * var(--tas-density));
+  min-width:0;padding:calc(1px * var(--tas-density));cursor:pointer;margin-left:calc(18px * var(--tas-density));
+}
+@media(max-width:480px){
+  #structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
+    grid-template-columns:minmax(calc(42px * var(--tas-density)),1fr) calc(32px * var(--tas-density)) minmax(calc(146px * var(--tas-density)),1.5fr) calc(42px * var(--tas-density));
+    gap:calc(3px * var(--tas-density));
+  }
+  #structurePanel .atoms-preset-grid{
+    grid-template-columns:repeat(6,calc(16px * var(--tas-density)));grid-template-rows:repeat(2,calc(19px * var(--tas-density)));
+    gap:calc(4px * var(--tas-density)) calc(2px * var(--tas-density));
+  }
+  #structurePanel .atoms-preset-color{width:calc(16px * var(--tas-density));height:calc(19px * var(--tas-density));border-radius:calc(3px * var(--tas-density));}
+  #structurePanel .atoms-color-cell .atoms-rgb-picker{
+    flex-basis:calc(24px * var(--tas-density));width:calc(24px * var(--tas-density));height:calc(24px * var(--tas-density));margin-left:calc(12px * var(--tas-density));
+  }
+}
+
+/* Atoms editor: proportional, responsive columns (Site : Visible : Color : Size = 1:1:3:1).
+   Grid-based positioning replaces fixed right-edge columns and translateX offsets. */
+#structurePanel .atoms-table-head,
+#structurePanel .atoms-table-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  gap: calc(6px * var(--tas-density));
+}
+#structurePanel .atoms-table-head span:nth-child(2),
+#structurePanel .atoms-table-row .atoms-visible,
+#structurePanel .atoms-table-head span:nth-child(3) {
+  transform: none;
+}
+#structurePanel .atoms-color-cell {
+  min-width: 0;
+}
+#structurePanel .atoms-table-head span:nth-child(3) {
+  text-align: left;
+}
+@media (max-width: 480px) {
+  #structurePanel .atoms-table-head,
+  #structurePanel .atoms-table-row {
+    gap: calc(3px * var(--tas-density));
+  }
+  /* Narrow-screen chips still require a usable color area. */
+  #structurePanel .atoms-color-cell .atoms-rgb-picker {
+    margin-left: calc(12px * var(--tas-density));
+  }
+}
+
+/* Center the Color header and the complete (12 preset colors + RGB) control
+   within the proportional Color column at every viewport width. */
+#structurePanel .atoms-table-head span:nth-child(3) {
+  text-align: center;
+}
+#structurePanel .atoms-table-row .atoms-color-cell {
+  justify-content: center;
+}
+
+/* The Atom editor headers and nuclear reflections are display labels, not
+   tiny tooltips. Keep the existing Atom column proportions unchanged. */
+#structurePanel .atoms-table-head{
+  font-size:max(12px,calc(17px * var(--tas-density)))!important;
+  line-height:1.35;
+}
+
+/* Every navigation level (main tabs, sub-tabs, CIF/structure tabs) shares one
+   legible typographic baseline.  Keep the existing responsive columns. */
+:is(main > .main-tabs > .tab-button,
+    .toolbox-subtabs > .toolbox-subtab,
+    .geometry-card-tabs > .geometry-card-tab,
+    .cif-output-tabs > .cif-output-tab,
+    #structurePanel .structure-config-tabs > button,
+    #structurePanel .generator-mode-tabs > button,
+    #structurePanel .generator-reflection-tabs > button,
+    .qe-mode-tabs > button,.qe-subtabs > button){
+  font-size:var(--tas-tab-text-size)!important;
+  line-height:1.3;
+}
+
+/* Structure Editor Style: three equal-width radio selections on one row. */
+#structurePanel .structure-style-modes{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:center;
+  gap:calc(8px * var(--tas-density));
+  width:100%;
+  min-width:0;
+  margin-bottom:calc(9px * var(--tas-density));
+}
+@container structure-viewer (max-width:360px){
+  #structurePanel .structure-style-modes{gap:calc(4px * var(--tas-density));}
+  #structurePanel .structure-style-modes label{gap:3px;font-size:12px;}
+}
+
+/* Style: preserve the original select/distance/width allocations.  Only the
+   colour swatch and Remove column need adjustment.  The old stable scrollbar
+   gutter reserved a blank strip even with no Style-list scrollbar. */
+#structurePanel #cifBondRows{
+  padding-right:0;
+  scrollbar-gutter:auto;
+  scrollbar-width:thin;
+}
+#structurePanel .structure-bond-row{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:100%!important;
+  grid-template-columns:
+    minmax(calc(54px * var(--tas-density)),.8fr)
+    minmax(calc(54px * var(--tas-density)),.8fr)
+    minmax(calc(136px * var(--tas-density)),1.6fr)
+    calc(58px * var(--tas-density))
+    calc(40px * var(--tas-density))
+    minmax(calc(80px * var(--tas-density)),.3fr)!important;
+}
+#structurePanel .structure-bond-row > *{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+/* Same compact 30px-high native colour picker as the Atoms/Spins controls. */
+#structurePanel .structure-bond-row > input[type=color]{
+  box-sizing:border-box!important;
+  width:min(100%, calc(34px * var(--tas-density)))!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:calc(30px * var(--tas-density))!important;
+  padding:calc(2px * var(--tas-density))!important;
+  justify-self:center!important;
+  align-self:end;
+}
+#structurePanel .structure-bond-row > button{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  justify-self:stretch!important;
+  white-space:nowrap;
+  padding-inline:calc(4px * var(--tas-density))!important;
+}
+/* Keep the previous medium-width 2-row layout, using the full width of the
+   colour and Remove cells. */
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-bond-row{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    grid-template-rows:auto auto!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+  
+  #structurePanel .structure-bond-row > .structure-entry-field{grid-column:1 / 3!important;grid-row:2!important;}
+  #structurePanel .structure-bond-row > input[type=color]{grid-column:3!important;grid-row:2!important;justify-self:end!important;}
+  #structurePanel .structure-bond-row > button{grid-column:4!important;grid-row:2!important;}
+}
+/* At split-screen/phone widths the inputs remain usable instead of colliding. */
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-bond-row{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto auto auto auto!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+  
+  #structurePanel .structure-bond-row > .structure-entry-field{grid-column:1!important;grid-row:3!important;}
+  #structurePanel .structure-bond-row > input[type=color]{grid-column:2!important;grid-row:3!important;}
+  #structurePanel .structure-bond-row > button{grid-column:1 / -1!important;grid-row:4!important;}
+}
+
+/* Atoms: a tall expanded element/site list must scroll, not shrink all rows.
+   .structure-rows-list is a column flexbox; its children otherwise have the
+   default flex-shrink:1, compressing the 2-row colour palettes vertically. */
+#structurePanel #cifAtomColorRows > .atoms-table-head,
+#structurePanel #cifAtomColorRows > .atoms-table-row{
+  flex:0 0 auto;
+}
+#structurePanel #cifAtomColorRows{
+  overscroll-behavior-y:contain;
+}
+
+/* CIF Generator: keep the Structure viewer's natural square-height footprint
+   when switching output tabs.  The (non-interactive) hidden Structure pane is
+   retained in the grid solely as a sizing reference.  This prevents the
+   scroll container from shortening and jumping back toward the page top. */
+#structurePanel .generator-unified-right{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-content:start;
+}
+
+/* CIF Generator: retain the left editor and right output next to each other
+   much longer than the previous 880px container cutoff.  Shrink only their
+   columns, not the inputs or 3D plot; keep the original mobile stack. */
+@media (min-width:761px){
+  @container generator-unified (min-width:660px){
+    #structurePanel #cifGeneratorPanel.generator-unified-grid{
+      grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      align-items:start;
+    }
+    #structurePanel .generator-unified-left,
+    #structurePanel .generator-unified-right{
+      min-width:0;
+      max-width:100%;
+    }
+  }
+}
+
+/* Structure Editor > Style: keep ALL seven controls on a single row.
+   Two atom selects + Min/Max/Width share five equal flexible columns.
+   Color and Remove retain their previous allocations at every width. */
+#structurePanel #cifBondRows{
+  container-type:inline-size;
+  container-name:cif-style-fields;
+}
+#structurePanel #cifBondRows .structure-bond-row{
+  grid-template-columns:
+    repeat(5,minmax(0,1fr))
+    calc(40px * var(--tas-density))
+    minmax(calc(80px * var(--tas-density)),.45fr)!important;
+  grid-template-rows:minmax(0,auto)!important;
+  min-width:0!important;
+  width:100%!important;
+}
+
+#structurePanel #cifBondRows .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
+#structurePanel #cifBondRows .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
+
+#structurePanel #cifBondRows .structure-bond-row > .structure-entry-field{grid-column:5!important;grid-row:1!important;}
+#structurePanel #cifBondRows .structure-bond-row > input[type=color]{grid-column:6!important;grid-row:1!important;}
+#structurePanel #cifBondRows .structure-bond-row > button{grid-column:7!important;grid-row:1!important;}
+#structurePanel #cifBondRows .structure-bond-row select,
+#structurePanel #cifBondRows .structure-bond-row input[type=number],
+#structurePanel #cifBondRows .structure-bond-row .structure-entry-field{
+  box-sizing:border-box;
+  min-width:0!important;
+  max-width:100%!important;
+}
+/* Instead of wrapping, trim gaps and the number-input chrome as space narrows. */
+@container cif-style-fields (max-width:610px){
+  #structurePanel #cifBondRows .structure-bond-row{
+    column-gap:calc(3px * var(--tas-density))!important;
+  }
+  #structurePanel #cifBondRows .structure-bond-row select,
+  #structurePanel #cifBondRows .structure-bond-row input[type=number]{
+    padding-inline:calc(2px * var(--tas-density))!important;
+  }
+  #structurePanel #cifBondRows .structure-bond-row input[type=number]{
+    appearance:textfield;
+    -moz-appearance:textfield;
+  }
+  #structurePanel #cifBondRows .structure-bond-row input[type=number]::-webkit-inner-spin-button,
+  #structurePanel #cifBondRows .structure-bond-row input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  #structurePanel #cifBondRows .structure-bond-row .structure-entry-label{
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+
+/* Spins: same dense, aligned table idiom as Positions. The header checkbox
+   toggles the whole Display selection, including individual magnetic sites. */
+#structurePanel .structure-spin-table-wrap {
+  width:100%;max-width:100%;min-width:0;
+  max-height:calc(320px * var(--tas-density));
+  overflow:auto;-webkit-overflow-scrolling:touch;
+  margin-top:calc(7px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #c9cdd1;
+  scrollbar-gutter:stable;
+}
+
+/* 2026-10-13 — Positions / Atoms / Spins / Style: shared table metrics.
+   Table height is capped by the adjacent Structure view; never cap at four rows.
+   The JS writes --editor-table-height from the actual plot bottom on desktop. */
+#structurePanel .cif-atom-table-wrap,
+#structurePanel #cifAtomColorRows,
+#structurePanel .structure-spin-table-wrap,
+#structurePanel .structure-style-table-wrap {
+  box-sizing:border-box;
+  max-width:100%;
+  max-height:var(--editor-table-height, min(62vh, calc(540px * var(--tas-density)))) !important;
+  overflow:auto !important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  -webkit-overflow-scrolling:touch;
+}
+#structurePanel .cif-atom-table-wrap {width:100%;}
+
+/* Style: Positions-style seven-column selection/reordering table. */
+#structurePanel .structure-style-table-wrap {
+  width:100%;
+  margin-top:calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #dfe3e7;
+}
+#structurePanel .structure-style-table {
+  display:grid;
+  grid-template-columns:
+    calc(43px * var(--tas-density))
+    repeat(2,minmax(calc(76px * var(--tas-density)),1fr))
+    repeat(3,minmax(calc(72px * var(--tas-density)),1fr))
+    calc(54px * var(--tas-density));
+  min-width:calc(487px * var(--tas-density));
+  width:100%;
+  background:#dfe3e7;
+  gap:calc(1px * var(--tas-density));
+}
+#structurePanel .structure-style-table .structure-style-header {
+  display:flex;align-items:center;justify-content:center;
+  position:sticky;top:0;z-index:3;white-space:nowrap;
+  text-align:center;
+}
+/* Neutralize older container layout and grid rules for the previous card-style rows. */
+#structurePanel #cifBondRows {
+  display:contents !important;
+  max-height:none !important;
+  overflow:visible !important;
+  padding:0 !important;
+  container-type:normal !important;
+  scrollbar-gutter:auto !important;
+}
+#structurePanel #cifBondRows .structure-bond-row {
+  display:contents !important;
+}
+#structurePanel .structure-style-table .structure-style-cell {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  background:#fff;
+  padding:calc(4px * var(--tas-density));
+  cursor:pointer;
+}
+#structurePanel .structure-style-table .structure-style-index {
+  color:#555;background:#fafafa;font-weight:650;cursor:grab;user-select:none;touch-action:pan-y;
+}
+#structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]) {
+  width:100%;height:auto;min-height:calc(29px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) !important;
+}
+#structurePanel .structure-style-table .structure-style-color input[type=color]{
+  width:calc(32px * var(--tas-density));
+  height:calc(26px * var(--tas-density));
+  min-width:0;padding:calc(1px * var(--tas-density));cursor:pointer;
+}
+#structurePanel #cifBondRows .structure-bond-row.style-row-selected > .structure-style-cell{
+  background:#e8f2fc;
+}
+#structurePanel #cifBondRows .structure-bond-row.style-row-selected > .structure-style-cell :is(input,select){background:#fff;}
+#structurePanel #cifBondRows .structure-bond-row.style-row-dragging > .structure-style-cell{opacity:.5;}
+#structurePanel #cifBondRows .structure-bond-row.style-drop-before > .structure-style-cell{box-shadow:inset 0 calc(2px * var(--tas-density)) 0 #4488bd;}
+#structurePanel #cifBondRows .structure-bond-row.style-drop-after > .structure-style-cell{box-shadow:inset 0 calc(-2px * var(--tas-density)) 0 #4488bd;}
+#structurePanel .structure-style-actions {
+  margin-top:calc(8px * var(--tas-density));
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(6px * var(--tas-density));
+}
+#structurePanel .structure-style-actions button {width:100%;min-width:0;}
+#structurePanel .structure-style-actions button:disabled {opacity:.45;cursor:not-allowed;}
+#structurePanel .structure-style-table{
+  grid-template-columns:48px repeat(2,minmax(108px,1fr)) repeat(3,minmax(93px,1fr)) 60px;
+  min-width:655px;
+}
+
+/* 2026-10-13: Uij columns split into Index | Use | Atom | U11..U23.
+   Retain the ordinary Positions cell borders and scroll behavior. */
+#cifGeneratorPanel .cif-thermal-table{
+  grid-template-columns:
+    calc(42px * var(--tas-density))
+    calc(48px * var(--tas-density))
+    minmax(calc(88px * var(--tas-density)),1.25fr)
+    repeat(6,minmax(calc(61px * var(--tas-density)),1fr));
+  min-width:calc(630px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-toggle{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
+  padding:0;margin:0;
+}
+#cifGeneratorPanel .cif-thermal-atom-name{
+  display:block;max-width:100%;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:calc(13px * var(--tas-density));
+}
+#structurePanel .structure-style-table{
+  grid-template-columns:
+    calc(36px * var(--tas-density))
+    repeat(2,minmax(calc(81px * var(--tas-density)),1fr))
+    repeat(3,minmax(calc(70px * var(--tas-density)),1fr))
+    calc(45px * var(--tas-density));
+  min-width:calc(492px * var(--tas-density));
+}
+
+/* Atomic positions shares the Spins Mode / Display control conventions. */
+#structurePanel .structure-position-editor-toolbar{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  margin:calc(7px * var(--tas-density)) 0;
+  align-items:end;
+}
+#structurePanel #cifAtomColorRows .atoms-table-row.atoms-row-selected{
+  background:#e8f2fc;
+  box-shadow:inset 3px 0 #2472ac;
+}
+#structurePanel #cifAtomColorRows .atoms-table-row{cursor:pointer;}
+
+/* Per-Style drawing choices: No | All | Atom1 | Atom2 | Bonds | Polyhedral | Min | Max | Width | Color */
+#structurePanel .structure-style-table {
+  grid-template-columns:
+    calc(40px * var(--tas-density))
+    calc(60px * var(--tas-density))
+    minmax(calc(85px * var(--tas-density)),1fr)
+    minmax(calc(85px * var(--tas-density)),1fr)
+    calc(57px * var(--tas-density))
+    calc(79px * var(--tas-density))
+    minmax(calc(72px * var(--tas-density)),.8fr)
+    minmax(calc(72px * var(--tas-density)),.8fr)
+    calc(63px * var(--tas-density))
+    calc(52px * var(--tas-density)) !important;
+  min-width:calc(765px * var(--tas-density)) !important;
+}
+#structurePanel .structure-style-table .structure-style-mode-header {
+  white-space:nowrap;
+  overflow:visible;
+}
+#structurePanel .structure-style-table .structure-style-mode input[type="checkbox"] {
+  box-sizing:border-box;
+  appearance:auto;
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+  min-width:calc(15px * var(--tas-density));
+  cursor:pointer;
+  margin:0;
+  accent-color:#306fa0;
+}
+
+/* Bonds / Polyhedral headers should remain readable at normal density. */
+#structurePanel .structure-style-table {
+  grid-template-columns:
+    calc(40px * var(--tas-density))
+    calc(60px * var(--tas-density))
+    minmax(calc(85px * var(--tas-density)),1fr)
+    minmax(calc(85px * var(--tas-density)),1fr)
+    calc(85px * var(--tas-density))
+    calc(110px * var(--tas-density))
+    minmax(calc(72px * var(--tas-density)),.8fr)
+    minmax(calc(72px * var(--tas-density)),.8fr)
+    calc(63px * var(--tas-density))
+    calc(52px * var(--tas-density)) !important;
+  min-width:calc(824px * var(--tas-density)) !important;
+}
+
+/* Nuclear (crystallographic) and magnetic cell settings are visually distinct. */
+#structurePanel .cif-cell-box{
+  min-width:0;border:1px solid var(--tas-border-color,#b9c1cd);
+  border-radius:8px;padding:10px 10px 12px;margin:9px 0 11px;
+}
+#structurePanel .cif-cell-mapping-note{font-size:.85em;margin:4px 0 8px;line-height:1.4;}
+#structurePanel .cif-heading-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+
+/* Structure plot control card: intrinsic width, not the full viewer width.
+   Crystallographic/Magnetic stays on the second row without stretching the
+   Unit cell / XYZ axes / Save figure group. */
+#structurePanel .structure-plot-toolbar {
+  display:grid!important;
+  grid-template-columns:max-content max-content max-content;
+  align-items:end;
+  gap:calc(6px * var(--tas-density));
+  width:max-content!important;
+  max-width:100%!important;
+  box-sizing:border-box;
+  padding:calc(5px * var(--tas-density)) calc(7px * var(--tas-density))!important;
+}
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-plot-toolbar{
+    grid-template-columns:max-content max-content;
+  }
+  #structurePanel .structure-plot-toolbar > button{
+    grid-column:1 / -1;
+    justify-self:start;
+  }
+}

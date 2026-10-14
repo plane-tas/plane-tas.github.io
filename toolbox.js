@@ -317,7 +317,7 @@ export function createToolbox({
       nLabel.replaceChildren(document.createTextNode('Neutron beam'),row);
     }
 
-    // The S2 input rows use the shared responsive styles in styles.css.
+    // The S2 input rows use the shared responsive styles in styles/.
     // Avoid injecting fixed-width grid columns which collapse the neutron field
     // when the toolbox is used in a narrower workspace.
   }

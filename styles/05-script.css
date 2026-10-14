@@ -1,0 +1,447 @@
+/* Script panel: measurement sequences, SPICE text and ASET help.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+/* v37 Script tab: Time estimate <-> SPICE macro */
+.script-card{margin-top:0;min-width:0;overflow:hidden}
+.script-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:calc(12px * var(--tas-density));align-items:stretch;min-width:0}
+.script-command-pane,.script-spice-pane{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));min-width:0;background:#fff;overflow:hidden}
+.script-pane-heading{font-size:calc(16px * var(--tas-density));font-weight:650;margin:0 0 calc(8px * var(--tas-density));min-height:calc(30px * var(--tas-density));display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
+.script-spice-heading{justify-content:space-between;flex-wrap:wrap}
+.script-actions{display:flex;gap:calc(6px * var(--tas-density));flex-wrap:wrap;margin-left:auto}
+.script-actions button{width:auto;white-space:nowrap}
+.script-time-mount{min-width:0}
+.script-time-mount>.time-estimate-pane{display:block!important;min-width:0;width:100%}
+.script-time-mount .time-range-help{margin-top:0}
+.script-spice-text{display:block;width:100%;min-width:0;height:calc(620px * var(--tas-density));resize:vertical;padding:calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-radius:calc(6px * var(--tas-density));font:calc(13px * var(--tas-density))/1.5 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;white-space:pre;overflow:auto}
+.script-message{font-size:calc(13px * var(--tas-density));line-height:1.4;min-height:calc(20px * var(--tas-density));margin-top:calc(7px * var(--tas-density))}
+.script-message.error-text{color:#a22}
+@media(max-width:1180px){
+  .script-workspace{grid-template-columns:1fr}
+  .script-spice-text{height:calc(440px * var(--tas-density))}
+}
+
+/* v39 Script: labeled bidirectional conversion controls; one-space SPICE loop indentation. */
+.script-workspace{
+  grid-template-columns:minmax(0,1fr) calc(96px * var(--tas-density)) minmax(0,1fr);
+  gap:calc(8px * var(--tas-density));
+}
+.script-spice-heading{flex-wrap:nowrap}
+.script-actions{flex-wrap:nowrap}
+@media(max-width:1180px){
+  .script-workspace{grid-template-columns:1fr;gap:calc(8px * var(--tas-density))}
+  
+  
+  
+  
+}
+.time-estimate-message.warning-text{
+  color:#6b4f00;
+  background:#fff8df;
+  border:calc(1px * var(--tas-density)) solid #e2c66d;
+  border-radius:calc(4px * var(--tas-density));
+  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
+}
+
+.script-workspace{
+  display:grid;
+  grid-template-columns:minmax(calc(180px * var(--tas-density)),1fr) minmax(calc(440px * var(--tas-density)),2fr) minmax(calc(220px * var(--tas-density)),1fr)!important;
+  gap:calc(8px * var(--tas-density));
+  align-items:stretch;
+  min-width:0;
+}
+.script-aset-pane,.script-command-pane,.script-spice-pane{
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(8px * var(--tas-density));
+  padding:calc(9px * var(--tas-density));
+  min-width:0;
+  background:#fff;
+  overflow:hidden;
+}
+.script-command-heading,.script-spice-heading{justify-content:space-between;flex-wrap:nowrap}
+.script-command-heading button,.script-actions button{width:auto;white-space:nowrap}
+.script-aset-help{font-size:calc(12px * var(--tas-density));line-height:1.35;color:#666;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
+.script-aset-list{display:flex;flex-direction:column;gap:calc(7px * var(--tas-density))}
+.script-aset-item{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:calc(3px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #e2e2e2;
+  border-radius:calc(6px * var(--tas-density));
+  padding:calc(6px * var(--tas-density));
+  background:#fafafa;
+}
+.script-aset-item>span{font-size:calc(12px * var(--tas-density));font-weight:650}
+.script-aset-item input{width:100%;min-width:0;font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
+.script-spice-editor{position:relative;width:100%;height:calc(620px * var(--tas-density));min-height:calc(620px * var(--tas-density));max-height:calc(620px * var(--tas-density));resize:none;overflow:hidden}
+.script-spice-backdrop,.script-spice-text{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  margin:0;
+  padding:calc(10px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #bbb;
+  border-radius:calc(6px * var(--tas-density));
+  font:calc(13px * var(--tas-density))/1.5 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  white-space:pre;
+  overflow:auto;
+  tab-size:2;
+}
+.script-spice-backdrop{
+  pointer-events:none;
+  color:transparent;
+  background:#fff;
+  z-index:0;
+}
+.script-spice-text{
+  resize:none;
+  background:transparent;
+  color:#222;
+  caret-color:#222;
+  z-index:1;
+}
+.script-spice-backdrop .spice-backdrop-line{display:block;min-height:1.5em;color:transparent}
+.script-spice-backdrop .spice-backdrop-line.spice-line-error{background:rgba(213,73,48,.22)}
+.script-spice-backdrop .spice-backdrop-line.spice-line-warning{background:rgba(225,170,20,.20)}
+.script-spice-backdrop .spice-backdrop-line.spice-line-error::selection,
+.script-spice-backdrop .spice-backdrop-line.spice-line-warning::selection{background:transparent}
+
+@media(max-width:1180px){
+  .script-workspace{grid-template-columns:1fr!important}
+  .script-spice-editor{height:calc(440px * var(--tas-density));min-height:calc(440px * var(--tas-density));max-height:calc(440px * var(--tas-density))}
+  .script-aset-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .time-scan-table{grid-template-columns:calc(38px * var(--tas-density)) calc(82px * var(--tas-density)) calc(84px * var(--tas-density)) minmax(calc(150px * var(--tas-density)),1fr) calc(64px * var(--tas-density)) calc(40px * var(--tas-density))!important}
+  .time-scan-table-wrap{overflow-x:auto}
+  .script-aset-list{grid-template-columns:1fr}
+}
+
+/* v43: user-extensible ASET list and explicit first/last drag targets. */
+.script-aset-heading{justify-content:space-between;align-items:center}
+.script-aset-heading button{width:auto;white-space:nowrap}
+.script-aset-remove{width:auto;padding:calc(2px * var(--tas-density)) calc(5px * var(--tas-density));font-size:calc(11px * var(--tas-density));line-height:1.2}
+.time-scan-table-wrap.time-dragging .time-edge-dropzone{
+  display:block;
+  height:calc(16px * var(--tas-density));
+  margin:calc(2px * var(--tas-density)) 0;
+  background:rgba(59,130,246,.08);
+  outline:calc(1px * var(--tas-density)) dashed rgba(59,130,246,.45);
+}
+
+/* v44: ASET rows are edited directly as Index / Target / SPICE template. */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(116px * var(--tas-density)) calc(94px * var(--tas-density)) minmax(calc(120px * var(--tas-density)),1fr) calc(68px * var(--tas-density)) calc(44px * var(--tas-density))!important;
+}
+.script-aset-list{display:flex!important;flex-direction:column;gap:calc(4px * var(--tas-density))}
+.script-aset-table-header,.script-aset-item{
+  display:grid;
+  grid-template-columns:calc(34px * var(--tas-density)) minmax(calc(68px * var(--tas-density)),.7fr) minmax(calc(120px * var(--tas-density)),1.6fr) calc(26px * var(--tas-density));
+  gap:calc(4px * var(--tas-density));
+  align-items:center;
+}
+.script-aset-table-header{
+  font-size:calc(11px * var(--tas-density));
+  font-weight:650;
+  color:#555;
+  padding:0 calc(2px * var(--tas-density)) calc(3px * var(--tas-density));
+  border-bottom:calc(1px * var(--tas-density)) solid #ddd;
+  margin-bottom:calc(4px * var(--tas-density));
+}
+.script-aset-item{
+  border:0;
+  border-radius:0;
+  padding:0;
+  background:transparent;
+}
+.script-aset-index{font-size:calc(12px * var(--tas-density));text-align:center;color:#555;font-variant-numeric:tabular-nums}
+.script-aset-item input{
+  width:100%;min-width:0;
+  font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+}
+.script-aset-item [data-aset-target]{font-family:inherit}
+.script-aset-remove{width:calc(26px * var(--tas-density));height:calc(26px * var(--tas-density));padding:0;font-size:calc(13px * var(--tas-density));line-height:1}
+@media(max-width:760px){
+  .time-scan-table{grid-template-columns:calc(38px * var(--tas-density)) calc(100px * var(--tas-density)) calc(82px * var(--tas-density)) minmax(calc(130px * var(--tas-density)),1fr) calc(60px * var(--tas-density)) calc(40px * var(--tas-density))!important}
+  .script-aset-table-header,.script-aset-item{grid-template-columns:calc(32px * var(--tas-density)) minmax(calc(80px * var(--tas-density)),.8fr) minmax(calc(180px * var(--tas-density)),1.7fr) calc(26px * var(--tas-density))}
+  .script-aset-pane{overflow-x:auto}
+  .script-aset-table-header,.script-aset-list{min-width:calc(380px * var(--tas-density))}
+}
+.script-aset-item input.invalid{border-color:#c33;background:#fff4f4}
+
+/* v46: wider multiline ASET templates; keep Command readable while QE uses two Details fields. */
+.script-workspace{
+  grid-template-columns:minmax(calc(240px * var(--tas-density)),1.12fr) minmax(calc(430px * var(--tas-density)),1.88fr) minmax(calc(220px * var(--tas-density)),1fr)!important;
+}
+.script-aset-table-header,.script-aset-item{
+  grid-template-columns:calc(34px * var(--tas-density)) minmax(calc(64px * var(--tas-density)),.52fr) minmax(calc(180px * var(--tas-density)),2.15fr) calc(26px * var(--tas-density));
+  align-items:start;
+}
+.script-aset-item textarea[data-aset-template]{
+  width:100%;
+  min-width:0;
+  min-height:calc(30px * var(--tas-density));
+  max-height:calc(96px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #bbb;
+  border-radius:calc(4px * var(--tas-density));
+  background:#fff;
+  resize:vertical;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+}
+.script-aset-item textarea[data-aset-template].invalid{border-color:#c33;background:#fff4f4}
+@media(max-width:1180px){
+  .script-workspace{grid-template-columns:1fr!important}
+}
+@media(max-width:760px){
+  .script-aset-table-header,.script-aset-item{grid-template-columns:calc(32px * var(--tas-density)) minmax(calc(74px * var(--tas-density)),.55fr) minmax(calc(220px * var(--tas-density)),2.2fr) calc(26px * var(--tas-density))}
+  .script-aset-table-header,.script-aset-list{min-width:calc(430px * var(--tas-density))}
+}
+
+/* v47: fully editable ASET targets, matched text sizing, and in-pane scrolling. */
+.script-aset-pane{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+.script-aset-heading,
+.script-aset-help,
+.script-aset-table-header{flex:0 0 auto}
+.script-aset-list{
+  flex:1 1 0;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:calc(3px * var(--tas-density));
+  scrollbar-gutter:stable;
+}
+.script-aset-item input[data-aset-target]{
+  font-family:inherit;
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.35;
+}
+.script-aset-item textarea[data-aset-template]{
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.35;
+}
+@media(max-width:1180px){
+  .script-aset-list{
+    flex:0 1 auto;
+    max-height:calc(420px * var(--tas-density));
+    overflow-y:auto;
+  }
+}
+
+/* v48: unified commands, collapsible ASET, and a wider SPICE editor. */
+.script-workspace{
+  grid-template-columns:minmax(calc(240px * var(--tas-density)),.9fr) minmax(calc(440px * var(--tas-density)),1.55fr) minmax(calc(360px * var(--tas-density)),1.35fr)!important;
+}
+.script-command-actions{display:flex;gap:calc(6px * var(--tas-density));align-items:center;flex-wrap:nowrap}
+.script-command-actions button{width:auto;white-space:nowrap}
+.script-workspace.aset-collapsed{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.script-workspace.aset-collapsed .script-aset-pane{display:none}
+.script-aset-remove{display:inline-flex!important;align-items:center;justify-content:center}
+.script-aset-list{max-height:calc(620px * var(--tas-density))}
+@media(max-width:1180px){
+  .script-workspace,.script-workspace.aset-collapsed{grid-template-columns:1fr!important}
+  .script-workspace.aset-collapsed .script-aset-pane{display:none}
+  .script-aset-list{max-height:calc(420px * var(--tas-density))}
+}
+
+/* v49: case-sensitive ASET names, left-collapsing ASET drawer, SPICE line gutter. */
+.script-workspace{
+  transition:grid-template-columns .22s ease;
+}
+.script-aset-pane{
+  transition:transform .22s ease, opacity .18s ease, padding .22s ease, border-width .22s ease;
+  transform:translateX(0);
+  opacity:1;
+}
+.script-workspace.aset-collapsed{
+  grid-template-columns:0 minmax(calc(480px * var(--tas-density)),1fr) minmax(calc(600px * var(--tas-density)),1.42fr)!important;
+  gap:calc(8px * var(--tas-density));
+}
+.script-workspace.aset-collapsed .script-aset-pane{
+  display:flex!important;
+  transform:translateX(-105%);
+  opacity:0;
+  pointer-events:none;
+  padding-left:0;
+  padding-right:0;
+  border-left-width:0;
+  border-right-width:0;
+  overflow:hidden;
+}
+.script-spice-editor{
+  padding-left:calc(44px * var(--tas-density));
+}
+.script-spice-line-numbers{
+  position:absolute;
+  inset:0 auto 0 0;
+  width:calc(44px * var(--tas-density));
+  height:100%;
+  margin:0;
+  padding:calc(10px * var(--tas-density)) calc(6px * var(--tas-density)) calc(10px * var(--tas-density)) 0;
+  border:calc(1px * var(--tas-density)) solid #bbb;
+  border-right:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(6px * var(--tas-density)) 0 0 calc(6px * var(--tas-density));
+  background:#f7f7f7;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:3;
+  font:calc(13px * var(--tas-density))/1.5 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  text-align:right;
+  color:#777;
+  user-select:none;
+}
+.script-spice-line-numbers .spice-line-number{
+  display:block;
+  min-height:1.5em;
+  padding-right:calc(2px * var(--tas-density));
+}
+.script-spice-line-numbers .spice-line-number.spice-line-error{
+  background:rgba(213,73,48,.28);
+  color:#8b2417;
+  font-weight:700;
+}
+.script-spice-line-numbers .spice-line-number.spice-line-warning{
+  background:rgba(225,170,20,.25);
+  color:#735800;
+  font-weight:700;
+}
+.script-spice-editor .script-spice-backdrop,
+.script-spice-editor .script-spice-text{
+  left:calc(44px * var(--tas-density));
+  width:calc(100% - calc(44px * var(--tas-density)));
+  border-radius:0 calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) 0;
+}
+@media(max-width:1180px){
+  .script-workspace.aset-collapsed{grid-template-columns:1fr!important}
+  .script-workspace.aset-collapsed .script-aset-pane{display:none!important}
+}
+
+/* v50: restore the v48 ASET hide/show behavior. Hiding ASET removes the pane
+   from the layout (rather than sliding it left) and redistributes the width to
+   Time estimate commands and SPICE macro. The v49 line-number gutter remains. */
+.script-workspace{
+  transition:none;
+  grid-template-columns:minmax(calc(240px * var(--tas-density)),.9fr) minmax(calc(440px * var(--tas-density)),1.55fr) minmax(calc(360px * var(--tas-density)),1.35fr)!important;
+}
+.script-aset-pane{
+  transition:none;
+  transform:none;
+  opacity:1;
+}
+.script-workspace.aset-collapsed{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:calc(8px * var(--tas-density));
+}
+.script-workspace.aset-collapsed .script-aset-pane{
+  display:none!important;
+  transform:none;
+  opacity:1;
+  pointer-events:auto;
+  padding:calc(9px * var(--tas-density));
+  border-width:calc(1px * var(--tas-density));
+  overflow:hidden;
+}
+@media(max-width:1180px){
+  .script-workspace,.script-workspace.aset-collapsed{grid-template-columns:1fr!important}
+  .script-workspace.aset-collapsed .script-aset-pane{display:none!important}
+}
+.script-message{white-space:pre-wrap}
+.script-message.warning-text{color:#735800;background:#fff9df;border:calc(1px * var(--tas-density)) solid #e4cf75;border-radius:calc(4px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
+
+/* v83: balanced Script workspace, compact help, and explicit one-shot conversion. */
+@media(min-width:1181px){
+  .script-workspace:not(.aset-collapsed){
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+.script-aset-heading-actions{display:flex;align-items:center;gap:calc(6px * var(--tas-density))}
+.info-toggle-button{
+  width:auto!important;
+  padding:calc(3px * var(--tas-density)) calc(7px * var(--tas-density));
+  white-space:nowrap;
+  font-size:calc(12px * var(--tas-density));
+  line-height:1.35;
+}
+.time-info-row{display:flex;justify-content:flex-end;margin:0 0 calc(5px * var(--tas-density))}
+.time-info-panel{
+  margin:0 0 calc(8px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #d9dee5;
+  border-radius:calc(6px * var(--tas-density));
+  background:#f8fafc;
+}
+
+/* v84: larger Script help controls and editor text. */
+.info-toggle-button{
+  padding:calc(6px * var(--tas-density)) calc(11px * var(--tas-density))!important;
+  font-size:calc(14px * var(--tas-density))!important;
+  line-height:1.35!important;
+  font-weight:650;
+}
+.script-command-actions{display:flex;align-items:center;gap:calc(6px * var(--tas-density))}
+.script-aset-help{
+  font-size:calc(14px * var(--tas-density))!important;
+  line-height:1.5!important;
+}
+.script-spice-editor .script-spice-backdrop,
+.script-spice-editor .script-spice-text{
+  font-size:calc(15px * var(--tas-density))!important;
+  line-height:1.55!important;
+}
+.script-spice-line-numbers{
+  font-size:calc(15px * var(--tas-density))!important;
+  line-height:1.55!important;
+}
+
+/* v85: ASET Info uses the same panel presentation as Time estimate Info. */
+#scriptAsetHelp.time-info-panel{
+  margin:0 0 calc(8px * var(--tas-density))!important;
+  padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density))!important;
+  border:calc(1px * var(--tas-density)) solid #d9dee5!important;
+  border-radius:calc(6px * var(--tas-density))!important;
+  background:#f8fafc!important;
+  color:#555!important;
+  font-size:calc(14px * var(--tas-density))!important;
+  line-height:1.5!important;
+}
+
+/* v94 Angle calculation Single / Scan controls */
+.geometry-inner-tabs{margin-top:0}
+.geometry-scan-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:calc(8px * var(--tas-density));align-items:end}
+.geometry-scan-grid-final{margin-top:calc(8px * var(--tas-density))}
+.geometry-scan-output{margin-top:calc(8px * var(--tas-density));border-top:calc(1px * var(--tas-density)) solid #ddd}
+.geometry-scan-point-row{display:flex;align-items:center;gap:calc(10px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+.geometry-scan-table-wrap{width:max-content;min-width:100%;overflow:visible;background:#fff}
+.geometry-scan-table{width:100%;border-collapse:collapse;font-size:calc(13px * var(--tas-density));white-space:nowrap;background:#fff}
+.geometry-scan-hkl-head,.geometry-scan-hkl-cell{width:calc(64px * var(--tas-density));min-width:calc(64px * var(--tas-density));max-width:calc(64px * var(--tas-density))}
+/* Keep Angle calculation > Scan in the same five aligned columns on narrow screens.
+   Initial: H, K, L, energy, Points; final: H, K, L, energy, blank.
+   The blank fifth cell below Points is intentional for visual clarity. */
+@media(max-width:900px){
+  .geometry-scan-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+
+/* vUI: compact instrument setup and balanced sample selectors. */
+.instrument-primary-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:calc(4px * var(--tas-density));align-items:end;min-width:0}
+.structure-help-text,
+.cif-structure-status{
+  font-size:calc(13px * var(--tas-density));
+  color:#555;
+}
+.harmonic-wrap{overflow-x:auto;margin-top:calc(14px * var(--tas-density))}
+/* Contain horizontal overflow in Script's Command pane; not the entire page. */
+#scriptPanel .time-scan-table-wrap{overflow-x:auto;}
+.script-spice-editor .script-spice-text,
+.script-spice-editor .script-spice-backdrop,
+.script-spice-editor .script-spice-line-numbers{
+  font-size:var(--tas-spice-text-size)!important;
+  line-height:1.55!important;
+}

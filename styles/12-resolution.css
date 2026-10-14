@@ -1,0 +1,258 @@
+/* Resolution panel.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.sidebar h2,.calc-card h2,#result h2{font-size:calc(16px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}details summary{font-weight:650;cursor:pointer}.compact-checks>div{border:calc(1px * var(--tas-density)) solid #eee;padding:calc(5px * var(--tas-density));border-radius:calc(5px * var(--tas-density))}.compact-checks label:has(input[type=checkbox]){flex-direction:row;align-items:center}.plots>div{height:calc(390px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #eee}.scan .grid5{margin-top:calc(5px * var(--tas-density))}
+#resolutionPanel .calc-card{margin-top:0}
+
+/* Resolution-only instrument details.
+   Common Instrument/Sample controls stay in the permanent left sidebar.
+   The finer resolution-model settings appear only inside the Resolution tab. */
+#resolutionPanel .resolution-workspace{
+  display:grid;
+  grid-template-columns:minmax(calc(300px * var(--tas-density)),calc(360px * var(--tas-density))) minmax(0,1fr);
+  gap:calc(12px * var(--tas-density));
+  align-items:start;
+}
+#resolutionPanel .resolution-main-column{min-width:0}
+#resolutionInstrumentDetails{
+  min-width:0;
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(8px * var(--tas-density));
+  padding:calc(9px * var(--tas-density));
+  background:#fff;
+}
+#resolutionInstrumentDetails .resolution-detail-title{
+  font-size:calc(16px * var(--tas-density));
+  font-weight:650;
+  margin:0 0 calc(8px * var(--tas-density));
+}
+/* Match the permanent sidebar cards (Instrument configuration / Sample):
+   white card, thin border, rounded corners, plain title with no divider line. */
+#resolutionInstrumentDetails details{
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(8px * var(--tas-density));
+  padding:calc(9px * var(--tas-density));
+  margin-bottom:calc(9px * var(--tas-density));
+  background:#fff;
+}
+#resolutionInstrumentDetails details > summary{
+  margin:0;
+  padding:0;
+  background:#fff;
+  border:0;
+  font-size:calc(16px * var(--tas-density));
+  font-weight:650;
+}
+#resolutionInstrumentDetails details[open] > summary{margin-bottom:calc(8px * var(--tas-density))}
+#resolutionInstrumentDetails details:not([open]) > summary{margin-bottom:0}
+#resolutionInstrumentDetails details:last-child{margin-bottom:0}
+#resolutionInstrumentDetails .instrument-fixed-section{
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(8px * var(--tas-density));
+  padding:calc(9px * var(--tas-density));
+  margin-bottom:calc(9px * var(--tas-density));
+  background:#fff;
+}
+#resolutionInstrumentDetails .instrument-fixed-heading{
+  margin:0 0 calc(8px * var(--tas-density));
+  padding:0;
+  background:#fff;
+  border:0;
+  font-size:calc(16px * var(--tas-density));
+  font-weight:650;
+}
+#resolutionInstrumentDetails h3{font-size:calc(13px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
+#resolutionInstrumentDetails input[type=number],
+#resolutionInstrumentDetails input[type=text]{
+  width:100%;
+  min-width:0;
+  max-width:none;
+}
+
+/* Use the available Calculation-point width instead of leaving short
+   fixed-width h/k/l/hbar-omega entry boxes surrounded by empty space. */
+#resolutionCalculation #singleInputs{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+}
+#resolutionCalculation #singleInputs input[type=number]{
+  width:100%;
+  min-width:0;
+  max-width:none;
+}
+
+/* Scan entries should also fill their grid cells consistently. */
+#resolutionCalculation #scanInputs input[type=number]{
+  width:100%;
+  min-width:0;
+  max-width:none;
+}
+
+/* On tablet-sized screens, do not let Instrument details consume a permanent
+   side column. Move it above the calculation/results area so the resolution
+   plots can use the full available width. The detail cards themselves become
+   a compact two-column grid where space permits. */
+@media(max-width:1250px){
+  #resolutionPanel .resolution-workspace{grid-template-columns:1fr}
+  #resolutionInstrumentDetails{
+    position:static;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:calc(8px * var(--tas-density));
+  }
+  #resolutionInstrumentDetails .resolution-detail-title{
+    grid-column:1 / -1;
+    margin-bottom:0;
+  }
+  #resolutionInstrumentDetails details{margin-bottom:0}
+  #resolutionInstrumentDetails .instrument-fixed-section{margin-bottom:0}
+}
+@media(max-width:1050px){
+  #resolutionInstrumentDetails{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  #resolutionCalculation #singleInputs{grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(4px * var(--tas-density))}
+  #resolutionCalculation #singleInputs label{font-size:calc(11.5px * var(--tas-density))}
+  #resolutionCalculation #singleInputs input[type=number]{padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
+}
+
+/* v105: Resolution Scan is explicitly calculated to keep common editing responsive. */
+#calcScanResolution{align-self:end;min-height:calc(38px * var(--tas-density))}
+#calcScanResolution.needs-calc{font-weight:700}
+
+/* Resolution: input labels, calculation results, axis directions/angles, matrix. */
+#resolutionCalculation > h2,
+#result > h2 {
+  font-size: calc(19px * var(--tas-density));
+  line-height: 1.3;
+}
+#resolutionPanel label,
+#resolutionInstrumentDetails label {
+  font-size: calc(15.5px * var(--tas-density));
+  line-height: 1.3;
+}
+#resolutionInstrumentDetails h3 {
+  font-size: calc(15.5px * var(--tas-density));
+}
+#resolutionPanel .summary {
+  font-size: calc(16.5px * var(--tas-density));
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+#resolutionPanel .summary > div + div {
+  margin-top: calc(5px * var(--tas-density));
+}
+#result details > summary {
+  font-size: calc(16px * var(--tas-density));
+}
+#result details > div {
+  font-size: calc(15px * var(--tas-density));
+}
+#result #matrix {
+  font-size: calc(14.5px * var(--tas-density));
+  line-height: 1.5;
+  max-width: 100%;
+  overflow: auto;
+}
+/* Keep Resolution's four compact mobile input labels readable as well. */
+@media (max-width: 600px) {
+  #resolutionCalculation #singleInputs label {
+    font-size: calc(14px * var(--tas-density));
+  }
+}
+
+/* Resolution: no redundant title above the local/U-based matrix listings. */
+#result .resolution-matrix-display{
+  min-width:0;
+  margin-top:calc(12px * var(--tas-density));
+}
+#result .resolution-matrix-display #matrix{
+  font-size:calc(18.5px * var(--tas-density));
+  line-height:1.55;
+  white-space:pre;
+  overflow-x:auto;
+  max-width:100%;
+  margin:0;
+  padding:calc(5px * var(--tas-density)) 0;
+}
+
+/* Resolution: remove the faint partial-looking div borders. Each entire
+   panel receives a complete four-sided card border. Plotly draws its own
+   four-sided axes inside the plotting rectangle. */
+#resolutionPanel #result .plots > div{
+  box-sizing:border-box;
+  border:1px solid #d3dae4!important;
+  border-radius:calc(7px * var(--tas-density));
+  background:#fff;
+  overflow:hidden;
+  min-width:0;
+}
+
+/* Instrument type: omit analyzer controls for diffractometers. */
+.diffractometer-resolution-note{font-size:var(--tas-font-control,13px);line-height:1.45;color:#8a5317;background:#fff8e9;border:1px solid #edd8ad;border-radius:6px;padding:8px 10px;margin:0 0 12px}
+
+/* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
+#resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
+#resolutionDistanceGrid .resolution-diffraction-distance{min-width:0}
+
+@media(max-width:760px){
+  #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* The remaining monochromator focusing controls use the full width. */
+#resolutionFocusingGrid.resolution-is-diffractometer{grid-template-columns:minmax(0,1fr)}
+
+/* Resolution subheadings should match the main Resolution tab's text size,
+   not exceed it on small screens. Includes the matrices heading. */
+#resolutionPanel #resolutionCalculation > h2,
+#resolutionPanel #result > h2{
+  font-size:var(--tas-tab-text-size);
+  line-height:1.3;
+}
+#resolutionPanel #summary,
+#geometryAnglesPane #geometryAngles{
+  font-size:var(--tas-calculation-output-font-size);
+  line-height:1.55;
+}
+
+/* Resolution result: the four bold summary labels match the actual
+   "Resolution" result heading, not the main navigation tab or summary text. */
+#resolutionPanel #result #summary > div > b{
+  font-size:var(--tas-tab-text-size);
+}
+
+/* Diffractometers have no supported TAS resolution model: display the notice only.
+   Keep calculation input visibility states unchanged for a later TAS selection. */
+#resolutionCalculation.resolution-unavailable > :not(#diffractometerResolutionNote){display:none!important;}
+
+/* Resolution Instrument details uses the same section-heading size as the
+   Instrument configuration card in the sidebar, including collapsed sections. */
+#resolutionInstrumentDetails :is(.resolution-detail-title, .instrument-fixed-heading),
+#resolutionInstrumentDetails details > summary {
+  font-size: var(--plane-tab-heading-font) !important;
+  font-weight: 650 !important;
+  line-height: 1.3;
+}
+#resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
+  font-size: 0.9em;
+  font-weight: 400;
+}
+/* Crystal's dropdown caption and neighboring d-entry label should not have
+   different weights.  The label with the select is never oversized. */
+#resolutionInstrumentDetails label {
+  font-weight: 400 !important;
+}
+#resolutionInstrumentDetails label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+/* Inside Resolution Instrument details, Crystal and d must be equivalent. */
+#resolutionInstrumentDetails label {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+/* The unit text is part of the heading, not a small footnote. */
+#resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
+  font-size: 1em !important;
+  font-weight: 650 !important;
+  line-height: inherit;
+}

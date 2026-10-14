@@ -1,0 +1,78 @@
+/* Application header and main tab bar.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}h1{font-size:calc(22px * var(--tas-density));margin:0}
+/* Keep the existing header links accessible on very narrow phones. */
+@media(max-width:360px){
+  header{flex-wrap:wrap!important;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density))!important;align-items:center!important;padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));}
+  header > h1{flex:1 1 100%;font-size:calc(18px * var(--tas-density));}
+  header > #status{flex:1 1 100%;margin-left:0!important;}
+}
+#tasTopBar { position: sticky; top: 0; z-index: 20; background: #fff; }
+#tasTopBar > header { position: static; }
+#tasTopBar > header{
+  display:flex;align-items:center;flex-wrap:wrap;
+  gap:4px 12px!important;
+  padding:6px 12px;
+  min-height:var(--tas-header-height);
+}
+#tasTopBar .tas-brand{
+  flex:0 1 auto;min-width:0;
+  display:flex;flex-direction:column;justify-content:center;
+}
+#tasTopBar .tas-brand h1{
+  margin:0;color:#cf6914;font-size:23px;font-weight:800;letter-spacing:.025em;line-height:1.08;
+}
+#tasTopBar .tas-brand-subtitle{
+  margin-top:3px;font-size:11px;line-height:1.25;color:#495261;
+  letter-spacing:0;white-space:normal;
+}
+#tasTopBar .tas-brand-letter{color:#cf6914;font-weight:800;}
+#tasTopBar #status{
+  flex:1 1 145px;min-width:0;margin-left:auto;
+  font-size:12px;line-height:1.3;text-align:right;color:#596472;
+}
+#tasTopBar #manualLink,#tasTopBar #githubLink{
+  flex:0 0 auto;font-size:15px;font-weight:650;
+  line-height:1.3;padding:3px 1px;
+}
+@media(max-width:900px) and (min-width:761px){
+  #tasTopBar .tas-brand-subtitle{max-width:350px;}
+  #tasTopBar #status{flex-basis:130px;}
+}
+@media(max-width:760px){
+  :root{--tas-header-height:88px;}
+  #tasTopBar > header{padding:6px 10px;gap:5px 12px!important;}
+  #tasTopBar .tas-brand{flex:1 1 100%;}
+  #tasTopBar .tas-brand h1{font-size:26px;}
+  #tasTopBar .tas-brand-subtitle{font-size:11.5px;}
+  #tasTopBar #manualLink{order:2;font-size:15px;}
+  #tasTopBar #githubLink{order:3;font-size:15px;}
+  #tasTopBar #status{order:4;flex:1 1 auto;min-width:0;margin-left:auto!important;text-align:right;font-size:11.5px;}
+}
+@media(max-width:420px){
+  #tasTopBar #status{flex-basis:100%;text-align:left;}
+  :root{--tas-header-height:108px;}
+}
+
+/* Brand only: Anta typeface and restrained embossed shadows.
+   Do not change form controls, Plotly graphs, results, or other headings.
+   Anta comes in regular (400); synthetic bold would distort its shapes. */
+#tasTopBar .tas-brand h1,
+#tasTopBar .tas-brand-subtitle,
+#tasTopBar .tas-brand-letter{
+  font-family:'Anta',system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-weight:400;
+}
+#tasTopBar .tas-brand h1{
+  text-shadow:
+    0 1px 0 rgba(255,230,193,.9),
+    0 2px 0 rgba(146,70,17,.82),
+    0 3px 3px rgba(71,40,18,.25);
+}
+#tasTopBar .tas-brand-subtitle{
+  text-shadow:0 1px 0 rgba(255,255,255,.9),0 2px 2px rgba(46,52,64,.18);
+}
+#tasTopBar .tas-brand-letter{
+  text-shadow:0 1px 0 rgba(255,233,195,.92),0 2px 2px rgba(131,64,24,.22);
+}

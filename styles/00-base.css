@@ -1,0 +1,801 @@
+@import url("https://fonts.googleapis.com/css2?family=Anta&display=swap");
+/* Global foundation: web font, element defaults, shared components and utilities used across several panels.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;background:#fff}*{box-sizing:border-box}body{margin:0}.status{font-size:calc(12px * var(--tas-density));color:#666}.shell{display:grid;grid-template-columns:calc(390px * var(--tas-density)) minmax(0,1fr);min-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar{padding:calc(10px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ddd;overflow:auto;max-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar section,.sidebar details,.calc-card,#result{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));margin-bottom:calc(9px * var(--tas-density))}main{padding:calc(12px * var(--tas-density));min-width:0}.grid2,.grid3,.grid4,.grid5,.vector,.toolbar{display:grid;gap:calc(4px * var(--tas-density))}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid5{grid-template-columns:repeat(5,minmax(0,1fr));align-items:end}.vector{grid-template-columns:calc(28px * var(--tas-density)) repeat(3,minmax(0,1fr));align-items:center;margin:calc(3px * var(--tas-density)) 0}.auto-vector{font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}.toolbar{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:calc(8px * var(--tas-density))}label{font-size:calc(12px * var(--tas-density));display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0}input,select,button{font:inherit;min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-radius:calc(4px * var(--tas-density));background:white}input[type=number]{width:10ch;min-width:8ch;max-width:100%}select{width:100%}input[type=checkbox]{width:auto}.checkbox-label{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));align-self:end;min-height:calc(28px * var(--tas-density))}.dark-table{display:grid;grid-template-columns:calc(26px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(70px * var(--tas-density));gap:calc(3px * var(--tas-density));align-items:center;font-size:calc(11px * var(--tas-density))}.chart-grid{display:grid;grid-template-columns:minmax(calc(520px * var(--tas-density)),1.35fr) minmax(calc(430px * var(--tas-density)),1fr);gap:calc(12px * var(--tas-density))}.qe-plot{width:100%;min-height:calc(620px * var(--tas-density))}.geometry{min-height:calc(620px * var(--tas-density))}.powder{min-height:calc(650px * var(--tas-density))}.energy-slider-row{display:flex;gap:calc(12px * var(--tas-density));align-items:center;padding:0 calc(20px * var(--tas-density)) calc(12px * var(--tas-density))}.energy-slider-row label{flex:1}.energy-slider-row input{width:100%}.calc-card{margin-top:calc(8px * var(--tas-density))}.plots{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--tas-density))}.summary{font-size:calc(13px * var(--tas-density));margin-bottom:calc(8px * var(--tas-density))}.error{border:calc(1px * var(--tas-density)) solid #c33;background:#fff4f4;padding:calc(10px * var(--tas-density));margin-bottom:calc(10px * var(--tas-density));white-space:pre-wrap}.hidden{display:none!important}.scan-nav{display:grid;grid-template-columns:auto 1fr auto auto;gap:calc(8px * var(--tas-density));align-items:center;margin-bottom:calc(8px * var(--tas-density))}pre{overflow:auto;font-size:calc(12px * var(--tas-density))}button{cursor:pointer}
+@media(max-width:1050px){.shell{grid-template-columns:calc(320px * var(--tas-density)) minmax(0,1fr)}.chart-grid{grid-template-columns:1fr}.geometry{min-height:calc(420px * var(--tas-density))}.plots{grid-template-columns:1fr}.grid5{grid-template-columns:repeat(2,minmax(0,1fr))}#singleInputs.grid5{grid-template-columns:repeat(5,minmax(0,1fr))}#scanInputs .grid5{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:760px){.shell{display:block}.sidebar{max-height:none;border-right:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd}.chart-grid{grid-template-columns:1fr}.qe-plot{min-height:calc(520px * var(--tas-density))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.geometry-target{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(4px * var(--tas-density))}
+
+.geometry-angles{font-size:calc(12px * var(--tas-density));line-height:1.45;margin-top:calc(8px * var(--tas-density));padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));background:#f7f7f7;border-radius:calc(5px * var(--tas-density));min-height:calc(34px * var(--tas-density))}
+.geometry-angles.error-text{color:#a22;background:#fff4f4}
+
+/* Main workspace tabs: Sample / Instrument setup remain shared in the sidebar. */
+.main-tabs{
+  display:flex;
+  gap:calc(6px * var(--tas-density));
+  margin:0 0 calc(12px * var(--tas-density));
+  padding:calc(4px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(9px * var(--tas-density));
+  background:#f7f7f7;
+}
+.tab-button{
+  flex:0 1 calc(220px * var(--tas-density));
+  padding:calc(8px * var(--tas-density)) calc(14px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid transparent;
+  border-radius:calc(6px * var(--tas-density));
+  background:transparent;
+  font-weight:650;
+}
+.tab-button:hover{background:#fff}
+.tab-button.active{
+  background:#fff;
+  border-color:#ccc;
+  box-shadow:0 calc(1px * var(--tas-density)) calc(3px * var(--tas-density)) rgba(0,0,0,.08);
+}
+.tab-button:focus-visible{outline:calc(2px * var(--tas-density)) solid currentColor;outline-offset:calc(2px * var(--tas-density))}
+.tab-panel{min-width:0}
+
+@media(max-width:760px){
+  /* Mobile: workspace navigation scrolls away with page content. */
+  .main-tabs{position:static;background:#f7f7f7}
+  .tab-button{flex:1;padding:calc(8px * var(--tas-density)) calc(6px * var(--tas-density))}
+}
+
+/* Q-E workspace: compact square reciprocal-space map + larger TAS schematic. */
+#singleMain .chart-grid{grid-template-columns:minmax(calc(500px * var(--tas-density)),1.08fr) minmax(calc(500px * var(--tas-density)),1fr);align-items:stretch}
+#geometryPlot.geometry{min-height:calc(580px * var(--tas-density))}
+@media(max-width:1250px){#singleMain .chart-grid{grid-template-columns:minmax(calc(440px * var(--tas-density)),1.05fr) minmax(calc(440px * var(--tas-density)),1fr)}#geometryPlot.geometry{min-height:calc(580px * var(--tas-density))}}
+
+/* TAS Geometry target energy slider */
+
+/* Background-scattering selectors are added/removed dynamically, up to the four existing display colors. */
+.background-rows{display:grid;gap:calc(5px * var(--tas-density))}
+.background-row{display:grid;grid-template-columns:minmax(0,1fr) calc(70px * var(--tas-density));gap:calc(5px * var(--tas-density));align-items:end}
+.background-label{display:flex;align-items:center;gap:calc(4px * var(--tas-density))}
+.bg-swatch{display:inline-block;width:calc(14px * var(--tas-density));height:calc(3px * var(--tas-density));border-radius:calc(2px * var(--tas-density));flex:0 0 auto}
+.bg-swatch.bg1{background:rgb(0,0,128)}
+.bg-swatch.bg2{background:rgb(165,42,42)}
+.bg-swatch.bg3{background:rgb(44,160,44)}
+.bg-swatch.bg4{background:rgb(148,103,189)}
+
+/* v63: toolbox and powder relation helper */
+.toolbox-card{max-width:calc(1200px * var(--tas-density))}
+.toolbox-grid{display:grid;grid-template-columns:repeat(4,minmax(calc(130px * var(--tas-density)),1fr));gap:calc(10px * var(--tas-density))}
+.harmonic-wrap{overflow-x:auto;margin-top:calc(14px * var(--tas-density))}.harmonic-table{display:grid;grid-template-columns:calc(90px * var(--tas-density)) repeat(7,minmax(calc(105px * var(--tas-density)),1fr));gap:0;min-width:calc(850px * var(--tas-density));border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
+.harmonic-table>*{background:#fff;padding:calc(8px * var(--tas-density));text-align:center;border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc}
+.tool-note{font-size:calc(12px * var(--tas-density));color:#666;margin:calc(8px * var(--tas-density)) 0 0}
+
+@media(max-width:900px){.toolbox-grid{grid-template-columns:repeat(2,1fr)}.harmonic-table{font-size:calc(11px * var(--tas-density));grid-template-columns:calc(70px * var(--tas-density)) repeat(7,minmax(calc(85px * var(--tas-density)),1fr))}}
+
+/* v65: let Toolbox use the full workspace width and keep all conversion inputs on one row. */
+.toolbox-card{max-width:none;width:100%}
+.toolbox-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:end}
+.toolbox-grid input[type=number]{width:100%;min-width:0;max-width:none}
+@media(max-width:1050px){.toolbox-grid{grid-template-columns:repeat(7,minmax(calc(110px * var(--tas-density)),1fr));overflow-x:auto;padding-bottom:calc(4px * var(--tas-density))}}
+
+/* v71: up to three propagation vectors, one compact row per vector. */
+.propagation-vectors{display:grid;gap:calc(5px * var(--tas-density))}
+.propagation-row{display:grid;grid-template-columns:calc(52px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(70px * var(--tas-density));gap:calc(5px * var(--tas-density));align-items:end}
+.propagation-row input[type=number],.propagation-row input[type=text]{width:100%;min-width:0}
+.propagation-enable{align-self:center;margin:0;padding-top:calc(15px * var(--tas-density))}
+
+/* v76: quick elastic targets for Angle calculation & TAS geometry */
+.geometry-target-row{display:grid;grid-template-columns:1fr;gap:calc(8px * var(--tas-density));align-items:end}
+.geometry-target-buttons{display:block;white-space:normal}
+.geometry-target-all-buttons{display:flex;gap:calc(5px * var(--tas-density));justify-content:flex-start;align-items:center;flex-wrap:nowrap}
+.geometry-target-buttons button{padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));font-size:calc(12px * var(--tas-density))}
+
+/* v79: up to three independent dark-angle assets */
+.dark-asset{border:calc(1px * var(--tas-density)) solid #e2e2e2;border-radius:calc(6px * var(--tas-density));padding:calc(7px * var(--tas-density));margin-top:calc(7px * var(--tas-density))}
+.dark-asset-head{display:grid;grid-template-columns:minmax(calc(105px * var(--tas-density)),.75fr) minmax(calc(150px * var(--tas-density)),1.25fr) calc(70px * var(--tas-density));gap:calc(6px * var(--tas-density));align-items:end;margin-bottom:calc(5px * var(--tas-density))}
+
+/* v90: optional nuclear Bragg-peak labels, between legend/plot and Q-E sliders. */
+.nuclear-label-control{padding:calc(2px * var(--tas-density)) calc(20px * var(--tas-density)) calc(4px * var(--tas-density));display:flex;align-items:center}
+
+/* Visually distinguish non-editable entry boxes from editable inputs. */
+input[readonly],
+input:disabled,
+textarea[readonly],
+textarea:disabled {
+  background: #e9ecef;
+  color: #666;
+  border-color: #c7c7c7;
+  cursor: not-allowed;
+}
+
+/* CIF selection and neutron nuclear structure-factor display. */
+.cif-select-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(8px * var(--tas-density));align-items:center;margin:calc(7px * var(--tas-density)) 0 calc(2px * var(--tas-density))}
+.cif-select-row button{white-space:nowrap}
+.cif-file-name{width:100%;min-width:0;font-size:calc(13px * var(--tas-density));color:#555;background:#f7f7f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sample-spacegroup-row{display:grid;grid-template-columns:minmax(calc(110px * var(--tas-density)),.8fr) minmax(calc(90px * var(--tas-density)),.55fr) minmax(calc(180px * var(--tas-density)),1.65fr);gap:calc(4px * var(--tas-density));align-items:end}
+
+#sfColorMaxRow{margin-top:calc(-4px * var(--tas-density))}
+
+/* Keep the nuclear structure-factor color control on one line and mirror the
+   hbar-omega / S2 controls with a numeric entry on the right. */
+
+.qe-range-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(12px * var(--tas-density));padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density)) calc(12px * var(--tas-density));align-items:end}
+.qe-range-control{display:flex;flex-direction:column;gap:calc(6px * var(--tas-density));min-width:0}
+.qe-range-control input[type=range]{width:100%;padding:0}
+.sf-control{margin-top:0!important}
+
+/* Q-E readability refinements. */
+.qe-range-control .qe-control-entry{font-size:calc(14px * var(--tas-density));font-weight:600}
+
+/* Q-E higher-order contamination warning above the hbar-omega control. */
+.qe-spurion-warning{
+  min-height:calc(20px * var(--tas-density));
+  font-size:calc(13px * var(--tas-density));
+  font-weight:700;
+  color:#b00020;
+  line-height:1.3;
+}
+
+/* CIF generator */
+
+.cif-generator-input-pane,.cif-generator-output-pane{min-width:0;border:calc(1px * var(--tas-density)) solid #d5d5d5;border-radius:calc(7px * var(--tas-density));background:#fff}
+.cif-generator-input-pane{padding:calc(12px * var(--tas-density))}
+.cif-generator-output-pane{display:flex;flex-direction:column;min-height:calc(650px * var(--tas-density));overflow:hidden}
+.cif-pane-heading,.cif-atom-heading{display:flex;justify-content:space-between;gap:calc(12px * var(--tas-density));align-items:flex-end}
+.cif-generator-setup{display:grid;grid-template-columns:1fr;gap:calc(8px * var(--tas-density));align-items:end;margin-top:calc(12px * var(--tas-density))}
+.cif-space-group-picker{display:grid;grid-template-columns:calc(78px * var(--tas-density)) minmax(0,1fr);gap:calc(8px * var(--tas-density));align-items:end}
+.cif-space-group-picker select,.cif-space-group-picker input{width:100%;max-width:none}
+.cif-lattice-grid{display:grid;grid-template-columns:repeat(3,minmax(calc(85px * var(--tas-density)),1fr));gap:calc(8px * var(--tas-density))}
+.cif-atom-table-wrap{overflow:auto;margin-top:calc(8px * var(--tas-density));max-height:calc(232px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ccc}
+.cif-atom-table{display:grid;grid-template-columns:calc(52px * var(--tas-density)) calc(72px * var(--tas-density)) repeat(4,minmax(calc(76px * var(--tas-density)),1fr)) calc(94px * var(--tas-density));min-width:calc(652px * var(--tas-density));border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc}
+.cif-atom-header{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7;padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center;position:sticky;top:0;z-index:2}
+.cif-atom-cell{padding:calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
+.cif-atom-cell button{width:100%;padding:calc(4px * var(--tas-density)) calc(7px * var(--tas-density));white-space:nowrap}
+.cif-atom-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#555;background:#fafafa}
+
+.cif-filename-suffix{display:flex;align-items:center;align-self:stretch;padding:0 calc(9px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-left:0;border-radius:0 calc(4px * var(--tas-density)) calc(4px * var(--tas-density)) 0;background:#f5f5f5;font-size:calc(14px * var(--tas-density));color:#444}
+.cif-generator-beam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density));margin:calc(10px * var(--tas-density)) 0 calc(12px * var(--tas-density))}
+
+.cif-generator-message{font-size:calc(12px * var(--tas-density));min-height:calc(20px * var(--tas-density));margin-top:calc(8px * var(--tas-density));color:#555}
+
+.cif-output-tabs{display:flex;gap:0;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#f5f5f5}
+.cif-output-tab{flex:1;border:0;border-right:calc(1px * var(--tas-density)) solid #d5d5d5;border-radius:0;background:#f5f5f5;padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));font-weight:650}
+.cif-output-panel{flex:1;min-height:0;padding:calc(10px * var(--tas-density));overflow:hidden}
+.cif-preview-note{box-sizing:border-box;width:100%;height:100%;min-height:calc(590px * var(--tas-density));margin:0;padding:calc(12px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(5px * var(--tas-density));background:#fafafa;font:calc(12px * var(--tas-density))/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;white-space:pre;tab-size:2}
+
+.cif-reflection-toolbar{display:grid;grid-template-columns:calc(150px * var(--tas-density)) calc(190px * var(--tas-density)) minmax(0,1fr);gap:calc(9px * var(--tas-density));align-items:end;margin-bottom:calc(9px * var(--tas-density))}
+.cif-reflection-toolbar input[type=number],.cif-reflection-toolbar select{width:100%;max-width:none}
+.cif-reflection-plane-toggle{display:flex;align-items:center;gap:calc(7px * var(--tas-density));min-height:calc(34px * var(--tas-density));font-size:calc(12px * var(--tas-density))}
+
+.cif-reflection-table-wrap{height:calc(535px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #ccc;border-radius:calc(5px * var(--tas-density))}
+.cif-reflection-table{border-collapse:separate;border-spacing:0;width:100%;min-width:calc(760px * var(--tas-density));font-size:calc(12px * var(--tas-density));font-variant-numeric:tabular-nums}
+
+@media(max-width:1180px){
+  
+  .cif-generator-output-pane{min-height:calc(620px * var(--tas-density))}
+  .cif-preview-note{min-height:calc(555px * var(--tas-density))}
+  .cif-reflection-table-wrap{height:calc(500px * var(--tas-density))}
+}
+@media(max-width:760px){
+  .cif-lattice-grid{grid-template-columns:repeat(2,minmax(calc(90px * var(--tas-density)),1fr))}
+  .cif-pane-heading,.cif-atom-heading{align-items:stretch;flex-direction:column}
+  
+  
+  
+  .cif-reflection-toolbar{grid-template-columns:1fr 1fr}
+  
+}
+@media(max-width:520px){
+  .cif-space-group-picker{grid-template-columns:calc(70px * var(--tas-density)) minmax(0,1fr)}
+  .cif-reflection-toolbar{grid-template-columns:1fr}
+  
+}
+
+/* vNext: wider Q-E workspace, narrower Angle calculation / TAS geometry card. */
+@media(min-width:1051px){
+  #singleMain .chart-grid{grid-template-columns:minmax(calc(620px * var(--tas-density)),2fr) minmax(calc(320px * var(--tas-density)),1fr);align-items:stretch}
+  #singleMain .geometry-card .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #singleMain .geometry-target-all-buttons{flex-wrap:wrap}
+  #geometryPlot.geometry{min-height:calc(620px * var(--tas-density))}
+}
+@media(min-width:1051px) and (max-width:1350px){
+  #singleMain .chart-grid{grid-template-columns:minmax(calc(560px * var(--tas-density)),1.8fr) minmax(calc(300px * var(--tas-density)),1fr)}
+}
+
+/* vNext: wider setup/sample sidebar; keep TAS geometry at roughly half the Q-E width. */
+@media(min-width:1051px){
+  .shell{grid-template-columns:calc(500px * var(--tas-density)) minmax(0,1fr)}
+  #singleMain .chart-grid{grid-template-columns:minmax(calc(600px * var(--tas-density)),2fr) minmax(calc(280px * var(--tas-density)),1fr);align-items:stretch}
+  #singleMain .geometry-card .grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(min-width:761px) and (max-width:1050px){
+  .shell{grid-template-columns:calc(400px * var(--tas-density)) minmax(0,1fr)}
+}
+
+/* Angle calculation result: always two rows (energy, then motor angles). */
+.geometry-angles{min-height:calc(46px * var(--tas-density));}
+.geometry-result-line{display:block;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal;}
+/* Reserve the Dark-angle warning row so Single/Scan TAS geometry does not jump vertically. */
+.geometry-warning-line{min-height:1.45em;}
+
+/* Sidebar input sizing: use the full available grid-cell width consistently. */
+.sidebar input[type=number],
+.sidebar input[type=text]{
+  width:100%;
+  min-width:0;
+  max-width:none;
+}
+
+/* Dynamic Propagation-vector / Dark-angle UI. */
+.dynamic-add-wide{
+  display:block;
+  width:100%;
+  margin-top:calc(6px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(10px * var(--tas-density));
+}
+.remove-propagation-vector,
+.remove-background,
+.remove-dark-asset,
+.remove-dark-range{
+  width:100%;
+  padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));
+  white-space:nowrap;
+}
+.uv-flip-button{
+  grid-column:2;
+  grid-row:1 / 3;
+  width:calc(34px * var(--tas-density));
+  min-width:calc(34px * var(--tas-density));
+  padding:0;
+  font-size:calc(20px * var(--tas-density));
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Readability pass: enlarge permanent sidebar form controls without changing the
+   established button-label sizing. */
+.sidebar label{font-size:calc(13.5px * var(--tas-density));line-height:1.25}
+
+/* CIF Generator controls are used for data entry/review, so give them the same
+   legibility as the enlarged sidebar controls. */
+.cif-generator-input-pane label{font-size:calc(13.5px * var(--tas-density))}
+.cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.cif-generator-input-pane select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
+.cif-preview-note{height:calc(535px * var(--tas-density));min-height:0;max-height:calc(535px * var(--tas-density));overflow:auto;overscroll-behavior:contain;font-size:calc(14px * var(--tas-density));line-height:1.5}
+.cif-reflection-plane-toggle{font-size:calc(13px * var(--tas-density))}
+
+.cif-reflection-table{font-size:calc(13px * var(--tas-density))}
+
+/* v4 readability: main-workspace controls match the enlarged sidebar inputs.
+   Buttons keep their established label size. Range sliders keep native sizing. */
+.tab-panel label,
+.calc-card label,
+#singleMain label{font-size:calc(13.5px * var(--tas-density));line-height:1.25}
+.tab-panel input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+.tab-panel select,
+.calc-card input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+.calc-card select,
+#singleMain input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+#singleMain select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
+.energy-slider-row output{font-size:calc(13px * var(--tas-density))}
+.cif-atom-cell button{white-space:nowrap;padding-left:calc(7px * var(--tas-density));padding-right:calc(7px * var(--tas-density))}
+
+/* CIF preview is a bounded, scrollable review pane like the reflection table. */
+.cif-preview-note{height:calc(535px * var(--tas-density));min-height:0;max-height:calc(535px * var(--tas-density));font-size:calc(14px * var(--tas-density));line-height:1.5;overflow:auto}
+@media(max-width:1180px){.cif-preview-note{height:calc(500px * var(--tas-density));max-height:calc(500px * var(--tas-density))}}
+.cif-reflection-plane-toggle{font-size:calc(13px * var(--tas-density));min-height:calc(30px * var(--tas-density))}
+.cif-sort-indicator{display:inline-block;min-width:1em;margin-left:calc(3px * var(--tas-density));font-size:.82em;vertical-align:calc(1px * var(--tas-density))}
+
+/* v4.6: make CIF output content fill the full output-pane height and improve
+   reflection-table readability. The outer output pane already stretches to the
+   same grid-row height as Structure input; let the active tab content consume
+   all remaining height instead of stopping at a fixed 535 px. */
+.cif-generator-output-pane{min-height:0}
+.cif-output-panel{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
+.cif-preview-note{flex:1 1 auto;width:100%;height:auto;min-height:0;max-height:none;overflow:auto;font-size:calc(15px * var(--tas-density));line-height:1.55}
+.cif-reflection-plane-toggle{font-size:calc(14.5px * var(--tas-density));line-height:1.3;min-height:calc(34px * var(--tas-density));gap:calc(8px * var(--tas-density));font-weight:600}
+.cif-reflection-plane-toggle input[type=checkbox]{width:calc(17px * var(--tas-density));height:calc(17px * var(--tas-density));flex:0 0 calc(17px * var(--tas-density))}
+.cif-reflection-table-wrap{flex:1 1 auto;height:auto;min-height:0;overflow:auto}
+.cif-reflection-table{font-size:calc(14px * var(--tas-density));line-height:1.35}
+
+@media(max-width:1180px){
+  .cif-generator-output-pane{min-height:calc(620px * var(--tas-density))}
+  .cif-preview-note{height:auto;max-height:none}
+  .cif-reflection-table-wrap{height:auto}
+}
+
+/* v4.7: match the output FRAME to the pre-generated Structure input frame.
+   JavaScript writes the desktop outer height from the left pane.  Both tab
+   contents keep their own internal scrollbars and cannot expand that frame. */
+
+.cif-generator-output-pane{min-height:0;overflow:hidden}
+.cif-output-panel{flex:1 1 auto;min-height:0;overflow:hidden}
+.cif-preview-note{flex:1 1 auto;height:100%;min-height:0;max-height:none;overflow:auto}
+.cif-reflection-table-wrap{flex:1 1 auto;height:100%;min-height:0;overflow:auto}
+@media(max-width:1180px){
+  .cif-generator-output-pane{height:auto!important;min-height:calc(620px * var(--tas-density))}
+  .cif-preview-note,.cif-reflection-table-wrap{height:auto;min-height:0;overflow:auto}
+}
+
+/* CIF-based neutron absorption calculator */
+.absorption-card{margin-top:calc(16px * var(--tas-density))}
+
+.absorption-results{margin-top:calc(14px * var(--tas-density))}
+
+.absorption-table-wrap{margin-top:calc(12px * var(--tas-density));overflow:auto;max-height:calc(320px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(6px * var(--tas-density))}
+.absorption-table{width:100%;border-collapse:collapse;font-size:calc(15px * var(--tas-density))}
+
+.absorption-warning{margin-top:calc(10px * var(--tas-density));padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d9b55b;border-radius:calc(6px * var(--tas-density));background:#fff8df;font-size:calc(14px * var(--tas-density))}
+
+/* Neutron absorption: compact controls left, thickness dependence right. */
+.absorption-workspace{display:grid;grid-template-columns:minmax(calc(440px * var(--tas-density)),.95fr) minmax(calc(430px * var(--tas-density)),1.05fr);gap:calc(18px * var(--tas-density));align-items:stretch}
+.absorption-left{display:grid;align-content:start;gap:calc(12px * var(--tas-density));min-width:0}
+.absorption-left>label,.absorption-cif-row label,.absorption-thickness-control label{display:grid;gap:calc(5px * var(--tas-density));font-size:calc(15px * var(--tas-density));font-weight:600}
+.absorption-cif-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:calc(8px * var(--tas-density));align-items:end}
+.absorption-cif-row button{min-height:calc(38px * var(--tas-density));white-space:nowrap}
+.absorption-thickness-control{display:grid;grid-template-columns:minmax(calc(145px * var(--tas-density)),.7fr) minmax(calc(180px * var(--tas-density)),1.2fr) minmax(calc(145px * var(--tas-density)),.7fr);gap:calc(10px * var(--tas-density));align-items:end}
+.absorption-thickness-control input[type="range"]{width:100%;align-self:center;margin-bottom:calc(8px * var(--tas-density))}
+.absorption-right{min-width:0;min-height:calc(430px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(6px * var(--tas-density));background:#fff}
+.absorption-plot{width:100%;height:100%;min-height:calc(430px * var(--tas-density))}
+.absorption-results{margin-top:0}
+
+@media(max-width:1050px){.absorption-workspace{grid-template-columns:1fr}.absorption-right,.absorption-plot{min-height:calc(360px * var(--tas-density))}.absorption-thickness-control{grid-template-columns:1fr}}
+
+/* Neutron absorption tables: clear grid and equal-width cells. */
+.absorption-table{table-layout:fixed;border-collapse:collapse;width:100%}
+
+/* Neutron attenuation summary: label on top, values underneath. */
+.absorption-summary-cards{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(calc(150px * var(--tas-density)),1fr));
+  gap:calc(9px * var(--tas-density));
+  margin-top:calc(2px * var(--tas-density));
+}
+.absorption-summary-card{
+  border:calc(1px * var(--tas-density)) solid #c9c9c9;
+  border-radius:calc(6px * var(--tas-density));
+  background:#fafafa;
+  padding:calc(9px * var(--tas-density)) calc(10px * var(--tas-density));
+  min-width:0;
+}
+.absorption-summary-label{
+  font-size:calc(13px * var(--tas-density));
+  font-weight:700;
+  line-height:1.25;
+  margin-bottom:calc(6px * var(--tas-density));
+  color:#444;
+}
+.absorption-summary-value{
+  font-size:calc(16px * var(--tas-density));
+  font-weight:700;
+  line-height:1.25;
+  white-space:nowrap;
+}
+.absorption-summary-wide{grid-column:span 2}
+.absorption-summary-subgrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+  border:calc(1px * var(--tas-density)) solid #d6d6d6;
+  border-radius:calc(4px * var(--tas-density));
+  overflow:hidden;
+  background:#fff;
+}
+.absorption-summary-subgrid span{font-size:calc(12.5px * var(--tas-density));color:#555;font-weight:600}
+
+@media(max-width:1050px){
+  .absorption-summary-cards{grid-template-columns:repeat(2,minmax(calc(145px * var(--tas-density)),1fr))}
+  .absorption-summary-wide{grid-column:span 2}
+}
+@media(max-width:620px){
+  .absorption-summary-cards{grid-template-columns:1fr}
+  .absorption-summary-wide{grid-column:span 1}
+}
+
+/* Editable attenuation beam conditions. */
+.absorption-beam-controls{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(10px * var(--tas-density));
+}
+@media(max-width:1050px){.absorption-beam-controls{grid-template-columns:1fr}}
+.absorption-thickness-control{grid-template-columns:minmax(calc(150px * var(--tas-density)),.7fr) minmax(calc(220px * var(--tas-density)),1.35fr) minmax(calc(150px * var(--tas-density)),.7fr);}
+
+/* v18: keep beam conditions and the 1/e + transmission summaries on single rows. */
+.absorption-beam-controls{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.absorption-summary-cards{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.absorption-summary-cards > .absorption-summary-card:first-child{
+  grid-column:span 1;
+}
+.absorption-summary-cards > .absorption-summary-card:nth-child(2){
+  grid-column:span 3;
+}
+.absorption-summary-cards > .absorption-summary-card:nth-child(3),
+.absorption-summary-cards > .absorption-summary-card:nth-child(4){
+  grid-column:span 2;
+}
+@media(max-width:1050px){
+  .absorption-beam-controls{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .absorption-summary-cards{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .absorption-summary-cards > .absorption-summary-card:first-child{grid-column:span 1;}
+  .absorption-summary-cards > .absorption-summary-card:nth-child(2){grid-column:span 3;}
+  .absorption-summary-cards > .absorption-summary-card:nth-child(3),
+  .absorption-summary-cards > .absorption-summary-card:nth-child(4){grid-column:span 2;}
+}
+@media(max-width:760px){
+  .absorption-beam-controls{grid-template-columns:1fr;}
+  .absorption-summary-cards{grid-template-columns:1fr;}
+  .absorption-summary-cards > .absorption-summary-card{grid-column:span 1!important;}
+}
+.time-scan-cell select,.time-scan-cell input{width:100%;max-width:none;min-width:0}
+.time-scan-actions{display:flex;gap:calc(6px * var(--tas-density));margin-top:calc(7px * var(--tas-density));align-items:center}
+
+.time-estimate-message{min-height:calc(20px * var(--tas-density));margin-top:calc(8px * var(--tas-density));font-size:calc(14px * var(--tas-density));color:#555;line-height:1.4}
+
+/* v7 Time estimate + CIF atom action layout refinements */
+.time-scan-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(6px * var(--tas-density));
+  margin-top:calc(7px * var(--tas-density));
+}
+.cif-atom-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:calc(6px * var(--tas-density));
+  margin-top:calc(6px * var(--tas-density));
+}
+
+@media(max-width:760px){
+  .time-scan-actions,.cif-atom-actions{grid-template-columns:1fr;}
+}
+
+/* Propagation-vector entries are text fields so simple fractions (e.g. 1/2) can be entered. */
+.propagation-row input[type=text]{width:100%;min-width:0;max-width:none;}
+
+/* v18 tablet workspace: stack the Q-E plot and Angle/Time card on tablets.
+   Keep desktop side-by-side layout, while matching the CIF Generator's stacked feel
+   on narrower viewports and coarse-pointer tablet devices. */
+@media (max-width:1180px){
+  #singleMain .chart-grid,
+  #singleMain .chart-grid.time-estimate-active{
+    grid-template-columns:1fr !important;
+  }
+}
+
+@media (hover:none) and (pointer:coarse) and (min-width:761px) and (max-width:1500px){
+  #singleMain .chart-grid,
+  #singleMain .chart-grid.time-estimate-active{
+    grid-template-columns:1fr !important;
+  }
+
+  /* Use the available main workspace cleanly instead of leaving the Toolbox
+     conversion controls in a squeezed, horizontally-scrolling strip. */
+  .toolbox-card{
+    width:100%;
+    max-width:none;
+  }
+  .toolbox-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    overflow-x:visible !important;
+    padding-bottom:0 !important;
+  }
+  .toolbox-grid input[type=number]{
+    width:100%;
+    min-width:0;
+    max-width:none;
+  }
+
+  /* All four main tabs share the row evenly on tablet widths. */
+  .main-tabs .tab-button{
+    flex:1 1 0;
+    width:auto;
+    padding-left:calc(8px * var(--tas-density));
+    padding-right:calc(8px * var(--tas-density));
+  }
+}
+
+/* v19 responsive containment: match Resolution/CIF Generator behavior on tablets.
+   Use the actual main-workspace width rather than viewport width, because the
+   persistent sidebar can leave much less room than the device viewport suggests. */
+main{
+  container-type:inline-size;
+}
+
+#qePanel,
+#singleMain,
+#singleMain .chart-grid,
+#singleMain .chart-grid>div:first-child,
+#singleMain .chart-grid>.geometry-card,
+#toolboxPanel,
+.toolbox-card,
+.absorption-card,
+.absorption-workspace,
+.absorption-left,
+.absorption-right,
+.harmonic-wrap{
+  min-width:0;
+  max-width:100%;
+}
+
+/* Toolbox entries wrap instead of forcing the whole application wider. */
+#toolboxPanel .toolbox-grid{
+  grid-template-columns:repeat(auto-fit,minmax(min(calc(150px * var(--tas-density)),100%),1fr))!important;
+  overflow-x:visible!important;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+}
+.harmonic-wrap{
+  width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+}
+
+/* Keep the absorption Plotly canvas inside its card at every width. */
+.absorption-right{
+  width:100%;
+  overflow:hidden;
+}
+
+/* Container-responsive rules: these react to the usable main-column width after
+   subtracting the sidebar, which is what Resolution/CIF Generator effectively do. */
+@container (max-width:1100px){
+  #singleMain .chart-grid,
+  #singleMain .chart-grid.time-estimate-active{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  #singleMain .chart-grid>div:first-child,
+  #singleMain .chart-grid>.geometry-card{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #toolboxPanel .toolbox-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .absorption-workspace{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .absorption-right,
+  .absorption-plot{
+    min-height:calc(360px * var(--tas-density));
+  }
+  .absorption-thickness-control{
+    grid-template-columns:minmax(0,1fr) minmax(calc(150px * var(--tas-density)),1.2fr) minmax(0,1fr);
+  }
+}
+.time-estimate-controls .time-datetime-entry input{
+  min-width:0;
+  max-width:100%;
+  width:100%;
+}
+.powder-geometry-target input,
+.powder-geometry-target select{
+  width:100%;
+  max-width:100%;
+}
+.dark-table input[type=number],
+.dark-table input[type=text]{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+}
+
+/* v74: compact X-ray -> neutron S2 conversion toolbox */
+.s2-conversion-card{max-width:none;width:100%}
+.s2-conversion-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:end}
+.s2-conversion-info{margin-top:calc(8px * var(--tas-density));min-height:1.4em;font-size:calc(12px * var(--tas-density));color:#555}
+
+/* v87: multi-peak S2 conversion results */
+
+.geometry-scan-selected-row td{background:#fff0ad !important}
+.geometry-scan-warning-row td{background:#fde9e2 !important;color:#111 !important}
+.geometry-scan-warning-row.geometry-scan-selected-row td{background:#fde9e2 !important;box-shadow:inset 0 0 0 calc(2px * var(--tas-density)) #d27a62}
+.geometry-scan-table tbody tr.geometry-scan-warning-row:hover td{background:#f9ddd3 !important}
+
+#structurePanel.hidden{
+  display:none;
+}
+
+.structure-moment-row input[type=color],
+.structure-bond-row input[type=color]{
+  width:calc(40px * var(--tas-density));
+  min-width:calc(40px * var(--tas-density));
+  height:calc(30px * var(--tas-density));
+  padding:calc(2px * var(--tas-density));
+}
+
+/* Structure viewer v4 refinements */
+
+/* Structure viewer v6 refinements */
+
+/* Structure viewer v8 compact refinements */
+
+/* Structure viewer v9 refinements */
+
+/* Structure Viewer final layout: keep controls explicit and avoid runtime CSS overrides. */
+#structurePanel .structure-section-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:calc(10px * var(--tas-density));
+  margin-bottom:calc(8px * var(--tas-density));
+}
+#structurePanel .structure-entry-field{
+  display:flex;
+  flex-direction:column;
+  gap:calc(3px * var(--tas-density));
+  min-width:0;
+  margin:0;
+  font-weight:400;
+}
+#structurePanel .structure-entry-label{
+  display:block;
+  font-size:calc(11px * var(--tas-density));
+  line-height:1.15;
+  color:#555;
+  white-space:nowrap;
+}
+#structurePanel .structure-plot-toolbar label{font-size:calc(11px * var(--tas-density));gap:calc(2px * var(--tas-density));}
+#structurePanel .structure-config-panel[hidden]{display:none!important;}
+#structurePanel .structure-config-panel{min-width:0;}
+
+/* vNext: consistent ordering UI, no duplicate tab headings/default buttons, and readable labels. */
+#structurePanel .structure-config-panel{
+  padding-top:calc(2px * var(--tas-density));
+}
+#structurePanel .structure-entry-label{
+  font-size:calc(13.5px * var(--tas-density))!important;
+  line-height:1.25!important;
+  color:#222!important;
+}
+#structurePanel input::placeholder{
+  color:#8b929b;
+  opacity:.62;
+}
+
+/* mCIF Generator: consistent selection order and actions. */
+
+/* v41: magnetic-ion selection, Q, and intensity on a single row, including phones. */
+
+/* Keep all levels of navigation legible without altering selected states. */
+main > .main-tabs > .tab-button,
+.toolbox-subtabs > .toolbox-subtab,
+.geometry-card-tabs > .geometry-card-tab,
+.cif-output-tabs > .cif-output-tab,
+#structurePanel .structure-config-tabs > button{
+  font-weight:600!important;
+}
+/* Navigation only: keep the existing colors, borders and layout unchanged. */
+main [role="tablist"] > button[role="tab"],
+#structurePanel .structure-config-tabs > button[role="tab"]{
+  font-weight:700!important;
+}
+
+/* Protected imported mCIF state: checked Modify means editing is disabled. */
+
+/* Native compact UI: dimensions and typography are scaled at layout time,
+   not after painting. This avoids transformed hit-testing coordinates in Plotly.
+   Keep the density token at 1 on smartphones to preserve the original UI.
+   All pixel-based lengths elsewhere in this stylesheet refer to this token.
+   Changing the density does not require coordinate corrections in JavaScript. */
+:root { --tas-density: 0.67; --tas-header-height: 34px; }
+@media (max-width: 760px) { :root { --tas-density: 1; --tas-header-height: 51px; } }
+html, body { width: 100%; margin: 0; overflow-x: clip; }
+html { font-size: calc(16px * var(--tas-density)); }
+
+/* CIF/mCIF Generator: match the legibility of the input labels elsewhere. */
+#structurePanel .cif-generator-input-pane label,
+#structurePanel .generator-unified-editor label,
+#structurePanel .generator-reflection-settings label,
+#structurePanel .generator-structure-view-controls > label,
+#structurePanel .structure-config-panel label,
+#structurePanel .structure-plot-toolbar label{
+  font-size:calc(17px * var(--tas-density));
+  line-height:1.35;
+}
+#structurePanel .structure-entry-label{
+  font-size:calc(17px * var(--tas-density))!important;
+  line-height:1.3!important;
+}
+
+/* 2026-10-11: shared readable controls and Plotly panel refinements.
+   Native compact density remains unchanged; no CSS zoom or transforms. */
+:root{--tas-control-text-size:max(12px,calc(17px * var(--tas-density)));}
+/* Navigation tabs are headings, not form controls; preserve their hierarchy.
+   Form field text, select options and ordinary button labels share one size. */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),
+select,
+textarea:not(.script-spice-text),
+button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab) {
+  font-size:var(--tas-control-text-size)!important;
+}
+/* Inputs must be allowed to contract inside narrow grid cells. */
+:is(input,select,textarea,button){min-width:0;}
+
+/* 2026-10-11: finish the native compact readability pass.
+   Keep Plotly's geometry untransformed; axis-title fonts are handled by
+   tas-plot-density.js.  Uniform table and tab tokens prevent tiny outliers. */
+:root{
+  --tas-table-text-size:max(12px,calc(17px * var(--tas-density)));
+  --tas-tab-text-size:max(13px,calc(18px * var(--tas-density)));
+  --tas-spice-text-size:max(13px,calc(18px * var(--tas-density)));
+}
+
+/* Native HTML tables and custom CSS-grid tables use the same text size.
+   Wider rows can scroll within their own table wrappers if necessary. */
+:is(table,table th,table td,
+    .harmonic-table,.harmonic-table > *,
+    .time-scan-table,.time-scan-header,.time-scan-index,
+    .geometry-scan-table,.geometry-scan-table th,.geometry-scan-table td,
+    .s2-conversion-table,.s2-conversion-table th,.s2-conversion-table td,
+    .cif-atom-table,.cif-atom-header,.cif-atom-index,
+    .cif-thermal-table,.cif-thermal-header,
+    .dark-table,.dark-table > *,
+    .script-aset-table-header,.script-aset-index,
+    .atoms-table-head,.structure-moment-header){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+}
+/* No new global zoom, Plotly hit-test adjustment, or body width changes. */
+
+/* Brand and readiness status. Native CSS sizes, no scale transform. */
+:root{--tas-header-height:56px;}
+
+/* Shared output readability: Resolution summary and Angle calculation Single/Scan
+   results all use the Single result text size. Keep the Scan point selector
+   consistent too, without changing input labels or plotting fonts. */
+:root{--tas-calculation-output-font-size:max(14px,calc(19px * var(--tas-density)));}
+
+/* Hide native numeric spin buttons throughout PLANE-TAS.
+   Keep type=number, min/max/step, validation, and input events unchanged. */
+input[type="number"]{
+  appearance:textfield;
+  -moz-appearance:textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+
+/* 2026-10-13: tab typography aligned to the Instrument configuration sidebar.
+   Keep layout dimensions and Plotly canvas sizes unchanged.  The minimum sizes
+   stop desktop compact-density settings from making labels unreadable. */
+:root {
+  --plane-tab-label-font: max(12px, calc(16px * var(--tas-density)));
+  --plane-tab-heading-font: calc(19px * var(--tas-density));
+  --plane-tab-warning-font: var(--tas-font-control, 13px);
+}
+
+/* 2026-10-13 follow-up: sidebar-like, regular-weight field captions.
+   Do not change chart geometry or tab headings; the earlier selector which
+   raised select/slider/checkbox captions to a 14px minimum was too large. */
+:root {
+  --plane-tab-select-caption-font: calc(16px * var(--tas-density));
+}
+/* Buttons are actions, not titles.  Navigation tabs remain visually separate
+   because they function as headings. */
+.tab-panel button:not([role="tab"]):not(.tab-button):not(.toolbox-subtab):not(.geometry-card-tab):not(.cif-output-tab):not(.generator-reflection-tab),
+.sidebar button,
+#qeDisplayControls button {
+  font-weight: 400 !important;
+}
+/* The selection/editing tables stay independently scrollable even when the
+   main workspace is capped. The manual Uij splitter still controls both. */
+#structurePanel .generator-height-limited :is(.cif-atom-table-wrap,
+    #cifAtomColorRows,.structure-spin-table-wrap,.structure-style-table-wrap,
+    .cif-thermal-table-wrap){
+  overscroll-behavior:contain;
+}
+
+/* Visible notification if a previous session ended during rendering. */
+#tasCrashRecoveryNotice:not([hidden]) {
+  position:relative;z-index:100;
+  background:#fff4d9;color:#54390a;
+  border-bottom:1px solid #d0ae70;
+  padding:8px 14px;font:600 13px/1.4 system-ui,sans-serif;
+}

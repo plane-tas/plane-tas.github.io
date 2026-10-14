@@ -1,0 +1,537 @@
+/* Structure editor: Positions (atomic coordinates) tab.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.cif-atom-cell input{width:100%;max-width:none;min-width:0}
+.cif-atom-actions button{width:100%;}
+.cif-generator-source-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  margin:calc(8px * var(--tas-density)) 0 calc(12px * var(--tas-density));
+}
+.cif-generator-section .cif-pane-heading h3,.cif-section-title{margin:0 0 calc(7px * var(--tas-density))}
+.cif-generator-file-name{display:block;width:100%;margin-top:calc(8px * var(--tas-density))}
+.cif-source-button-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density));margin-top:calc(8px * var(--tas-density))}
+#cifGeneratorPanel .cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
+#cifGeneratorPanel .cif-generator-input-pane select,
+.absorption-left input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.absorption-left select{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+#cifGeneratorPanel .cif-atom-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#cifGeneratorPanel .cif-preview-note{max-width:100%;overflow:auto;-webkit-overflow-scrolling:touch}
+#cifGeneratorPanel .cif-reflection-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Four controls on wide screens; button wraps naturally on narrower panels. */
+#cifGeneratorPanel .cif-generator-beam-grid{grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end}
+#cifMagMomentRows .structure-moment-site{overflow-wrap:anywhere;min-width:0}
+
+/* Spin editing controls: consistent Atom label; equal-width Mode/Atom columns.
+   Keep both fields on one row even when the structure panel is narrow. */
+#structurePanel .structure-spin-editor-toolbar{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:end;
+  column-gap:calc(10px * var(--tas-density));
+  margin:calc(8px * var(--tas-density)) 0 calc(6px * var(--tas-density));
+  min-width:0;
+  width:100%;
+}
+
+/* Sub-tabs in Q-E plots, angle/scan views and both CIF preview areas. */
+.geometry-card-tabs,
+.cif-output-tabs{
+  display:flex;
+  flex-direction:row!important;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  gap:0;
+  padding:0;
+}
+
+/* v50: consistent full-width Structure sub-tabs and tab typography. */
+#structurePanel .structure-config-tabs{
+  box-sizing:border-box;
+  width:100%;
+  max-width:100%;
+  margin:0 0 calc(8px * var(--tas-density));
+  padding:0;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:calc(4px * var(--tas-density));
+  overflow:visible;
+}
+#structurePanel .structure-config-tabs > button{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  flex:none;
+}
+/* Use the same button typography in CIF and mCIF generation actions. */
+#cifGeneratorPanel .cif-source-button-row > button{
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.25;
+}
+#cifGeneratorPanel .cif-generator-input-pane,
+#cifGeneratorPanel .cif-generator-output-pane,
+#structurePanel .structure-viewer-main{
+  box-sizing:border-box;
+  min-width:0;
+  width:100%;
+  border:calc(1px * var(--tas-density)) solid #d5dbe3;
+  border-radius:calc(8px * var(--tas-density));
+  background:#fff;
+}
+#structurePanel .structure-control-section{
+  box-sizing:border-box;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:transparent;
+  padding:calc(12px * var(--tas-density)) 0;
+  min-width:0;
+  width:100%;
+  margin:0;
+}
+#structurePanel .structure-config-tabs{width:100%;margin:0 0 calc(8px * var(--tas-density));}
+#structurePanel .structure-viewer-main{
+  overflow:hidden;
+  min-height:0;
+  align-self:stretch;
+}
+#cifGeneratorPanel .cif-generator-input-pane{padding:calc(12px * var(--tas-density));}
+@media(max-width:760px){
+  
+  #cifGeneratorPanel .cif-generator-input-pane{padding:calc(10px * var(--tas-density));}
+  
+}
+#cifGeneratorPanel .cif-generator-source-row{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:end;
+  gap:calc(8px * var(--tas-density));
+  margin:calc(8px * var(--tas-density)) 0 calc(12px * var(--tas-density));
+  min-width:0;
+  width:100%;
+}
+
+/* v55: Prevent long imported CIF/mCIF text from shrinking the CIF Preview tabs.
+   Tabs keep their original equal widths; scrolling happens inside the preview. */
+#cifGeneratorPanel .cif-generator-output-pane,
+#cifGeneratorPanel .cif-output-panel{
+  min-width:0;
+  max-width:100%;
+}
+
+/* v59 — One generator, two independent editing modes, four shared results.
+   Legacy control IDs and calculation modules are intentionally unchanged. */
+#structurePanel .generator-unified-card{
+  box-sizing:border-box;
+  width:100%;max-width:none;
+  padding:calc(10px * var(--tas-density));
+  margin-top:0;
+  min-width:0;
+  container-type:inline-size;
+  container-name:generator-unified;
+}
+#structurePanel .generator-unified-left,
+#structurePanel .generator-unified-right{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  border:calc(1px * var(--tas-density)) solid #d5dbe3;
+  border-radius:calc(8px * var(--tas-density));
+  background:#fff;
+  overflow:hidden;
+}
+#structurePanel .generator-unified-right{
+  padding:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:calc(615px * var(--tas-density));
+  align-self:stretch;
+}
+#structurePanel .generator-shared-file{
+  padding:0 0 calc(12px * var(--tas-density));
+  margin:0 0 calc(12px * var(--tas-density));
+  border-bottom:calc(1px * var(--tas-density)) solid #e1e5ea;
+  min-width:0;
+}
+#structurePanel .generator-reflection-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:0;
+  min-width:0;
+  width:100%;
+  border:calc(1px * var(--tas-density)) solid #b9c4d0;
+  background:#f3f5f7;
+}
+#structurePanel .generator-mode-pane{box-sizing:border-box;min-width:0;width:100%;}
+#structurePanel .generator-unified-output-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:0!important;
+  width:100%;min-width:0;
+  flex:0 0 auto;
+  border:0;border-bottom:calc(1px * var(--tas-density)) solid #b9c4d0;
+  border-radius:0;
+  overflow:visible;
+}
+#structurePanel .generator-reflection-pane{min-width:0;}
+@container generator-unified (max-width:880px){
+  #structurePanel #cifGeneratorPanel.generator-unified-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:calc(10px * var(--tas-density));
+  }
+  #structurePanel .generator-unified-right{min-height:0;}
+  #structurePanel .generator-unified-output-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+@media(max-width:760px){
+  #structurePanel .generator-unified-card{padding:calc(8px * var(--tas-density));}
+  #structurePanel #cifGeneratorPanel.generator-unified-grid{grid-template-columns:minmax(0,1fr)!important;}
+  #structurePanel .generator-unified-left{padding:calc(10px * var(--tas-density));}
+  #structurePanel .generator-unified-output-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  #structurePanel .generator-unified-right > .generator-output-pane{min-height:calc(520px * var(--tas-density));padding:calc(9px * var(--tas-density));}
+  #structurePanel #cifPreviewPanel{min-height:calc(520px * var(--tas-density));}
+}
+
+/* v62 — Shared Structure view controls, compact Reflections, clear triad overlays. */
+#structurePanel .generator-structure-view-controls{
+  display:flex;
+  flex-direction:column;
+  gap:calc(8px * var(--tas-density));
+  box-sizing:border-box;
+  width:100%;min-width:0;
+  margin:0 0 calc(12px * var(--tas-density));
+}
+
+/* v64: optional atom ADPs; keep the regular Atomic positions table compact. */
+#cifGeneratorPanel .cif-atom-detailed{
+  border:calc(1px * var(--tas-density)) solid #d5d5d5;border-radius:calc(6px * var(--tas-density));padding:0;margin-top:calc(12px * var(--tas-density));
+  background:#fff;min-width:0;overflow:hidden;
+}
+#cifGeneratorPanel .cif-atom-detailed>summary{
+  cursor:pointer;font-size:calc(15px * var(--tas-density));font-weight:700;padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
+  background:#fff;list-style-position:inside;
+}
+#cifGeneratorPanel .cif-thermal-list{display:grid;gap:calc(9px * var(--tas-density));padding:0 calc(12px * var(--tas-density)) calc(12px * var(--tas-density));min-width:0}
+#cifGeneratorPanel .cif-thermal-row{border:calc(1px * var(--tas-density)) solid #dfe3e8;border-radius:calc(5px * var(--tas-density));padding:calc(10px * var(--tas-density));min-width:0}
+#cifGeneratorPanel .cif-thermal-toggle{flex-direction:row;align-items:center;gap:calc(7px * var(--tas-density));min-height:calc(36px * var(--tas-density));font-weight:600}
+#cifGeneratorPanel .cif-thermal-toggle input{width:auto;min-height:0;flex-shrink:0}
+#cifGeneratorPanel .cif-thermal-row input[type=number]{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+#cifGeneratorPanel .cif-thermal-row input:disabled{opacity:.65;background:#f3f5f7}
+@media(max-width:360px){
+  #cifGeneratorPanel .cif-thermal-list{padding-left:calc(8px * var(--tas-density));padding-right:calc(8px * var(--tas-density))}
+  #cifGeneratorPanel .cif-thermal-row{padding:calc(8px * var(--tas-density))}
+  
+  
+}
+
+/* v66: Biso belongs in the Atomic positions grid. Keep the same column
+   alignment for data rows and header, with local (not page) scrolling. */
+#cifGeneratorPanel .cif-atom-table{
+  grid-template-columns:calc(46px * var(--tas-density)) calc(78px * var(--tas-density)) repeat(5,minmax(calc(76px * var(--tas-density)),1fr)) calc(88px * var(--tas-density));
+  min-width:calc(750px * var(--tas-density));
+}
+/* Compact Uij table: one atom per row. For many sites scroll inside the
+   expanded section instead of extending the whole page vertically. */
+#cifGeneratorPanel .cif-thermal-table-wrap{
+  width:100%;max-width:100%;min-width:0;
+  max-height:calc(278px * var(--tas-density));overflow:auto;-webkit-overflow-scrolling:touch;
+}
+#cifGeneratorPanel .cif-thermal-table{
+  display:grid;
+  grid-template-columns:calc(82px * var(--tas-density)) calc(78px * var(--tas-density)) repeat(6,minmax(calc(78px * var(--tas-density)),1fr));
+  min-width:calc(730px * var(--tas-density));
+  border-left:calc(1px * var(--tas-density)) solid #ccc;
+  border-top:calc(1px * var(--tas-density)) solid #ccc;
+}
+#cifGeneratorPanel .cif-thermal-header{
+  font-size:calc(12px * var(--tas-density));font-weight:700;text-align:center;
+  padding:calc(8px * var(--tas-density)) calc(4px * var(--tas-density));background:#f7f7f7;
+  border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;
+  position:sticky;top:0;z-index:2;
+}
+#cifGeneratorPanel .cif-thermal-list,
+#cifGeneratorPanel .cif-thermal-row{display:contents;}
+#cifGeneratorPanel .cif-thermal-row{border:0;padding:0;}
+#cifGeneratorPanel .cif-thermal-cell{
+  display:flex;align-items:center;justify-content:center;min-width:0;
+  padding:calc(4px * var(--tas-density));background:#fff;
+  border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;
+}
+#cifGeneratorPanel .cif-thermal-toggle{
+  display:flex;justify-content:center;align-items:center;
+  width:100%;margin:0;min-height:calc(32px * var(--tas-density));cursor:pointer;
+}
+#cifGeneratorPanel .cif-thermal-toggle input{margin:0;flex:0 0 auto;}
+#cifGeneratorPanel .cif-thermal-cell input[type=number]{
+  box-sizing:border-box;width:100%;max-width:none;min-width:0;
+  font-size:calc(13px * var(--tas-density));padding:calc(5px * var(--tas-density)) calc(4px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-atom-detailed{overflow:hidden;}
+#cifGeneratorPanel .cif-atom-detailed > summary{background:#fff;}
+
+/* v67 — Draw all CIF atom/ADP table separators as a continuous 1px grid.
+   A grid background + 1px gaps avoids sporadically missing lines when
+   fractional column widths are rounded during horizontal scrolling. */
+#cifGeneratorPanel .cif-atom-table,
+#cifGeneratorPanel .cif-thermal-table{
+  column-gap:calc(1px * var(--tas-density));
+  row-gap:calc(1px * var(--tas-density));
+  background:#c9cdd1;
+  border:calc(1px * var(--tas-density)) solid #c9cdd1;
+  box-sizing:border-box;
+}
+#cifGeneratorPanel .cif-atom-header,
+#cifGeneratorPanel .cif-atom-cell,
+#cifGeneratorPanel .cif-thermal-header,
+#cifGeneratorPanel .cif-thermal-cell{
+  border:0;
+  box-sizing:border-box;
+}
+/* Match Atomic positions: about 4–5 visible rows, followed by scrolling. */
+#cifGeneratorPanel .cif-thermal-table-wrap{
+  max-height:calc(232px * var(--tas-density));
+}
+
+/* v68 — Pixel-stable cell boundaries at all viewport widths / zoom levels.
+   Put a true border on EACH cell (header and data), plus an inset seam, rather
+   than relying exclusively on fractional CSS-grid gap backgrounds. */
+#cifGeneratorPanel .cif-atom-table,
+#cifGeneratorPanel .cif-thermal-table{
+  column-gap:0;
+  row-gap:0;
+  background:#fff;
+  border:calc(1px * var(--tas-density)) solid #afb7c0;
+  box-sizing:border-box;
+}
+#cifGeneratorPanel .cif-atom-header,
+#cifGeneratorPanel .cif-atom-cell,
+#cifGeneratorPanel .cif-thermal-header,
+#cifGeneratorPanel .cif-thermal-cell{
+  box-sizing:border-box;
+  min-width:0;
+  border-right:calc(1px * var(--tas-density)) solid #afb7c0;
+  border-bottom:calc(1px * var(--tas-density)) solid #afb7c0;
+  /* Back up borders where grid tracks occupy fractional device pixels. */
+  box-shadow:inset calc(-1px * var(--tas-density)) 0 0 #afb7c0;
+}
+/* 7 columns: atom selector / row number / element, then U11–U23. */
+#cifGeneratorPanel .cif-thermal-table{
+  grid-template-columns:minmax(calc(134px * var(--tas-density)),1.5fr) repeat(6,minmax(calc(82px * var(--tas-density)),1fr));
+  min-width:calc(750px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-toggle{
+  display:flex;
+  flex-flow:row nowrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:calc(7px * var(--tas-density));
+  width:100%;
+  min-width:0;
+  margin:0;
+  min-height:calc(32px * var(--tas-density));
+  cursor:pointer;
+}
+#cifGeneratorPanel .cif-thermal-toggle > input[type="checkbox"]{
+  flex:0 0 auto;
+  margin:0;
+}
+#cifGeneratorPanel .cif-thermal-atom-name{
+  display:block;
+  flex:1 1 auto;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
+}
+
+/* v69 — restore quiet table separators without doubled borders/inset shadows.
+   Draw soft 1px cell borders at every width, including full-screen. */
+#cifGeneratorPanel .cif-atom-table,
+#cifGeneratorPanel .cif-thermal-table{
+  column-gap:0;
+  row-gap:0;
+  background:#fff;
+  border:calc(1px * var(--tas-density)) solid #dfe3e7;
+}
+#cifGeneratorPanel .cif-atom-header,
+#cifGeneratorPanel .cif-atom-cell,
+#cifGeneratorPanel .cif-thermal-header,
+#cifGeneratorPanel .cif-thermal-cell{
+  border-right:calc(1px * var(--tas-density)) solid #dfe3e7;
+  border-bottom:calc(1px * var(--tas-density)) solid #dfe3e7;
+  box-shadow:none;
+}
+/* Keep Atom compact: checkbox + index + element, about half the old width. */
+#cifGeneratorPanel .cif-thermal-table{
+  grid-template-columns:minmax(calc(70px * var(--tas-density)),calc(76px * var(--tas-density))) repeat(6,minmax(calc(82px * var(--tas-density)),1fr));
+  min-width:calc(690px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-toggle{gap:calc(4px * var(--tas-density));}
+/* Both Biso and Uij can be edited; Use Uij only selects calculation priority. */
+#cifGeneratorPanel .cif-atom-cell [data-cif-atom-field="Biso"]{
+  opacity:1;background:#fff;cursor:text;
+}
+
+/* v70 — three equal atom actions and Script-style selection. */
+#cifGeneratorPanel .cif-atom-actions{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(6px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-atom-actions button{width:100%;min-width:0;}
+#cifGeneratorPanel .cif-atom-actions button:disabled{opacity:.45;cursor:not-allowed;}
+/* The per-row Remove column is gone; data/header have seven equal tracks. */
+#cifGeneratorPanel .cif-atom-table{
+  grid-template-columns:calc(46px * var(--tas-density)) calc(78px * var(--tas-density)) repeat(5,minmax(calc(76px * var(--tas-density)),1fr));min-width:calc(662px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-atom-row .cif-atom-cell{cursor:pointer;}
+
+/* v72: subtle drag handle and drop position for Script-style atom reordering. */
+#cifGeneratorPanel .cif-atom-index{cursor:grab;user-select:none;touch-action:pan-y;}
+#cifGeneratorPanel .cif-atom-index:active{cursor:grabbing;}
+
+/* Unified Structure editor: five equally accessible editor sections. */
+#structurePanel .structure-config-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+#structurePanel .structure-config-panel[data-structure-config-panel="positions"]{min-width:0;}
+@media(max-width:650px){
+  #structurePanel .structure-config-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+
+/* Equal widths for Spins Mode / Element / Source. */
+#structurePanel .structure-spin-editor-toolbar{grid-template-columns:repeat(3,minmax(0,1fr));}
+#structurePanel .cif-unified-output-buttons { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: calc(6px * var(--tas-density)); }
+#structurePanel .cif-unified-output-buttons > button { min-width: 0; }
+
+/* Three unified output tabs: Structure / Reflections / CIF-mCIF Preview.
+   Override older 4-column desktop and 2-column mobile/container rules. */
+#structurePanel .generator-unified-output-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  width: 100%;
+}
+@container generator-unified (max-width: 880px) {
+  #structurePanel .generator-unified-output-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 760px) {
+  #structurePanel .generator-unified-output-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Mode / Display each take precisely half of the available row. */
+#structurePanel .structure-spin-editor-toolbar {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: 100%;
+  min-width: 0;
+}
+#structurePanel .atoms-table-head{position:sticky;top:0;z-index:2;background:var(--panel-bg,#fff);font-size:calc(11px * var(--tas-density));font-weight:700;padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #d7dce3;}
+#structurePanel .atoms-site-row{background:rgba(120,140,160,.055);}
+
+/* 2026-10-11: CIF/mCIF text preview must remain readable in the native
+   compact UI. This overrides the older 12px mobile declaration without
+   changing the preview panel dimensions or its independent scrolling. */
+#cifGeneratorPanel .cif-preview-note{
+  font-size:max(13px,calc(17px * var(--tas-density)));
+  line-height:1.6;
+}
+
+/* CIF Generator: avoid the tall empty lower area on Reflections / Preview.
+   The Structure view remains square; other tabs size to their actual content,
+   with the preview text viewport matching the Structure plot's width. */
+#structurePanel .generator-unified-right{
+  min-height:0;
+  align-self:start;
+}
+#structurePanel .structure-style-modes input{
+  margin:0;
+  flex:0 0 auto;
+  accent-color:var(--accent-color,#337ab7);
+}
+#cifGeneratorPanel .cif-thermal-header{
+  font-size:max(14px,calc(15px * var(--tas-density)))!important;
+  line-height:1.3;
+  white-space:normal;overflow-wrap:normal;
+  padding:calc(8px * var(--tas-density)) calc(3px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-index{
+  background:#fafafa;
+  color:#555;
+  font-weight:650;
+  font-size:calc(13px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-use{
+  padding:calc(3px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-toggle > input[type=checkbox]{
+  width:calc(17px * var(--tas-density));
+  height:calc(17px * var(--tas-density));
+  min-width:calc(17px * var(--tas-density));
+  min-height:calc(17px * var(--tas-density));
+  margin:0;flex-shrink:0;
+}
+#cifGeneratorPanel .cif-thermal-atom{
+  justify-content:flex-start;
+  padding-left:calc(7px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-thermal-table-wrap{
+  max-height:var(--thermal-editor-table-height,calc(232px * var(--tas-density))) !important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+/* The section title should be noticeably larger than its column labels. */
+#structurePanel #cifAtomDetailed > summary{
+  font-size:max(18px,calc(22px * var(--tas-density)))!important;
+  font-weight:700;
+  line-height:1.35;
+}
+#structurePanel .structure-position-editor-toolbar .structure-entry-field{min-width:0;}
+#structurePanel .structure-position-editor-toolbar select{min-width:0;width:100%;}
+/* Uij section heading matches the Atomic positions section heading. */
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(15px * var(--tas-density))!important;
+  font-weight:700;
+  line-height:1.3;
+}
+/* The atom / Uij row containers use display:contents; hidden filters must
+   override that so all cells of the same atom disappear together. */
+#structurePanel #cifAtomRows .cif-atom-row[hidden],
+#structurePanel #cifAtomDetailedRows .cif-thermal-row[hidden]{display:none!important;}
+/* One shared section-heading type size for Positions and Anisotropic Uij. */
+#structurePanel .cif-atom-heading h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(15px * var(--tas-density))!important;
+  font-weight:700;
+  line-height:1.3;
+}
+
+/* Atomic Positions / Anisotropic Uij: clearly legible section titles.
+   Matches the visual heading scale of the sidebar Lattice parameters section
+   without changing the compact table font or row heights. */
+/* Match the requested Lattice parameters heading in the sidebar. */
+#structurePanel .cif-atom-heading > div > h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:max(17px,calc(18px * var(--tas-density)))!important;
+  font-weight:700!important;
+  line-height:1.35;
+}
+
+/* Atomic positions and Anisotropic Uij: one step below Structure editor
+   (17px vs its 19px), consistently across zoom and density settings. */
+#structurePanel .cif-atom-heading > div > h3,
+#structurePanel #cifAtomDetailed > summary{
+  font-size:calc(17px * var(--tas-density))!important;
+  font-weight:700!important;
+  line-height:1.35;
+}

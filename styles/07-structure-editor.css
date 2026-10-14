@@ -1,0 +1,782 @@
+/* Structure editor (CIF/mCIF Generator): Cell tab and shared editor layout.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.cif-pane-heading h3,.cif-atom-heading h3{margin:0 0 calc(4px * var(--tas-density))}
+.cif-space-group-picker label{min-width:0}
+.cif-lattice-grid input{width:100%;max-width:none}
+.cif-filename-entry input{border-top-right-radius:0;border-bottom-right-radius:0}
+
+.cif-heading-actions button{white-space:nowrap}
+.structure-control-section h3{
+  margin:0 0 calc(8px * var(--tas-density)) 0;
+  font-size:calc(15px * var(--tas-density));
+}
+#structurePanel{
+  display:flex;
+  flex-direction:column;
+}
+
+/* Structure viewer v3 refinements */
+.structure-control-section{
+  background:#fff;
+}
+#structurePanel .structure-section-heading h3{
+  margin:0;
+}
+#structurePanel .structure-section-heading > button{
+  flex:0 0 auto;
+  margin-left:auto;
+  white-space:nowrap;
+}
+#structurePanel .structure-moment-row > input[type=checkbox]{
+  width:auto!important;
+  min-width:0!important;
+  margin:0!important;
+  justify-self:center!important;
+  align-self:center!important;
+}
+
+@media(max-width:1180px){
+  
+  #structurePanel .structure-plot-wrap .cif-structure-plot{min-height:calc(560px * var(--tas-density));}
+}
+
+/* Fallback for browsers without container-query support: switch the overall
+   Structure layout to controls-above / plot-below earlier on narrow windows. */
+@media (max-width:1380px){
+  
+  #structurePanel .structure-viewer-main{
+    width:100%;
+    min-width:0;
+  }
+  #structurePanel .structure-plot-wrap .cif-structure-plot{
+    min-height:calc(560px * var(--tas-density));
+  }
+}
+
+/* At medium/narrow control widths, avoid forcing every magnetic-moment control
+   into one compressed row.  Keep the checkbox/site/vector/color readable and
+   give Length/Width/Head a full-width second row. */
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-moment-row{
+    grid-template-columns:calc(24px * var(--tas-density)) minmax(calc(64px * var(--tas-density)),calc(96px * var(--tas-density))) minmax(0,1fr) calc(40px * var(--tas-density))!important;
+    grid-template-rows:auto auto!important;
+    column-gap:calc(8px * var(--tas-density))!important;
+    row-gap:calc(7px * var(--tas-density))!important;
+    align-items:end!important;
+    padding:calc(6px * var(--tas-density)) calc(2px * var(--tas-density))!important;
+  }
+  #structurePanel .structure-moment-row > input[type=checkbox]{
+    grid-column:1!important;
+    grid-row:1!important;
+    align-self:center!important;
+  }
+  #structurePanel .structure-moment-site{
+    grid-column:2!important;
+    grid-row:1!important;
+    max-width:none!important;
+    width:auto!important;
+    align-self:center!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  
+  #structurePanel .structure-moment-color-swatch,
+  #structurePanel .structure-moment-row > input[type=color]{
+    grid-column:4!important;
+    grid-row:1!important;
+    justify-self:end!important;
+  }
+  
+
+  /* Bonds wrap into logical rows so Remove never extends outside the card. */
+  #structurePanel .structure-bond-row{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-template-rows:auto auto auto!important;
+    gap:calc(8px * var(--tas-density))!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(1){
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+  #structurePanel .structure-bond-row > select:nth-child(2){
+    grid-column:2!important;
+    grid-row:1!important;
+  }
+  
+  #structurePanel .structure-bond-row > .structure-entry-field{
+    grid-column:1!important;
+    grid-row:3!important;
+  }
+  #structurePanel .structure-bond-row > input[type=color]{
+    grid-column:2!important;
+    grid-row:3!important;
+    justify-self:start!important;
+    align-self:end!important;
+  }
+  #structurePanel .structure-bond-row > button{
+    grid-column:1 / -1!important;
+    grid-row:4!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* Very narrow split-screen/mobile: place moment identity on the first row, then
+   give Mx/My/Mz and Length/Width/Head their own full-width rows. */
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-range-six{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+  #structurePanel .structure-moment-axis-row{
+    grid-template-columns:1fr!important;
+  }
+  #structurePanel .structure-moment-row{
+    grid-template-columns:calc(24px * var(--tas-density)) minmax(0,1fr) calc(40px * var(--tas-density))!important;
+    grid-template-rows:auto auto auto!important;
+  }
+  #structurePanel .structure-moment-row > input[type=checkbox]{
+    grid-column:1!important;
+    grid-row:1!important;
+  }
+  #structurePanel .structure-moment-site{
+    grid-column:2!important;
+    grid-row:1!important;
+  }
+  #structurePanel .structure-moment-color-swatch,
+  #structurePanel .structure-moment-row > input[type=color]{
+    grid-column:3!important;
+    grid-row:1!important;
+  }
+  
+  
+  #structurePanel .cif-structure-view-buttons.structure-view-buttons-six{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+
+/* vNext: compact Atoms / Spins / Bonds tabs and plot-overlay legend placement. */
+#structurePanel .structure-config-section{padding-top:0;overflow:hidden;}
+#structurePanel .structure-config-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(4px * var(--tas-density));
+  margin:0 calc(-1px * var(--tas-density)) calc(8px * var(--tas-density));
+  padding:calc(4px * var(--tas-density));
+  background:#f2f4f7;
+  border:calc(1px * var(--tas-density)) solid #d7dce3;
+  border-radius:calc(8px * var(--tas-density));
+}
+#structurePanel .structure-config-tabs button{
+  min-width:0;
+  padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));
+  border:0;
+  border-radius:calc(6px * var(--tas-density));
+  background:transparent;
+  font-weight:600;
+}
+#structurePanel .structure-config-tabs button.active{
+  background:#fff;
+  box-shadow:0 calc(1px * var(--tas-density)) calc(3px * var(--tas-density)) rgba(0,0,0,.12);
+}
+#structurePanel .structure-spin-mode-row{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-spin-mode-row{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  #structurePanel .structure-plot-overlay-left{max-width:72%;}
+}
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-spin-mode-row{grid-template-columns:1fr!important;}
+  #structurePanel .structure-plot-overlay-left{max-width:80%;}
+  #structurePanel .structure-atom-legend{font-size:calc(16px * var(--tas-density))!important;}
+  #structurePanel .structure-atom-legend-dot{width:calc(18px * var(--tas-density))!important;height:calc(18px * var(--tas-density))!important;}
+}
+
+/* Spin element bulk toggles */
+#structurePanel .structure-spin-element-toggles{
+  display:flex;
+  flex-wrap:wrap;
+  gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));
+  align-items:center;
+  margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));
+  padding:calc(6px * var(--tas-density)) 0;
+  border-bottom:calc(1px * var(--tas-density)) solid rgba(127,127,127,.22);
+}
+#structurePanel .structure-spin-element-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:calc(5px * var(--tas-density));
+  white-space:nowrap;
+  font-size:calc(13.5px * var(--tas-density));
+  line-height:1.2;
+  cursor:pointer;
+}
+#structurePanel .structure-spin-element-toggle input{
+  margin:0;
+}
+
+/* Spins: global arrow width/head, compact Cartesian/Polar direction inputs. */
+#structurePanel .structure-spin-display-row{
+  display:grid;
+  grid-template-columns:minmax(calc(130px * var(--tas-density)),1.35fr) minmax(calc(86px * var(--tas-density)),.8fr) minmax(calc(86px * var(--tas-density)),.8fr);
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  margin:calc(8px * var(--tas-density)) 0 calc(6px * var(--tas-density));
+}
+#structurePanel .structure-moment-row{
+  grid-template-columns:auto minmax(calc(72px * var(--tas-density)),.8fr) minmax(calc(150px * var(--tas-density)),2fr) minmax(calc(82px * var(--tas-density)),.8fr) auto!important;
+}
+
+@container structure-viewer (max-width:760px){
+  #structurePanel .structure-spin-display-row{grid-template-columns:repeat(3,minmax(0,1fr));}
+  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(68px * var(--tas-density)),.9fr) minmax(calc(130px * var(--tas-density)),2fr) minmax(calc(76px * var(--tas-density)),.9fr) auto!important;}
+}
+@container structure-viewer (max-width:520px){
+  #structurePanel .structure-spin-display-row{grid-template-columns:1fr 1fr 1fr;}
+  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(64px * var(--tas-density)),1fr) minmax(0,2.3fr) minmax(calc(70px * var(--tas-density)),1fr) auto!important;}
+  
+}
+
+/* mCIF Generator preview panes */
+#structurePanel .structure-viewer-main{display:flex;flex-direction:column;min-width:0}
+
+.cif-generator-input-pane,.cif-generator-output-pane{min-width:0;border:calc(1px * var(--tas-density)) solid #d5d5d5;border-radius:calc(7px * var(--tas-density));background:#fff}
+.cif-generator-input-pane{padding:calc(12px * var(--tas-density))}
+.cif-generator-setup{display:grid;grid-template-columns:1fr;gap:calc(8px * var(--tas-density));align-items:end;margin-top:calc(12px * var(--tas-density))}
+.cif-lattice-grid{display:grid;grid-template-columns:repeat(3,minmax(calc(85px * var(--tas-density)),1fr));gap:calc(8px * var(--tas-density))}
+.cif-lattice-grid input{width:100%;max-width:none}
+
+.cif-generator-message{font-size:calc(12px * var(--tas-density));min-height:calc(20px * var(--tas-density));margin-top:calc(8px * var(--tas-density));color:#555}
+.cif-generator-input-pane label{font-size:calc(13.5px * var(--tas-density))}
+.cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.cif-generator-input-pane select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
+.cif-generator-output-pane{min-height:0}
+.cif-generator-output-pane{min-height:0;overflow:hidden}
+
+.cif-generator-source-row .cif-file-name{width:100%;min-width:0;}
+.cif-generator-section{min-width:0}
+.cif-generator-section .cif-pane-heading{align-items:center}
+.cif-generator-file-name .cif-filename-entry{width:100%}
+.cif-source-button-row button{width:100%;white-space:nowrap}
+.cif-source-button-row .primary-action{font-weight:700}
+
+/* v13: Four numeric inputs share available width; no changes to 3D plot. */
+#structurePanel .structure-moment-row{
+  display:grid!important;grid-template-columns:calc(22px * var(--tas-density)) minmax(calc(42px * var(--tas-density)),.75fr) minmax(0,4.5fr) calc(36px * var(--tas-density))!important;
+  grid-template-rows:auto!important;column-gap:calc(7px * var(--tas-density))!important;row-gap:calc(5px * var(--tas-density))!important;
+  align-items:end!important;width:100%!important;min-width:0!important;
+}
+#structurePanel .structure-moment-row>input[type=checkbox]{grid-column:1!important;grid-row:1!important;}
+#structurePanel .structure-moment-row>.structure-moment-site{
+  grid-column:2!important;grid-row:1!important;min-width:0!important;max-width:none!important;
+}
+
+#structurePanel .structure-moment-row>.structure-moment-color-swatch{
+  grid-column:4!important;grid-row:1!important;justify-self:end!important;width:calc(34px * var(--tas-density))!important;
+}
+
+@container structure-viewer (max-width:430px){
+  #structurePanel .structure-moment-row{grid-template-columns:calc(22px * var(--tas-density)) minmax(0,1fr) calc(36px * var(--tas-density))!important;grid-template-rows:auto auto!important;}
+  #structurePanel .structure-moment-row>.structure-moment-site{grid-column:2!important;grid-row:1!important;}
+  #structurePanel .structure-moment-row>.structure-moment-color-swatch{grid-column:3!important;grid-row:1!important;}
+  
+}
+
+/* v14: global arrow length/width/head; each spin keeps three compact fields. */
+#structurePanel .structure-spin-display-row{grid-template-columns:repeat(4,minmax(0,1fr));}
+#structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(54px * var(--tas-density)),.65fr) minmax(calc(150px * var(--tas-density)),3fr) auto!important;}
+
+#structurePanel .structure-moment-row .structure-entry-field{min-width:0;}
+@container structure-viewer (max-width:520px){
+ #structurePanel .structure-spin-display-row{grid-template-columns:repeat(2,minmax(0,1fr));}
+ #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(48px * var(--tas-density)),.6fr) minmax(calc(125px * var(--tas-density)),3fr) auto!important;}
+}
+#structurePanel .structure-spin-editor-toolbar>.structure-entry-field,
+#structurePanel .structure-spin-editor-toolbar>.structure-individual-selector{
+  margin:0;
+  width:100%;
+  min-width:0;
+  max-width:none;
+  box-sizing:border-box;
+}
+
+/* mCIF Generator: Atoms / Spins / Bonds. */
+#structurePanel .structure-config-tabs{
+  display:flex;
+  flex-wrap:nowrap;
+  grid-template-columns:none;
+  align-items:stretch;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  gap:calc(4px * var(--tas-density));
+  padding:calc(4px * var(--tas-density));
+}
+#structurePanel .structure-config-tabs button{
+  flex:1 0 auto;
+  min-width:max-content;
+  white-space:nowrap;
+  padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
+  border:0;
+  background:#f3f5f7;
+  color:#222;
+  font-size:calc(14px * var(--tas-density));
+}
+#structurePanel .structure-config-tabs button:hover{background:#eaf0f6;}
+#structurePanel .structure-config-tabs button.active{
+  background:#fff;
+  box-shadow:none;
+  color:#222;
+}
+/* Three Structure tabs are likewise 1:1:1. */
+#structurePanel .structure-config-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(4px * var(--tas-density));
+  overflow-x:hidden;
+}
+#structurePanel .structure-config-tabs > button{
+  width:100%;min-width:0;flex:none;
+  white-space:normal;overflow-wrap:anywhere;
+  text-align:center;
+}
+
+/* v51: unified, two-pane CIF / mCIF Generator workspace.
+   Each side is one continuous card; sections inside the left card are separated
+   by unobtrusive rules, not independent card outlines. */
+
+#structurePanel .structure-control-section:first-child{padding-top:0;}
+#structurePanel .structure-control-section + .structure-control-section{
+  border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
+}
+#structurePanel .structure-control-section:last-child{padding-bottom:0;}
+#structurePanel .structure-config-section{overflow:visible;}
+#structurePanel .structure-viewer-main > .cif-output-tabs,
+#cifGeneratorPanel .cif-generator-output-pane > .cif-output-tabs{
+  border-top:0;
+  border-left:0;
+  border-right:0;
+  border-radius:0;
+  margin:0;
+  width:100%;
+}
+#cifGeneratorPanel .cif-generator-section + .cif-generator-section{
+  border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
+}
+
+/* v52: Match the CIF Generator outer-to-inner spacing to mCIF Generator.
+   The CIF card previously had 14px inset plus a 12px workspace top margin,
+   while the mCIF card has a 10px inset with no extra top margin. */
+
+/* v53: match CIF/mCIF source-section spacing and keep both interfaces legible. */
+#cifGeneratorPanel .cif-generator-source-section .cif-pane-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:calc(8px * var(--tas-density));
+  margin:0;
+}
+#cifGeneratorPanel .cif-generator-source-section .cif-pane-heading h3{
+  margin:0 0 calc(7px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-generator-source-row > input{
+  min-width:0;
+  width:100%;
+}
+#cifGeneratorPanel .cif-generator-source-section .cif-generator-file-name{
+  display:block;
+  width:100%;
+  margin-top:calc(8px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-generator-source-section .cif-source-button-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  margin-top:calc(8px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-lattice-information-heading{
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:calc(8px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-lattice-information-heading h3{margin:0;}
+#cifGeneratorPanel .cif-lattice-information-section .cif-generator-setup{margin-top:calc(8px * var(--tas-density));}
+#cifGeneratorPanel .cif-lattice-information-section .cif-lattice-grid{margin-top:calc(12px * var(--tas-density));}
+#structurePanel .structure-config-section > .structure-section-title{
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  margin:0 0 calc(9px * var(--tas-density));
+}
+@media(max-width:760px){
+  
+  
+  
+  
+  #cifGeneratorPanel .cif-generator-source-section .cif-source-button-row > button{
+    min-width:0;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
+#cifGeneratorPanel .cif-generator-output-pane > .cif-output-tabs{
+  flex:0 0 auto;
+  flex-shrink:0;
+  width:100%;
+  min-width:0;
+  min-height:calc(43px * var(--tas-density));
+  max-width:100%;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+#cifGeneratorPanel .cif-generator-output-pane > .cif-output-tabs > .cif-output-tab{
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+}
+#cifGeneratorPanel .cif-generator-input-pane .cif-pane-heading h3{
+  margin:0;
+}
+#cifGeneratorPanel .cif-generator-source-section :is(.cif-file-name, .cif-filename-entry input, .cif-filename-suffix){
+  box-sizing:border-box;
+  font-size:calc(14px * var(--tas-density));
+  font-weight:400;
+  line-height:1.35;
+  min-height:calc(36px * var(--tas-density));
+}
+#cifGeneratorPanel .cif-generator-source-section .cif-generator-source-row > .cif-file-name{
+  min-width:0;
+}
+#structurePanel #cifGeneratorPanel.generator-unified-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:calc(12px * var(--tas-density));
+  align-items:start;
+  width:100%;max-width:100%;
+  min-width:0;
+}
+#structurePanel .generator-unified-left{padding:calc(12px * var(--tas-density));}
+#structurePanel .generator-shared-file .cif-pane-heading{margin-bottom:calc(9px * var(--tas-density));align-items:center;}
+#structurePanel .generator-shared-file .cif-pane-heading h3,
+#structurePanel .generator-output-heading{
+  font-size:calc(15px * var(--tas-density))!important;
+  font-weight:700!important;
+  line-height:1.3;
+  margin:0 0 calc(8px * var(--tas-density));
+}
+#structurePanel .generator-shared-file .cif-pane-heading h3{margin:0;}
+#structurePanel .generator-shared-file .cif-generator-source-row{
+  min-width:0;max-width:100%;
+}
+#structurePanel .generator-reflection-tabs > button:last-child{border-right:0;}
+#structurePanel .generator-reflection-tabs > button.active{
+  background:#fff;
+  border-color:#98a7b6;
+}
+#structurePanel .generator-mode-pane .cif-generator-input-pane{
+  box-sizing:border-box;
+  display:block;
+  border:0!important;
+  border-radius:0!important;
+  padding:calc(12px * var(--tas-density)) 0 0!important;
+  margin:0!important;
+  width:100%;max-width:100%;
+  min-width:0;
+  box-shadow:none!important;
+  background:transparent;
+}
+
+#structurePanel .generator-mode-pane .structure-control-section{
+  padding:calc(12px * var(--tas-density)) 0;
+  margin:0;
+}
+#structurePanel .generator-mode-pane .structure-control-section:first-child{padding-top:0;}
+#structurePanel .generator-mode-pane .structure-control-section:last-child{padding-bottom:0;}
+#structurePanel .generator-mode-pane .cif-generator-source-section{
+  padding-top:0;
+}
+#structurePanel .generator-mode-pane .cif-source-button-row > button{
+  font-size:calc(14px * var(--tas-density));min-height:calc(36px * var(--tas-density));font-weight:600;
+}
+#structurePanel .generator-unified-right > .generator-output-pane{
+  box-sizing:border-box;
+  display:block;
+  flex:1 1 auto;
+  height:auto!important;
+  min-height:calc(560px * var(--tas-density));
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  padding:calc(12px * var(--tas-density));
+  overflow:hidden;
+}
+#structurePanel .generator-reflection-tabs{margin-bottom:calc(12px * var(--tas-density));}
+#structurePanel .generator-reflections-notice{
+  margin:calc(12px * var(--tas-density)) 0;
+  color:#646d76;
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.5;
+}
+#structurePanel .generator-unified-right .cif-structure-plot{min-width:0;max-width:100%;}
+#structurePanel .generator-structure-view-controls .cif-structure-view-buttons{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:calc(6px * var(--tas-density))!important;
+  margin:0!important;
+  width:100%;min-width:0;
+}
+#structurePanel .generator-structure-view-controls .structure-range-six{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:calc(6px * var(--tas-density))!important;
+  align-items:end;
+  margin:0!important;
+  width:100%;min-width:0;
+}
+#structurePanel .generator-structure-view-controls .structure-entry-field{min-width:0;width:100%;}
+#cifGeneratorPanel .cif-atom-detailed[open]>summary{border-bottom:calc(1px * var(--tas-density)) solid #d5d5d5}
+
+#cifGeneratorPanel #cifGeneratorMessage.hidden{display:none!important}
+#cifGeneratorPanel .cif-atom-cell [data-cif-atom-field="Biso"]:disabled{
+  opacity:.65;background:#f3f5f7;cursor:not-allowed;
+}
+
+#cifGeneratorPanel .cif-atom-row.cif-atom-selected .cif-atom-cell,
+#cifGeneratorPanel .cif-thermal-row.cif-atom-selected .cif-thermal-cell{
+  background:#e8f2fc;
+}
+#cifGeneratorPanel .cif-atom-row.cif-atom-selected .cif-atom-index{color:#1d5281;}
+#cifGeneratorPanel .cif-atom-row.cif-atom-selected .cif-atom-cell input{
+  background:#fff;
+}
+
+/* v71 — compact atom reordering controls, separate from the 3 equal actions. */
+
+#cifGeneratorPanel .cif-atom-row.cif-atom-dragging .cif-atom-cell{opacity:.5;}
+#cifGeneratorPanel .cif-atom-row.cif-atom-drop-before .cif-atom-cell{box-shadow:inset 0 calc(2px * var(--tas-density)) 0 #4488bd;}
+#cifGeneratorPanel .cif-atom-row.cif-atom-drop-after .cif-atom-cell{box-shadow:inset 0 calc(-2px * var(--tas-density)) 0 #4488bd;}
+#structurePanel .generator-unified-editor{display:block!important;}
+
+#structurePanel .structure-config-panel > .cif-lattice-information-section{border:0;margin:0;padding:0;}
+
+/* One shared export filename and two output-action rows. */
+
+#structurePanel .cif-filename-suffix{white-space:nowrap;}
+
+/* Divider belongs directly above Structure editor, never inside Positions. */
+#structurePanel .generator-unified-editor > .structure-config-section {
+  border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
+  padding-top:calc(12px * var(--tas-density));
+  margin-top:calc(12px * var(--tas-density));
+}
+
+/* Format + File name on one row, including narrow layouts. */
+#structurePanel .cif-unified-output-line {
+  display: grid !important;
+  grid-template-columns: minmax(calc(82px * var(--tas-density)),1fr) minmax(0,2fr) !important;
+  align-items: end;
+  gap: calc(8px * var(--tas-density));
+}
+#structurePanel .cif-unified-output-line > label { min-width: 0; }
+#structurePanel .cif-unified-output-line .cif-generator-file-name { display: block; }
+#structurePanel .cif-unified-output-line .cif-generator-file-name input { min-width: 0; width: 100%; box-sizing: border-box; }
+#structurePanel .cif-unified-output-line .cif-filename-entry { display: flex; align-items: center; min-width: 0; gap: calc(4px * var(--tas-density)); margin-top: calc(5px * var(--tas-density)); }
+#structurePanel .cif-unified-output-line .cif-filename-entry input { flex: 1 1 0; }
+
+/* Release notices: distinguish unsupported BNS assignment and unvalidated intensity. */
+#structurePanel .cif-release-note {
+  color: #c62828;
+  font-size: calc(14px * var(--tas-density));
+  line-height: 1.35;
+  font-weight: 700;
+  margin: calc(5px * var(--tas-density)) 0 calc(10px * var(--tas-density));
+}
+/* Keep the file headings and their Show buttons on the same row on phones.
+   Scope only these two headings; other editor headings retain their layout. */
+#structurePanel .generator-shared-file > .cif-pane-heading,
+#structurePanel .cif-generator-source-section > .cif-pane-heading {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: calc(6px * var(--tas-density)) !important;
+  min-width: 0;
+}
+#structurePanel .generator-shared-file > .cif-pane-heading h3,
+#structurePanel .cif-generator-source-section > .cif-pane-heading h3 {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+#structurePanel .generator-shared-file > .cif-pane-heading .cif-heading-actions,
+#structurePanel .cif-generator-source-section > .cif-pane-heading .cif-heading-actions {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap !important;
+  justify-content: flex-end !important;
+}
+#structurePanel .generator-shared-file > .cif-pane-heading .cif-heading-actions button,
+#structurePanel .cif-generator-source-section > .cif-pane-heading .cif-heading-actions button {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 0;
+  white-space: nowrap;
+}
+@media (max-width: 450px) {
+  #structurePanel .generator-shared-file > .cif-pane-heading .cif-heading-actions button,
+  #structurePanel .cif-generator-source-section > .cif-pane-heading .cif-heading-actions button {
+    font-size: calc(11px * var(--tas-density)) !important;
+    padding-inline: calc(5px * var(--tas-density)) !important;
+  }
+}
+#cifGeneratorPanel .cif-unified-preview-label{
+  font-size:max(12px,calc(16px * var(--tas-density)));
+}
+
+/* CIF/mCIF generation and reflection messages must remain legible even in the
+   compact desktop layout. Includes "Generate CIF first ..." and error notices. */
+#structurePanel .cif-generator-message,
+#cifGeneratorPanel .cif-generator-message,
+#structurePanel .generator-reflections-notice,
+#cifGeneratorPanel .generator-reflections-notice {
+  font-size:max(14px,calc(16px * var(--tas-density)));
+  line-height:1.5;
+}
+@media (max-width:760px){
+  #structurePanel .cif-generator-message,
+  #cifGeneratorPanel .cif-generator-message,
+  #structurePanel .generator-reflections-notice,
+  #cifGeneratorPanel .generator-reflections-notice {font-size:17px;}
+}
+
+/* Restore the output format selector beside the filename. */
+#structurePanel .cif-unified-output-line{
+  grid-template-columns:minmax(calc(105px * var(--tas-density)),1fr) minmax(0,2fr)!important;
+}
+#structurePanel .cif-unified-output-line .cif-output-format-label select{
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box;
+  margin-top:calc(5px * var(--tas-density));
+}
+/* Structure editor: System precedes No. and filters the existing 230 space groups.
+   The Space group selector retains enough width for Hermann-Mauguin symbols. */
+#structurePanel .cif-space-group-picker{
+  grid-template-columns:minmax(0,1.1fr) minmax(0,.56fr) minmax(0,1.75fr);
+  gap:calc(8px * var(--tas-density));
+}
+#structurePanel .cif-space-group-picker label{min-width:0}
+#structurePanel .cif-space-group-picker select,
+#structurePanel .cif-space-group-picker input{
+  min-width:0;width:100%;max-width:100%;box-sizing:border-box;
+}
+/* The narrower layout keeps System immediately to the left of No. while
+   moving the full space-group symbol to its own line for readability. */
+@media(max-width:520px){
+  #structurePanel .cif-space-group-picker{
+    grid-template-columns:minmax(0,1.6fr) minmax(0,.8fr);
+  }
+  #structurePanel .cif-space-group-picker > label:last-child{grid-column:1/-1}
+}
+/* Do not show an mCIF future-support notice for ordinary CIF output,
+   including on the first paint before scripts initialize. */
+#structurePanel #cifMcifBnsNotice[hidden]{display:none!important}
+#structurePanel .structure-style-modes label{
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:calc(5px * var(--tas-density));
+  width:100%;
+  min-width:0;
+  padding:calc(5px * var(--tas-density)) 0;
+  white-space:nowrap;
+  cursor:pointer;
+}
+#structurePanel .generator-unified-right > .generator-output-pane{
+  grid-column:1;
+  grid-row:2;
+  min-height:0!important;
+  height:100%!important;
+  align-self:stretch;
+}
+
+/* Scroll anchoring must not compensate for short editor tabs when the
+   Generator changes its output pane at narrower responsive widths. */
+#structurePanel #cifGeneratorPanel.generator-unified-grid{
+  overflow-anchor:none;
+}
+/* Previously forced-small CIF file headings and view-control captions. */
+#structurePanel .generator-shared-file > .cif-pane-heading h3,
+#structurePanel #cifGeneratorPanel .cif-generator-source-section .cif-pane-heading h3 {
+  font-size: var(--plane-tab-heading-font) !important;
+}
+#structurePanel .generator-structure-view-controls label:has(> select),
+#structurePanel .structure-plot-toolbar label:has(> select) {
+  font-size: var(--plane-tab-select-caption-font) !important;
+}
+/* The generated filename suffix should read at least as clearly as the
+   output format / filename controls, including at compact UI densities. */
+#structurePanel #cifUnifiedFileSuffix {
+  font-size: max(15px, calc(17px * var(--tas-density)));
+  font-weight: 400;
+  white-space: nowrap;
+}
+#structurePanel .structure-style-table .structure-style-index:active {cursor:grabbing;}
+
+/* CIF Generator desktop viewport fitting (wide but short displays).
+   Apply only while JS has measured a usable two-column workspace.  The card
+   occupies the visible part of the main pane; long atomic/magnetic tables
+   and Reflections/Preview scroll inside the card, never enlarging the page. */
+#structurePanel .generator-unified-card.generator-height-limited{
+  height:var(--generator-visible-height);
+  min-height:0;
+  max-height:var(--generator-visible-height);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited #cifGeneratorPanel.generator-unified-grid{
+  flex:1 1 0;
+  height:100%;
+  min-height:0;
+  max-height:100%;
+  align-items:stretch!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited .generator-unified-left,
+#structurePanel .generator-height-limited .generator-unified-right{
+  height:100%;
+  min-height:0!important;
+  max-height:100%;
+  align-self:stretch!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited .generator-unified-left{
+  display:flex;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited .generator-shared-file{
+  flex:0 0 auto;
+}
+#structurePanel .generator-height-limited .generator-unified-left > .generator-mode-pane:not(.hidden){
+  flex:1 1 0;
+  min-height:0;
+  max-height:100%;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#structurePanel .cif-cell-box legend{font-size:1em;font-weight:700;padding:0 6px;}
+#structurePanel .cif-cell-box[hidden]{display:none!important;}
+#structurePanel .cif-cell-box .cif-generator-setup{margin-top:3px;}
+#structurePanel .cif-cell-box .cif-lattice-grid{margin-top:10px;}
+#structurePanel .structure-plot-toolbar .structure-cell-reference-row{flex:0 0 100%;width:100%;min-width:0;}

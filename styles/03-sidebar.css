@@ -1,0 +1,152 @@
+/* Sidebar: instrument configuration, sample, background, propagation-vector and dark-angle rows.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.sidebar h3{font-size:calc(13px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.auto-row{grid-template-columns:calc(28px * var(--tas-density)) minmax(0,1fr)}
+.propagation-row label{min-width:0}
+.dark-asset .dark-table{margin-top:calc(5px * var(--tas-density))}
+#sampleSpaceGroupNumber{width:100%;max-width:none}
+@media(max-width:760px){.sample-spacegroup-row{grid-template-columns:1fr 1fr}.sample-spacegroup-row label:last-child{grid-column:1/-1}}
+.dark-asset .dynamic-add-wide{margin-top:calc(6px * var(--tas-density))}
+
+/* Dark-angle cards keep neutral borders, while every enable checkbox uses
+   the same blue accent. Asset labels use normal text weight. */
+.dark-asset{
+  border:calc(1.5px * var(--tas-density)) solid #111 !important;
+}
+.dark-asset input[type=checkbox]{
+  accent-color:#1677ff !important;
+}
+.dark-asset .checkbox-label span{
+  color:#111 !important;
+  font-weight:400 !important;
+}
+
+@media(max-width:760px){
+  .propagation-row{grid-template-columns:calc(52px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(66px * var(--tas-density))}
+  .background-row{grid-template-columns:minmax(0,1fr) calc(66px * var(--tas-density))}
+  .dark-asset-head{grid-template-columns:minmax(calc(95px * var(--tas-density)),.7fr) minmax(calc(125px * var(--tas-density)),1.3fr) calc(66px * var(--tas-density))}
+  .dark-table{grid-template-columns:calc(24px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(66px * var(--tas-density))}
+}
+
+/* v16: explicit U/V swap control. The entered order defines handedness, so this
+   button performs an intentional swap only when the user requests it. */
+.uv-entry-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) calc(34px * var(--tas-density));
+  grid-template-rows:auto auto;
+  column-gap:calc(5px * var(--tas-density));
+  align-items:stretch;
+}
+.uv-entry-grid .vector{margin:calc(3px * var(--tas-density)) 0;}
+.uv-vector-u{grid-column:1;grid-row:1;}
+.uv-vector-v{grid-column:1;grid-row:2;}
+.sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
+.sidebar select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
+.sidebar h3{font-size:calc(14px * var(--tas-density))}
+.sidebar .auto-vector,.sidebar .status{font-size:calc(13px * var(--tas-density))}
+
+/* v22: stable compact sidebar sizing and linked Powder Angle inputs. */
+.sample-spacegroup-row{
+  grid-template-columns:minmax(0,.78fr) minmax(0,.58fr) minmax(0,1.64fr);
+  gap:calc(4px * var(--tas-density));
+  width:100%;
+  min-width:0;
+}
+.sample-spacegroup-row label,
+.sample-spacegroup-row select,
+#sampleSpaceGroup,
+#sampleSpaceGroupNumber{
+  min-width:0;
+  max-width:100%;
+  width:100%;
+}
+
+/* Dark-angle cards must stay inside the sidebar even when a sample-environment
+   name is long. Both Remove buttons use the same readable control size. */
+.dark-asset-head{
+  grid-template-columns:minmax(0,.78fr) minmax(0,1.35fr) minmax(calc(84px * var(--tas-density)),.62fr);
+  gap:calc(5px * var(--tas-density));
+  width:100%;
+  min-width:0;
+}
+.dark-asset-head label,
+.dark-asset-head select{
+  min-width:0;
+  max-width:100%;
+  width:100%;
+}
+.dark-table{
+  grid-template-columns:calc(24px * var(--tas-density)) repeat(3,minmax(0,1fr)) minmax(calc(84px * var(--tas-density)),.72fr);
+  gap:calc(3px * var(--tas-density));
+  min-width:0;
+  width:100%;
+}
+.remove-dark-asset,
+.remove-dark-range{
+  width:100%;
+  min-width:0;
+  min-height:calc(30px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
+  font-size:calc(16px * var(--tas-density));
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+@media(max-width:760px){
+  .sample-spacegroup-row{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  }
+  .sample-spacegroup-row label:last-child{grid-column:1/-1}
+  .dark-asset-head{
+    grid-template-columns:minmax(0,.8fr) minmax(0,1.25fr) minmax(calc(78px * var(--tas-density)),.65fr);
+  }
+  .dark-table{
+    grid-template-columns:calc(22px * var(--tas-density)) repeat(3,minmax(0,1fr)) minmax(calc(78px * var(--tas-density)),.72fr);
+  }
+}
+
+/* v24: keep the permanent left panel width stable when Single crystal / Powder
+   changes the amount of visible content. Reserve the vertical scrollbar gutter
+   so form controls do not grow/shrink by the scrollbar width. */
+.sidebar{scrollbar-gutter:stable;}
+@media(max-width:760px){
+  .sidebar{scrollbar-gutter:auto;}
+}
+
+/* Background scattering is no longer limited to four dynamic rows. */
+.background-rows{min-width:0;}
+.background-row{min-width:0;}
+.background-row label,.background-row select{min-width:0;max-width:100%;width:100%;}
+.instrument-primary-row>label,.instrument-primary-row select,.instrument-primary-row input{min-width:0;width:100%;max-width:100%}
+.sample-spacegroup-row{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.sidebar { max-height: calc(100vh - var(--tas-header-height)); }
+@media (max-width: 760px) {
+  .sidebar { max-height: none; }
+}
+
+/* Readability tuning (native compact UI; no transform/zoom).
+   Adjust typography only. Existing responsive columns and graph geometry stay intact. */
+.sidebar section > h2 {
+  font-size: calc(19px * var(--tas-density));
+  line-height: 1.25;
+}
+.sidebar h3 {
+  font-size: calc(16px * var(--tas-density));
+  line-height: 1.3;
+}
+.sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
+.sidebar select {
+  font-size: calc(16px * var(--tas-density));
+}
+.instrument-crystal-row label,.instrument-crystal-row select{min-width:0;width:100%;max-width:100%}
+#fixedBeamQuantity,#fixedBeamValue{width:100%;min-width:0;}
+#fixedBeamLabel{min-width:0;}
+.sidebar .propagation-enable input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  min-height: 13px;
+  flex: 0 0 13px;
+  padding: 0;
+  margin: 0;
+}

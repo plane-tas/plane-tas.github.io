@@ -1,0 +1,510 @@
+// Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
+// Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
+export function createQEVectorMap(deps){
+  const {
+    $, backgroundColor, backgroundMaterials, backgroundPowderPeaks, checkedValue, currentQEMapUnit,
+    powderS2ForQAtHW, qeFormatPathNumber, qePathAxisCoordinateLabel, qePathPointXY,
+    qePhysicalRluCoordinates, qePlaneRluBasis, qeSelectedPathHKL, renderQEExternalLegend, renderSingle,
+    representativePowderHklText, safeResizePlot, scatteringPlaneWarningMessage, selectedBackgrounds,
+    setScatteringPlaneWarning, getPowderCache, getSingleCache
+  }=deps;
+
+function qeRluNiceStep(span){
+  const raw=Math.max(1e-12,Math.abs(span)/9);
+  const decade=Math.pow(10,Math.floor(Math.log10(raw)));
+  return [1,2,5,10].map(v=>v*decade).find(v=>v>=raw) || 10*decade;
+}
+
+function qeObliqueRluGrid(cache,xRange,yRange){
+  const b=qePlaneRluBasis(cache);
+  const det=b.ux*b.vy-b.uy*b.vx;
+  const empty={shapes:[],annotations:[],xTickVals:[],xTickText:[],yTickVals:[],yTickText:[]};
+  if(!Number.isFinite(det) || Math.abs(det)<1e-12) return empty;
+  const xmin=Math.min(...xRange),xmax=Math.max(...xRange);
+  const ymin=Math.min(...yRange),ymax=Math.max(...yRange);
+  const corners=[[xmin,ymin],[xmin,ymax],[xmax,ymin],[xmax,ymax]].map(p=>qePhysicalRluCoordinates(cache,p));
+  const umin=Math.min(...corners.map(p=>p[0])),umax=Math.max(...corners.map(p=>p[0]));
+  const vmin=Math.min(...corners.map(p=>p[1])),vmax=Math.max(...corners.map(p=>p[1]));
+  const ustep=qeRluNiceStep(umax-umin),vstep=qeRluNiceStep(vmax-vmin);
+  const shapes=[],xTickVals=[],xTickText=[],yTickVals=[],yTickText=[];
+  const gridLine=(origin,delta,zero)=>({
+    type:'line',xref:'x',yref:'y',
+    x0:origin[0]-delta[0],y0:origin[1]-delta[1],
+    x1:origin[0]+delta[0],y1:origin[1]+delta[1],
+    layer:'above',line:{color:zero?'rgba(80,90,105,0.67)':'rgba(105,115,130,0.31)',width:zero?1.4:0.85}
+  });
+  const toXY=(u,v)=>[b.ux*u+b.vx*v,b.uy*u+b.vy*v];
+  const fmt=v=>Math.abs(v)<1e-9?'0':String(Number(v.toPrecision(6)));
+  const spanU=(umax-umin)+2*ustep,spanV=(vmax-vmin)+2*vstep;
+  const nU0=Math.ceil(umin/ustep-1e-9),nU1=Math.floor(umax/ustep+1e-9);
+  const nV0=Math.ceil(vmin/vstep-1e-9),nV1=Math.floor(vmax/vstep+1e-9);
+  const eps=1e-8*Math.max(xmax-xmin,ymax-ymin,1);
+  // In r.l.u. mode the graph is still physically orthonormal (Å^-1), but
+  // u/v=constant grid lines are oblique.  Place Plotly's axis ticks exactly
+  // where those same grid lines intersect the BOTTOM and LEFT frame edges.
+  // This leaves both tick labels and axis titles outside the plot, like Å^-1.
+  for(let n=nU0;n<=nU1 && n<nU0+40;n++){
+    const u=n*ustep,zero=n===0;
+    shapes.push(gridLine(toXY(u,(vmin+vmax)/2),[b.vx*spanV/2,b.vy*spanV/2],zero));
+    if(Math.abs(b.vy)>1e-12){
+      const vAtBottom=(ymin-b.uy*u)/b.vy;
+      const xAtBottom=b.ux*u+b.vx*vAtBottom;
+      if(Number.isFinite(xAtBottom) && xAtBottom>=xmin-eps && xAtBottom<=xmax+eps){
+        xTickVals.push(Math.max(xmin,Math.min(xmax,xAtBottom)));
+        xTickText.push(fmt(u));
+      }
+    }
+  }
+  for(let n=nV0;n<=nV1 && n<nV0+40;n++){
+    const v=n*vstep,zero=n===0;
+    shapes.push(gridLine(toXY((umin+umax)/2,v),[b.ux*spanU/2,b.uy*spanU/2],zero));
+    if(Math.abs(b.ux)>1e-12){
+      const uAtLeft=(xmin-b.vx*v)/b.ux;
+      const yAtLeft=b.uy*uAtLeft+b.vy*v;
+      if(Number.isFinite(yAtLeft) && yAtLeft>=ymin-eps && yAtLeft<=ymax+eps){
+        yTickVals.push(Math.max(ymin,Math.min(ymax,yAtLeft)));
+        yTickText.push(fmt(v));
+      }
+    }
+  }
+  return {shapes,annotations:[],xTickVals,xTickText,yTickVals,yTickText};
+}
+
+function bindSingleRluGrid(cache){
+  const gd=$('singlePlot');
+  if(!gd || typeof gd.on!=='function') return;
+  if(gd.__tasRluGridHandler && typeof gd.removeListener==='function')
+    gd.removeListener('plotly_relayout',gd.__tasRluGridHandler);
+  gd.__tasRluGridHandler=null;
+  if(currentQEMapUnit()!=='rlu') return;
+  let scheduled=false,updating=false;
+  const handler=event=>{
+    if(updating || scheduled) return;
+    // Plotly.relayout(shapes/annotations) also fires plotly_relayout; do not
+    // recursively rebuild the grid in response to our own updates.
+    const keys=Object.keys(event||{});
+    if(!keys.some(k=>/^([xy]axis\.(range|autorange)|[xy]axis\.range\[)/.test(k))) return;
+    scheduled=true;
+    requestAnimationFrame(()=>{
+      scheduled=false;
+      if(!gd.isConnected || currentQEMapUnit()!=='rlu') return;
+      const xr=gd._fullLayout?.xaxis?.range,yr=gd._fullLayout?.yaxis?.range;
+      if(!Array.isArray(xr)||!Array.isArray(yr)) return;
+      updating=true;
+      const grid=qeObliqueRluGrid(cache,xr,yr);
+      Promise.resolve(Plotly.relayout(gd,{
+        shapes:grid.shapes,annotations:grid.annotations,
+        'xaxis.tickvals':grid.xTickVals,'xaxis.ticktext':grid.xTickText,
+        'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText
+      })).catch(err=>console.warn('Oblique RLU grid refresh warning:',err))
+        .finally(()=>{updating=false;});
+    });
+  };
+  gd.__tasRluGridHandler=handler;
+  gd.on('plotly_relayout',handler);
+}
+
+function qePointInPolygon(point,polygon){
+  const x=point[0], y=point[1];
+  let inside=false;
+  for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
+    const xi=polygon[i][0], yi=polygon[i][1], xj=polygon[j][0], yj=polygon[j][1];
+    const cross=((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/((yj-yi)||1e-30)+xi);
+    if(cross) inside=!inside;
+  }
+  return inside;
+}
+
+function qeMapHeaderTitle(cache){
+  const energyText=cache.energyMode==="Ef fixed"?`Ef=${cache.Ef.toFixed(2)} meV`:`Ei=${cache.Ei.toFixed(2)} meV`;
+  const lam=cache.lambdaHalf?" | λ/2":"";
+  const plane=`(${cache.U.join(",")})-(${cache.V.join(",")})`;
+  const spaceGroup=`#${cache.sampleSpaceGroup?.number ?? 1} ${cache.sampleSpaceGroup?.hm ?? "P1"}`;
+  const lattice=`a=${cache.lc.a.toFixed(3)}, b=${cache.lc.b.toFixed(3)}, c=${cache.lc.c.toFixed(3)} Å, `+
+    `α=${cache.lc.alpha.toFixed(1)}, β=${cache.lc.beta.toFixed(1)}, γ=${cache.lc.gamma.toFixed(1)}°`;
+  return `${cache.inst.name||"Instrument"} | ${energyText}${lam} | Scattering plane: ${plane}<br>`+
+    `${spaceGroup} | ${lattice}`;
+}
+
+// Plotly's native double-click reset can restore a stale viewport after a
+// Q-path edit. Disable that built-in reset on this plot and always return to
+// the current path's calculated axes instead (without affecting Constant E).
+function installQEVectorDoubleClickReset(plot){
+  if(!plot || typeof plot.on!=='function' || plot.__tasQEVectorResetHandler) return;
+  const handler=()=>{
+    const view=plot.__tasQEVectorDefaultView;
+    if(!view || !plot.isConnected) return;
+    Plotly.relayout(plot,{
+      'xaxis.range':view.x.slice(),
+      'yaxis.range':view.y.slice(),
+      'xaxis.autorange':false,
+      'yaxis.autorange':false
+    }).catch(err=>console.warn('Q vector–E map reset:',err));
+  };
+  plot.__tasQEVectorResetHandler=handler;
+  plot.on('plotly_doubleclick',handler);
+}
+
+function renderQEVectorMap(cache){
+  const plot=$('qeVectorPlot'), msg=$('qeVectorMessage');
+  if(!plot || !cache || cache.powder) return;
+  try{
+    const pathPoints=qeSelectedPathHKL.map(point=>point.slice());
+    if(pathPoints.length<2){
+      // An empty path is a normal editing state, not a warning.
+      if(msg) msg.textContent='';
+      setScatteringPlaneWarning('qeVectorPlaneWarning','');
+      $('qeVectorLegend')?.replaceChildren();
+      try{Plotly.purge(plot);}catch(_e){}
+      plot.__tasQEVectorPathKey=null;
+      plot.__tasQEVectorDefaultView=null;
+      plot.__tasQEVectorResetHandler=null;
+      return;
+    }
+    const multiple=pathPoints.length>2;
+    const planeWarnings=[];
+    pathPoints.forEach((point,index)=>{
+      const warning=scatteringPlaneWarningMessage(point,`P${index+1}`);
+      if(warning) planeWarnings.push(warning.replace(/^Warning:\s*/,''));
+    });
+    setScatteringPlaneWarning('qeVectorPlaneWarning',planeWarnings.length?`Warning: ${planeWarnings.join(' / ')}`:'');
+    // Piecewise-linear path in physical scattering-plane coordinates.
+    const paths=[]; let totalDistance=0;
+    for(let j=0;j<pathPoints.length-1;j++){
+      const startHKL=pathPoints[j],endHKL=pathPoints[j+1];
+      const startXY=qePathPointXY(cache,startHKL),endXY=qePathPointXY(cache,endHKL);
+      const dx=endXY[0]-startXY[0],dy=endXY[1]-startXY[1],length=Math.hypot(dx,dy);
+      if(!(length>1e-10)) throw new Error(`P${j+1} and P${j+2} must be distinct in the scattering plane.`);
+      paths.push({a:startHKL,b:endHKL,p0:startXY,p1:endXY,ux:dx/length,uy:dy/length,length,start:totalDistance});
+      totalDistance+=length;
+    }
+    const currentPathKey=pathPoints.map(p=>p.join(',')).join(';');
+    const pathChanged=plot.__tasQEVectorPathKey!==currentPathKey;
+    // A new path must get its own viewport, even if Plotly has a cached zoom
+    // from the old path. Recalculation with an unchanged path may keep zoom.
+    plot.__tasQEVectorPathKey=currentPathKey;
+    const renderToken=(plot.__tasQEVectorRenderToken||0)+1;
+    plot.__tasQEVectorRenderToken=renderToken;
+    const first=pathPoints[0],last=pathPoints.at(-1),dh=last.map((v,i)=>v-first[i]);
+    // Two points retain the h/k/l axis convention. For 3+ vertices, use
+    // accumulated physical path length and mark the bends P1..Pn.
+    const variableLength=Math.max(...dh.map(Math.abs));
+    const xScale=multiple?1:variableLength/totalDistance;
+    const axisNumber=value=>qeFormatPathNumber(value);
+    let axisTitle='HKL path';
+    if(!multiple){
+      const coefficients=dh.map(d=>d/variableLength);
+      const firstVaryingIndex=coefficients.findIndex(c=>Math.abs(c)>1e-10);
+      const axisSymbol=['h','k','l'][firstVaryingIndex]||'h';
+      const axisTerm=(base,coefficient)=>{
+        if(Math.abs(coefficient)<1e-10) return axisNumber(base);
+        const sign=coefficient<0?'-':'+';
+        const abs=Math.abs(coefficient);
+        const coeff=Math.abs(abs-1)<1e-10?'':axisNumber(abs);
+        const variable=`${coeff}${axisSymbol}`;
+        return Math.abs(base)<1e-10?(coefficient<0?'-':'')+variable:`${axisNumber(base)}${sign}${variable}`;
+      };
+      axisTitle=`(${first.map((v,i)=>axisTerm(v,coefficients[i])).join(', ')})`;
+    }
+    // Allocate samples proportional to each segment's length and include
+    // its two endpoints; deduplicate shared vertices for a monotonic x axis.
+    const samples=[];
+    for(const [j,path] of paths.entries()){
+      const steps=Math.max(3,Math.round(260*path.length/totalDistance));
+      for(let n=j===0?0:1;n<=steps;n++){
+        const t=n/steps;
+        samples.push({x:(path.start+t*path.length)*xScale,
+          xy:[path.p0[0]+t*path.length*path.ux,path.p0[1]+t*path.length*path.uy],
+          hkl:path.a.map((v,k)=>v+t*(path.b[k]-v))});
+      }
+    }
+    const xVals=samples.map(p=>p.x),hMin=0,hMax=totalDistance*xScale;
+    const knots=[0,...paths.map(p=>(p.start+p.length)*xScale)];
+    const tickVals=[];
+    if(multiple){
+      tickVals.push(...knots);
+    }else{
+      const roughStep=hMax/8,base10=Math.pow(10,Math.floor(Math.log10(roughStep)));
+      const tickStep=([1,2,2.5,5,10].find(s=>s*base10>=roughStep)||10)*base10;
+      for(let i=0;i<=12;i++){
+        const tick=i*tickStep;
+        if(tick>hMax+tickStep*1e-9) break;
+        tickVals.push(Number(tick.toPrecision(12)));
+      }
+      // The right endpoint may not be a multiple of the automatic tick step.
+      if(!tickVals.some(value=>Math.abs(value-hMax)<1e-9)) tickVals.push(hMax);
+    }
+    // Keep every vertex as an x-axis tick, but draw the HKL coordinates as
+    // horizontal annotations.  Plotly's native tickangle rotates *all* labels;
+    // stagger individual labels into rows when their bounding boxes overlap.
+    const tickText=multiple
+      ?pathPoints.map((_,i)=>qePathAxisCoordinateLabel(i))
+      :tickVals.map(axisNumber);
+    const labelPixelWidth=text=>Math.max(0,String(text).length*17*0.56);
+    const longestVertexLabel=Math.max(...pathPoints.map((_,i)=>labelPixelWidth(qePathAxisCoordinateLabel(i))));
+    const sideMargin=Math.ceil(Math.max(88,longestVertexLabel/2+24));
+    const plotPixelWidth=plot.getBoundingClientRect().width||plot.clientWidth||540;
+    const staggeredPathLabels=(width=plotPixelWidth)=>{
+      if(!multiple) return {annotations:[],rowCount:0};
+      const usableWidth=Math.max(60,width-2*sideMargin);
+      const lastRight=[];
+      const annotations=knots.map((x,i)=>{
+        const width=labelPixelWidth(tickText[i]);
+        const center=x/Math.max(hMax,1e-9)*usableWidth;
+        const left=center-width/2;
+        let row=lastRight.findIndex(right=>left>=right+9);
+        if(row<0){row=lastRight.length;lastRight.push(-Infinity);}
+        lastRight[row]=center+width/2;
+        return {x,xref:'x',y:0,yref:'paper',yshift:-11-21*row,
+          text:tickText[i],showarrow:false,xanchor:'center',yanchor:'top',
+          font:{size:17}};
+      });
+      return {annotations,rowCount:lastRight.length};
+    };
+    const pathLabelLayout=staggeredPathLabels();
+    const z=[], darkKiZ=[], darkKfZ=[], darkFixedZ=[], hover=[];
+    for(let i=0;i<cache.hwList.length;i++){
+      const row=[], kiRow=[], kfRow=[], fixedRow=[], hrow=[];
+      const region=cache.regions[i];
+      const darkKi=cache.darkKI[i]||[], darkKf=cache.darkKF[i]||[], darkFixed=cache.darkFixed[i]||[];
+      for(const sample of samples){
+        const pt=sample.xy;
+        const geometric=qePointInPolygon(pt,region);
+        // Dark-angle geometry is an independent display layer.  Do not clip it
+        // to the Accessible-Q polygon: a blocked motor geometry can lie outside
+        // the currently reachable S1 envelope and should still be visible on
+        // the Q-vector–E map when it falls inside the displayed axes.
+        const inKi=darkKi.some(poly=>qePointInPolygon(pt,poly));
+        const inKf=darkKf.some(poly=>qePointInPolygon(pt,poly));
+        const inFixed=darkFixed.some(poly=>qePointInPolygon(pt,poly));
+        // Keep the underlying accessible region yellow and draw dark-angle
+        // regions as explicit colored overlays, including outside Accessible Q.
+        row.push(geometric?1:0);
+        kiRow.push(inKi?1:null);
+        kfRow.push(inKf?1:null);
+        fixedRow.push(inFixed?1:null);
+        const hkl=sample.hkl;
+        let status='';
+        if(inKi || inKf || inFixed){
+          const labels=[];
+          if(inKi) labels.push('dark angle: ki side');
+          if(inKf) labels.push('dark angle: kf side');
+          if(inFixed) labels.push('dark angle: fixed');
+          status=`<br>${labels.join(', ')}`;
+        }
+        hrow.push(`HKL = (${hkl.map(v=>v.toFixed(3)).join(', ')})<br>ℏω = ${cache.hwList[i].toFixed(2)} meV${status}`);
+      }
+      z.push(row); darkKiZ.push(kiRow); darkKfZ.push(kfRow); darkFixedZ.push(fixedRow); hover.push(hrow);
+    }
+    const endX=hMax;
+    const traces=[{
+      type:'heatmap',x:xVals,y:cache.hwList,z,
+      zmin:0,zmax:1,showscale:false,hoverinfo:'text',text:hover,
+      colorscale:[[0,'rgba(255,255,255,0)'],[0.499,'rgba(255,255,255,0)'],[0.5,'rgba(255,222,105,0.72)'],[1,'rgba(255,222,105,0.72)']],
+      name:'Accessible Q–E',showlegend:false
+    },{
+      type:'scatter',mode:'markers',x:[null],y:[null],hoverinfo:'skip',
+      marker:{size:11,symbol:'square',color:'rgba(255,222,105,0.90)',line:{color:'#c7a62c',width:1}},
+      name:'Accessible Q',showlegend:true,legendrank:0
+    }];
+    const addDarkOverlay=(mask,name,color,legendrank)=>{
+      if(!mask.some(row=>row.some(v=>v===1))) return;
+      traces.push({type:'heatmap',x:xVals,y:cache.hwList,z:mask,zmin:0,zmax:1,showscale:false,hoverinfo:'skip',
+        colorscale:[[0,color],[1,color]],name,showlegend:true,legendrank});
+    };
+    // Keep legend ordering consistent with the Constant E map: Accessible Q,
+    // background materials, then dark-angle overlays.
+
+    // Overlay background-powder |Q| spheres intersecting EVERY path leg.
+    // Each intersection is a vertical line at its cumulative path distance.
+    const qVectorLimit=Math.max(...paths.flatMap(p=>[Math.hypot(...p.p0),Math.hypot(...p.p1)]));
+    for(const bg of selectedBackgrounds()){
+      const material=backgroundMaterials.get(bg.key);
+      const visiblePeaks=backgroundPowderPeaks(material,qVectorLimit);
+      let bgLegendShown=false;
+      for(const peak of visiblePeaks){
+        for(const path of paths){
+          const proj=path.p0[0]*path.ux+path.p0[1]*path.uy;
+          const perp2=Math.max(0,Math.hypot(...path.p0)**2-proj*proj);
+          const discriminant=peak.q*peak.q-perp2;
+          if(discriminant<-1e-10) continue;
+          const root=Math.sqrt(Math.max(0,discriminant));
+          const seen=[];
+          for(const sv of [-proj-root,-proj+root]){
+            if(sv<-1e-9 || sv>path.length+1e-9 || seen.some(v=>Math.abs(v-sv)<1e-8)) continue;
+            seen.push(sv);
+            const t=Math.min(1,Math.max(0,sv/path.length));
+            const x=[],y=[],customdata=[];
+            let open=false;
+            for(const w of cache.hwList){
+              const s2=powderS2ForQAtHW(peak.q,w);
+              if(!Number.isFinite(s2)){
+                if(open){x.push(null);y.push(null);customdata.push(null);open=false;}
+                continue;
+              }
+              const hkl=path.a.map((v,k)=>v+t*(path.b[k]-v));
+              x.push((path.start+sv)*xScale);y.push(w);
+              customdata.push([
+                `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(peak)}<br>I/Imax = ${peak.relativeIntensity.toFixed(3)}<br>HKL path = (${hkl.map(v=>v.toFixed(3)).join(', ')})`,
+                peak.q,`${s2.toFixed(3)}°`
+              ]);
+              open=true;
+            }
+            if(open){x.push(null);y.push(null);customdata.push(null);}
+            if(!x.length) continue;
+            traces.push({type:'scatter',mode:'lines',x,y,customdata,
+              name:`BG${bg.index+1}: ${bg.key}`,
+              legendgroup:`background-scattering-${bg.index}`,
+              showlegend:!bgLegendShown,legendrank:10+bg.index,
+              line:{color:backgroundColor(bg.slot,0.20+0.75*peak.relativeIntensity),width:1.5},
+              hovertemplate:`%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`
+            });
+            bgLegendShown=true;
+          }
+        }
+      }
+    }
+
+    addDarkOverlay(darkKiZ,'Dark angle (ki side)','rgba(75,190,105,0.55)',20);
+    addDarkOverlay(darkKfZ,'Dark angle (kf side)','rgba(75,170,235,0.55)',21);
+    addDarkOverlay(darkFixedZ,'Dark angle (fixed)','rgba(95,105,220,0.50)',22);
+
+    // Plotly's native axis grid is rendered behind data traces, so colored
+    // heatmap overlays can obscure it.  Build a matching set of grid lines as
+    // top-layer shapes so the grid stays readable over Accessible-Q, BG and
+    // dark-angle colors as well as the white background.
+    const hwMax=Math.max(0,...cache.hwList);
+    const niceGridStep=max=>{
+      if(!(max>0)) return 1;
+      const raw=max/8, power=Math.pow(10,Math.floor(Math.log10(raw)));
+      const scaled=raw/power;
+      const candidates=[1,2,5,10];
+      const nice=candidates.reduce((best,value)=>
+        Math.abs(value-scaled)<Math.abs(best-scaled)?value:best
+      ,candidates[0]);
+      return nice*power;
+    };
+    const yGridStep=niceGridStep(hwMax);
+    const yGridVals=[];
+    for(let y=0;y<=hwMax+1e-9;y+=yGridStep) yGridVals.push(Number(y.toFixed(12)));
+    if(hwMax>0 && !yGridVals.some(y=>Math.abs(y-hwMax)<1e-9)) yGridVals.push(hwMax);
+    const frontGridShapes=[
+      ...tickVals.map(x=>({type:'line',xref:'x',yref:'paper',x0:x,x1:x,y0:0,y1:1,layer:'above',line:{color:'rgba(105,115,125,0.50)',width:1}})),
+      ...yGridVals.map(y=>({type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:y,y1:y,layer:'above',line:{color:'rgba(105,115,125,0.50)',width:1}}))
+    ];
+
+    renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);
+    const defaultView={x:[hMin,hMax],y:[0,hwMax]};
+    plot.__tasQEVectorDefaultView=defaultView;
+    const renderPromise=Plotly.react(plot,traces,{
+      uirevision:`qeVector-${currentPathKey}`, 
+      plot_bgcolor:'#fff',paper_bgcolor:'#fff',
+      showlegend:false,
+      xaxis:{title:{text:''},tickfont:{size:17},tickmode:'array',tickvals:tickVals,
+        ticktext:multiple?tickVals.map(()=>''):tickText,
+        range:[hMin,hMax],tickangle:0,automargin:false,zeroline:false,
+        ticks:multiple?'outside':'',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      yaxis:{title:{text:'ℏω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      shapes:[
+        ...frontGridShapes,
+        ...knots.map(x=>({type:'line',x0:x,x1:x,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}}))
+      ],
+      annotations:[
+        {x:0.5,xref:'paper',y:0,yref:'paper',
+          yshift:multiple?-(48+21*pathLabelLayout.rowCount):-123,
+          text:axisTitle,showarrow:false,xanchor:'center',yanchor:'top',font:{size:15}},
+        ...pathLabelLayout.annotations,
+        ...multiple?[]:[
+          {x:hMin,xref:'x',y:0,yref:'paper',yshift:-60,
+            text:qePathAxisCoordinateLabel(0),showarrow:false,
+            xanchor:'center',yanchor:'top',font:{size:17}},
+          {x:hMax,xref:'x',y:0,yref:'paper',yshift:-60,
+            text:qePathAxisCoordinateLabel(pathPoints.length-1),showarrow:false,
+            xanchor:'center',yanchor:'top',font:{size:17}}
+        ]
+      ],
+      margin:{l:sideMargin,r:sideMargin,t:multiple?52:45,
+        b:multiple?80+21*pathLabelLayout.rowCount:158}
+    },{responsive:true,doubleClick:false});
+    Promise.resolve(renderPromise).then(()=>{
+      if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
+      installQEVectorDoubleClickReset(plot);
+      // Force the current path's axes when a vertex is added/removed/edited.
+      // Otherwise Plotly may reuse the last double-click/zoom state.
+      if(pathChanged) return Plotly.relayout(plot,{
+        'xaxis.range':defaultView.x.slice(),
+        'yaxis.range':defaultView.y.slice(),
+        'xaxis.autorange':false,
+        'yaxis.autorange':false
+      });
+    }).catch(err=>console.warn('Q vector–E map viewport:',err));
+    // A responsive Plotly resize does not re-run the label row selection.
+    // Recalculate the horizontal-label rows when the parent pane changes width
+    // (for example when a tablet rotates or the browser becomes narrower).
+    plot.__tasPathUpdateAxisLabels=width=>{
+      if(!multiple || !plot.isConnected || $('qeVectorMapPane')?.classList.contains('hidden')) return;
+      const fresh=staggeredPathLabels(width);
+      const axisAnnotations=[
+        {x:0.5,xref:'paper',y:0,yref:'paper',
+          yshift:-(48+21*fresh.rowCount),text:axisTitle,showarrow:false,
+          xanchor:'center',yanchor:'top',font:{size:15}},
+        ...fresh.annotations
+      ];
+      Plotly.relayout(plot,{
+        annotations:axisAnnotations,
+        'margin.b':80+21*fresh.rowCount
+      }).catch(err=>console.warn('Q path label resize:',err));
+    };
+    if(typeof ResizeObserver!=='undefined' && !plot.__tasPathResizeObserver){
+      plot.__tasPathLastWidth=plotPixelWidth;
+      plot.__tasPathResizeObserver=new ResizeObserver(entries=>{
+        const width=entries[0]?.contentRect?.width;
+        if(!(width>0) || Math.abs(width-plot.__tasPathLastWidth)<3) return;
+        plot.__tasPathLastWidth=width;
+        clearTimeout(plot.__tasPathResizeTimer);
+        plot.__tasPathResizeTimer=setTimeout(()=>plot.__tasPathUpdateAxisLabels?.(width),120);
+      });
+      plot.__tasPathResizeObserver.observe(plot);
+    }
+    plot.__tasPathLastWidth=plotPixelWidth;
+    if(msg) msg.textContent='';
+  }catch(err){
+    if(msg) msg.textContent=err?.message||String(err);
+    $('qeVectorLegend')?.replaceChildren();
+    try{Plotly.purge(plot);}catch(_e){}
+    plot.__tasQEVectorPathKey=null;
+    plot.__tasQEVectorDefaultView=null;
+    plot.__tasQEVectorResetHandler=null;
+  }
+}
+
+function setQEMapTab(name){
+  const vector=name==='vector';
+  $('qeMapTabConstant')?.classList.toggle('active',!vector);
+  $('qeMapTabVector')?.classList.toggle('active',vector);
+  $('qeMapTabConstant')?.setAttribute('aria-selected',String(!vector));
+  $('qeMapTabVector')?.setAttribute('aria-selected',String(vector));
+  $('qeConstantMapPane')?.classList.toggle('hidden',vector);
+  $('qeVectorMapPane')?.classList.toggle('hidden',!vector);
+  try{localStorage.setItem('tas-qe-map-tab-v1',vector?'vector':'constant');}catch(_e){}
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    // Re-render the newly visible Q-E plot rather than relying on resize.
+    // Plotly cannot resize a graph that was intentionally skipped while its
+    // pane was hidden.  Reusing the current cache keeps this display-only.
+    if(vector){
+      if(getSingleCache()) renderQEVectorMap(getSingleCache());
+    }else if(checkedValue('sampleMode')==='single'){
+      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider')?.value)||0);
+    }else if(getPowderCache()){
+      // Powder Constant-E has no separate render-only function; its cached plot
+      // should already exist, so resize it once visible.  If it does not, the
+      // common visible-plot recovery below will request one recalculation.
+      safeResizePlot($('powderPlot'));
+    }
+  }));
+}
+
+  return {
+    bindSingleRluGrid, qeObliqueRluGrid, qePointInPolygon, renderQEVectorMap, setQEMapTab
+  };
+}

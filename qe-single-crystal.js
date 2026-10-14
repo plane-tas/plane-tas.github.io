@@ -4,7 +4,7 @@ export function createQESingleCrystal(deps){
     backgroundPowderPeaks, calcQ0, centeringFromSpaceGroup, checkedValue, clamp,
     currentInstrument, deg2rad, dot, effectiveOrientationReference, effectiveS2MaxAtEi,
     enabledPropagationVectors, formatHKL, getDarkAssets, getSelectedCifFileName,
-    getSelectedCifStructure, hklToQ, isAllowedByCentering, latticeParams, linspace,
+    getNuclearCifStructure, hklToQ, isAllowedByCentering, latticeParams, linspace,
     makeSpiceScatteringPlaneBasis, maxArray, norm, nuclearStructureFactorSquared, num,
     rad2deg, rangeTable, rebuildGeometryMatchedDarkPolygons, representativePowderHklText,
     scale, selectedBackgrounds, selectedS1Sign, selectedSampleSpaceGroup, selectedTasSense,
@@ -18,7 +18,9 @@ export function createQESingleCrystal(deps){
   }
 
   function calculateSingleCrystalCore(convention){
-    const selectedCifStructure=getSelectedCifStructure();
+    // Nuclear intensities use the crystallographic cell: for an mCIF this is its
+    // parent cell, never the (possibly larger) magnetic cell.
+    const nuclearCifStructure=getNuclearCifStructure();
     const selectedCifFileName=getSelectedCifFileName();
     const inst=currentInstrument();
     const lc=latticeParams();
@@ -229,8 +231,8 @@ export function createQESingleCrystal(deps){
         const l = Math.round(hkl[2]);
 
         const isOrigin=hkl.every(v=>Math.abs(v)<1e-10);
-        const sf2=selectedCifStructure && !isOrigin
-          ? nuclearStructureFactorSquared(selectedCifStructure,hkl,norm(G))
+        const sf2=nuclearCifStructure && !isOrigin
+          ? nuclearStructureFactorSquared(nuclearCifStructure,hkl,norm(G))
           : null;
         Gpoints.push({
           x:dot(G,ex),y:dot(G,ey),hkl,label:isOrigin?"":`(${formatHKL(hkl)})`,
@@ -239,7 +241,7 @@ export function createQESingleCrystal(deps){
       }
     }
 
-    if(selectedCifStructure){
+    if(nuclearCifStructure){
       const sfMax=Math.max(0,...Gpoints.map(p=>Number.isFinite(p.sf2)?p.sf2:0));
       for(const p of Gpoints) p.sfNorm=(sfMax>0 && Number.isFinite(p.sf2)) ? p.sf2/sfMax : 0;
       // Remove effectively extinct reflections.  The threshold is relative to the
@@ -299,7 +301,7 @@ export function createQESingleCrystal(deps){
       energyMode,Ei,Ef,lambdaHalf,hwList,
       regions,S2list,QmaxList,darkKF,darkKI,darkFixed,addDark,
       Gpoints,magPoints,ringData,darkAssets,QrefXY,sense,
-      cifStructure:selectedCifStructure,cifFileName:selectedCifFileName
+      cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };
   }
 

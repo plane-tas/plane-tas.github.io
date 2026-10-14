@@ -1,0 +1,651 @@
+/* Angle calculation & TAS geometry card, including the Time estimate tab.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+#singleMain .chart-grid>div:first-child,#singleMain .chart-grid>.geometry-card{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));margin-bottom:calc(9px * var(--tas-density))}
+
+/* Keep the dark-angle / geometry card border continuous around Plotly content */
+#singleMain .chart-grid>.geometry-card{overflow:hidden}
+#singlePlot{height:calc(680px * var(--tas-density));min-height:calc(680px * var(--tas-density))}
+@media(max-width:1050px){#singleMain .chart-grid{grid-template-columns:1fr}#singlePlot{min-height:calc(560px * var(--tas-density))}#geometryPlot.geometry{min-height:calc(620px * var(--tas-density))}}
+
+/* v53: enlarge the square Q-E map to approximately the former full x-axis width.
+   The data aspect remains 1:1 in Plotly; the extra vertical room prevents
+   `constrain:domain` from shrinking the x domain to fit the 580 px box. */
+@media(min-width:1051px){
+  #singlePlot{height:calc(680px * var(--tas-density));min-height:calc(680px * var(--tas-density))}
+}
+@media(max-width:1250px){.geometry-target-row{grid-template-columns:1fr}}
+
+/* Q-E range: larger reciprocal-space map and three compact control columns. */
+#singlePlot{height:calc(900px * var(--tas-density));min-height:calc(900px * var(--tas-density))}
+.qe-range-control .qe-control-entry{display:grid;grid-template-columns:minmax(0,1fr) calc(88px * var(--tas-density));align-items:center;gap:calc(8px * var(--tas-density));min-height:calc(28px * var(--tas-density))}
+@media(max-width:1050px){#singlePlot{height:calc(720px * var(--tas-density));min-height:calc(720px * var(--tas-density))}}
+@media(max-width:760px){.qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density))}#singlePlot{height:calc(620px * var(--tas-density));min-height:calc(620px * var(--tas-density))}}
+#singlePlot .legendtext{font-size:calc(14px * var(--tas-density))}
+
+/* Keep h / k / l / hbar-omega on one row in Angle calculation. */
+#singleMain .geometry-card .geometry-target .grid4{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+#singleMain .geometry-card .geometry-target .grid4 input[type=number]{
+  width:100%;
+  min-width:0;
+}
+.geometry-result-line + .geometry-result-line{margin-top:calc(2px * var(--tas-density));}
+
+/* Time estimate tab inside Angle calculation & TAS geometry card */
+.geometry-card-tabs{display:flex;gap:calc(4px * var(--tas-density));padding:calc(5px * var(--tas-density)) calc(5px * var(--tas-density)) 0;border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#f7f7f7}
+.geometry-card-tab{flex:1;padding:calc(8px * var(--tas-density)) calc(7px * var(--tas-density));border:calc(1px * var(--tas-density)) solid transparent;border-bottom:0;border-radius:calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) 0 0;background:transparent;font-weight:650;font-size:calc(13px * var(--tas-density))}
+.geometry-card-tab:hover{background:#fff}
+.geometry-card-tab.active{background:#fff;border-color:#ccc;position:relative;bottom:calc(-1px * var(--tas-density))}
+.geometry-card-tab:focus-visible{outline:calc(2px * var(--tas-density)) solid currentColor;outline-offset:calc(2px * var(--tas-density))}
+.geometry-card-pane{min-width:0}
+.time-estimate-pane{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(12px * var(--tas-density))}
+.time-scan-table-wrap{overflow-x:visible;max-width:100%;min-width:0}
+.time-scan-table{display:grid;grid-template-columns:calc(46px * var(--tas-density)) calc(96px * var(--tas-density)) minmax(0,1fr) calc(94px * var(--tas-density)) calc(76px * var(--tas-density));width:100%;min-width:0;border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
+.time-scan-header{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7;padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center}
+.time-scan-rows,.time-scan-row{display:contents}
+.time-scan-cell{padding:calc(5px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff;min-width:0}
+.time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#555;background:#fafafa}
+.time-scan-cell button{width:100%;white-space:nowrap}
+.time-range-inputs{display:grid;gap:calc(4px * var(--tas-density));grid-template-columns:repeat(var(--time-range-cols,1),minmax(0,1fr))}
+.time-range-field{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:calc(4px * var(--tas-density));align-items:center}
+.time-range-label{font-size:calc(11px * var(--tas-density));font-weight:650;color:#555;white-space:nowrap}
+.time-mcu-entry{display:block;min-width:0}
+.time-scan-actions button{width:auto;min-height:0;font-weight:400}
+.time-mcu-help{margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));font-size:calc(14px * var(--tas-density));line-height:1.4;color:#555;}
+.time-estimate-controls{display:grid;grid-template-columns:auto auto minmax(calc(310px * var(--tas-density)),1fr) minmax(calc(310px * var(--tas-density)),1fr);gap:calc(8px * var(--tas-density));align-items:end;margin-top:calc(12px * var(--tas-density))}
+.time-estimate-controls>button{min-height:0;padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));font-weight:400;white-space:nowrap}
+.time-datetime-label{min-width:0}
+.time-datetime-entry{display:grid;grid-template-columns:minmax(calc(128px * var(--tas-density)),1fr) calc(92px * var(--tas-density)) auto;gap:calc(5px * var(--tas-density));align-items:center;min-width:0}
+.time-datetime-entry input{width:100%;max-width:none;min-width:0}
+.time-clock-entry{display:grid;grid-template-columns:1fr auto 1fr;gap:calc(3px * var(--tas-density));align-items:center}
+.time-clock-entry input{text-align:center;padding-left:calc(3px * var(--tas-density));padding-right:calc(3px * var(--tas-density))}
+.time-clock-entry>span{font-weight:650}
+.time-invalid-number{background:#f2b19d!important;border-color:#c55235!important;box-shadow:0 0 0 calc(1px * var(--tas-density)) rgba(197,82,53,.12) inset}
+.time-estimate-message.error-text{color:#a22;background:#fff4f4;border:calc(1px * var(--tas-density)) solid #e0aaaa;border-radius:calc(4px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
+@media(max-width:760px){
+  .geometry-card-tabs{flex-direction:column;border-bottom:0}
+  .geometry-card-tab{border:calc(1px * var(--tas-density)) solid #ccc;border-radius:calc(6px * var(--tas-density))}
+  .geometry-card-tab.active{bottom:0}
+  .time-scan-actions{flex-wrap:wrap}
+  .time-estimate-controls{grid-template-columns:1fr}
+}
+#singleMain .chart-grid.time-estimate-active .time-scan-table-wrap{overflow-x:visible}
+
+/* Time-estimate validation: make the problematic scan index unmistakable. */
+.time-scan-row.time-scan-warning .time-scan-index{
+  background:#e96b4c;
+  color:#fff;
+  border-color:#b94e35;
+}
+.time-scan-actions button{width:100%;}
+.time-range-help{
+  margin-top:calc(6px * var(--tas-density));
+  font-size:calc(12px * var(--tas-density));
+  line-height:1.35;
+  color:#555;
+}
+.time-estimate-controls{
+  grid-template-columns:auto auto minmax(0,1fr) minmax(0,1fr);
+}
+.time-datetime-entry{
+  display:grid;
+  grid-template-columns:minmax(calc(128px * var(--tas-density)),1fr) calc(92px * var(--tas-density));
+  gap:calc(5px * var(--tas-density));
+  align-items:center;
+  min-width:0;
+}
+.time-set-now{
+  align-self:start;
+  margin-top:calc(5px * var(--tas-density));
+  width:auto;
+}
+
+/* v8 Time estimate footer: one compact row with matched controls. */
+.time-estimate-controls{
+  display:grid;
+  grid-template-columns:auto auto auto minmax(calc(220px * var(--tas-density)),1fr) minmax(calc(220px * var(--tas-density)),1fr);
+  gap:calc(6px * var(--tas-density));
+  align-items:end;
+  margin-top:calc(10px * var(--tas-density));
+}
+.time-estimate-controls>button{
+  min-height:0;
+  padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));
+  font-size:inherit;
+  font-weight:400;
+  white-space:nowrap;
+  align-self:end;
+}
+.time-datetime-label{min-width:0;margin:0}
+.time-datetime-entry{
+  display:grid;
+  grid-template-columns:calc(112px * var(--tas-density)) calc(78px * var(--tas-density));
+  gap:calc(4px * var(--tas-density));
+  align-items:center;
+  min-width:0;
+}
+.time-datetime-entry input{min-width:0;max-width:100%;width:100%}
+.time-clock-entry{display:grid;grid-template-columns:1fr auto 1fr;gap:calc(2px * var(--tas-density));align-items:center}
+.time-clock-entry input{min-width:0;width:100%;text-align:center;padding-left:calc(2px * var(--tas-density));padding-right:calc(2px * var(--tas-density))}
+.time-set-now{margin-top:0;width:auto;align-self:end}
+@media(max-width:1180px){
+  .time-estimate-controls{grid-template-columns:auto auto auto 1fr 1fr}
+  .time-datetime-entry{grid-template-columns:minmax(calc(104px * var(--tas-density)),1fr) calc(76px * var(--tas-density))}
+}
+@media(max-width:900px){
+  .time-estimate-controls{grid-template-columns:1fr 1fr}
+  .time-estimate-controls .time-datetime-label{grid-column:span 2}
+}
+
+/* Time estimate: selection, Fix weighting, MCU formatting. */
+.time-range-help{
+  margin:0 0 calc(8px * var(--tas-density));
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.4;
+  font-weight:600;
+  color:#444;
+}
+.time-scan-table{grid-template-columns:calc(46px * var(--tas-density)) calc(96px * var(--tas-density)) minmax(0,1fr) calc(94px * var(--tas-density)) calc(48px * var(--tas-density)) calc(76px * var(--tas-density))}
+.time-fix-header{display:flex;align-items:center;justify-content:center;gap:calc(5px * var(--tas-density))}
+.time-fix-header input,.time-fix-cell input{width:auto;margin:0}
+.time-fix-cell{display:flex;align-items:center;justify-content:center}
+.time-scan-index{cursor:pointer;user-select:none}
+.time-scan-row.time-scan-selected .time-scan-cell{background:#eaf2ff}
+.time-scan-row.time-scan-selected .time-scan-index{background:#dbe9ff;color:#234b7a}
+.time-scan-row.time-scan-warning .time-scan-index{background:#e96b4c;color:#fff;border-color:#b94e35}
+.time-scan-table-wrap{min-height:0;}
+
+.time-scan-table-wrap.time-scan-scroll{overflow-y:auto;scrollbar-gutter:stable;}
+
+.time-scan-table-wrap.time-scan-scroll .time-scan-header{position:sticky;top:0;z-index:3;background:#f7f7f7;}
+
+/* v14: compact Time estimate table so HKL & E range fields fit the stable card width. */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(86px * var(--tas-density)) minmax(0,1fr) calc(82px * var(--tas-density)) calc(44px * var(--tas-density)) calc(68px * var(--tas-density));
+}
+.time-scan-cell{padding:calc(4px * var(--tas-density));}
+.time-range-inputs{gap:calc(3px * var(--tas-density));}
+.time-range-field{grid-template-columns:max-content minmax(0,1fr);gap:calc(2px * var(--tas-density));}
+.time-range-field input{
+  padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));
+  font-size:calc(11.5px * var(--tas-density));
+}
+.time-range-label{font-size:calc(10.5px * var(--tas-density));}
+
+/* v15 Time estimate: deterministic 10-row viewport and grouped scan actions. */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(78px * var(--tas-density)) minmax(0,1fr) calc(82px * var(--tas-density)) calc(44px * var(--tas-density));
+}
+.time-scan-actions{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.time-scan-table-wrap.time-scan-scroll{
+  /* Header + ten compact scan rows.  The height no longer depends on the Q-E plot,
+     footer text, validation messages, Calc finish, Add, or Remove operations. */
+  max-height:calc(434px * var(--tas-density));
+  overflow-y:auto;
+  overflow-x:visible;
+  scrollbar-gutter:stable;
+}
+.time-scan-table-wrap.time-scan-scroll .time-scan-header{
+  position:sticky;
+  top:0;
+  z-index:3;
+  background:#f7f7f7;
+}
+@media(max-width:760px){
+  .time-scan-actions{grid-template-columns:1fr;}
+}
+
+/* v15 row geometry: exactly ten body rows are visible before vertical scrolling. */
+.time-scan-header{
+  height:calc(34px * var(--tas-density));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.time-scan-cell{
+  height:calc(38px * var(--tas-density));
+  overflow:hidden;
+}
+.time-scan-table-wrap.time-scan-scroll{
+  max-height:calc(415px * var(--tas-density)); /* 1 px top border + 34 px header + 10 × 38 px rows */
+}
+
+/* v16 Time estimate footer order: Set now, Calc finish, Scan start, Scan finish, Calc MCU. */
+.time-estimate-controls{
+  grid-template-columns:auto auto minmax(0,1fr) minmax(0,1fr) auto;
+}
+@media(max-width:1180px){
+  .time-estimate-controls{grid-template-columns:auto auto minmax(0,1fr) minmax(0,1fr) auto;}
+}
+@media(max-width:900px){
+  .time-estimate-controls{grid-template-columns:1fr 1fr;}
+  .time-estimate-controls .time-datetime-label{grid-column:span 2;}
+}
+
+/* v17: make Angle calculation actions/results match the surrounding Time estimate readability. */
+.geometry-target-buttons button{
+  font-size:inherit;
+}
+.geometry-angles{
+  font-size:calc(14px * var(--tas-density));
+  line-height:1.45;
+}
+
+/* v20 Time estimate footer: stable three-row layout.
+   Row 1 = action buttons, Row 2 = Scan start, Row 3 = Scan finish. */
+.time-estimate-controls{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:calc(7px * var(--tas-density));
+  align-items:stretch;
+  margin-top:calc(10px * var(--tas-density));
+}
+.time-estimate-button-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(6px * var(--tas-density));
+  width:100%;
+  min-width:0;
+}
+.time-estimate-button-row>button{
+  width:100%;
+  min-width:0;
+  min-height:0;
+  padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));
+  font-size:inherit;
+  font-weight:400;
+  white-space:nowrap;
+  margin:0;
+}
+.time-estimate-controls .time-datetime-label{
+  display:grid;
+  grid-template-columns:calc(88px * var(--tas-density)) minmax(0,1fr);
+  gap:calc(8px * var(--tas-density));
+  align-items:center;
+  width:100%;
+  min-width:0;
+  margin:0;
+}
+.time-datetime-title{
+  white-space:nowrap;
+}
+.time-estimate-controls .time-datetime-entry{
+  display:grid;
+  grid-template-columns:minmax(calc(120px * var(--tas-density)),calc(160px * var(--tas-density))) calc(82px * var(--tas-density));
+  gap:calc(5px * var(--tas-density));
+  align-items:center;
+  width:min(100%,calc(250px * var(--tas-density)));
+  min-width:0;
+}
+.time-estimate-controls .time-set-now{
+  align-self:stretch;
+}
+@media(max-width:520px){
+  .time-estimate-button-row{
+    grid-template-columns:1fr;
+  }
+  .time-estimate-controls .time-datetime-label{
+    grid-template-columns:1fr;
+    gap:calc(3px * var(--tas-density));
+  }
+  .time-estimate-controls .time-datetime-entry{
+    grid-template-columns:minmax(0,1fr) calc(82px * var(--tas-density));
+    width:100%;
+  }
+}
+
+/* v21: Single-crystal / Powder Q-E range share the same workspace and right card. */
+.qe-main-plot-column{
+  min-width:0;
+  overflow:hidden;
+}
+.powder-geometry-target{
+  display:grid;
+  grid-template-columns:minmax(calc(92px * var(--tas-density)),.65fr) minmax(calc(120px * var(--tas-density)),1fr) minmax(calc(120px * var(--tas-density)),1fr);
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+}
+@media(max-width:760px){
+  .powder-geometry-target{grid-template-columns:1fr 1fr;}
+  .powder-geometry-target>label:last-child{grid-column:1 / -1;}
+}
+
+.powder-geometry-target{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  min-width:0;
+}
+.powder-geometry-target>label,
+.powder-geometry-target input{
+  min-width:0;
+  width:100%;
+  max-width:100%;
+}
+
+/* v25: make the Angle/Time switch match the CIF Preview / Reflection table tabs. */
+.geometry-card-tabs{
+  display:flex;
+  flex-direction:row!important;
+  gap:0;
+  padding:0;
+  border-bottom:calc(1px * var(--tas-density)) solid #ccc;
+  background:#f5f5f5;
+}
+.geometry-card-tab{
+  flex:1 1 0;
+  border:0;
+  border-right:calc(1px * var(--tas-density)) solid #d5d5d5;
+  border-radius:0;
+  background:#f5f5f5;
+  padding:calc(11px * var(--tas-density)) calc(12px * var(--tas-density));
+  font-size:calc(16px * var(--tas-density));
+  line-height:1.25;
+  font-weight:650;
+  position:static;
+  bottom:auto;
+}
+.geometry-card-tab:last-child{border-right:0;}
+.geometry-card-tab:hover{background:#fff;}
+.geometry-card-tab.active{
+  background:#fff;
+  border-color:transparent;
+  box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #555;
+  position:static;
+  bottom:auto;
+}
+
+/* v25: Index cells double as drag handles. Selected scans move as one block. */
+.time-scan-index{cursor:grab;touch-action:none;}
+.time-scan-index:active{cursor:grabbing;}
+.time-scan-row.time-drag-source .time-scan-cell{opacity:.58;}
+.time-scan-row.time-drag-before .time-scan-cell{box-shadow:inset 0 calc(3px * var(--tas-density)) 0 #3b82f6;}
+.time-scan-row.time-drag-after .time-scan-cell{box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #3b82f6;}
+
+/* v27 Time estimate command model. */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(94px * var(--tas-density)) minmax(0,1fr) calc(74px * var(--tas-density)) calc(44px * var(--tas-density));
+}
+.time-scan-cell input.time-readonly{
+  background:#f3f4f6;
+  color:#555;
+  cursor:default;
+}
+.time-scan-cell select[data-time-variable]{font-size:calc(12px * var(--tas-density));}
+
+/* v30 Time estimate: loop nesting is expressed by indentation only. */
+.time-command-cell{
+  transition:padding-left .08s ease;
+}
+.time-command-cell select[data-time-variable]{
+  min-width:0;
+}
+
+/* v34: empty loop insertion slot.  It stays unobtrusive normally and expands
+   while dragging so a command can be dropped into a brand-new nested loop
+   before any row exists between loopN and endloopN. */
+.time-loop-empty-dropzone{
+  grid-column:1 / -1;
+  min-width:0;
+  height:calc(4px * var(--tas-density));
+  margin-left:calc(calc(42px * var(--tas-density)) + calc(94px * var(--tas-density)) + calc(14px * var(--tas-density)) * var(--time-empty-loop-depth, 0));
+  border:0;
+  background:transparent;
+}
+.time-scan-table-wrap.time-dragging .time-loop-empty-dropzone{
+  height:calc(18px * var(--tas-density));
+  margin-top:calc(1px * var(--tas-density));
+  margin-bottom:calc(1px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) dashed #aab4c2;
+  border-radius:calc(4px * var(--tas-density));
+}
+.time-scan-table-wrap.time-dragging .time-loop-empty-dropzone.time-drop-active{
+  border-color:#3b82f6;
+  box-shadow:inset 0 0 0 calc(1px * var(--tas-density)) #3b82f6;
+}
+
+/* v36 Time estimate column balance: wider Command, compact t(s). */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(112px * var(--tas-density)) minmax(0,1fr) calc(58px * var(--tas-density)) calc(44px * var(--tas-density));
+}
+.time-scan-cell input[data-time-mcu]{
+  width:100%;
+  min-width:0;
+}
+
+/* v41: non-blocking instrument S2 upper-limit warnings in Time estimate / Script. */
+.time-scan-row.time-s2-limit-warning .time-scan-index{
+  background:#f2c66d;
+  color:#4b3a10;
+  border-color:#c79b42;
+}
+.time-scan-row.time-scan-warning.time-s2-limit-warning .time-scan-index{
+  background:#e96b4c;
+  color:#fff;
+  border-color:#b94e35;
+}
+
+/* v42 Script command model: ASET / commands / SPICE = ~1:2:1. */
+.time-scan-table{
+  grid-template-columns:calc(42px * var(--tas-density)) calc(92px * var(--tas-density)) calc(94px * var(--tas-density)) minmax(0,1fr) calc(72px * var(--tas-density)) calc(44px * var(--tas-density))!important;
+}
+.time-internal-command{display:none!important}
+.time-command-cell,.time-target-cell{min-width:0}
+.time-command-cell select,.time-target-cell select{width:100%;min-width:0;max-width:none}
+.time-target-cell select:disabled{background:#f4f4f4;color:#777}
+.time-edge-dropzone{
+  grid-column:1 / -1;
+  display:none;
+  width:100%;
+  min-width:0;
+  height:0;
+  margin:0;
+  border-radius:calc(4px * var(--tas-density));
+  transition:height .12s ease,margin .12s ease,background .12s ease;
+}
+.time-scan-table-wrap.time-dragging .time-edge-dropzone.time-drop-active{
+  height:calc(24px * var(--tas-density));
+  background:rgba(59,130,246,.18);
+  outline:calc(2px * var(--tas-density)) solid #3b82f6;
+}
+.time-command-cell select[data-time-operation]{font-size:calc(13px * var(--tas-density))}
+
+/* v57: explicit MCU conversion and movement-overhead controls. */
+.time-estimate-settings{
+  display:flex;
+  align-items:end;
+  gap:calc(10px * var(--tas-density));
+  flex-wrap:wrap;
+  margin:calc(8px * var(--tas-density)) 0 calc(9px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(6px * var(--tas-density));
+  background:#fafafa;
+}
+.time-estimate-settings>label{
+  display:flex;
+  align-items:center;
+  gap:calc(6px * var(--tas-density));
+  margin:0;
+  font-size:calc(13px * var(--tas-density));
+  white-space:nowrap;
+}
+.time-setting-entry{display:inline-flex;align-items:center;gap:calc(4px * var(--tas-density))}
+.time-setting-entry input{width:calc(82px * var(--tas-density));min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
+@media(max-width:760px){
+  .time-estimate-settings{display:grid;grid-template-columns:1fr 1fr}
+  .time-estimate-settings>label{justify-content:space-between}
+}
+
+/* v58: clearer Time estimate settings — two independent white inline boxes. */
+.time-estimate-settings{
+  display:flex;
+  align-items:center;
+  gap:calc(10px * var(--tas-density));
+  flex-wrap:wrap;
+  margin:calc(8px * var(--tas-density)) 0 calc(9px * var(--tas-density));
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.time-estimate-settings>label{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:flex-start;
+  gap:calc(6px * var(--tas-density));
+  margin:0;
+  padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #d6d6d6;
+  border-radius:calc(6px * var(--tas-density));
+  background:#fff;
+  font-size:calc(13px * var(--tas-density));
+  white-space:nowrap;
+}
+.time-estimate-settings .time-setting-entry{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  gap:calc(4px * var(--tas-density));
+  white-space:nowrap;
+}
+.time-estimate-settings .time-setting-entry input{
+  width:calc(82px * var(--tas-density));
+  min-width:0;
+  padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));
+}
+@media(max-width:760px){
+  .time-estimate-settings{
+    display:flex;
+    flex-wrap:wrap;
+  }
+  .time-estimate-settings>label{
+    justify-content:flex-start;
+  }
+}
+
+/* v59 Q-E map tabs and Q-vector map controls */
+.qe-map-tabs{margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-bottom:0;border-radius:calc(8px * var(--tas-density)) calc(8px * var(--tas-density)) 0 0;overflow:hidden}
+.qe-map-toolbar{display:flex;justify-content:flex-end;align-items:center;padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #ddd;border-top:0;background:#fff}
+.qe-map-toolbar label{display:flex;align-items:center;gap:calc(7px * var(--tas-density));font-size:calc(13px * var(--tas-density));font-weight:600}
+.qe-map-pane{min-width:0}
+
+/* v61: Constant-E-only Q-unit control sits beside the nuclear-label toggle. */
+.nuclear-label-control{
+  gap:calc(16px * var(--tas-density));
+  flex-wrap:wrap;
+  padding:calc(6px * var(--tas-density)) calc(20px * var(--tas-density)) calc(6px * var(--tas-density));
+  background:#fff;
+}
+
+/* v72: non-blocking warning when a Bragg orientation reference is outside U-V. */
+.orientation-plane-warning{
+  margin-top:calc(6px * var(--tas-density));
+  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #d6a84d;
+  border-radius:calc(5px * var(--tas-density));
+  background:#fff8df;
+  font-size:calc(12px * var(--tas-density));
+  line-height:1.35;
+  color:#6a4a00;
+}
+@media(max-width:1250px){.s2-conversion-card{overflow-x:auto}.s2-conversion-grid{grid-template-columns:repeat(6,minmax(calc(150px * var(--tas-density)),1fr));min-width:calc(980px * var(--tas-density))}}
+.geometry-scan-target{padding:calc(8px * var(--tas-density)) 0 calc(2px * var(--tas-density))}
+.geometry-scan-grid label,.geometry-scan-grid input[type=number]{min-width:0;width:100%;max-width:none}
+.geometry-scan-empty{min-height:calc(1px * var(--tas-density))}
+.geometry-scan-output-pane{background:#fff;padding:calc(8px * var(--tas-density))}
+.geometry-scan-point-row label{flex:1}
+.geometry-scan-point-row input[type=range]{width:100%}
+.geometry-scan-point-row output{min-width:calc(62px * var(--tas-density));text-align:right;font-size:calc(12px * var(--tas-density));font-variant-numeric:tabular-nums}
+.geometry-scan-table-panel{background:#fff;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(4px * var(--tas-density));max-width:100%;overflow:auto;max-height:calc(430px * var(--tas-density))}
+
+/* v9 Time estimate: settings and Info share a single row; Info stays right-aligned. */
+#geometryTimePane .time-estimate-settings {
+  display:flex;
+  align-items:center;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+}
+#geometryTimePane .time-estimate-settings > label { flex:0 0 auto; }
+#geometryTimePane .time-estimate-settings > #timeEstimateInfoToggle {
+  flex:0 0 auto;
+  margin-left:auto;
+}
+
+/* v48: Angle calculation & TAS geometry / Time estimate have equal-width tabs.
+   Limit this to the outer geometry switch; inner Single/Scan tabs are unchanged. */
+#singleMain .chart-grid > .geometry-card > .geometry-card-tabs:first-child{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0;
+  overflow-x:hidden;
+}
+#singleMain .chart-grid > .geometry-card > .geometry-card-tabs:first-child > .geometry-card-tab{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  flex:none;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  text-align:center;
+}
+
+/* Angle calculation: single-point and scan output, without resizing Plotly. */
+#geometryAnglesPane .geometry-angles {
+  font-size: calc(17px * var(--tas-density));
+  line-height: 1.55;
+}
+#geometryAnglesPane .geometry-target label,
+#geometryAnglesPane .geometry-scan-target label,
+#geometryAnglesPane .powder-geometry-target label,
+#qePanel .qe-range-control label {
+  font-size: calc(15.5px * var(--tas-density));
+}
+.time-estimate-controls .time-datetime-title{
+  font-weight:600;
+}
+/* Give long labels their natural height while preserving the input widths. */
+.time-estimate-controls .time-datetime-label{align-items:center}
+/* Internal script scan labels are part of the table, not tiny footnotes. */
+.time-scan-table .time-range-label{font-size:var(--tas-table-text-size);}
+.time-scan-table .time-scan-cell :is(input:not([type=checkbox]),select,button){
+  box-sizing:border-box;
+  min-height:max(27px,calc(37px * var(--tas-density)));
+  height:auto;
+  line-height:1.3;
+}
+.geometry-scan-point-row > output {
+  min-width:6ch;
+  font-variant-numeric:tabular-nums;
+}
+/* The geometry warning row is reserved even when there is no warning. */
+#geometryAngles .geometry-warning-line{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Angle calculation: distinguish the main Angle/Time switch from Single/Scan. */
+#singleMain .geometry-card #geometryCalcModeTabs{
+  margin-top:calc(12px * var(--tas-density));
+}
+/* Align the Fix header and each scan's Fix checkbox to the regular 17px controls. */
+.time-scan-table .time-fix-header input[type=checkbox],
+.time-scan-table .time-fix-cell input[type=checkbox] {
+  appearance:auto;
+  box-sizing:border-box;
+  flex:0 0 auto;
+  width:calc(17px * var(--tas-density)) !important;
+  height:calc(17px * var(--tas-density)) !important;
+  min-width:calc(17px * var(--tas-density)) !important;
+  min-height:calc(17px * var(--tas-density)) !important;
+  padding:0!important;
+  margin:0!important;
+  cursor:pointer;
+}

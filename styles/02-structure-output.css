@@ -1,0 +1,478 @@
+/* Generator output: reflection tables and CIF/mCIF preview.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.cif-atom-rows{display:contents}
+.cif-atom-row{display:contents}
+.cif-atom-cell input.cif-invalid-number{background:#f2b19d;border-color:#c55235;box-shadow:0 0 0 calc(1px * var(--tas-density)) rgba(197,82,53,.12) inset}
+.cif-filename-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.cif-generator-beam-grid input{width:100%;max-width:none}
+.cif-generator-message.error-text{color:#a22}
+.cif-output-tab:last-child{border-right:0}
+.cif-output-tab.active{background:#fff;box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #555}
+.cif-reflection-plane-toggle input{margin:0}
+.cif-reflection-table th,.cif-reflection-table td{padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap}
+.cif-reflection-table th:first-child,.cif-reflection-table td:first-child{text-align:center}
+.cif-reflection-table th{position:sticky;top:0;z-index:1;background:#f3f3f3;font-weight:700}
+.cif-reflection-table th:last-child,.cif-reflection-table td:last-child{border-right:0}
+.cif-reflection-table tbody tr:last-child td{border-bottom:0}
+.cif-reflection-table tbody tr:nth-child(even) td{background:#fafafa}
+.cif-reflection-empty{text-align:center!important;color:#777;padding:calc(20px * var(--tas-density))!important}
+
+/* The preview remains bounded by its output pane; long CIFs scroll instead of
+   stretching the entire page. */
+#cifPreviewPanel{min-height:0;overflow:hidden}
+
+/* Reflection-table readability and row selection. */
+.cif-reflection-toolbar{grid-template-columns:calc(170px * var(--tas-density)) calc(175px * var(--tas-density)) calc(220px * var(--tas-density)) calc(160px * var(--tas-density)) minmax(0,1fr)}
+.cif-reflection-table tbody tr{cursor:pointer}
+.cif-reflection-table tbody tr:hover td{background:#f0f4f8}
+.cif-reflection-table tbody tr.cif-reflection-selected td,
+.cif-reflection-table tbody tr.cif-reflection-selected:nth-child(even) td{background:#dbeafe;font-weight:650}
+.cif-reflection-table tbody tr.cif-reflection-selected td:first-child{box-shadow:inset calc(4px * var(--tas-density)) 0 0 #3b82f6}
+.cif-reflection-table tbody tr:focus{outline:calc(2px * var(--tas-density)) solid #3b82f6;outline-offset:calc(-2px * var(--tas-density))}
+
+@media(max-width:1180px){
+  .cif-reflection-toolbar{grid-template-columns:1fr 1fr}
+  
+}
+
+/* CIF atom/action proportions. */
+.cif-atom-table{grid-template-columns:calc(52px * var(--tas-density)) calc(72px * var(--tas-density)) repeat(4,minmax(calc(76px * var(--tas-density)),1fr)) calc(94px * var(--tas-density));min-width:calc(652px * var(--tas-density))}
+
+/* CIF preview intentionally uses the same viewport height as the Reflection table. */
+
+/* v4.5 reflection-table simplification */
+.cif-reflection-toolbar{display:flex;flex-wrap:wrap;gap:calc(10px * var(--tas-density)) calc(18px * var(--tas-density));align-items:center;margin-bottom:calc(9px * var(--tas-density))}
+.cif-sortable-th{cursor:pointer;user-select:none}
+.cif-sortable-th:hover{background:#e8edf3}
+.cif-sortable-th:focus{outline:calc(2px * var(--tas-density)) solid #3b82f6;outline-offset:calc(-2px * var(--tas-density))}
+.cif-output-panel.hidden{display:none!important}
+#cifPreviewPanel,#cifReflectionsPanel{min-height:0}
+.cif-reflection-toolbar{flex:0 0 auto;margin-bottom:calc(10px * var(--tas-density))}
+.cif-reflection-table th,.cif-reflection-table td{padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))}
+.cif-reflection-table th{font-size:calc(14px * var(--tas-density))}
+.structure-bond-row{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) calc(90px * var(--tas-density)) auto;
+}
+
+/* View: six equal direction buttons and six equal min/max entry boxes. */
+#structurePanel .cif-structure-view-buttons.structure-view-buttons-six{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:calc(6px * var(--tas-density))!important;
+  width:100%!important;
+}
+
+/* Magnetic moments: checkbox + site use only a narrow fixed area.  The M-vector
+   group and Length/Width/Head group receive the remaining width. */
+#structurePanel .structure-moment-row{
+  display:grid!important;
+  grid-template-columns:calc(20px * var(--tas-density)) minmax(calc(42px * var(--tas-density)),calc(58px * var(--tas-density))) minmax(calc(135px * var(--tas-density)),1fr) minmax(calc(165px * var(--tas-density)),1.25fr) calc(40px * var(--tas-density))!important;
+  column-gap:calc(6px * var(--tas-density))!important;
+  row-gap:calc(4px * var(--tas-density))!important;
+  width:100%!important;
+  align-items:end!important;
+  padding:calc(4px * var(--tas-density)) calc(2px * var(--tas-density))!important;
+  border:0!important;
+  background:#fff!important;
+}
+#structurePanel .structure-moment-site{
+  width:auto!important;
+  min-width:0!important;
+  max-width:calc(58px * var(--tas-density))!important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  align-self:center;
+}
+#structurePanel .structure-moment-color-swatch{
+  width:calc(40px * var(--tas-density))!important;
+  min-width:calc(40px * var(--tas-density))!important;
+  height:calc(30px * var(--tas-density))!important;
+  padding:calc(2px * var(--tas-density))!important;
+  align-self:end;
+}
+
+/* Bonds: min and max are independent entry boxes. */
+#structurePanel .structure-bond-row{
+  display:grid!important;
+  grid-template-columns:minmax(calc(54px * var(--tas-density)),.8fr) minmax(calc(54px * var(--tas-density)),.8fr) minmax(calc(136px * var(--tas-density)),1.6fr) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) calc(66px * var(--tas-density))!important;
+  gap:calc(6px * var(--tas-density))!important;
+  align-items:end!important;
+  width:100%!important;
+}
+
+@media(max-width:1450px){
+  #structurePanel .structure-moment-row{
+    grid-template-columns:calc(20px * var(--tas-density)) minmax(calc(40px * var(--tas-density)),calc(54px * var(--tas-density))) minmax(calc(120px * var(--tas-density)),1fr) minmax(calc(150px * var(--tas-density)),1.25fr) calc(40px * var(--tas-density))!important;
+  }
+}
+
+/* Spiral/helical magnetic display: one global rotation axis combined with the
+   enabled propagation vector(s) and each site's Mx/My/Mz reference moment. */
+#structurePanel .structure-moment-axis-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(calc(120px * var(--tas-density)),1fr));
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  margin:0 0 calc(8px * var(--tas-density));
+}
+@media(max-width:700px){
+  #structurePanel .structure-moment-axis-row{grid-template-columns:1fr;}
+}
+#structurePanel #mcifPreviewText{min-height:calc(570px * var(--tas-density));max-height:75vh}
+.cif-generator-beam-grid input{width:100%;max-width:none}
+#structurePanel .structure-spin-editor-toolbar>[hidden]{display:none!important;}
+#cifGeneratorPanel #cifPreviewPanel,
+#cifGeneratorPanel #cifReflectionsPanel{
+  flex:1 1 0;
+  height:0;
+  min-height:0;
+  min-width:0;
+  overflow:hidden;
+}
+#cifGeneratorPanel #cifPreview{
+  display:block;
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+  width:100%;
+  min-height:0;
+  overflow:auto;
+  white-space:pre;
+  overflow-wrap:normal;
+  contain:layout;
+}
+@media(max-width:1180px){
+  /* Stacked output uses a definite preview height, not the desktop frame. */
+  #cifGeneratorPanel #cifPreviewPanel,
+  #cifGeneratorPanel #cifReflectionsPanel{
+    flex:0 0 auto;
+    height:auto;
+    min-height:0;
+  }
+}
+
+/* v56: A shared type scale for CIF and mCIF Generator.
+   Section headings match View / Structure settings: 15px bold.
+   File actions and labels use the same sizes in both generators. */
+#cifGeneratorPanel .cif-generator-input-pane :is(.cif-pane-heading h3, .cif-atom-heading h3){
+  font-size:calc(15px * var(--tas-density));
+  font-weight:700;
+  line-height:1.3;
+}
+#cifGeneratorPanel .cif-generator-input-pane .cif-heading-actions button,
+#cifGeneratorPanel .cif-generator-source-section .cif-generator-source-row > button,
+#cifGeneratorPanel .cif-generator-source-section .cif-source-button-row > button{
+  box-sizing:border-box;
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  line-height:1.3;
+  min-height:calc(36px * var(--tas-density));
+}
+#structurePanel .generator-mode-pane.hidden,
+#structurePanel .generator-output-pane.hidden,
+#structurePanel .generator-reflection-pane.hidden{display:none!important;}
+#structurePanel .generator-mode-pane .cif-generator-section + .cif-generator-section{
+  border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
+}
+#structurePanel #generatorReflectionsPane{padding:calc(12px * var(--tas-density));}
+#structurePanel #cifReflectionsPanel{
+  display:block;
+  height:auto!important;
+  min-height:0;
+  padding:0;
+  overflow:visible;
+}
+#structurePanel #cifPreviewPanel{
+  height:auto!important;
+  min-height:calc(560px * var(--tas-density));
+  padding:calc(12px * var(--tas-density));
+}
+#structurePanel #cifPreview,
+#structurePanel #mcifPreviewText{
+  display:block;
+  box-sizing:border-box;
+  width:100%;min-width:0;max-width:100%;
+  height:calc(560px * var(--tas-density))!important;
+  min-height:0;
+  overflow:auto;
+  contain:layout;
+}
+
+/* v61 — Consistent Nuclear sections and reflection parameters in results pane. */
+/* Atomic positions is inside the Positions tab. No section divider here. */
+#structurePanel #generatorReflectionsPane > .generator-reflection-settings{
+  box-sizing:border-box;
+  margin:0 0 calc(14px * var(--tas-density));
+  padding:0 0 calc(14px * var(--tas-density));
+  width:100%;min-width:0;
+  border:0;
+  border-bottom:calc(1px * var(--tas-density)) solid #e1e5ea;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-pane-heading{
+  align-items:center;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-pane-heading h3{
+  font-size:calc(15px * var(--tas-density));
+  font-weight:700;
+  line-height:1.3;
+  margin:0;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-heading-actions button{
+  min-height:calc(36px * var(--tas-density));
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr)) auto;
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  min-width:0;
+  margin:calc(10px * var(--tas-density)) 0 0;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
+  min-width:0;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
+  box-sizing:border-box;
+  min-width:0;
+  width:100%;
+  max-width:100%;
+}
+
+@media (max-width:620px){
+  #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+/* Keep beam parameters; remove the now-unneeded Reflection parameters heading. */
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
+  margin-top:0;
+}
+/* Download table belongs to the right of the Nuclear filtering checkboxes. */
+#structurePanel #cifReflectionsPanel .cif-reflection-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:calc(8px * var(--tas-density)) calc(14px * var(--tas-density));
+  min-width:0;
+}
+#structurePanel #cifReflectionsPanel .cif-reflection-toolbar > #cifDownloadTable{
+  box-sizing:border-box;
+  flex:0 0 auto;
+  margin-left:auto;
+  min-height:calc(36px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(12px * var(--tas-density));
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  white-space:nowrap;
+}
+
+/* Set default was removed: use three equal-width fields. */
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+@media(max-width:620px){#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Nuclear and Magnetic: a common approximately-ten-data-row scroll viewport.
+   Auto-height prevents blank space when the table contains fewer rows. */
+#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  box-sizing:border-box;
+  flex:none;
+  height:auto!important;
+  min-height:0!important;
+  max-height:calc(11 * calc(38px * var(--tas-density)));
+  overflow:auto;
+  overscroll-behavior:contain;
+  max-width:100%;
+}
+#structurePanel #generatorReflectionsPane .cif-reflection-table th{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+/* Magnetic action buttons share all available width equally at every viewport. */
+#structurePanel #generatorMagneticReflectionsPane > .cif-reflection-toolbar{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:calc(8px * var(--tas-density));
+  width:100%;
+  min-width:0;
+}
+#structurePanel #generatorMagneticReflectionsPane > .cif-reflection-toolbar > button{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  margin:0;
+  padding:calc(8px * var(--tas-density)) calc(4px * var(--tas-density));
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#structurePanel #magneticReflectionMessage[hidden]{display:none!important;}
+#structurePanel #generatorNuclearReflectionsPane .cif-reflection-plane-toggle{
+  font-size:max(12px,calc(17px * var(--tas-density)))!important;
+  line-height:1.3;
+}
+/* Reflection numbers and headings should match the Unit Conversion table. */
+#structurePanel .cif-reflection-table :is(th,td),
+#toolboxAttenuationPane :is(table,th,td){
+  font-size:var(--tas-table-text-size)!important;
+}
+
+/* Reflections: keep Energy, Wavelength and Wavevector on a single row,
+   including half-width browser windows. Override the 620px two-column rule. */
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:calc(5px * var(--tas-density));
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
+  min-width:0;
+  font-size:calc(12px * var(--tas-density));
+  overflow-wrap:anywhere;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
+  min-width:0;
+  width:100%;
+  padding-left:calc(5px * var(--tas-density));
+  padding-right:calc(3px * var(--tas-density));
+  font-size:calc(13px * var(--tas-density));
+}
+#structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel){
+  flex:0 0 auto;
+  min-height:0;
+  height:auto!important;
+}
+#structurePanel #generatorReflectionsPane :is(.generator-reflection-pane,.cif-reflection-table-wrap){
+  min-height:0;
+}
+#structurePanel #cifPreviewPanel #cifPreview{
+  flex:0 0 auto;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none;
+  aspect-ratio:1 / 1;
+  overflow:auto;
+}
+
+/* CIF Generator output height alignment (Structure / Reflections / Preview).
+   Use the same square content viewport for all three tabs.  Reflections
+   keeps its own vertical scroll rather than clipping the reflection rows. */
+/* Reflections returns to the original compact, content-height table viewport. */
+#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  box-sizing:border-box;
+  display:block;
+  flex:none;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:calc(11 * calc(38px * var(--tas-density)))!important;
+  aspect-ratio:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+
+#structurePanel #cifPreviewPanel #cifPreview{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:1 / 1;
+  margin:0;
+  overflow:auto;
+}
+#structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel):not(.hidden){
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-settings,
+#structurePanel #generatorReflectionsPane .generator-reflection-tabs{
+  flex:0 0 auto;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane:not(.hidden){
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane > .cif-output-panel{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+#structurePanel #cifPreviewPanel #cifPreview{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto;
+  margin:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+/* Reflections > Energy / Wavelength / Wavevector is a four-column row:
+   allow multiline captions instead of shrinking their font to fit. */
+#structurePanel #generatorReflectionsPane .cif-generator-beam-grid > label {
+  font-size: var(--plane-tab-label-font) !important;
+  overflow-wrap: anywhere;
+}
+
+/* Magnetic reflections are unavailable until validated; keep the tab visible. */
+#structurePanel .generator-reflection-tabs > #generatorReflectionsMagnetic:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  color: #66717b;
+  background: #e4e8ed;
+}
+#structurePanel .generator-height-limited .generator-unified-right > .generator-output-pane{
+  min-height:0!important;
+  max-height:100%;
+  height:100%!important;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #generatorReflectionsPane,
+#structurePanel .generator-height-limited #cifPreviewPanel{
+  min-height:0!important;
+  max-height:100%;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  flex:1 1 0!important;
+  height:0!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+#structurePanel .generator-height-limited #cifPreviewPanel #cifPreview{
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  aspect-ratio:auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+
+/* Uncertainty messages share the existing Cell Note typography. */
+#structurePanel #cifReflectionEstimateNotice{font-size:.85em;line-height:1.4;margin:4px 0 8px;}

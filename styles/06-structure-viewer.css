@@ -1,0 +1,650 @@
+/* 3D structure viewer and its controls.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.cif-heading-actions{display:flex;gap:calc(8px * var(--tas-density));flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:760px){
+  .instrument-primary-row{grid-template-columns:1fr 1fr}
+  .instrument-primary-row>label:first-child{grid-column:1/-1}
+  .sample-spacegroup-row{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .sample-spacegroup-row label:last-child{grid-column:auto!important}
+  .cif-heading-actions{justify-content:stretch}
+  .cif-heading-actions button{flex:1 1 calc(150px * var(--tas-density))}
+}
+.structure-control-section{
+  border:calc(1px * var(--tas-density)) solid #d9d9d9;
+  border-radius:calc(10px * var(--tas-density));
+  padding:calc(12px * var(--tas-density));
+  background:#fafafa;
+}
+.structure-section-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:calc(8px * var(--tas-density));
+  margin-bottom:calc(8px * var(--tas-density));
+}
+.structure-help-text{
+  margin-top:calc(8px * var(--tas-density));
+  line-height:1.4;
+}
+.structure-rows-list{
+  display:flex;
+  flex-direction:column;
+  gap:calc(8px * var(--tas-density));
+}
+.structure-rows-empty{
+  color:#777;
+  font-size:calc(13px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) 0;
+}
+.cif-structure-view-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:calc(6px * var(--tas-density));
+}
+.cif-structure-view-buttons button{
+  min-width:calc(42px * var(--tas-density));
+}
+.structure-viewer-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  min-height:calc(640px * var(--tas-density));
+}
+.cif-structure-status{
+  margin-bottom:calc(8px * var(--tas-density));
+  min-height:1.4em;
+}
+.cif-structure-plot{
+  width:100%;
+  min-height:calc(560px * var(--tas-density));
+  flex:1 1 auto;
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(8px * var(--tas-density));
+  background:#fff;
+}
+.structure-bond-row{
+  display:grid;
+  gap:calc(8px * var(--tas-density));
+  align-items:center;
+}
+@media (max-width: 1180px){
+  
+  .structure-viewer-main{
+    min-height:calc(480px * var(--tas-density));
+  }
+  .cif-structure-plot{
+    min-height:calc(440px * var(--tas-density));
+  }
+}
+.structure-control-section{
+  padding:calc(10px * var(--tas-density));
+}
+.structure-color-palette{
+  display:grid;
+  grid-template-columns:repeat(6,calc(22px * var(--tas-density)));
+  gap:calc(3px * var(--tas-density));
+  align-items:center;
+}
+.structure-color-chip{
+  width:calc(22px * var(--tas-density));
+  min-width:calc(22px * var(--tas-density));
+  height:calc(22px * var(--tas-density));
+  padding:0;
+  border:calc(2px * var(--tas-density)) solid transparent;
+  border-radius:calc(4px * var(--tas-density));
+}
+.structure-moment-row{
+  display:grid;
+  grid-template-columns:auto minmax(calc(125px * var(--tas-density)),1fr) calc(150px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(145px * var(--tas-density)),1fr) calc(42px * var(--tas-density));
+  gap:calc(6px * var(--tas-density));
+  align-items:center;
+  padding:calc(7px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #ddd;
+  border-radius:calc(7px * var(--tas-density));
+  background:#fff;
+}
+.structure-moment-site{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  font-size:calc(12px * var(--tas-density));
+}
+.structure-moment-site span{
+  color:#666;
+  font-size:calc(11px * var(--tas-density));
+  overflow-wrap:anywhere;
+}
+.structure-moment-row>input[type=number]{
+  width:calc(58px * var(--tas-density));
+}
+.structure-bond-row{
+  grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(80px * var(--tas-density)) calc(44px * var(--tas-density)) auto;
+}
+.structure-viewer-main{
+  min-height:calc(100vh - calc(142px * var(--tas-density)));
+}
+.cif-structure-plot{
+  min-height:calc(100vh - calc(182px * var(--tas-density)));
+  height:calc(100vh - calc(182px * var(--tas-density)));
+}
+@media (max-width: 1450px){
+  
+  .structure-color-palette{grid-template-columns:repeat(4,calc(22px * var(--tas-density)))}
+  .structure-moment-row{grid-template-columns:auto minmax(calc(110px * var(--tas-density)),1fr);}
+  .structure-moment-row .structure-color-palette{grid-column:1/-1;}
+}
+@media (max-width:1180px){
+  .structure-viewer-main{min-height:auto}
+  .cif-structure-plot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
+}
+.structure-moment-row{
+  grid-template-columns:calc(28px * var(--tas-density)) calc(52px * var(--tas-density)) calc(138px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(78px * var(--tas-density)),1fr);
+  gap:calc(5px * var(--tas-density));
+  padding:calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
+  border-left:calc(4px * var(--tas-density)) solid var(--moment-site-color,#888);
+}
+.structure-moment-site{
+  display:block;
+  font-size:calc(12px * var(--tas-density));
+  font-weight:700;
+  color:var(--moment-site-color,#333);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Structure viewer v5 refinements */
+.structure-range-grid{
+  display:grid;
+  grid-template-columns:calc(28px * var(--tas-density)) minmax(calc(70px * var(--tas-density)),1fr) minmax(calc(70px * var(--tas-density)),1fr);
+  gap:calc(6px * var(--tas-density));
+  align-items:center;
+  margin-top:calc(9px * var(--tas-density));
+  font-size:calc(12px * var(--tas-density));
+}
+.structure-range-grid>span{
+  color:#666;
+  text-align:center;
+}
+.structure-range-grid>label{
+  margin:0;
+  font-weight:600;
+}
+.structure-range-grid input{
+  width:100%!important;
+}
+.structure-moment-row>input[type=number]{
+  width:100%!important;
+  min-width:0;
+}
+.structure-bond-row [data-bond-field="distanceRange"]{
+  width:calc(92px * var(--tas-density));
+  min-width:calc(92px * var(--tas-density));
+}
+.structure-plot-wrap{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+}
+.structure-plot-wrap .cif-structure-plot{
+  height:100%!important;
+  min-height:calc(100vh - calc(182px * var(--tas-density)));
+}
+.structure-triad{
+  position:absolute;
+  bottom:calc(10px * var(--tas-density));
+  width:calc(150px * var(--tas-density));
+  height:calc(150px * var(--tas-density));
+  pointer-events:none;
+  z-index:5;
+  background:rgba(255,255,255,0.72);
+  border-radius:calc(8px * var(--tas-density));
+}
+.structure-triad-left{left:calc(10px * var(--tas-density));}
+.structure-triad-right{right:calc(10px * var(--tas-density));}
+@media(max-width:1180px){
+  .structure-plot-wrap .cif-structure-plot{min-height:calc(560px * var(--tas-density));}
+  .structure-triad{width:calc(120px * var(--tas-density));height:calc(120px * var(--tas-density));}
+}
+#structurePanel .cif-structure-view-buttons.structure-view-buttons-six > button{
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+#structurePanel .structure-range-six{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:calc(6px * var(--tas-density))!important;
+  width:100%!important;
+  margin-top:calc(9px * var(--tas-density));
+  align-items:end;
+}
+#structurePanel .structure-range-six .structure-entry-field,
+#structurePanel .structure-range-six input[type=number]{
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-sizing:border-box;
+}
+#structurePanel .structure-range-six input[type=number]{
+  padding-left:calc(4px * var(--tas-density));
+  padding-right:calc(4px * var(--tas-density));
+}
+#structurePanel .structure-bond-row .structure-entry-field,
+#structurePanel .structure-bond-row .structure-entry-field input[type=number]{
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-sizing:border-box;
+}
+
+/* Coordinate indicators are independent SVG overlays.  They never receive
+   pointer events and therefore cannot steal orbit/zoom gestures from Plotly. */
+#structurePanel .structure-plot-wrap{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+}
+#structurePanel .structure-plot-wrap .cif-structure-plot{
+  height:100%!important;
+  min-height:calc(100vh - calc(182px * var(--tas-density)));
+}
+#structurePanel .structure-triad{
+  position:absolute;
+  bottom:calc(12px * var(--tas-density));
+  width:calc(160px * var(--tas-density));
+  height:calc(160px * var(--tas-density));
+  pointer-events:none!important;
+  z-index:5;
+  overflow:visible;
+  background:rgba(255,255,255,.72);
+  border-radius:calc(8px * var(--tas-density));
+}
+#structurePanel .structure-triad-left{left:calc(12px * var(--tas-density));}
+#structurePanel .structure-triad-right{right:calc(12px * var(--tas-density));}
+
+@container structure-viewer (max-width:1050px){
+  
+  #structurePanel .structure-viewer-main{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+  #structurePanel .structure-viewer-main{
+    min-height:calc(560px * var(--tas-density))!important;
+  }
+  #structurePanel .structure-plot-wrap .cif-structure-plot{
+    min-height:calc(560px * var(--tas-density))!important;
+  }
+}
+
+#structurePanel .structure-plot-toolbar{
+  position:absolute;
+  top:calc(10px * var(--tas-density));
+  left:calc(10px * var(--tas-density));
+  z-index:8;
+  display:flex;
+  gap:calc(8px * var(--tas-density));
+  align-items:end;
+  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
+  background:rgba(255,255,255,.9);
+  border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.12);
+  border-radius:calc(7px * var(--tas-density));
+  box-shadow:0 calc(1px * var(--tas-density)) calc(4px * var(--tas-density)) rgba(0,0,0,.08);
+}
+#structurePanel .structure-plot-toolbar select{min-width:calc(94px * var(--tas-density));padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));}
+#structurePanel .structure-atom-legend{
+  position:absolute;
+  top:calc(10px * var(--tas-density));
+  right:calc(10px * var(--tas-density));
+  z-index:8;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));
+  max-width:46%;
+  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
+  background:rgba(255,255,255,.9);
+  border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.12);
+  border-radius:calc(7px * var(--tas-density));
+  box-shadow:0 calc(1px * var(--tas-density)) calc(4px * var(--tas-density)) rgba(0,0,0,.08);
+  pointer-events:none;
+  font-size:calc(12px * var(--tas-density));
+}
+#structurePanel .structure-atom-legend-item{display:inline-flex;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;}
+#structurePanel .structure-atom-legend-dot{display:inline-block;width:calc(10px * var(--tas-density));height:calc(10px * var(--tas-density));border-radius:50%;border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.35);}
+
+@container structure-viewer (max-width:760px){
+  
+  #structurePanel .structure-plot-toolbar{flex-direction:column;align-items:stretch;}
+  #structurePanel .structure-atom-legend{max-width:52%;}
+}
+
+#structurePanel .structure-plot-overlay-left{
+  position:absolute;
+  top:calc(10px * var(--tas-density));
+  left:calc(10px * var(--tas-density));
+  z-index:8;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:calc(7px * var(--tas-density));
+  max-width:min(64%,calc(520px * var(--tas-density)));
+  pointer-events:none;
+}
+#structurePanel .structure-plot-toolbar{
+  position:static!important;
+  top:auto!important;
+  left:auto!important;
+  pointer-events:auto;
+}
+#structurePanel .structure-atom-legend{
+  position:static!important;
+  top:auto!important;
+  right:auto!important;
+  max-width:100%!important;
+  justify-content:flex-start!important;
+  gap:calc(8px * var(--tas-density)) calc(14px * var(--tas-density))!important;
+  padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))!important;
+  font-size:calc(18px * var(--tas-density))!important;
+}
+#structurePanel .structure-atom-legend-item{gap:calc(7px * var(--tas-density))!important;}
+#structurePanel .structure-atom-legend-dot{
+  width:calc(20px * var(--tas-density))!important;
+  height:calc(20px * var(--tas-density))!important;
+  border-width:calc(1.5px * var(--tas-density))!important;
+}
+
+/* vNext: stack the in-plot atom legend vertically below the plot controls. */
+#structurePanel .structure-atom-legend{
+  display:flex!important;
+  flex-direction:column!important;
+  flex-wrap:nowrap!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:calc(8px * var(--tas-density))!important;
+  width:max-content;
+  max-width:100%!important;
+}
+#structurePanel .structure-atom-legend-item{
+  display:flex!important;
+  width:auto;
+}
+#structurePanel .structure-plot-toolbar label{
+  font-size:calc(13.5px * var(--tas-density))!important;
+  line-height:1.25!important;
+  gap:calc(4px * var(--tas-density))!important;
+}
+#structurePanel #mcifStructurePane{flex:1;min-width:0;min-height:0}
+.toolbox-grid{display:grid;grid-template-columns:repeat(4,minmax(calc(130px * var(--tas-density)),1fr));gap:calc(10px * var(--tas-density))}
+.harmonic-table{display:grid;grid-template-columns:calc(90px * var(--tas-density)) repeat(7,minmax(calc(105px * var(--tas-density)),1fr));gap:0;min-width:calc(850px * var(--tas-density));border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
+.harmonic-table>*{background:#fff;padding:calc(8px * var(--tas-density));text-align:center;border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc}
+.cif-generator-output-pane{display:flex;flex-direction:column;min-height:calc(650px * var(--tas-density));overflow:hidden}
+.cif-generator-beam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density));margin:calc(10px * var(--tas-density)) 0 calc(12px * var(--tas-density))}
+
+/* v11: only the new figure export button; do not alter camera/viewer sizing. */
+#structurePanel #cifSaveFigure{align-self:end;white-space:nowrap;padding:calc(5px * var(--tas-density)) calc(9px * var(--tas-density));font-size:calc(12px * var(--tas-density));}
+.geometry-card-tabs .geometry-card-tab:last-child,
+.cif-output-tabs .cif-output-tab:last-child{border-right:0;}
+/* Larger Save figure action, including on narrow screens. */
+#structurePanel #cifSaveFigure{
+  font-size:calc(14px * var(--tas-density));
+  font-weight:600;
+  line-height:1.3;
+  min-height:calc(36px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(12px * var(--tas-density));
+}
+#structurePanel .generator-unified-output-tabs > .cif-output-tab.active{
+  background:#fff;border-color:#98a7b6;
+}
+#structurePanel .generator-unified-output-tabs > .cif-output-tab:last-child{border-right:0;}
+#structurePanel #mcifStructurePane{padding:calc(12px * var(--tas-density));}
+#structurePanel .generator-structure-view-controls .cif-structure-view-buttons > button{
+  width:100%;min-width:0;min-height:calc(36px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(3px * var(--tas-density));
+  box-sizing:border-box;
+  font-size:calc(14px * var(--tas-density));
+  font-weight:700;
+}
+#structurePanel .generator-structure-view-controls .structure-range-six input[type=number]{
+  box-sizing:border-box;
+  width:100%!important;
+  min-width:0;
+  min-height:calc(36px * var(--tas-density));
+  padding:calc(5px * var(--tas-density)) calc(6px * var(--tas-density));
+  font-size:calc(14px * var(--tas-density));
+}
+/* The previous status line has been replaced by the shared view controls.
+   Keep status announcements available to assistive technology. */
+#structurePanel #cifStructureStatus{
+  position:absolute!important;
+  width:calc(1px * var(--tas-density))!important;
+  height:calc(1px * var(--tas-density))!important;
+  min-height:0!important;
+  max-height:calc(1px * var(--tas-density))!important;
+  margin:calc(-1px * var(--tas-density))!important;
+  padding:0!important;
+  overflow:hidden!important;
+  clip-path:inset(50%);
+  white-space:nowrap;
+  border:0!important;
+}
+/* The direct/reciprocal coordinate indicators must not occlude atoms. */
+#structurePanel .structure-triad{
+  background:transparent!important;
+  background-color:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+/* Retain two tidy rows even at 280px, without overlapping x/y/z labels. */
+@media(max-width:340px){
+  #structurePanel .generator-structure-view-controls .structure-entry-label{
+    font-size:0!important;
+    line-height:1.3!important;
+  }
+  #structurePanel .generator-structure-view-controls .structure-entry-label::after{
+    content:attr(data-short-label);
+    display:block;
+    font-size:calc(11px * var(--tas-density));
+    font-weight:700;
+    line-height:1.3;
+  }
+}
+
+/* Six side-by-side view-range fields have less room than editor fields. */
+#structurePanel .generator-structure-view-controls .structure-entry-label{
+  font-size:calc(15px * var(--tas-density))!important;
+  line-height:1.3!important;
+}
+@container generator-unified (max-width:660px){
+  #structurePanel .generator-structure-view-controls .structure-entry-label{
+    font-size:calc(13px * var(--tas-density))!important;
+  }
+}
+@media(max-width:420px){
+  #structurePanel .generator-structure-view-controls .structure-entry-label{
+    font-size:calc(13px * var(--tas-density))!important;
+  }
+}
+
+/* CIF Generator Structure: use a square viewport instead of a viewport-height
+   minimum. Keep other Generator output tabs and their sizing unchanged. */
+#structurePanel #mcifStructurePane .structure-plot-wrap{
+  box-sizing:border-box;
+  position:relative;
+  display:block;
+  flex:0 0 auto;
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1 / 1;
+}
+#structurePanel #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%;
+}
+
+/* CIF Generator Structure: one continuous frame around the square viewport.
+   Draw the frame on the wrapper, not on the Plotly drawing surface. */
+#structurePanel #mcifStructurePane .structure-plot-wrap{
+  border:1px solid #d3dae4;
+  border-radius:calc(8px * var(--tas-density));
+  background:#fff;
+  overflow:hidden;
+}
+#structurePanel #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  border:0!important;
+  border-radius:0!important;
+}
+
+/* CIF Generator / Structure: all six range fields and six direction buttons
+   share a single row without creating a horizontal scrolling region.  Allow
+   the number fields to contract in a half-width viewer. */
+#structurePanel #mcifStructurePane .generator-structure-view-controls{
+  display:grid!important;
+  grid-template-columns:minmax(0,3fr) minmax(0,2fr);
+  align-items:end;
+  column-gap:calc(6px * var(--tas-density));
+  row-gap:0;
+  overflow:visible;
+  min-width:0;
+  max-width:100%;
+}
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-range-six,
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .cif-structure-view-buttons{
+  min-width:0;
+  max-width:100%;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+}
+#structurePanel #mcifStructurePane .structure-range-six .structure-entry-field,
+#structurePanel #mcifStructurePane .structure-range-six input[type=number],
+#structurePanel #mcifStructurePane .cif-structure-view-buttons > button{
+  box-sizing:border-box;
+  min-width:0!important;
+  max-width:100%!important;
+}
+@container generator-unified (max-width:900px){
+  #structurePanel #mcifStructurePane .generator-structure-view-controls{
+    column-gap:calc(3px * var(--tas-density));
+  }
+  #structurePanel #mcifStructurePane .structure-range-six,
+  #structurePanel #mcifStructurePane .cif-structure-view-buttons{
+    gap:calc(2px * var(--tas-density))!important;
+  }
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]{
+    padding-inline:calc(2px * var(--tas-density))!important;
+    font-size:max(10px,calc(12px * var(--tas-density)))!important;
+    appearance:textfield;
+    -moz-appearance:textfield;
+  }
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]::-webkit-inner-spin-button,
+  #structurePanel #mcifStructurePane .structure-range-six input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  #structurePanel #mcifStructurePane .cif-structure-view-buttons > button{
+    padding-inline:0!important;
+    font-size:max(10px,calc(12px * var(--tas-density)))!important;
+    white-space:nowrap;
+  }
+  #structurePanel #mcifStructurePane .structure-entry-label{
+    font-size:max(10px,calc(11px * var(--tas-density)))!important;
+    white-space:nowrap;
+  }
+}
+#structurePanel .generator-unified-right > .generator-unified-output-tabs{
+  grid-column:1;
+  grid-row:1;
+}
+#structurePanel .generator-unified-right > #mcifStructurePane.hidden{
+  display:block!important;
+  visibility:hidden;
+  pointer-events:none;
+}
+#structurePanel .generator-unified-right > #mcifStructurePane:not(.hidden){
+  visibility:visible;
+}
+
+/* CIF Generator: exclude output-tab visibility changes from the browser's
+   automatic scroll anchoring.  The surrounding main/page scroll position is
+   explicitly preserved by setUnifiedGeneratorOutputTab(). */
+#structurePanel .generator-unified-right{
+  overflow-anchor:none;
+}
+#structurePanel .generator-structure-view-controls label {
+  font-size: var(--plane-tab-label-font) !important;
+}
+
+/* View range x/y/z min/max are data-entry captions, not 10px footnotes.
+   This also covers Unit cell and XYZ axes in the Structure viewer toolbar. */
+#structurePanel .generator-structure-view-controls .structure-entry-label,
+#structurePanel .generator-structure-view-controls label,
+#structurePanel .generator-structure-view-controls label > span,
+#structurePanel .structure-plot-toolbar label,
+#structurePanel .structure-plot-toolbar label > span {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.3;
+}
+/* At extreme phone widths keep the established short xmin/xmax equivalents. */
+@media (max-width: 340px) {
+  #structurePanel .generator-structure-view-controls .structure-entry-label {
+    font-size: 0 !important;
+  }
+  #structurePanel .generator-structure-view-controls .structure-entry-label::after {
+    font-size: var(--plane-tab-label-font) !important;
+    font-weight: 400 !important;
+  }
+}
+#structurePanel .generator-height-limited .generator-unified-right{
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  align-content:stretch!important;
+}
+#structurePanel .generator-height-limited #mcifStructurePane,
+#structurePanel .generator-height-limited #mcifStructurePane.hidden{
+  display:flex!important;
+  flex-direction:column;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .generator-structure-view-controls,
+#structurePanel .generator-height-limited #mcifStructurePane .cif-structure-status{
+  flex:0 0 auto;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .structure-plot-wrap{
+  flex:1 1 0!important;
+  aspect-ratio:auto!important;
+  width:100%;
+  height:auto!important;
+  min-height:0!important;
+  max-height:100%;
+  overflow:hidden;
+}
+#structurePanel .generator-height-limited #mcifStructurePane .structure-plot-wrap .cif-structure-plot{
+  width:100%;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+}
+
+/* Unit-cell frame reference: second, unlabelled row under Structure controls. */
+#structurePanel .structure-plot-toolbar{flex-wrap:wrap!important;}
+/* Keep the selector on its own second row without stretching it across the toolbar. */
+#structurePanel .structure-plot-toolbar .structure-cell-reference-row select{
+  display:block;
+  box-sizing:border-box;
+  width:calc(176px * var(--tas-density));
+  max-width:100%;
+  min-width:0;
+}
+#structurePanel .structure-cell-reference-row option:disabled{color:#888;}
+#structurePanel .structure-plot-toolbar .structure-cell-reference-row select {
+  width:calc(176px * var(--tas-density));
+  max-width:100%;
+  min-width:0;
+}
