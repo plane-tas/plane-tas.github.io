@@ -1,3 +1,5 @@
+import {nuclearExtinctionThreshold} from '../cif/cif-structure.js';
+
 export function createQESingleCrystal(deps){
   const {
     $, PI, RL_calc, UB_calc, add, arange, backgroundColor, backgroundMaterials,
@@ -242,17 +244,17 @@ export function createQESingleCrystal(deps){
     }
 
     if(nuclearCifStructure){
+      // Remove systematic extinctions first.  The threshold uses the absolute
+      // |F|^2 scale of the structure (not the strongest DISPLAYED reflection),
+      // so it still works when the window contains no allowed reflection;
+      // genuinely weak peaks (> 1e-10 of the scale) are kept.
+      const extinct=nuclearExtinctionThreshold(nuclearCifStructure);
+      for(let j=Gpoints.length-1;j>=0;j--){
+        const p=Gpoints[j];
+        if(p.label && Number.isFinite(p.sf2) && p.sf2<=extinct) Gpoints.splice(j,1);
+      }
       const sfMax=Math.max(0,...Gpoints.map(p=>Number.isFinite(p.sf2)?p.sf2:0));
       for(const p of Gpoints) p.sfNorm=(sfMax>0 && Number.isFinite(p.sf2)) ? p.sf2/sfMax : 0;
-      // Remove effectively extinct reflections.  The threshold is relative to the
-      // strongest displayed reflection, so exact/systematic extinctions disappear
-      // without hiding genuinely weak peaks.
-      if(sfMax>0){
-        for(let j=Gpoints.length-1;j>=0;j--){
-          const p=Gpoints[j];
-          if(p.label && Number.isFinite(p.sf2) && p.sf2<=sfMax*1e-10) Gpoints.splice(j,1);
-        }
-      }
     }
 
     // Generate magnetic satellites only after nuclear systematic/extinction

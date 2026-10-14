@@ -705,6 +705,25 @@ export function neutronAbsorptionSummary(structure,wavelengthA,thicknessCm=0){
   };
 }
 
+// Upper bound of |F_N|^2 for ANY hkl: (sum_j occ_j |b_j|)^2 (Debye-Waller <= 1).
+// Use it as the absolute scale for systematic-extinction tests.  A threshold
+// relative only to the strongest reflection in the current list fails when
+// that list contains no allowed reflection: symmetry-cancelled sums are then
+// pure rounding residue (~1e-31) that would be normalized to I/Imax = 1.
+export function nuclearStructureFactorScale(structure){
+  if(!structure?.atoms?.length) return NaN;
+  let sum=0;
+  for(const a of structure.atoms){
+    sum+=Math.abs(Number(a.occupancy)||0)*Math.hypot(Number(a.bRe)||0,Number(a.bIm)||0);
+  }
+  return sum*sum;
+}
+// |F_N|^2 at or below this value is a systematic extinction.
+export function nuclearExtinctionThreshold(structure,relative=1e-10){
+  const scale=nuclearStructureFactorScale(structure);
+  return Number.isFinite(scale) ? scale*relative : 0;
+}
+
 export function nuclearStructureFactorSquared(structure,hkl,qNorm=0){
   if(!structure?.atoms?.length) return NaN;
   const [h,k,l]=hkl.map(Number);

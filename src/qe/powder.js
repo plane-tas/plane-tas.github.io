@@ -1,7 +1,7 @@
 // Powder Q-E map: background powder peaks/curves and calculatePowder.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {PI, add, arange, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '../core/tas-core.js';
-import {nuclearStructureFactorSquared} from '../cif/cif-structure.js';
+import {nuclearExtinctionThreshold, nuclearStructureFactorSquared} from '../cif/cif-structure.js';
 
 export function createPowder(deps){
   const {
@@ -108,8 +108,11 @@ function backgroundPowderPeaks(material,qLimit){
   }
 
   if(!entries.length) return [];
-  const sfMax=Math.max(0,...entries.map(p=>p.sf2));
-  const surviving=sfMax>0 ? entries.filter(p=>p.sf2>sfMax*1e-10) : entries;
+  // Absolute extinction scale: with a low fixed energy (e.g. HODACA, Ef =
+  // 3.635 meV, 2k = 2.65 A^-1) Al has no allowed reflection below 2k, and a
+  // threshold relative to the list maximum kept forbidden (100) as a ring.
+  const extinct=nuclearExtinctionThreshold(structure);
+  const surviving=entries.filter(p=>p.sf2>extinct);
   const groups=groupPowderReflectionsByQ(surviving);
 
   const corrected=[];
@@ -277,12 +280,10 @@ function calculatePowder(){
   // effectively extinct nuclear parents only when a CIF structure factor is
   // available.  Keep the origin as a valid magnetic-satellite parent.
   if(nuclearCifStructure){
-    const sfMax=Math.max(0,...parentCandidates.filter(p=>!p.isOrigin).map(p=>Number.isFinite(p.sf2)?p.sf2:0));
-    if(sfMax>0){
-      for(let i=parentCandidates.length-1;i>=0;i--){
-        const p=parentCandidates[i];
-        if(!p.isOrigin && Number.isFinite(p.sf2) && p.sf2<=sfMax*1e-10) parentCandidates.splice(i,1);
-      }
+    const extinct=nuclearExtinctionThreshold(nuclearCifStructure);
+    for(let i=parentCandidates.length-1;i>=0;i--){
+      const p=parentCandidates[i];
+      if(!p.isOrigin && Number.isFinite(p.sf2) && p.sf2<=extinct) parentCandidates.splice(i,1);
     }
   }
 
