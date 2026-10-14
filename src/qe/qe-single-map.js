@@ -92,7 +92,15 @@ function refreshSinglePeakAppearance(cache,fullX,fullY){
       markerIndices.push(j);markerSizes.push(symbol==='star'?sourceSizes.star:sourceSizes.magnetic);
     }
   }
-  if(markerIndices.length) Plotly.restyle(gd,{'marker.size':markerSizes},markerIndices);
+  // Restyle only when a size actually changes. At the initial (full) view the
+  // sizes equal those renderSingle() just drew, and a no-op restyle re-renders
+  // every trace (about 0.5 s on start-up).
+  const sizeChanged=markerIndices.some((j,k)=>{
+    const current=gd.data[j]?.marker?.size;
+    const wanted=markerSizes[k]*density;
+    return !(typeof current==='number' && Math.abs(current-wanted)<=1e-9*Math.max(1,Math.abs(wanted)));
+  });
+  if(markerIndices.length && sizeChanged) Plotly.restyle(gd,{'marker.size':markerSizes},markerIndices);
 
   const labelIndex=gd.data.findIndex(tr=>tr.meta==='nuclear-labels');
   if(labelIndex<0) return;
@@ -138,6 +146,15 @@ function refreshSinglePeakAppearance(cache,fullX,fullY){
     if(point.px>=0&&point.px<=xSpan&&point.py>=0&&point.py<=ySpan) boxes.push(bestBox);
     return {x:xaxis.p2l(point.px+best[0]),y:yaxis.p2l(point.py+best[1])};
   });
+  // Every relayout event re-runs this placement; restyle only when a label
+  // position or the label size actually changes (repeated identical restyles
+  // re-render the whole map several times during start-up).
+  const labelTrace=gd.data[labelIndex];
+  const same=(a,b)=>typeof a==='number' && typeof b==='number' && Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b));
+  const unchanged=labelTrace && labelTrace.x?.length===positions.length && labelTrace.y?.length===positions.length &&
+    positions.every((p,i)=>same(labelTrace.x[i],p.x) && same(labelTrace.y[i],p.y)) &&
+    same(labelTrace.textfont?.size,sourceLabelStyle.fontSize*density);
+  if(unchanged) return;
   Plotly.restyle(gd,{
     x:[positions.map(p=>p.x)],y:[positions.map(p=>p.y)],
     'textfont.size':sourceLabelStyle.fontSize

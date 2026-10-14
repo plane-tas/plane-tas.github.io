@@ -2,8 +2,46 @@
 
 import {parseCifStructure} from "../cif/cif-structure.js";
 
+// "no-cache" always revalidates with the server (ETag), so data are never
+// stale, but an unchanged file is answered with 304 instead of re-downloading
+// it on every start (the previous "no-store" bypassed the cache entirely).
+export const DATA_CACHE_MODE="no-cache";
+
+// Start a JSON download once and share it: app.js begins fetching the data
+// files at start-up, and the module that needs a file later awaits the same
+// request instead of starting a new one.
+const jsonOnce=new Map();
+export function fetchJsonOnce(url){
+  if(!jsonOnce.has(url)){
+    const p=fetch(url,{cache:DATA_CACHE_MODE}).then(response=>{
+      if(!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+      return response.json();
+    });
+    p.catch(()=>{}); // a prefetch that nobody awaits must not be reported as unhandled
+    jsonOnce.set(url,p);
+  }
+  return jsonOnce.get(url);
+}
+
+// Downloads started early by prefetchStartupData() (see src/app/prefetch.js).
+// Each entry is handed to the first caller that asks for it and then removed,
+// so later loads always go to the network.
+const early=new Map();
+function takeEarly(key){
+  const p=early.get(key);
+  if(p) early.delete(key);
+  return p;
+}
+function putEarly(key,promise){
+  promise.catch(()=>{}); // failures surface when the real caller awaits it
+  early.set(key,promise);
+  return promise;
+}
+
 export async function fetchJson(url){
-  const response = await fetch(url, {cache: "no-store"});
+  const started=takeEarly(`json:${url}`);
+  if(started) return await started;
+  const response = await fetch(url, {cache: DATA_CACHE_MODE});
 
   if(!response.ok){
     throw new Error(`${url} を読み込めませんでした (HTTP ${response.status})。`);
@@ -38,14 +76,14 @@ export async function discoverJsonFilesFromGitHub(directory){
   const repo=(!parts.length || (parts.length===1 && /\.html?$/i.test(parts[0])))
     ? `${owner}.github.io` : parts[0];
   const apiUrl=`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${directory}`;
-  const response=await fetch(apiUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github+json"}});
+  const response=await fetch(apiUrl,{cache:DATA_CACHE_MODE,headers:{"Accept":"application/vnd.github+json"}});
   if(!response.ok) throw new Error(`GitHub API: ${directory}/ (HTTP ${response.status})`);
   const items=await response.json();
   return items.filter(x=>x&&x.type==="file").map(x=>x.name).filter(x=>/\.json$/i.test(x)&&x.toLowerCase()!=="index.json").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}));
 }
 
 export async function discoverJsonFilesFromDirectoryListing(directory){
-  const response = await fetch(`${directory}/`, {cache: "no-store"});
+  const response = await fetch(`${directory}/`, {cache: DATA_CACHE_MODE});
 
   if(!response.ok){
     throw new Error(
@@ -75,7 +113,7 @@ export async function discoverJsonFilesFromDirectoryListing(directory){
   return [...new Set(files)].sort((a,b)=>a.localeCompare(b));
 }
 
-export async function discoverJsonFiles(directory){
+async function discoverJsonFilesNow(directory){
   // Local development with python -m http.server exposes directory listings.
   if(isLocalDirectoryListingHost()){
     const files=await discoverJsonFilesFromDirectoryListing(directory);
@@ -95,7 +133,7 @@ export async function discoverJsonFiles(directory){
 
   // Other static hosts may provide an explicit manifest.
   try{
-    const manifestResponse=await fetch(`${directory}/index.json`,{cache:"no-store"});
+    const manifestResponse=await fetch(`${directory}/index.json`,{cache:DATA_CACHE_MODE});
     if(manifestResponse.ok){
       const manifest=await manifestResponse.json();
       const files=normalizeJsonFileList(manifest)
@@ -110,16 +148,20 @@ export async function discoverJsonFiles(directory){
   return files;
 }
 
+export function discoverJsonFiles(directory){
+  return takeEarly(`dir-json:${directory}`) || discoverJsonFilesNow(directory);
+}
+
 export async function loadJsonDirectory(directory, targetMap){
   targetMap.clear();
 
   const files = await discoverJsonFiles(directory);
 
-  for(const filename of files){
-    const obj = await fetchJson(`${directory}/${filename}`);
-    const key = filename.replace(/\.json$/i, "");
-    targetMap.set(key, obj);
-  }
+  // Download all files in parallel; insert in the original (sorted) order.
+  const objects = await Promise.all(files.map(filename=>fetchJson(`${directory}/${filename}`)));
+  files.forEach((filename,i)=>{
+    targetMap.set(filename.replace(/\.json$/i, ""), objects[i]);
+  });
 
   return files.length;
 }
@@ -137,7 +179,7 @@ export async function discoverCifFilesFromGitHub(directory){
   const repo=(!parts.length || (parts.length===1 && /\.html?$/i.test(parts[0])))
     ? `${owner}.github.io` : parts[0];
   const apiUrl=`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${directory}`;
-  const response=await fetch(apiUrl,{cache:"no-store",headers:{"Accept":"application/vnd.github+json"}});
+  const response=await fetch(apiUrl,{cache:DATA_CACHE_MODE,headers:{"Accept":"application/vnd.github+json"}});
   if(!response.ok) throw new Error(`GitHub API: ${directory}/ (HTTP ${response.status})`);
   const items=await response.json();
   return items
@@ -148,7 +190,7 @@ export async function discoverCifFilesFromGitHub(directory){
 }
 
 export async function discoverCifFilesFromDirectoryListing(directory){
-  const response=await fetch(`${directory}/`,{cache:"no-store"});
+  const response=await fetch(`${directory}/`,{cache:DATA_CACHE_MODE});
   if(!response.ok) throw new Error(`${directory}/ could not be loaded (HTTP ${response.status}).`);
   const html=await response.text();
   const doc=new DOMParser().parseFromString(html,"text/html");
@@ -166,7 +208,7 @@ export async function discoverCifFilesFromDirectoryListing(directory){
   return [...new Set(files)].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}));
 }
 
-export async function discoverCifFiles(directory){
+async function discoverCifFilesNow(directory){
   // On the local Python server, the directory listing is authoritative.
   if(isLocalDirectoryListingHost()) return await discoverCifFilesFromDirectoryListing(directory);
 
@@ -177,7 +219,7 @@ export async function discoverCifFiles(directory){
 
   // Optional manifest for other static hosts that do not expose listings.
   try{
-    const response=await fetch(`${directory}/index.json`,{cache:"no-store"});
+    const response=await fetch(`${directory}/index.json`,{cache:DATA_CACHE_MODE});
     if(response.ok){
       const manifest=await response.json();
       const files=normalizeCifFileList(manifest).filter(name=>/\.cif$/i.test(name));
@@ -188,22 +230,70 @@ export async function discoverCifFiles(directory){
   return await discoverCifFilesFromDirectoryListing(directory);
 }
 
-export async function loadCifDirectory(directory,targetMap){
+export function discoverCifFiles(directory){
+  return takeEarly(`dir-cif:${directory}`) || discoverCifFilesNow(directory);
+}
+
+function fetchCifText(url){
+  return takeEarly(`text:${url}`) || fetch(url,{cache:DATA_CACHE_MODE}).then(async response=>{
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.text();
+  });
+}
+
+// `beforeParse` (optional promise) is awaited after the downloads and before
+// parsing: CIF parsing reads neutron scattering lengths, so the caller passes
+// the neutron-data load to let downloads overlap with it.
+export async function loadCifDirectory(directory,targetMap,{beforeParse=null}={}){
   targetMap.clear();
   const files=await discoverCifFiles(directory);
   const errors=[];
-  for(const filename of files){
+  const texts=await Promise.all(files.map(async filename=>{
+    try{ return {text:await fetchCifText(`${directory}/${filename}`)}; }
+    catch(err){ return {err}; }
+  }));
+  if(beforeParse) await Promise.resolve(beforeParse).catch(()=>{});
+  files.forEach((filename,i)=>{
     try{
-      const response=await fetch(`${directory}/${filename}`,{cache:"no-store"});
-      if(!response.ok) throw new Error(`HTTP ${response.status}`);
-      const text=await response.text();
-      const structure=parseCifStructure(text);
+      if(texts[i].err) throw texts[i].err;
+      const structure=parseCifStructure(texts[i].text);
       const key=filename.replace(/\.cif$/i,"");
       targetMap.set(key,{key,filename,structure});
     }catch(err){
       errors.push(`${filename}: ${err?.message||err}`);
     }
-  }
+  });
   if(errors.length) console.warn("BG_material CIF load warning(s):\n"+errors.join("\n"));
   return targetMap.size;
+}
+
+// Start the start-up data downloads immediately (called by src/app/prefetch.js
+// before Plotly and the application have even been evaluated). app.js later
+// asks for the same files through the normal functions above and receives
+// these in-flight requests instead of starting new ones.
+export function prefetchStartupData(){
+  fetchJsonOnce('neutron-data.json');
+  fetchJsonOnce('space-groups.json');
+  for(const directory of ['instrument','sample_environments']){
+    const files=putEarly(`dir-json:${directory}`,discoverJsonFilesNow(directory));
+    files.then(list=>{
+      for(const name of list){
+        const url=`${directory}/${name}`;
+        putEarly(`json:${url}`,fetch(url,{cache:DATA_CACHE_MODE}).then(async response=>{
+          if(!response.ok) throw new Error(`${url} を読み込めませんでした (HTTP ${response.status})。`);
+          return await response.json();
+        }));
+      }
+    },()=>{});
+  }
+  const cif=putEarly('dir-cif:BG_material',discoverCifFilesNow('BG_material'));
+  cif.then(list=>{
+    for(const name of list){
+      const url=`BG_material/${name}`;
+      putEarly(`text:${url}`,fetch(url,{cache:DATA_CACHE_MODE}).then(async response=>{
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+      }));
+    }
+  },()=>{});
 }

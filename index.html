@@ -6,6 +6,9 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>PLANE-TAS</title>
 <link href="data:," rel="icon"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Anta&amp;display=swap" rel="stylesheet"/>
 <link href="styles/00-base.css" rel="stylesheet"/>
 <link href="styles/01-layout.css" rel="stylesheet"/>
 <link href="styles/02-structure-output.css" rel="stylesheet"/>
@@ -60,7 +63,13 @@
 })();
 </script>
 <script src="src/app/canvas-read-frequently.js"></script>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<!-- Plotly, the Plotly adapter and the application run in this order once the
+     HTML has been parsed (defer / module). The page and its 60+ modules then
+     download while Plotly (4.5 MB) is still loading, instead of after it. -->
+<script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script defer src="src/qe/tas-plot-density.js"></script>
+<script async src="src/app/prefetch.js" type="module"></script>
+<script src="src/app.js" type="module"></script>
 </head>
 <body>
 <div id="tasCrashRecoveryNotice" role="status" hidden>PLANE-TAS recovered from an interrupted session. Saved PLANE-TAS settings were reset for safety.</div>
@@ -761,6 +770,4 @@
 </div>
 </main>
 </div>
-<script src="src/qe/tas-plot-density.js"></script>
-<script src="src/app.js" type="module"></script>
 </body></html>

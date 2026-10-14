@@ -12,9 +12,17 @@
   if(!plotly || plotly.__tasNativeCompact) return;
   plotly.__tasNativeCompact=true;
 
+  // getComputedStyle() forces a style recalculation whenever Plotly has just
+  // changed the DOM, and this is called for every Plotly call. Reuse the value
+  // for the rest of the current task; --tas-density only changes with the
+  // window size, which is always handled in a later task.
+  let cachedDensity=null;
   const density=()=>{
+    if(cachedDensity!==null) return cachedDensity;
     const n=Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tas-density'));
-    return Number.isFinite(n)&&n>0 ? n : 1;
+    cachedDensity=Number.isFinite(n)&&n>0 ? n : 1;
+    setTimeout(()=>{ cachedDensity=null; },0);
+    return cachedDensity;
   };
   window.tasUIDensity=density;
 

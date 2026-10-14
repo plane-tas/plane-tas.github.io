@@ -1,5 +1,6 @@
 // CIF Generator startup (space-group data, restore) and event wiring.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {fetchJsonOnce} from '../../app/data-loader.js';
 export function installGeneratorInit(ctx){
   const {deps:{
     $, getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText, updateModeVisibility
@@ -13,9 +14,8 @@ async function initializeCifGenerator(){
   if(!select) return;
   cifState.restoringCifStartup=true;
   try{
-    const response=await fetch("space-groups.json",{cache:"no-store"});
-    if(!response.ok) throw new Error(`space-groups.json returned HTTP ${response.status}`);
-    const data=await response.json();
+    // Shared with the request app.js starts at start-up (same error message).
+    const data=await fetchJsonOnce("space-groups.json");
     cifState.cifSpaceGroups=Array.isArray(data) ? data : data.space_groups;
     if(!Array.isArray(cifState.cifSpaceGroups) || cifState.cifSpaceGroups.length!==230) throw new Error("space-groups.json does not contain the expected 230 standard space groups.");
     fn.populateSampleSpaceGroupControls();

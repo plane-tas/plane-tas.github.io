@@ -17,7 +17,7 @@ import {
 } from "./core/tas-conventions.js";
 import {
   isGitHubPages, isLocalDirectoryListingHost,
-  loadJsonDirectory, loadCifDirectory
+  loadJsonDirectory, loadCifDirectory, fetchJsonOnce
 } from "./app/data-loader.js";
 import {
   reciprocalSymmetryMatrices, hklKey, compareHkl,
@@ -57,9 +57,7 @@ let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal, calculateSingleCrystalCore;
 
 async function initializeNeutronData(){
-  const response=await fetch("neutron-data.json",{cache:"no-store"});
-  if(!response.ok) throw new Error(`Failed to load neutron-data.json: HTTP ${response.status}`);
-  const payload=await response.json();
+  const payload=await fetchJsonOnce("neutron-data.json"); // may already be in flight (prefetch.js)
   setNeutronData(payload);
   return Object.keys(payload?.elements||{}).length;
 }
@@ -664,9 +662,9 @@ async function tryLoadDir(directory,map,{skipGitHubPages=false}={}){
   if(skipGitHubPages && isGitHubPages()){ map.clear(); return 0; }
   try{return await loadJsonDirectory(directory,map);}catch(_e){map.clear();return 0;}
 }
-async function tryLoadCifDir(directory,map,{skipGitHubPages=false}={}){
+async function tryLoadCifDir(directory,map,{skipGitHubPages=false,beforeParse=null}={}){
   if(skipGitHubPages && isGitHubPages()){ map.clear(); return 0; }
-  try{return await loadCifDirectory(directory,map);}catch(_e){map.clear();return 0;}
+  try{return await loadCifDirectory(directory,map,{beforeParse});}catch(_e){map.clear();return 0;}
 }
 function mergeLegacyRangeData(){
   for(const [key,inst] of instruments){
@@ -702,21 +700,31 @@ async function initialize(){
   $('tabScript')?.addEventListener('click',()=>setActiveTab('script'));
 
   setStatus('neutron data / instrument / BG_material / sample_environments loading...');
+  // Start every independent download now instead of one after another.
+  // The space-group table is only needed later by the CIF generator, which
+  // awaits this same request (fetchJsonOnce).
+  fetchJsonOnce('space-groups.json');
+  const neutronLoad=initializeNeutronData();
+  const instrumentLoad=loadJsonDirectory('instrument',instruments);
+  instrumentLoad.catch(()=>{}); // awaited (and reported) below
+  const optionalLoads=Promise.all([
+    // Optional data directories are loaded on every host.  GitHub Pages uses
+    // the repository contents API, so no directory/index.json probe is needed.
+    // BG CIFs download in parallel but are parsed only after the neutron
+    // scattering lengths are in place (parsing reads them).
+    tryLoadCifDir('BG_material',backgroundMaterials,{beforeParse:neutronLoad}),
+    tryLoadDir('sample_environments',sampleEnvironments)
+  ]);
   let nNeutron=0;
-  try{ nNeutron=await initializeNeutronData(); }
+  try{ nNeutron=await neutronLoad; }
   catch(err){ console.warn('Neutron data load warning:',err); }
-  const nInstrument=await loadJsonDirectory('instrument',instruments);
+  const nInstrument=await instrumentLoad;
   // Migration: avoid listing DEMAND twice when the old HB-3A filename from
   // earlier releases coexists with the newly supplied 08_HB3A.json.
   if(instruments.has('08_HB3A.json') && instruments.has('08_HB3A_DEMAND.json')){
     instruments.delete('08_HB3A_DEMAND.json');
   }
-  const [nBG,nSE]=await Promise.all([
-    // Optional data directories are loaded on every host.  GitHub Pages uses
-    // the repository contents API, so no directory/index.json probe is needed.
-    tryLoadCifDir('BG_material',backgroundMaterials),
-    tryLoadDir('sample_environments',sampleEnvironments)
-  ]);
+  const [nBG,nSE]=await optionalLoads;
   // The unified instrument/ directory is the preferred source. On localhost,
   // do not probe a possibly absent legacy instruments/ directory at startup;
   // that failed compatibility probe only creates noisy 404s. Static/GitHub
