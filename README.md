@@ -26,15 +26,18 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 ### Structure editor and reflections
 
 - Load and visualize CIF and mCIF structure files.
-- Edit cell parameters, atomic positions, spin vectors, atom appearance, and bonds.
-- Visualize nuclear structures and spins from imported magnetic structures.
+- Edit cell parameters, atomic positions, spin vectors, atom appearance, bonds, and polyhedral display settings.
+- Separate **Crystallographic** and **Magnetic** unit-cell fields for imported mCIF structures when available. Structure's Min/Max coordinates refer to the selected unit cell.
+- Visualize nuclear structures and magnetic moments from imported magnetic structures. In the Spins editor, **Symmetry operations** shows independent magnetic sites and **Manual** shows the expanded magnetic sites; nonmagnetic atoms remain in the structure.
 - Calculate and sort **nuclear** Bragg reflections; inspect structure-file previews.
 - Generate, download and set **CIF** and experimental **mCIF** output.
 
 **Experimental magnetic-structure features and limitations:**
 
-- **mCIF export is available** for single-k magnetic structures using a magnetic P1 representation. It creates a finite commensurate supercell and can use a rational approximation to the entered propagation vector. Such output is **not** an exact incommensurate superspace description or an automatically validated BNS classification. Check the generated mCIF before using it in quantitative work.
-- Imported mCIF files with explicitly provided magnetic symmetry operations can be visualized; incommensurate single-q Fourier support is limited to recognized superspace operations. Multi-q magnetic structures are not supported.
+- **mCIF export is available.** The CIF/mCIF Generator uses a **single-k, magnetic P1** representation, with a finite supercell obtained by rational approximation where needed (denominator at most 16; accepted error at most 0.007 per component). This is an approximation, **not** an exact incommensurate superspace model or an automatically identified BNS group. The file records the original input k, which may therefore differ from the approximated k used to build the supercell. Review the generated output before quantitative use.
+- The Structure editor also supports updating magnetic moments in a loaded mCIF while retaining its explicitly provided magnetic symmetry where supported. This is distinct from generating a new P1 mCIF.
+- Imported mCIF files with explicit magnetic symmetry operations, centering and time reversal can be visualized without a 1,651-group BNS database. **Incommensurate single-q** Fourier input is supported only for recognized superspace operations; incomplete/unsupported operations are noted in the Magnetic unit cell section. Multi-q magnetic structures and general superspace mCIF export are not supported.
+- For an imported mCIF, the parent crystallographic cell is reconstructed from supported explicit cell-transformation data where possible. If a diagonal candidate is independently verified from atomic translations and k, it is labeled **Estimated** and nuclear peaks use the estimated structure. If a reliable parent cannot be determined, nuclear-reflection calculation is unavailable; a parent cell is **not** deduced from BNS alone.
 - **Magnetic reflection intensity calculations** remain disabled in the public interface pending external validation.
 
 ### Script and time estimate
@@ -49,6 +52,12 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 - X-ray-to-neutron S2 conversion.
 - Neutron attenuation calculations using sample composition and beam energy.
 - Magnetic form-factor visualization and data export (separate from the disabled magnetic-reflection calculation).
+
+## Browser data and recovery
+
+- User-edited structure, spin and display settings are stored in the browser. Use **Reload current file** to discard edits and re-read the original CIF/mCIF. Keep a separate copy of important input files.
+- If the application cannot recover after an interrupted rendering session, reopen the application URL with `?tas-safe-reset=1` appended (or `&tas-safe-reset=1` if the URL already contains a query). This clears the application's saved `tas-` settings and can discard unsaved edits. Then reopen the normal URL and reload the CIF/mCIF as needed.
+- If that does not help, open your browser's Developer Tools → **Application/Storage** → **Local Storage** and **Session Storage** for the PLANE-TAS page, remove keys beginning with `tas-`, then reload. Do **not** clear unrelated sites' storage.
 
 ## TAS geometry and sign conventions
 
