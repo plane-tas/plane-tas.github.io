@@ -29,14 +29,13 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 - Edit cell parameters, atomic positions, spin vectors, atom appearance, and bonds.
 - Visualize nuclear structures and spins from imported magnetic structures.
 - Calculate and sort **nuclear** Bragg reflections; inspect structure-file previews.
-- Generate, download and set **CIF** output.
+- Generate, download and set **CIF** and experimental **mCIF** output.
 
-**Experimental features currently unavailable in the public interface:**
+**Experimental magnetic-structure features and limitations:**
 
-- **mCIF export** is disabled. The magnetic space group is not identified automatically; provisional generated mCIF data must not be treated as validated BNS symmetry.
-- **Magnetic reflection intensity calculations** are disabled pending external validation.
-
-These restrictions apply to output/calculation functions, not to loading existing mCIF files or viewing spins.
+- **mCIF export is available** for single-k magnetic structures using a magnetic P1 representation. It creates a finite commensurate supercell and can use a rational approximation to the entered propagation vector. Such output is **not** an exact incommensurate superspace description or an automatically validated BNS classification. Check the generated mCIF before using it in quantitative work.
+- Imported mCIF files with explicitly provided magnetic symmetry operations can be visualized; incommensurate single-q Fourier support is limited to recognized superspace operations. Multi-q magnetic structures are not supported.
+- **Magnetic reflection intensity calculations** remain disabled in the public interface pending external validation.
 
 ### Script and time estimate
 
@@ -69,7 +68,7 @@ The browser application uses ES modules, with responsibilities separated across 
 | `qe-plot.js`, `qe-single-crystal.js`, `powder-qe.js`, `dark-angle.js` | Q–E display, scattering accessibility and overlays |
 | `resolution-core.js`, `resolution-ui.js`, `matrix.js` | Resolution calculations and display |
 | `cif-ui.js`, `cif-structure.js`, `cif-symmetry.js` | CIF/mCIF input, Structure editor and nuclear reflections |
-| `mcif-export.js`, `magnetic-reflections.js` | Experimental magnetic-output/reflection modules; public features disabled |
+| `mcif-export.js`, `magnetic-reflections.js` | Experimental mCIF export; magnetic-reflection calculation disabled in public interface |
 | `magnetic-form-factor.js`, `magnetic-form-factor-data.js` | Magnetic-ion form-factor calculation and coefficients |
 | `script-workspace.js`, `script-ui.js` | Measurement scripts, SPICE and time estimates |
 | `toolbox.js`, `toolbox-ui.js` | Unit conversion, attenuation and form-factor toolbox |

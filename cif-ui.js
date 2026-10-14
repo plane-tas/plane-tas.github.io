@@ -165,7 +165,7 @@ function estimatedParentIndexingFromMcif(parsed,text){
   if(!parsed?.magnetic || !Array.isArray(parsed.atoms) || !parsed.atoms.length)return null;
   // If the author supplied a transform that we cannot handle, do not
   // silently replace it with a different guessed diagonal transform.
-  if(/_parent_space_group\.(?:child_transform_Pp_abc|transform_Pp_abc)/i.test(String(text||'')))return null;
+  if(/^\s*_parent_space_group[._](?:child_transform_Pp_abc|transform_Pp_abc)(?=\s|$)/im.test(String(text||'')))return null;
   const q=propagationVectorsFromMcif(text,parsed);
   if(q.length!==1)return null;
   const nums=[q[0].h,q[0].k,q[0].l].map(Number);
