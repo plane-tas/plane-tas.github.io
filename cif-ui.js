@@ -255,15 +255,11 @@ function updateImportedUnitCellPanels(parsed,text){
   if(box)box.hidden=!parsed?.magnetic;
   if(notice)notice.hidden=true;
   if(!parsed?.magnetic)return;
-  const requestedNumber=Number(parsed.spaceGroupNumber);
-  const sg=cifSpaceGroups.find(g=>g.number===requestedNumber);
-  // This selector is the standard IT space group of the magnetic unit-cell
-  // setting, not a substitute for a BNS magnetic space-group classification.
-  selectMagneticCellSpaceGroup(sg?.number||1,{syncSystem:true});
+  // The mCIF has its own time-reversed magnetic symmetry operations. Do not
+  // reinterpret its parent IT number as a magnetic space-group selector.
   for(const [key,id] of Object.entries(CIF_MAG_LATTICE_FIELDS)){
     if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(parsed.lattice[key]):'';
   }
-  applyCifLatticeConstraints(true);
   if(!crystallographicStructureFromMcif(parsed,text) && notice){
     notice.hidden=false;
     notice.textContent='Parent-cell conversion is not defined in this mCIF. Nuclear-cell editing requires an explicit parent setting; no conversion was guessed.';
@@ -2168,8 +2164,12 @@ function updateStructureAtomColorRows(elements,structure=null){
 
 function magneticCandidateSites(structure){
   const sites=Array.isArray(structure?.asymmetricSites) ? structure.asymmetricSites : [];
+  // Keep non-magnetic Se/O/etc. in the parsed 3D structure, but avoid
+  // synthesising magnetic moments for them in an imported mCIF spin editor.
+  const editable=sites.map((site,siteIndex)=>({...site,siteIndex})).filter(site=>
+    !structure?.magnetic || Array.isArray(site.magneticMoment) || !!site.magneticFourier);
   const elementOrder=new Map(structureElements(structure).map((element,index)=>[String(element),index]));
-  return sites.map((site,index)=>({...site,siteIndex:index})).sort((a,b)=>{
+  return editable.sort((a,b)=>{
     const ea=elementOrder.get(String(a.element)) ?? Number.MAX_SAFE_INTEGER;
     const eb=elementOrder.get(String(b.element)) ?? Number.MAX_SAFE_INTEGER;
     if(ea!==eb) return ea-eb;
@@ -2187,13 +2187,16 @@ function individualSpinDimensions(){
 }
 function individualSpinCandidates(structure){
   if(!Array.isArray(structure?.atoms)) return [];
-  const N=individualSpinDimensions();
+  // mCIF parseCifStructure() ALREADY applied its magnetic operations,
+  // centering, and time reversal. Do not expand it again using k denominators.
+  const N=structure.magnetic?[1,1,1]:individualSpinDimensions();
   if(N.reduce((a,b)=>a*b,1)*structure.atoms.length>1200)
     throw new Error('Individual spin editor limit: 1200 atoms. Reduce k denominators or use linked sites.');
   const out=[];
   const labelCounts=new Map();
   for(let ix=0;ix<N[0];ix++)for(let iy=0;iy<N[1];iy++)for(let iz=0;iz<N[2];iz++)
     structure.atoms.forEach((atom,atomIndex)=>{
+      if(structure.magnetic && !Array.isArray(atom.magneticMoment) && !atom.magneticFourier)return;
       const key=individualSpinKey(ix,iy,iz,atomIndex);
       const parent=structure.asymmetricSites?.[atom.sourceSiteIndex]||atom;
       const pos=[atom.x+ix,atom.y+iy,atom.z+iz];
@@ -2207,8 +2210,14 @@ function individualSpinCandidates(structure){
     });
   return out;
 }
-function spinEditingIsIndividual(structure){return structureSpinEditingMode==='individual' && !!structure && (!structure.magnetic || importedMagneticEditMode);}
+function spinEditingIsIndividual(structure){return structureSpinEditingMode==='individual' && !!structure;}
 function initialIndividualSpin(site,structure){
+  // Imported mCIF sites have already been individually transformed by the
+  // magnetic symmetry group. Show their *actual* dipoles, not repetitions of
+  // the asymmetric site's moment, and do not run synthetic k-phase rotations.
+  if(structure?.magnetic){
+    return defaultMomentSetting(site,structure);
+  }
   const base=site.parentSite||site;
   const key=momentKey({...base,siteIndex:site.siteIndex});
   const parent={...defaultMomentSetting(base,structure),...(structureMomentSettings.get(key)||{})};
@@ -2345,8 +2354,10 @@ function currentMomentSettings(){
   return out;
 }
 // Element selection only controls which rows are shown. Hidden rows retain their settings.
-function refreshSpinTableToolbar(structure){
-  const elements=structureElements(structure);
+function refreshSpinTableToolbar(structure,candidates=null){
+  const elements=structure?.magnetic && Array.isArray(candidates)
+    ? [...new Set(candidates.map(site=>String(site.element)).filter(Boolean))]
+    : structureElements(structure);
   const select=$("cifSpinTableElement");
   if(!elements.includes(structureSpinTableElement) && structureSpinTableElement!=="*")
     structureSpinTableElement="*";
@@ -2380,7 +2391,7 @@ function updateMagneticMomentRows(structure){
   catch(err){const notice=$("cifSpinIndividualInfo");if(notice){notice.hidden=false;notice.textContent=err.message;}syncSpinTableBulkCheckbox(structure,[]);return;}
   const notice=$("cifSpinIndividualInfo");
   if(notice){notice.hidden=true;notice.textContent="";}
-  refreshSpinTableToolbar(structure);
+  refreshSpinTableToolbar(structure,allSites);
   const polar=structureMomentDirectionMode==="polar";
   const headings=polar?["θ (°)","φ (°)","μ (μB)"]:["X (μB)","Y (μB)","Z (μB)"];
   for(const [i,name] of ["X","Y","Z"].entries()){
@@ -3704,10 +3715,6 @@ function prepareStructureViewerControls(){
       editingSelect.addEventListener('change',()=>{
         for(const [key,value] of currentMomentSettings())structureMomentSettings.set(key,value);
         structureSpinEditingMode=editingSelect.value==='individual'?'individual':'sites';
-        if(structureSpinEditingMode==='individual' && structureSpinTableElement==='*'){
-          const info=currentStructureForViewer()?.structure;
-          structureSpinTableElement=structureElements(info).find(el=>DEFAULT_SPIN_ELEMENTS.has(String(el).toUpperCase()))||'*';
-        }
         $('cifMagMomentRows')?.replaceChildren();
         updateMagneticMomentRows(currentStructureForViewer()?.structure||null);
         saveStructureViewerState();renderCifStructureIfVisible();
@@ -4228,10 +4235,12 @@ function jumpToCifSpaceGroupNumber(){
   updateCifSpaceGroupInfo();
 }
 
-function applyCifLatticeConstraints(magnetic=false){
-  const sg=magnetic ? selectedMagneticCellSpaceGroup() : selectedCifGeneratorSpaceGroup();
+function applyCifLatticeConstraints(){
+  // Only the crystallographic space group can constrain the nuclear cell.
+  // Magnetic lattice editing must not silently inherit a 230-group IT setting.
+  const sg=selectedCifGeneratorSpaceGroup();
   if(!sg) return;
-  const latticeFields=magnetic ? CIF_MAG_LATTICE_FIELDS : CIF_LATTICE_FIELDS;
+  const latticeFields=CIF_LATTICE_FIELDS;
   const inputs=Object.fromEntries(Object.entries(latticeFields).map(([key,id])=>[key,$(id)]));
   for(const input of Object.values(inputs)){
     if(!input) continue;
@@ -4272,47 +4281,11 @@ function applyCifLatticeConstraints(magnetic=false){
 // Magnetic-cell controls are independent from the crystallographic cell.
 // No change here is allowed to rewrite Sample or nuclear-reflection indices.
 const CIF_MAG_LATTICE_FIELDS={a:'cifMagA',b:'cifMagB',c:'cifMagC',alpha:'cifMagAlpha',beta:'cifMagBeta',gamma:'cifMagGamma'};
-const CIF_MAG_CELL_DRAFT_IDS=['cifMagCrystalSystem','cifMagSpaceGroupNumber','cifMagSpaceGroup',...Object.values(CIF_MAG_LATTICE_FIELDS)];
-function selectedMagneticCellSpaceGroup(){
-  return cifSpaceGroups.find(sg=>sg.number===Number($("cifMagSpaceGroup")?.value))||null;
-}
-function populateMagneticSpaceGroupOptions(requestedNumber,{adaptSystem=false}={}){
-  const select=$("cifMagSpaceGroup"),systemInput=$("cifMagCrystalSystem");
-  if(!select || !cifSpaceGroups.length)return null;
-  const wanted=cifSpaceGroups.find(sg=>sg.number===Number(requestedNumber));
-  let system=systemInput?.value||'custom';
-  if(adaptSystem && wanted && !cifSystemIncludesSpaceGroup(system,wanted)){
-    system=cifSpaceGroupSystem(wanted);
-    if(systemInput)systemInput.value=system;
-  }
-  const matching=cifSpaceGroups.filter(sg=>cifSystemIncludesSpaceGroup(system,sg));
-  select.replaceChildren();
-  for(const sg of matching){
-    const option=document.createElement('option');option.value=String(sg.number);
-    option.textContent=`${sg.number} — ${sg.hm}`;select.appendChild(option);
-  }
-  const selected=wanted && cifSystemIncludesSpaceGroup(system,wanted)?wanted:matching[0];
-  if(selected)select.value=String(selected.number);
-  if($("cifMagSpaceGroupNumber") && selected)$("cifMagSpaceGroupNumber").value=String(selected.number);
-  return selected||null;
-}
-function selectMagneticCellSpaceGroup(number,{syncSystem=false}={}){
-  const sg=cifSpaceGroups.find(item=>item.number===Number(number));
-  if(!sg)return null;
-  const system=$("cifMagCrystalSystem");
-  if(syncSystem && system)system.value=cifSpaceGroupSystem(sg);
-  return populateMagneticSpaceGroupOptions(sg.number,{adaptSystem:!syncSystem});
-}
-function updateMagneticCellGroupInfo(){
-  const sg=selectedMagneticCellSpaceGroup();
-  if(!sg)return;
-  if($("cifMagSpaceGroupNumber"))$("cifMagSpaceGroupNumber").value=String(sg.number);
-  applyCifLatticeConstraints(true);
-}
+const CIF_MAG_CELL_DRAFT_IDS=Object.values(CIF_MAG_LATTICE_FIELDS);
 function saveMagneticCellDraft(){
   if(restoringCifStartup || !getSelectedCifStructure()?.magnetic)return;
   const values={};
-  for(const id of CIF_MAG_CELL_DRAFT_IDS)values[id]=$(id)?.value??'';
+  for(const id of CIF_MAG_CELL_DRAFT_IDS) values[id]=$(id)?.value??'';
   try{localStorage.setItem(CIF_MAGNETIC_CELL_STORAGE_KEY,JSON.stringify({version:1,sourceKey:currentEditorSourceKey(),values}));}catch(_e){}
 }
 function restoreMagneticCellDraft(){
@@ -4320,41 +4293,25 @@ function restoreMagneticCellDraft(){
   let saved;
   try{saved=JSON.parse(localStorage.getItem(CIF_MAGNETIC_CELL_STORAGE_KEY)||'null');}catch(_e){return false;}
   if(saved?.version!==1 || saved.sourceKey!==currentEditorSourceKey())return false;
-  const values=saved.values||{};
-  const n=Number(values.cifMagSpaceGroup);
-  if(Number.isInteger(n)&&n>=1&&n<=230)selectMagneticCellSpaceGroup(n,{syncSystem:true});
-  for(const id of Object.values(CIF_MAG_LATTICE_FIELDS)){
-    if($(id) && Object.hasOwn(values,id))$(id).value=String(values[id]);
+  for(const id of CIF_MAG_CELL_DRAFT_IDS){
+    if($(id) && Object.hasOwn(saved.values||{},id))$(id).value=String(saved.values[id]);
   }
-  // Restore an editing draft without forcing a new cell constraint that
-  // could silently overwrite the user's last typed lattice values.
+  // Older drafts may contain the now-removed crystallographic System/No/SG;
+  // deliberately ignore them rather than constraining the magnetic cell.
   return true;
 }
 function bindMagneticCellEditor(){
-  const system=$("cifMagCrystalSystem"),number=$("cifMagSpaceGroupNumber");
-  system?.addEventListener('change',()=>{
-    populateMagneticSpaceGroupOptions(Number($("cifMagSpaceGroup")?.value)||1);
-    updateMagneticCellGroupInfo();saveMagneticCellDraft();renderCifStructureIfVisible();
-  });
-  $("cifMagSpaceGroup")?.addEventListener('change',()=>{
-    updateMagneticCellGroupInfo();saveMagneticCellDraft();renderCifStructureIfVisible();
-  });
-  bindSpaceGroupIntegerEntry(number);
-  const selectByNumber=()=>{
-    const n=readSpaceGroupInteger(number,Number($("cifMagSpaceGroup")?.value)||1);
-    if(n===null)return;
-    if(!selectMagneticCellSpaceGroup(n,{syncSystem:true})){
-      setCifGeneratorMessage(`Magnetic space group #${n} is not available.`,true);return;
-    }
-    updateMagneticCellGroupInfo();saveMagneticCellDraft();renderCifStructureIfVisible();
-  };
-  number?.addEventListener('change',selectByNumber);
-  number?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();selectByNumber();}});
-  for(const id of Object.values(CIF_MAG_LATTICE_FIELDS)){
+  // Do not constrain the magnetic metric using a 230-group crystallographic
+  // selector: an imported mCIF already carries the magnetic symmetry.
+  for(const [key,id] of Object.entries(CIF_MAG_LATTICE_FIELDS)){
     const field=$(id);
     field?.addEventListener('input',saveMagneticCellDraft);
     field?.addEventListener('change',()=>{
-      updateMagneticCellGroupInfo();saveMagneticCellDraft();renderCifStructureIfVisible();
+      const value=Number(field.value);
+      if(!Number.isFinite(value) || value<=0 || (['alpha','beta','gamma'].includes(key) && value>=180)){
+        field.setCustomValidity('Enter a valid positive cell parameter (angles below 180°).');
+      }else field.setCustomValidity('');
+      saveMagneticCellDraft();renderCifStructureIfVisible();
     });
   }
 }
