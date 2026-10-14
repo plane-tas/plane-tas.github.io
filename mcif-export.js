@@ -200,6 +200,12 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     `_cell_length_a ${fmt(lattice.a)}` ,`_cell_length_b ${fmt(lattice.b)}` ,`_cell_length_c ${fmt(lattice.c)}`,
     `_cell_angle_alpha ${fmt(lattice.alpha)}`,`_cell_angle_beta ${fmt(lattice.beta)}`,`_cell_angle_gamma ${fmt(lattice.gamma)}`,
     ...parentGroup,
+    // magCIF child_transform records the actual magnetic supercell relative
+    // to the nuclear parent. _cell_length_* remains the child-cell lattice.
+    ...(parentGroup.length ? [
+      "_parent_space_group.transform_Pp_abc 'a,b,c;0,0,0'",
+      `_parent_space_group.child_transform_Pp_abc '${N.map((n,i)=>n===1?['a','b','c'][i]:`${n}${['a','b','c'][i]}`).join(',')};0,0,0'`
+    ] : []),
     ...(p1Only ? ["_space_group_IT_number 1", "_space_group_name_H-M_alt 'P 1'"] : []),
     "_space_group_magn.name_BNS '?'",'',
     // Explicit ordinary-space-group operations let non-magnetic CIF readers

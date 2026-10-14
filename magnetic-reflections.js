@@ -165,32 +165,53 @@ export function magneticBraggPeaks(motif,wavelength,{twoThetaMax=180,maxCandidat
 // their parent basis from k alone.
 export function parentIndexingFromMcif(text, magneticLattice, q){
   const src=String(text||'');
-  // Bilbao/standard mCIF with a known parent-cell setting. For identity
-  // transforms, the parent and magnetic conventional-cell hkl are identical,
-  // even when the magnetic centering includes time reversal (e.g. k=[1,0,0]).
-  // Do not mistake the BNS standard-setting transform for this mapping.
-  const tag=(name)=>src.split(/\r?\n/).map(line=>line.trim()).find(line=>line.toLowerCase().startsWith(name.toLowerCase()+' '))?.slice(name.length).trim().replace(/^[\"']|[\"']$/g,'');
+  const tag=(name)=>src.split(/\r?\n/).map(line=>line.trim()).find(line=>
+    line.toLowerCase().startsWith(name.toLowerCase()+' '))?.slice(name.length).trim().replace(/^[\"']|[\"']$/g,'');
+  const hasParent=/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src);
+  if(!hasParent)return null;
   const parent=tag('_parent_space_group.transform_Pp_abc');
   const child=tag('_parent_space_group.child_transform_Pp_abc');
-  if(/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src) && parent && child &&
-     /^a\s*,\s*b\s*,\s*c\s*;\s*0\s*,\s*0\s*,\s*0$/i.test(parent) &&
-     /^a\s*,\s*b\s*,\s*c\s*;\s*0\s*,\s*0\s*,\s*0$/i.test(child)){
-    return {replication:[1,1,1],lattice:{...magneticLattice},reference:'parent mCIF identity basis'};
+  const identity=/^a\s*,\s*b\s*,\s*c\s*;\s*0\s*,\s*0\s*,\s*0$/i;
+  // Support an explicitly declared, zero-origin, orthogonal-index (diagonal)
+  // parent-to-child supercell mapping. More general sheared/transposed mCIF
+  // settings must use a full change-of-basis implementation: NEVER guess.
+  if((parent===undefined || identity.test(parent)) && child){
+    const pieces=child.split(';');
+    if(pieces.length===2 && /^0\s*,\s*0\s*,\s*0$/.test(pieces[1].trim())){
+      const coords=pieces[0].split(',').map(x=>x.trim());
+      const axes=['a','b','c'];
+      if(coords.length===3){
+        const replication=coords.map((v,i)=>{
+          const m=v.match(new RegExp('^(?:([1-9]\\d*)\\s*\\*?\\s*)?'+axes[i]+'$','i'));
+          return m?Number(m[1]||1):NaN;
+        });
+        if(replication.every(n=>Number.isInteger(n)&&n>=1&&n<=128)){
+          const lattice={...magneticLattice};
+          for(const [i,key] of ['a','b','c'].entries())lattice[key]=Number(lattice[key])/replication[i];
+          if(['a','b','c'].every(key=>Number.isFinite(lattice[key])&&lattice[key]>0))
+            return {replication,lattice,reference:'explicit magCIF parent-child diagonal basis'};
+        }
+      }
+    }
   }
+  // An explicit but unsupported transformation must not be replaced by a
+  // denominator-based guess even when an old generator marker is present.
+  if(child || parent)return null;
+  // This marker belongs exclusively to *our own* legacy exports and proves
+  // their diagonal replication layout. The wavevector alone proves nothing.
   if(!/^# Commensurate magnetic supercell generated from user-entered moments\.\s*$/m.test(src))return null;
-  if(!/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src))return null;
   if(!/_parent_propagation_vector\.kxkykz/i.test(src))return null;
   if(!Array.isArray(q)||q.length!==3)return null;
   let dims;
   try { dims=q.map(v=>rationalDenominator(v)); } catch {return null;}
   const lattice={...magneticLattice};
   for(const [i,key] of ['a','b','c'].entries()){
-    const length=Number(lattice[key]);
-    if(!(length>0))return null;
+    const length=Number(lattice[key]);if(!(length>0))return null;
     lattice[key]=length/dims[i];
   }
-  return {replication:dims,lattice,reference:'parent CIF cell (inferred from app-generated supercell)'};
+  return {replication:dims,lattice,reference:'legacy app-generated magnetic supercell'};
 }
+
 export function hklInParentCell(magneticHkl,replication){
   return magneticHkl.map((v,i)=>Number(v)/Number(replication[i]));
 }

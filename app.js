@@ -4073,7 +4073,8 @@ async function initialize(){
   setQEMapTab, setupTasConventionUI, sub, updateAutoW, updateBackgroundSelectAvailability, updateDarkReferenceUI,
   updateEnergyLabel, updateModeVisibility, updateOrientationReferenceUI, updateResolutionPlaneWarning, updateS2MaxDisplay,
   updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
-  getSelectedCifStructure:()=>selectedCifStructure, hasScanResults
+  getSelectedCifStructure:()=>selectedCifStructure,
+  getSelectedCifText:()=>selectedCifText, hasScanResults
 }));
 
 // The initial HTML contains every conditional panel for later use, but only

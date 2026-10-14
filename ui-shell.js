@@ -55,6 +55,7 @@ export function createUIShell(deps){
     getSingleCache,
     getPowderCache,
     getSelectedCifStructure,
+    getSelectedCifText,
     hasScanResults
   }=deps;
 
@@ -326,6 +327,15 @@ function enableRightPanelPersistence(){
 // while this layer prevents ordinary stable-ID controls or tab choices from
 // silently falling through the cracks as the UI evolves.
 const APP_UI_STORAGE_KEY='tas-simulator-ui-state-v1';
+function currentGlobalCifScope(){
+  const raw=String(getSelectedCifText?.()||'');
+  if(!raw)return 'generator:empty';
+  let hash=0x811c9dc5;
+  for(let i=0;i<raw.length;i++){
+    hash^=raw.charCodeAt(i);hash=Math.imul(hash,0x01000193)>>>0;
+  }
+  return `cif:${raw.length}:${hash.toString(16)}`;
+}
 let restoringGlobalUI=false;
 let globalUIPersistenceEnabled=false;
 
@@ -365,14 +375,15 @@ function saveGlobalUIState(){
       geometryOutput:currentGeometryScanOutputTab(),
       cifOutput:currentCifOutputTab()
     };
-    localStorage.setItem(APP_UI_STORAGE_KEY,JSON.stringify({version:1,controls,tabs}));
+    localStorage.setItem(APP_UI_STORAGE_KEY,JSON.stringify({version:2,
+      sourceKey:currentGlobalCifScope(),controls,tabs}));
   }catch(_e){}
 }
 
 function restoreGlobalUIState(){
   let saved;
   try{ saved=JSON.parse(localStorage.getItem(APP_UI_STORAGE_KEY)||'null'); }catch(_e){ return false; }
-  if(!saved || saved.version!==1 || !saved.controls || typeof saved.controls!=='object') return false;
+  if(!saved || ![1,2].includes(saved.version) || !saved.controls || typeof saved.controls!=='object') return false;
   restoringGlobalUI=true;
   try{
     // The selected CIF/mCIF is restored by initializeCifGenerator() BEFORE
@@ -380,6 +391,7 @@ function restoreGlobalUIState(){
     // not to an older global UI snapshot (which may still say P1).
     // Do not undo the file import by restoring stale values over either editor.
     const fileOwnsCell=!!getSelectedCifStructure?.();
+    const restoringSameSource=saved.version===2 && saved.sourceKey===currentGlobalCifScope();
     const fileCellControls=new Set([
       'sampleSpaceGroup','sampleSpaceGroupNumber',
       'cifCrystalSystem','cifSpaceGroup','cifSpaceGroupNumber',
@@ -387,7 +399,13 @@ function restoreGlobalUIState(){
       'cifA','cifB','cifC','cifAlpha','cifBeta','cifGamma'
     ]);
     for(const el of globalUIPersistentControls()){
-      if(fileOwnsCell && fileCellControls.has(el.id)) continue;
+      // File import wins for a NEW source, but the last edited controls win
+      // on ordinary reload of that SAME source. Prevent old P1 settings from
+      // a different CIF leaking into a newly loaded structure.
+      if(fileOwnsCell && fileCellControls.has(el.id) && !restoringSameSource) continue;
+      // The mCIF format and magnetic-cell draft each have dedicated source-
+      // aware persistence. Setting them here would skip their change handlers.
+      if(el.id==='cifOutputFormat' || el.id.startsWith('cifMag'))continue;
       const value=saved.controls[el.id];
       if(value===undefined) continue;
       if(el.type==='checkbox'||el.type==='radio') el.checked=!!value;
