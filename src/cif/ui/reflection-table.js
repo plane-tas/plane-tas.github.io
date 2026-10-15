@@ -326,7 +326,10 @@ function renderReflectionPowderPlot(){
   if(part!=='N') traces.push(tick(peaks.filter(p=>p.Im>0&&inRange(p)),part==='M'?0.05:0.11,'Magnetic','#c62828','Im','I_M'));
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:56,b:70},font:{size:18},
     // The axis title is the #reflectionPlotXAxis selector placed under the plot.
-    xaxis:{title:{text:''},tickfont:{size:18},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
+    // Display from 0 (2θ, Q); the pattern itself is computed only in the
+    // instrument S2 range. d has no finite value at 2θ = 0: autorange.
+    xaxis:{title:{text:''},tickfont:{size:18},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,
+      ...(axis==='d' ? {autorange:true} : {range:[0,conv(t1)]})},
     yaxis:{tickfont:{size:18},title:{text:'Intensity (arb. units)',standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,
       range:[-(part==='all'?0.17:0.11)*yMax,1.05*yMax]},
     // Legend above the frame (top right); the FWHM field sits at the same height, top left.

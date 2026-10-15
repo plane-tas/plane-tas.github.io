@@ -1,6 +1,7 @@
 // Nuclear reflections: beam/filters, nuclear source structure and |F_N|^2 by reflection family.
 // The combined nuclear + magnetic table is rendered by reflection-table.js.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {operationsPreserveStructure} from '../cif-symmetry.js';
 export function installNuclearReflections(ctx){
   const {deps:{
     $, RL_calc, canonicalReflectionHkl, checkedValue, clamp, compareHkl, cross, dot,
@@ -107,6 +108,26 @@ function hklPassesDirectionFilter(rl,hkl,filters){
   return true;
 }
 
+// Symmetry used to group hkl into stars (multiplicity). It must be the
+// structure's actual symmetry in the structure's own setting: try the given
+// group, then the CIF's own operations, else Friedel pairs only (always valid).
+const starSymmetryCache=new WeakMap();
+function verifiedStarSymmetry(structure,sg){
+  // Keyed by the atom list: Sample-lattice overrides copy the structure object.
+  const atoms=structure?.atoms;
+  if(!Array.isArray(atoms)) return sg;
+  let perStructure=starSymmetryCache.get(atoms);
+  if(!perStructure){ perStructure=new Map(); starSymmetryCache.set(atoms,perStructure); }
+  const key=(sg?.operations||[]).join(';');
+  if(perStructure.has(key)) return perStructure.get(key);
+  const candidates=[sg,
+    structure?.symmetryOperations?.length ? {hm:'CIF symmetry operations',operations:structure.symmetryOperations} : null
+  ].filter(c=>Array.isArray(c?.operations) && c.operations.length);
+  const chosen=candidates.find(c=>operationsPreserveStructure(c.operations,atoms))
+    || {number:1,hm:'Friedel pairs only',operations:['x,y,z']};
+  perStructure.set(key,chosen);
+  return chosen;
+}
 function buildCifReflectionTable(structure,sg,wavelength,filters={alongU:true,alongV:true,withinS2Max:true},twoThetaMax=180){
   if(!structure?.lattice) throw new Error("Generated CIF has no valid lattice.");
   const lambda=Number(wavelength);
@@ -122,7 +143,7 @@ function buildCifReflectionTable(structure,sg,wavelength,filters={alongU:true,al
     throw new Error(`Reflection search is too large (${candidateCount.toLocaleString()} candidate hkl). Increase wavelength or use a smaller unit cell.`);
   }
 
-  const reciprocalOps=reciprocalSymmetryMatrices(sg);
+  const reciprocalOps=reciprocalSymmetryMatrices(verifiedStarSymmetry(structure,sg));
   const rows=[];
   const seenFamilies=new Set();
   const tol=1e-9;

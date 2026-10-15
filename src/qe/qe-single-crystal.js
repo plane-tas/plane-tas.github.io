@@ -243,6 +243,11 @@ export function createQESingleCrystal(deps){
       }
     }
 
+    // Magnetic satellites G +/- k need only the lattice-centering condition
+    // (applied above). Screw/glide/atom-position extinctions of the NUCLEAR
+    // structure factor do not extinguish magnetic scattering (MnF2 (100) at
+    // k = 0), so keep every centering-allowed parent for the satellites.
+    const magneticParents=Gpoints.slice();
     if(nuclearCifStructure){
       // Remove systematic extinctions first.  The threshold uses the absolute
       // |F|^2 scale of the structure (not the strongest DISPLAYED reflection),
@@ -257,11 +262,9 @@ export function createQESingleCrystal(deps){
       for(const p of Gpoints) p.sfNorm=(sfMax>0 && Number.isFinite(p.sf2)) ? p.sf2/sfMax : 0;
     }
 
-    // Generate magnetic satellites only after nuclear systematic/extinction
-    // filtering is complete.  This prevents k-satellites from remaining around
-    // a parent nuclear reflection that has disappeared.  The origin is retained
-    // intentionally, so +/-k around (0,0,0) continue to be shown.
-    for(const parent of Gpoints){
+    // Satellites around every centering-allowed G (including the origin),
+    // independent of the nuclear intensity of G.
+    for(const parent of magneticParents){
       const hkl=parent.hkl;
       for(const q of propagationVectors){
         const kvec=q.hkl;

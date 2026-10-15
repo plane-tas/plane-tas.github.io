@@ -353,7 +353,20 @@ function transformAxialMoment(op,m){
   const factor=op.parity*determinant3(op.R);
   return op.R.map(row=>factor*row.reduce((sum,x,j)=>sum+x*m[j],0));
 }
-function positionKey(p){ return p.map(v=>Math.round(wrap01(v)*1e8)).join(','); }
+// Symmetry images of a special position must merge even when the CIF gives
+// rounded coordinates: 0.3333/0.6667 under x-y images to 0.6666, i.e. ~1e-4
+// off, and 3-decimal files are ~1e-3 off. Exact keys kept such images as
+// extra atoms (e.g. 6 Cs instead of 2 in P6_3/mmc 2d), corrupting |F_N|^2,
+// composition and absorption. Distinct real sites are never this close.
+const SITE_MERGE_TOL=2e-3;
+function samePosition(a,b,tol=SITE_MERGE_TOL){
+  return a.every((v,i)=>{const d=v-b[i];return Math.abs(d-Math.round(d))<tol;});
+}
+// Rounded moment components (e.g. 3 decimals) cannot satisfy site symmetry
+// to 1e-7; accept symmetry-equivalent copies within ~1e-3 muB.
+function sameMoment(a,b){
+  return a.every((v,i)=>Math.abs(v-b[i])<=2e-3+1e-3*Math.max(Math.abs(v),Math.abs(b[i])));
+}
 
 function findAnisoLoop(doc){
   return doc.loops.find(lp=>
@@ -455,28 +468,34 @@ export function parseCifStructure(text){
       Biso:Number.isFinite(Biso)?Biso:0,Uaniso:U0?U0.map(r=>r.slice()):null,
       magneticMoment:sourceMoment,magneticFourier:fourier});
     const moment=magneticMomentForLabel(momentLoop,siteLabel);
-    const unique=new Map();
+    const unique=[];
     const opsToUse=(superspaceOps && fourier) ? superspaceOps : (magneticOps||symops);
     for(const op of opsToUse){
       const p=(magneticOps||superspaceOps)?applyMagneticOperator(op,xyz):applySymmetryOperation(op,xyz);
-      const key=positionKey(p);
       const R=(magneticOps||superspaceOps)?op.R:symmetryRotationMatrix(op);
       const transformedMoment=moment ? ((magneticOps||superspaceOps)?transformAxialMoment(op,moment):moment.slice()) : null;
       const transformedFourier=fourier ? {q:fourier.q.slice(),cos:fourier.cos.slice(),sin:fourier.sin.slice(),phaseSign:(op.phaseSign ?? 1),phaseShift:(op.phaseShift ?? 0),transformR:R,transformFactor:(op.parity ?? 1)*determinant3(R)} : null;
-      if(unique.has(key)){
+      const existing=unique.find(item=>samePosition(item.p,p));
+      if(existing){
+        // Images that coincide are the site-symmetry (stabilizer) images of
+        // this position; their mean is the exact special position, which
+        // removes the rounding of e.g. 0.3333 -> 1/3 (no residual intensity
+        // at reflections that are extinct for the true special position).
+        existing.sum=existing.sum.map((v,i)=>{const d=p[i]-existing.p[i];return v+existing.p[i]+d-Math.round(d);});
+        existing.count++;
         // Sunny's set_dipoles_from_mcif! rejects incompatible moments produced
         // for the same site by different magnetic symmetry operations.
-        const previous=unique.get(key).magneticMoment;
-        if(previous && transformedMoment &&
-           previous.some((v,i)=>Math.abs(v-transformedMoment[i])>1e-7*Math.max(1,Math.abs(v),Math.abs(transformedMoment[i])))){
+        const previous=existing.magneticMoment;
+        if(previous && transformedMoment && !sameMoment(previous,transformedMoment)){
           throw new Error(`Inconsistent mCIF magnetic symmetry for ${siteLabel} at (${p.map(v=>v.toFixed(6)).join(', ')}).`);
         }
       }else{
-        unique.set(key,{p,U:U0?transformSymmetricTensor(U0,R):null,magneticMoment:transformedMoment,magneticFourier:transformedFourier});
+        unique.push({p,sum:p.slice(),count:1,U:U0?transformSymmetricTensor(U0,R):null,magneticMoment:transformedMoment,magneticFourier:transformedFourier});
       }
     }
     const sourceSiteIndex=asymmetricSites.length-1;
-    for(const item of unique.values()) atoms.push({
+    for(const item of unique) item.p=item.sum.map(v=>wrap01(v/item.count));
+    for(const item of unique) atoms.push({
       element, occupancy:Number.isFinite(occupancy)?occupancy:1,
       Biso:Number.isFinite(Biso)?Biso:0, Uaniso:item.U,
       x:item.p[0],y:item.p[1],z:item.p[2], bRe:b[0],bIm:b[1],
@@ -489,15 +508,15 @@ export function parseCifStructure(text){
   // Check duplicates across *different* asymmetric labels as well: overlapping
   // magnetic orbits must not silently assign contradictory dipoles to one site.
   if((magneticOps||superspaceOps) && momentLoop){
-    const occupied=new Map();
+    const occupied=[];
     for(const atom of atoms){
       if(!Array.isArray(atom.magneticMoment)) continue;
-      const key=positionKey([atom.x,atom.y,atom.z]);
-      const existing=occupied.get(key);
-      if(existing && existing.moment.some((v,i)=>Math.abs(v-atom.magneticMoment[i])>1e-7*Math.max(1,Math.abs(v),Math.abs(atom.magneticMoment[i])))){
+      const position=[atom.x,atom.y,atom.z];
+      const existing=occupied.find(item=>samePosition(item.p,position));
+      if(existing && !sameMoment(existing.moment,atom.magneticMoment)){
         throw new Error(`Conflicting mCIF moments at (${[atom.x,atom.y,atom.z].map(v=>v.toFixed(6)).join(', ')}): ${existing.label} and ${atom.sourceLabel}.`);
       }
-      if(!existing) occupied.set(key,{moment:atom.magneticMoment,label:atom.sourceLabel});
+      if(!existing) occupied.push({p:position,moment:atom.magneticMoment,label:atom.sourceLabel});
     }
   }
   if(missing.size) throw new Error(`No neutron coherent scattering length is available for CIF atom type(s): ${[...missing].join(', ')}`);
@@ -526,6 +545,8 @@ export function parseCifStructure(text){
     incommensurateSingleQ:!!fourierInfo.supported,
     propagationVectors:fourierInfo.q ? [{id:'q1',h:fourierInfo.q[0],k:fourierInfo.q[1],l:fourierInfo.q[2]}] : [],
     symmetryOperationCount:superspaceOps?.length||magneticOps?.length||symops.length,
+    // The file's own (crystallographic) operations, in the file's setting.
+    symmetryOperations:(magneticOps||superspaceOps) ? null : symops.map(String),
     asymmetricSiteCount:asymmetricSites.length, warnings
   };
 }

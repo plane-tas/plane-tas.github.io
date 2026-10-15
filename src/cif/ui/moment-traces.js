@@ -1,6 +1,6 @@
 // Magnetic moment arrows and propagation-vector selection for the viewer.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {collinearSignAmbiguous, modulatedMoment} from '../../magnetic/magnetic-reflections.js';
+
 export function installMomentTraces(ctx){
   const {deps:{
     $, PI
@@ -137,57 +137,44 @@ function refreshMomentPropagationVectorSelect(){
 }
 function magneticStructureTraces(atoms,basis,structure){
   cifState.collinearAmbiguousDisplayed=0;
-  const q=effectivePropagationVectorForStructure();
+  cifState.magneticModelError='';
   const settings=fn.currentMomentSettings();
   if(!settings.size) return [];
-  const rotationAxis=structureMomentRotationAxisVector(basis);
+  // Incommensurate (Fourier) mCIF moments are evaluated per displayed atom;
+  // every commensurate case reads the shared magnetic model, so the arrows
+  // are exactly the moments used for the reflections and the P1 export.
+  const fourier=structure?.magnetic && !cifState.importedMagneticEditMode &&
+    (structure.atoms||[]).some(atom=>atom.magneticFourier);
+  let momentAt=null;
+  if(!fourier){
+    let model=null;
+    try{ model=fn.currentMagneticModel(); }
+    catch(err){ cifState.magneticModelError=err?.message||String(err); return []; }
+    if(!model) return [];
+    cifState.collinearAmbiguousDisplayed=model.ambiguousSites||0;
+    momentAt=fn.magneticMomentLookup(model);
+  }
   const groups=new Map();
   for(const atom of atoms){
+    // The setting supplies the arrow colour only; whether and how a spin is
+    // drawn is decided by the model (disabled sites carry a zero moment).
     const setting=atomMomentSetting(atom,settings,structure);
-    if(!setting?.enabled) continue;
-    // mCIF supplies the site-resolved magnetic moment. Preserve its canting.
-    // mCIF crystalaxis components must be transformed with the actual
-    // magnetic cell vectors (as in Sunny), not reinterpreted as UI XYZ values.
-    // mCIF moments are axial crystalaxis vectors, NOT fractional positions.
-    // Their symmetry-transformed components are mapped to physical Cartesian
-    // coordinates with the magnetic unit-cell basis exactly once (Sunny).
-    // Never synthesize a spin along c for sites missing an mCIF moment.
-    if(structure?.magnetic && !cifState.importedMagneticEditMode &&
-       !Array.isArray(atom.magneticMoment) && !atom.magneticFourier) continue;
     const frac=[Number.isFinite(atom.phaseX)?atom.phaseX:atom.x,Number.isFinite(atom.phaseY)?atom.phaseY:atom.y,Number.isFinite(atom.phaseZ)?atom.phaseZ:atom.z];
-    const crystalMoment=(Array.isArray(atom.magneticMoment)||atom.magneticFourier)
-      ? fn.atomCrystalMoment(atom,frac) : null;
-    // After an edit, user-controlled site moments and the selected model take
-    // precedence over source magnetic symmetry. Do not reuse old symmetry.
-    const moment=(!cifState.importedMagneticEditMode && crystalMoment)
-      ? fn.mcifCrystalAxisToCartesian(basis,crystalMoment)
-      : [Number(setting.mx)||0,Number(setting.my)||0,Number(setting.mz)||0];
+    // mCIF crystalaxis components are mapped to Cartesian with the magnetic
+    // cell vectors exactly once (as in Sunny).
+    const moment=fourier
+      ? ((Array.isArray(atom.magneticMoment)||atom.magneticFourier) ? fn.mcifCrystalAxisToCartesian(basis,fn.atomCrystalMoment(atom,frac)) : null)
+      : momentAt(atom.element,frac);
+    if(!moment) continue;
     const mnorm=fn.vecNorm(moment);
     if(!(mnorm>1e-12)) continue;
-    let dir=fn.vecNormalize(moment);
-    let amplitude=1;
-    if(!cifState.importedMagneticEditMode && (Array.isArray(atom.magneticMoment) || atom.magneticFourier)){
-      // Before editing, display the original symmetry/Fourier moments.
-    }else if(fn.spinEditingIsIndividual(structure)){
-      // The user supplies each supercell vector; do not synthesize k modulation.
-    }else{
-      // Same single-k model as the magnetic-reflection calculator and the
-      // mCIF export (modulatedMoment): phase 2*pi*k.r of the atom position r.
-      const kr=q.h*frac[0]+q.k*frac[1]+q.l*frac[2];
-      if(cifState.structureMomentStructureType==='collinear' && collinearSignAmbiguous(kr)) cifState.collinearAmbiguousDisplayed=(cifState.collinearAmbiguousDisplayed||0)+1;
-      const modulated=modulatedMoment(moment,kr,{mode:cifState.structureMomentStructureType,
-        axis:rotationAxis,chirality:cifState.structureMomentChirality});
-      const mod=fn.vecNorm(modulated);
-      if(cifState.structureMomentStructureType==="sinusoidal" && mod<1e-5*mnorm) continue;
-      dir=fn.vecNormalize(modulated);
-      amplitude=mod/mnorm;
-    }
+    const dir=fn.vecNormalize(moment);
     // Length is only a display multiplier. The original Cartesian moment
     // (including its magnitude in mu_B) stays unchanged for mCIF export.
     // Using the norm here preserves relative arrow lengths between distinct
     // magnetic ions: e.g. 2 mu_B and 1 mu_B display at a 2:1 ratio.
     const displayMultiplier=Number(cifState.structureMomentGlobalLength);
-    const length=(Number.isFinite(displayMultiplier) ? Math.max(0.05,displayMultiplier) : 1)*mnorm*amplitude;
+    const length=(Number.isFinite(displayMultiplier) ? Math.max(0.05,displayMultiplier) : 1)*mnorm;
     if(!(length>1e-12)) continue;
     const width=Math.max(1,Number(cifState.structureMomentGlobalWidth)||10);
     // Avoid a fixed arrowhead minimum that could dwarf small moments.
@@ -198,7 +185,7 @@ function magneticStructureTraces(atoms,basis,structure){
     // tip = center + L*dir, so the atom sits at the arrow midpoint.
     const start=fn.vecSub(center,fn.vecScale(dir,length));
     const tip=fn.vecAdd(center,fn.vecScale(dir,length));
-    const color=setting.color||fn.elementColor(atom.element);
+    const color=setting?.color||fn.elementColor(atom.element);
     const key=`${color}|${width}`;
     if(!groups.has(key)) groups.set(key,{color,width,x:[],y:[],z:[],mesh:{x:[],y:[],z:[],i:[],j:[],k:[],color}});
     const g=groups.get(key);

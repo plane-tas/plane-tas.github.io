@@ -276,6 +276,11 @@ function calculatePowder(){
     }
   }
 
+  // Magnetic satellites G +/- k need only the LATTICE-centering condition on G
+  // (already applied above). Nuclear extinctions from screw axes, glides or
+  // atom positions do NOT extinguish magnetic scattering (e.g. MnF2 (100),
+  // k = 0), so satellites are generated from the parents before that filter.
+  const magneticParents=parentCandidates.slice();
   // Match the existing Single-crystal CIF extinction handling: remove
   // effectively extinct nuclear parents only when a CIF structure factor is
   // available.  Keep the origin as a valid magnetic-satellite parent.
@@ -354,7 +359,7 @@ function calculatePowder(){
   // calculate them.  All k1/k2/k3 satellites share one red solid-line style,
   // one compact legend entry, and the same hbar-omega line length.
   const magneticUnique=new Map();
-  for(const parent of parentCandidates){
+  for(const parent of magneticParents){
     for(const kv of propagation){
       for(const sign of [1,-1]){
         const hm=add(parent.hkl,scale(kv.hkl,sign));

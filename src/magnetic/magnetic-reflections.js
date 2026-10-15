@@ -69,11 +69,11 @@ export function modulatedMoment(m,kr,{mode='collinear',axis=[0,0,1],chirality='C
 export function collinearSignAmbiguous(kr,tol=0.1){
   return Math.abs(Math.cos(twopi*Number(kr)))<tol;
 }
-export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode='collinear',axis='c',chirality='CCW',imported=false,maxAtoms=1500}){
+// Single-k motif of a NUCLEAR structure with symmetry-linked site moments
+// (CIF + k). Imported mCIF models are assembled in cif/ui/magnetic-model.js.
+export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode='collinear',axis='c',chirality='CCW',maxAtoms=1500}){
   if(!structure?.atoms?.length)throw Error('No atomic structure loaded.');
-  if(structure.incommensurateSingleQ || structure.atoms.some(a=>a.magneticFourier))
-    throw Error('Fourier-modulated mCIF requires a dedicated satellite structure-factor calculation (not implemented).');
-  const dims=imported?[1,1,1]:q.map(v=>rationalDenominator(v));
+  const dims=q.map(v=>rationalDenominator(v));
   const size=dims.reduce((a,b)=>a*b,1)*structure.atoms.length;
   if(size>maxAtoms)throw Error(`Magnetic supercell would contain ${size} atoms (limit ${maxAtoms}).`);
   const parentBasis=latticeVectors(structure.lattice);
@@ -85,32 +85,44 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
       const p=[atom.x+ix,atom.y+iy,atom.z+iz];
       const key=`${atom.sourceSiteIndex}:${structure.asymmetricSites?.[atom.sourceSiteIndex]?.label||atom.sourceLabel||atom.element}`;
       const s=settings.get(key);
-      let m;
-      if(imported){
-        m=Array.isArray(atom.magneticMoment)?cartesianMoment(atom.magneticMoment,structure.lattice):[0,0,0];
-      }else{
-        m=(s?.enabled && [s.mx,s.my,s.mz].every(Number.isFinite))?[s.mx,s.my,s.mz]:[0,0,0];
-        if(mode==='collinear' && norm(m)>1e-12 && collinearSignAmbiguous(dot(q,p))) ambiguousSites++;
-        m=modulatedMoment(m,dot(q,p),{mode,axis:rotAxis,chirality});
-      }
+      let m=(s?.enabled && [s.mx,s.my,s.mz].every(Number.isFinite))?[s.mx,s.my,s.mz]:[0,0,0];
+      if(mode==='collinear' && norm(m)>1e-12 && collinearSignAmbiguous(dot(q,p))) ambiguousSites++;
+      m=modulatedMoment(m,dot(q,p),{mode,axis:rotAxis,chirality});
+      // Biso/Uaniso travel with the site: the magnetic and nuclear amplitudes
+      // of one atom share the same Debye-Waller factor.
       sites.push({element:atom.element,occupancy:Number(atom.occupancy??1),
+        Biso:Number(atom.Biso)||0,Uaniso:atom.Uaniso||null,
         fract:p.map((x,i)=>x/dims[i]), moment:m,sourceLabel:atom.sourceLabel});
     }
   }
   const lattice={...structure.lattice,a:structure.lattice.a*dims[0],b:structure.lattice.b*dims[1],c:structure.lattice.c*dims[2]};
-  return {lattice,sites,replication:dims,source:imported?'mCIF':'Modify',ambiguousSites,
-    caveat:'Dipole approximation with the selected magnetic-ion form factors (f = 1 where none is selected). Single magnetic domain. No Debye-Waller, absorption, or instrument corrections.'};
+  return {lattice,sites,replication:dims,source:'CIF + k',ambiguousSites,
+    caveat:'Dipole approximation with the selected magnetic-ion form factors (f = 1 where none is selected). Same Debye-Waller factor as the nuclear calculation. Single magnetic domain. No absorption, extinction, or instrument corrections.'};
+}
+// Debye-Waller factor of one site, identical to nuclearStructureFactorSquared:
+// U^ij (CIF convention, along normalized a*,b*,c*) or Biso. A diagonal
+// supercell leaves the reciprocal-axis directions, hence U^ij, unchanged.
+function debyeWaller(site,hkl,q,rlen){
+  if(site.Uaniso && rlen){
+    const g=[hkl[0]*rlen[0],hkl[1]*rlen[1],hkl[2]*rlen[2]];
+    let quad=0;
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)quad+=g[i]*Number(site.Uaniso[i][j]||0)*g[j];
+    return Math.exp(-2*Math.PI*Math.PI*quad);
+  }
+  const B=Number(site.Biso)||0;
+  return B ? Math.exp(-B*q*q/(16*Math.PI*Math.PI)) : 1;
 }
 export function magneticStructureFactorSquared(motif,hkl,{formFactor=()=>1}={}){
   const Q=reciprocalVector(motif.lattice,hkl),q=norm(Q);
   if(!(q>1e-9))return 0;
+  const rlen=reciprocalBasis(motif.lattice).map(v=>norm(v)/twopi);
   const n=Q.map(x=>x/q),re=[0,0,0],im=[0,0,0];
   for(const s of motif.sites){
     if(!s.moment || norm(s.moment)<1e-12)continue;
     const v=plus(s.moment,times(n,-dot(s.moment,n)));
     const ff=Number(formFactor(s.element,q));
     if(!Number.isFinite(ff))throw Error('Invalid magnetic form factor.');
-    const amp=(s.occupancy??1)*ff;
+    const amp=(s.occupancy??1)*ff*debyeWaller(s,hkl,q,rlen);
     const phase=twopi*dot(hkl,s.fract),c=Math.cos(phase),sn=Math.sin(phase);
     for(let i=0;i<3;i++){re[i]+=amp*v[i]*c;im[i]+=amp*v[i]*sn;}
   }

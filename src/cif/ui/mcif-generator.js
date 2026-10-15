@@ -10,7 +10,7 @@ export function installMcifGenerator(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     generateP1McifForReview, initMcifGeneratorActions, initializeUnifiedOutputActions,
-    invalidateGeneratedMcif
+    invalidateGeneratedMcif, replaceMcifMoments, cartesianToMcifCrystalAxis:crystalComponents
   });
 
 // mCIF Generator: preserve the complete source symmetry/orbit specification.
@@ -150,18 +150,10 @@ function importedMagneticModel(){
   }
   let model=source;
   if(cifState.importedMagneticEditMode){
-    // Modify (linked sites): apply the edited site moments through the
-    // file's magnetic symmetry by rewriting the moment loop and re-parsing.
-    const records=[];
-    (source.asymmetricSites||[]).forEach((site,siteIndex)=>{
-      const key=fn.momentKey({...site,siteIndex});
-      const setting=live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(site,source);
-      if(!setting.enabled) return;
-      const v=crystalComponents(source.lattice,[Number(setting.mx)||0,Number(setting.my)||0,Number(setting.mz)||0]);
-      records.push(`${site.label} ${v.map(x=>Number(x.toFixed(8))).join(" ")} mx,my,mz`);
-    });
-    if(!records.length) throw new Error("No spin sites enabled. Enable at least one spin.");
-    model=parseCifStructure(replaceMcifMoments(getSelectedCifText(),records));
+    // Modify (linked sites): the edited site moments propagated through the
+    // file's magnetic symmetry -- the same model as the viewer and reflections.
+    model=fn.editedMcifStructure(source,live);
+    if(!model) throw new Error("No spin sites enabled. Enable at least one spin.");
   }
   return {lattice:model.lattice,atoms:model.atoms.map(atom=>({atom,setting:fn.defaultMomentSetting(atom,model)}))};
 }

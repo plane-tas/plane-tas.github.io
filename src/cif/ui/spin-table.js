@@ -9,7 +9,7 @@ export function installSpinTable(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     atomCrystalMoment, currentMomentSettings, defaultMomentSetting, individualSettingForAtom,
-    individualSpinCandidates, initialIndividualSpin, magneticCandidateSites,
+    individualSpinCandidates, individualSpinDimensions, initialIndividualSpin, magneticCandidateSites,
     mcifCrystalAxisToCartesian, momentKey, resolveIndividualSpin, spinEditingIsIndividual,
     spinTableFilteredSites, updateMagneticMomentRows
   });

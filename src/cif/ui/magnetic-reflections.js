@@ -1,7 +1,7 @@
 // Magnetic Bragg reflections for the combined reflection table, and the
 // per-element magnetic-ion (form factor) selectors.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {buildMagneticMotif, explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, magneticElementsOfMotif, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
+import {explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, magneticElementsOfMotif} from '../../magnetic/magnetic-reflections.js';
 import {availableMagneticIons} from '../../magnetic/magnetic-form-factor.js';
 import {chargeBalancedOxidationStates, compositionOfSites, preferredOxidationState} from '../../magnetic/oxidation-states.js';
 
@@ -74,26 +74,9 @@ function selectedMagneticIons(){
   }
   return out;
 }
-function magneticModelFromEditor(){
-  // The generated CIF draft contains *nuclear* atom sites only and may take
-  // precedence in the 3-D viewer. Never let that draft silently replace an
-  // explicitly loaded magnetic CIF when computing magnetic intensities.
-  const importedStructure=getSelectedCifStructure();
-  const current=importedStructure?.magnetic
-    ? importedStructure : fn.currentStructureForViewer()?.structure;
-  if(!current) return null;
-  if(cifState.structureSpinEditingMode==='individual') throw new Error('Magnetic reflections: switch Spins Mode to linked Sites; per-atom manual supercell edits are not yet supported.');
-  const fromFile=!!current.magnetic && !cifState.importedMagneticEditMode;
-  const selectedQ=fn.effectivePropagationVectorForStructure();
-  const settings=new Map(cifState.structureMomentSettings);
-  for(const [key,value] of fn.currentMomentSettings())settings.set(key,value);
-  // For Source=mCIF, the parsed expanded atoms carry the actual magnetic
-  // moments; the nuclear generator's zero-valued UI rows must not erase them.
-  return buildMagneticMotif({structure:current,settings,
-    q:[selectedQ.h,selectedQ.k,selectedQ.l],imported:fromFile,
-    mode:cifState.structureMomentStructureType,axis:cifState.structureMomentRotationAxis,
-    chirality:cifState.structureMomentChirality});
-}
+// The shared magnetic model (magnetic-model.js): identical to the 3-D spins
+// and to the P1 mCIF export.
+function magneticModelFromEditor(){ return fn.currentMagneticModel(); }
 
 // Magnetic Bragg peaks for the current beam. Rows are indexed in the parent
 // (crystallographic) cell when it is known, with |F_M|^2 per parent cell in
@@ -111,24 +94,20 @@ function computeMagneticReflections({wavelength,twoThetaMax=180}){
   try{
     const ionByElement=selectedMagneticIons();
     const raw=magneticBraggPeaks(motif,wavelength,{twoThetaMax,ionByElement});
-    let message=motif.ambiguousSites ? `Collinear: ${motif.ambiguousSites} magnetic atom(s) lie on a node of cos(2πk·r) (k·r ≈ 1/4 or 3/4), so their sign is arbitrary for this k. Check the 3-D structure; use Sinusoidal, another k, or Manual spins if it is not the intended structure.` : '';
+    let message=motif.source==='mCIF (modified site moments)' ? 'Modified mCIF: edited site moments are applied through the file\'s magnetic symmetry; the propagation vector and structure type apply only to a nuclear CIF.' : '';
+    message+=(message&&motif.ambiguousSites?' ':'')+(motif.ambiguousSites ? `Collinear: ${motif.ambiguousSites} magnetic atom(s) lie on a node of cos(2πk·r) (k·r ≈ 1/4 or 3/4), so their sign is arbitrary for this k. Check the 3-D structure; use Sinusoidal, another k, or Manual spins if it is not the intended structure.` : '');
     if(!raw.length){
       const unrestricted=twoThetaMax<179.999 ? magneticBraggPeaks(motif,wavelength,{twoThetaMax:180,ionByElement}) : [];
       message+=(message?' ':'')+(unrestricted.length
         ? `${unrestricted.length} magnetic reflections exist beyond the instrument 2θ limit (${Number(twoThetaMax).toFixed(2)}°).`
         : 'No magnetic reflections in the selected wavelength range.');
     }
-    // Only recover the parent reference for mCIFs written by this generator.
-    // All structure factors remain evaluated in the actual magnetic cell.
-    const fileText=getSelectedCifText();
-    const fileQ=fn.propagationVectorsFromMcif(fileText,getSelectedCifStructure());
-    const parentInfo=(motif.source==='mCIF' && fileQ.length<=1)
-      ? parentIndexingFromMcif(fileText,motif.lattice,fileQ.length?[fileQ[0].h,fileQ[0].k,fileQ[0].l]:null) : null;
-    const replication=parentInfo?.replication || motif.replication;
-    const parentKnown=!!parentInfo || motif.source!=='mCIF';
-    // |F|^2 is evaluated in the magnetic cell, which contains N parent cells.
-    // Bragg intensities scale as |F|^2/V^2, so |F_M|^2/N^2 is directly
-    // comparable with the nuclear |F_N|^2 per parent cell.
+    // Structure factors are evaluated in the magnetic cell. When the parent
+    // (crystallographic) cell is known, index in it: the magnetic cell holds
+    // N parent cells and intensities scale as |F|^2/V^2, so |F_M|^2/N^2 is
+    // directly comparable with the nuclear |F_N|^2 per parent cell.
+    const replication=motif.parentReplication;
+    const parentKnown=Array.isArray(replication);
     const nParent=parentKnown ? replication.reduce((a,b)=>a*b,1) : 1;
     const rows=raw.map(row=>({
       hkl:parentKnown ? hklInParentCell(row.hkl,replication) : row.hkl,

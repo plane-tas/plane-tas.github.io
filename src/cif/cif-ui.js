@@ -11,6 +11,7 @@ import {installStructureCamera} from './ui/structure-camera.js';
 import {installUnitCell} from './ui/unit-cell.js';
 import {installAtomTable} from './ui/atom-table.js';
 import {installSpinTable} from './ui/spin-table.js';
+import {installMagneticModel} from './ui/magnetic-model.js';
 import {installBondRules} from './ui/bond-rules.js';
 import {installStructureTraces} from './ui/structure-traces.js';
 import {installMomentTraces} from './ui/moment-traces.js';
@@ -48,6 +49,7 @@ export function createCifUI(deps){
   installUnitCell(ctx);
   installAtomTable(ctx);
   installSpinTable(ctx);
+  installMagneticModel(ctx);
   installBondRules(ctx);
   installStructureTraces(ctx);
   installMomentTraces(ctx);
