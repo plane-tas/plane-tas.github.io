@@ -5,9 +5,9 @@ export function installGeneratorOutput(ctx){
     $, currentInstrument, effectiveS2MaxAtEi, getSelectedCifStructure, getSelectedCifText
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    downloadCifReflectionTable, downloadGeneratedCif, findGeneratorSpaceGroup, generateCifForReview,
+    downloadGeneratedCif, findGeneratorSpaceGroup, generateCifForReview,
     loadCifIntoGenerator, loadParsedCifIntoGenerator, recalculateGeneratedReflections,
-    setCifOutputTab, setGeneratorReflectionMode, setUnifiedGeneratorOutputTab, showUnifiedCifPreview
+    setCifOutputTab, setUnifiedGeneratorOutputTab, showUnifiedCifPreview
   });
 
 function recalculateGeneratedReflections(){
@@ -17,35 +17,54 @@ function recalculateGeneratedReflections(){
     fn.clearCifReflectionTable('Complete valid Unit Cell / Positions values to calculate nuclear reflections.');
     return;
   }
-  const source=fn.nuclearReflectionSource();
-  if(!source){
-    const unsupportedParent=!!getSelectedCifStructure()?.magnetic &&
-      !fn.crystallographicStructureFromMcif(getSelectedCifStructure(),getSelectedCifText());
-    fn.clearCifReflectionTable(unsupportedParent
-      ? 'This mCIF does not define a safely convertible parent cell; nuclear reflections were not calculated in the magnetic cell.'
-      : 'Select a CIF/mCIF or Generate CIF to calculate nuclear reflections.');
-    return;
-  }
+  let beam,twoThetaMax=180,filters;
   try{
-    const beam=fn.currentCifReflectionBeam();
-    const filters=fn.currentCifReflectionFilters();
-    let twoThetaMax=180;
+    beam=fn.currentCifReflectionBeam();
+    filters=fn.currentCifReflectionFilters();
     if(filters.withinS2Max){
       const inst=currentInstrument();
       twoThetaMax=Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf));
       if(!Number.isFinite(twoThetaMax)) throw new Error("Instrument 2θ maximum is unavailable.");
     }
-    const liveSource=cifState.liveEditorNuclearSource || fn.nuclearReflectionWithSampleLattice(source);
-    cifState.lastGeneratedReflections=fn.buildCifReflectionTable(liveSource.structure,liveSource.spaceGroup,beam.wavelength,filters,twoThetaMax);
-    fn.renderCifReflectionTable();
-    const resultNotice=$('cifReflectionEstimateNotice');
-    if(resultNotice){
-      resultNotice.hidden=!source.estimatedParent;
-      resultNotice.textContent=source.estimatedParent?'Note: Nuclear reflections use an estimated crystallographic cell; verify the parent space group and cell transformation before quantitative use.':'';
-    }
-    if($("cifDownloadTable")) $("cifDownloadTable").disabled=!cifState.lastGeneratedReflections.length;
-  }catch(err){
-    fn.clearCifReflectionTable(err?.message||String(err));
+  }catch(err){ fn.clearCifReflectionTable(err?.message||String(err)); return; }
+  const notes=[];
+  // Powder graph range: instrument S2 min to effective S2 max at this energy.
+  let plotRange=null;
+  try{
+    const inst=currentInstrument();
+    plotRange={min:Number($('S2min')?.value),max:Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf))};
+  }catch(_e){ plotRange=null; }
+  // Nuclear: all reflection families (direction filters are applied at display time).
+  let nuclear=null;
+  const source=fn.nuclearReflectionSource();
+  if(source){
+    try{
+      const liveSource=cifState.liveEditorNuclearSource || fn.nuclearReflectionWithSampleLattice(source);
+      const families=fn.buildCifReflectionTable(liveSource.structure,liveSource.spaceGroup,beam.wavelength,
+        {...filters,alongU:false,alongV:false},twoThetaMax);
+      nuclear={families,lattice:liveSource.structure.lattice,wavelength:beam.wavelength};
+    }catch(err){ notes.push(`Nuclear: ${err?.message||String(err)}`); }
+  }else if(getSelectedCifStructure()?.magnetic && !fn.crystallographicStructureFromMcif(getSelectedCifStructure(),getSelectedCifText())){
+    notes.push('This mCIF does not define a safely convertible parent cell; nuclear reflections are not calculated (hkl in the magnetic cell).');
+  }
+  // Magnetic: only when a spin is set; errors are reported without hiding nuclear peaks.
+  // Incommensurate mCIF: magnetic satellite intensities are not implemented.
+  const incommensurate=fn.selectedCifIsIncommensurate();
+  const magnetic=incommensurate ? {rows:[],parentKnown:true,lattice:null,message:''}
+    : fn.computeMagneticReflections({wavelength:beam.wavelength,twoThetaMax});
+  if(incommensurate){
+    fn.refreshMagneticIonSelectors?.(null);
+    notes.push('Incommensurate mCIF: only nuclear reflections are calculated; magnetic intensities and mCIF export are not available.');
+  }
+  if(magnetic.message) notes.push(magnetic.message);
+  if(!nuclear && !magnetic.rows.length){
+    fn.clearCifReflectionTable(notes.join(' ') || 'Select a CIF/mCIF or Generate CIF to calculate reflections.');
+    return;
+  }
+  fn.setReflectionData({nuclear,magnetic,notes,wavelength:beam.wavelength,incommensurate,plotRange});
+  if(estimateNotice && source?.estimatedParent){
+    estimateNotice.hidden=false;
+    estimateNotice.textContent='Note: Nuclear reflections use an estimated crystallographic cell; verify the parent space group and cell transformation before quantitative use.';
   }
 }
 
@@ -74,8 +93,7 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   if(persist && cifState.generatorOutputTabRestored) try{ localStorage.setItem(cifState.GENERATOR_OUTPUT_TAB_STORAGE_KEY,name); }catch(_e){}
   fn.requestGeneratorViewportHeightSync();
   if(name==='structure') requestAnimationFrame(fn.renderCifStructureIfVisible);
-  if(name==='reflections' && $('generatorReflectionsMagnetic')?.classList.contains('active'))
-    fn.calculateMagneticReflectionTable();
+  if(name==='reflections') requestAnimationFrame(()=>fn.renderReflectionPowderPlot?.());
 }
 function setCifOutputTab(tab){
   setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
@@ -91,27 +109,6 @@ function setGeneratorMode(name){
   }
   try{localStorage.setItem('tas-simulator-generator-mode-v1',name);}catch(_e){}
 }
-function setGeneratorReflectionMode(_requestedMode){
-  // Magnetic reflection intensity remains under validation. Disable the tab
-  // at the navigation layer, including persisted "magnetic" selections from
-  // older builds, without deleting any of the calculation implementation.
-  const name='nuclear';
-  const magneticTab=$('generatorReflectionsMagnetic');
-  if(magneticTab){
-    magneticTab.disabled=true;
-    magneticTab.setAttribute('aria-disabled','true');
-    magneticTab.tabIndex=-1;
-  }
-  for(const [mode,tabId,paneId] of [['nuclear','generatorReflectionsNuclear','generatorNuclearReflectionsPane'],['magnetic','generatorReflectionsMagnetic','generatorMagneticReflectionsPane']]){
-    const on=mode===name;
-    $(tabId)?.classList.toggle('active',on);
-    $(tabId)?.setAttribute('aria-selected',String(on));
-    $(tabId)?.setAttribute('tabindex',on?'0':'-1');
-    $(paneId)?.classList.toggle('hidden',!on);
-  }
-  try{localStorage.setItem(cifState.GENERATOR_REFLECTION_MODE_KEY,name);}catch(_e){}
-}
-
 function generateCifForReview(){
   const generated=fn.buildGeneratedCif();
   cifState.lastGeneratedCifText=generated.text;
@@ -133,22 +130,6 @@ function downloadGeneratedCif(text,filename){
   const blob=new Blob([text],{type:"chemical/x-cif;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),0);
-}
-
-function downloadCifReflectionTable(){
-  if(!cifState.lastGeneratedReflections.length) throw new Error("No reflections are available to download.");
-  const rows=fn.sortedCifReflections(cifState.lastGeneratedReflections,cifState.cifReflectionSort);
-  const csv=[
-    ["h","k","l","|F|^2 (barn)","Multiplicity","Total |F|^2 (barn)","2theta (deg)","Q (A^-1)","d (A)"].join(","),
-    ...rows.map(r=>[r.hkl[0],r.hkl[1],r.hkl[2],r.intensity/100,r.multiplicity,r.totalIntensity/100,r.twoTheta,r.q,r.d].join(","))
-  ].join("\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  const source=fn.nuclearReflectionSource();
-  a.href=url; a.download=`${fn.cleanCifBaseName(source?.fileName||"selected_structure.cif")}_reflection_table.csv`;
-  document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),0);
 }
 

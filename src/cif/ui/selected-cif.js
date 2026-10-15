@@ -133,7 +133,6 @@ function updateImportedUnitCellPanels(parsed,text){
 function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   cifState.liveEditorNuclearSource=null;
   cifState.liveEditorNuclearInvalid=false;
-  cifState.magneticTableHasBeenCalculated=false;
   const parsed=parseCifStructure(text);
   const cifText=String(text??"");
   const importedQ=fn.propagationVectorsFromMcif(cifText,parsed);
@@ -235,6 +234,8 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   clearError();
   scheduleRecalc();
   fn.renderCifStructureIfVisible();
+  // A different structure can carry spins on different elements.
+  fn.refreshMagneticIonSelectors?.();
   return parsed;
 }
 
@@ -246,7 +247,6 @@ async function selectCifFile(file){
 function clearSelectedCif(){
   cifState.liveEditorNuclearSource=null;
   cifState.liveEditorNuclearInvalid=false;
-  cifState.magneticTableHasBeenCalculated=false;
   fn.discardStructureEditingSession();
   setSelectedCifState(null,"","");
   updateImportedUnitCellPanels(null,"");

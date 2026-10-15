@@ -473,11 +473,6 @@
 #structurePanel .generator-shared-file .cif-generator-source-row{
   min-width:0;max-width:100%;
 }
-#structurePanel .generator-reflection-tabs > button:last-child{border-right:0;}
-#structurePanel .generator-reflection-tabs > button.active{
-  background:#fff;
-  border-color:#98a7b6;
-}
 #structurePanel .generator-mode-pane .cif-generator-input-pane{
   box-sizing:border-box;
   display:block;
@@ -515,7 +510,6 @@
   padding:calc(12px * var(--tas-density));
   overflow:hidden;
 }
-#structurePanel .generator-reflection-tabs{margin-bottom:calc(12px * var(--tas-density));}
 #structurePanel .generator-reflections-notice{
   margin:calc(12px * var(--tas-density)) 0;
   color:#646d76;

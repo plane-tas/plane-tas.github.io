@@ -1,6 +1,7 @@
 // Magnetic moments: spin settings, Fourier/explicit moments and the Spins table.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {rationalApprox} from '../mcif-export.js';
+import {modulatedMoment} from '../../magnetic/magnetic-reflections.js';
 
 export function installSpinTable(ctx){
   const {deps:{
@@ -76,13 +77,11 @@ function initialIndividualSpin(site,structure){
   const q=fn.effectivePropagationVectorForStructure();
   const approx=[q.h,q.k,q.l].map(v=>rationalApprox(v));
   const vec=[parent.mx,parent.my,parent.mz];
-  const phase=2*PI*[site.x,site.y,site.z].reduce((sum,v,i)=>sum+v*approx[i].n/approx[i].d,0);
-  let result=vec;
-  if(cifState.structureMomentStructureType==='helical'){
-    const b=fn.directLatticeBasis(structure.lattice);
-    result=fn.rotateVectorAroundAxis(vec,fn.structureMomentRotationAxisVector(b),(cifState.structureMomentChirality==='CW'?1:-1)*phase);
-  }else if(cifState.structureMomentStructureType==='sinusoidal') result=fn.vecScale(vec,Math.cos(phase));
-  else if(Math.cos(phase)<0)result=fn.vecScale(vec,-1);
+  // Phase 2*pi*k.r of this supercell site's position (see modulatedMoment).
+  const kL=[site.x,site.y,site.z].reduce((sum,v,i)=>sum+Number(v)*approx[i].n/approx[i].d,0);
+  const b=fn.directLatticeBasis(structure.lattice);
+  const result=modulatedMoment(vec,kL,{mode:cifState.structureMomentStructureType,
+    axis:fn.structureMomentRotationAxisVector(b),chirality:cifState.structureMomentChirality});
   return {...parent,mx:result[0],my:result[1],mz:result[2]};
 }
 

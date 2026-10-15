@@ -344,6 +344,7 @@ function globalUIPersistentControls(){
     const type=String(el.type||'').toLowerCase();
     if(['button','submit','file'].includes(type)) return false;
     if(el.readOnly) return false; // derived outputs are recomputed, not restored
+    if(el.dataset.noPersist!==undefined) return false; // per-file choices (magnetic ion)
     return true;
   });
 }

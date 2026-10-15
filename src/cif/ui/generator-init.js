@@ -262,15 +262,9 @@ async function initializeCifGenerator(){
     for(const button of document.querySelectorAll("[data-generator-output-tab]")){
       button.addEventListener("click",()=>fn.setUnifiedGeneratorOutputTab(button.dataset.generatorOutputTab,{persist:true}));
     }
-    // Only Nuclear can be selected until magnetic reflections are validated.
-    $('generatorReflectionsNuclear')?.addEventListener('click',()=>fn.setGeneratorReflectionMode('nuclear'));
-    // Attach the actual Calculate / CSV / BNS buttons. The magnetic pane can
-    // be visible without these listeners if only the tab switch is wired.
-    fn.initializeMagneticReflections();
+    // Combined nuclear + magnetic reflection table (sorting, row selection, display options).
+    fn.initializeReflectionTable();
     fn.initializeGeneratorTableOutsideClick();
-    let savedReflectionMode='nuclear';
-    try{savedReflectionMode=localStorage.getItem(cifState.GENERATOR_REFLECTION_MODE_KEY)||'nuclear';}catch(_e){}
-    fn.setGeneratorReflectionMode(savedReflectionMode);
     $("tabCifGenerator")?.addEventListener("click",()=>requestAnimationFrame(fn.renderCifStructureIfVisible));
     if($("cifSaveFigure")) $("cifSaveFigure").onclick=()=>fn.saveStructureFigure().catch(err=>{alert(`Save figure failed: ${err?.message||err}`);});
     
@@ -351,12 +345,6 @@ async function initializeCifGenerator(){
     });
     $("propagationVectors")?.addEventListener("click",()=>requestAnimationFrame(propagationStructureRefresh));
     $("addPropagationVector")?.addEventListener("click",()=>requestAnimationFrame(propagationStructureRefresh));
-    for(const th of document.querySelectorAll(".cif-sortable-th:not(.magnetic-sortable-th)")){
-      const activate=()=>fn.setCifReflectionSort(th.dataset.sortKey);
-      th.addEventListener("click",activate);
-      th.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();activate();}});
-    }
-    fn.updateCifReflectionSortHeaders();
     const reflectionFilterIds=[
       "cifReflectionAlongU","cifReflectionAlongV",
       "cifReflectionWithinS2Max","cifReflectionLambdaHalf"

@@ -1,5 +1,6 @@
 // Magnetic moment arrows and propagation-vector selection for the viewer.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {modulatedMoment} from '../../magnetic/magnetic-reflections.js';
 export function installMomentTraces(ctx){
   const {deps:{
     $, PI
@@ -162,27 +163,22 @@ function magneticStructureTraces(atoms,basis,structure){
       : [Number(setting.mx)||0,Number(setting.my)||0,Number(setting.mz)||0];
     const mnorm=fn.vecNorm(moment);
     if(!(mnorm>1e-12)) continue;
-    const basePhase=2*PI*(q.h*frac[0]+q.k*frac[1]+q.l*frac[2]);
     let dir=fn.vecNormalize(moment);
     let amplitude=1;
     if(!cifState.importedMagneticEditMode && (Array.isArray(atom.magneticMoment) || atom.magneticFourier)){
       // Before editing, display the original symmetry/Fourier moments.
     }else if(fn.spinEditingIsIndividual(structure)){
       // The user supplies each supercell vector; do not synthesize k modulation.
-    }else if(cifState.structureMomentStructureType==="helical"){
-      const chiralitySign=cifState.structureMomentChirality==="CW" ? 1 : -1;
-      dir=fn.vecNormalize(rotateVectorAroundAxis(moment,rotationAxis,chiralitySign*basePhase));
-    }else if(cifState.structureMomentStructureType==="sinusoidal"){
-      amplitude=Math.cos(basePhase);
-      if(Math.abs(amplitude)<1e-5) continue;
-      if(amplitude<0) dir=fn.vecScale(dir,-1);
-      amplitude=Math.abs(amplitude);
     }else{
-      // Collinear includes the former Uniform mode: k = 0 gives the same
-      // moment in every cell, while half-integer propagation components give
-      // the usual parallel/antiparallel AFM alternation.
-      const phaseAmplitude=Math.cos(basePhase);
-      if(phaseAmplitude<0) dir=fn.vecScale(dir,-1);
+      // Same single-k model as the magnetic-reflection calculator and the
+      // mCIF export (modulatedMoment): phase 2*pi*k.r of the atom position r.
+      const kr=q.h*frac[0]+q.k*frac[1]+q.l*frac[2];
+      const modulated=modulatedMoment(moment,kr,{mode:cifState.structureMomentStructureType,
+        axis:rotationAxis,chirality:cifState.structureMomentChirality});
+      const mod=fn.vecNorm(modulated);
+      if(cifState.structureMomentStructureType==="sinusoidal" && mod<1e-5*mnorm) continue;
+      dir=fn.vecNormalize(modulated);
+      amplitude=mod/mnorm;
     }
     // Length is only a display multiplier. The original Cartesian moment
     // (including its magnitude in mu_B) stays unchanged for mCIF export.

@@ -1,6 +1,7 @@
 // Commensurate magnetic structure exporter. The displayed spins, not the
 // parent crystallographic space group, determine the retained magnetic group.
 import {parseCifDocument, parseCifStructure} from './cif-structure.js';
+import {modulatedMoment} from '../magnetic/magnetic-reflections.js';
 
 const wrap=x=>((x%1)+1)%1;
 const near=(a,b,tol=2e-5)=>Math.abs(a-b)<=tol;
@@ -42,15 +43,24 @@ function parseSpatialOperations(source, fallback=[]){
   if(!out.some(op=>op.R.every((r,i)=>r.every((x,j)=>x===(i===j?1:0)))&&op.t.every(x=>nearFrac(x,0)))) out.unshift({R:[[1,0,0],[0,1,0],[0,0,1]],t:[0,0,0]});
   return out;
 }
-export function rationalApprox(q,maxDenom=16,tol=0.007){
+// Same rule as the magnetic-reflection calculator (rationalDenominator):
+// k must be an exact fraction with denominator <= 24 (enter e.g. 1/3, not 0.33).
+export function rationalApprox(q,maxDenom=24,tol=1e-6){
   let best=null;
   for(let d=1;d<=maxDenom;d++){
     const n=Math.round(q*d),err=Math.abs(q-n/d);
     if(err<=tol && (!best||d<best.d||d===best.d&&err<best.err))best={n,d,err};
   }
-  if(!best) throw new Error(`k=${q} cannot be approximated with denominator <=${maxDenom} (tolerance ${tol}).`);
+  if(!best) throw new Error(`k = ${q} is not a fraction with denominator ≤ ${maxDenom}. Enter k as an exact fraction (e.g. 1/3); incommensurate k cannot be exported.`);
   return best;
 }
+// Data values (cell, coordinates, occupancy, moments) must be plain decimals:
+// CIF readers such as VESTA do not evaluate "13/100" and would read 13.
+function dec(x){
+  const n=clean(Number(x));
+  return String(Number(n.toFixed(8)));
+}
+// Rational form, only for symmetry-operation strings and the k vector.
 function fmt(x){
   const n=clean(x);
   for(let d=1;d<=192;d++){const p=Math.round(n*d);if(Math.abs(n-p/d)<1e-8)return d===1?String(p):`${p}/${d}`;}
@@ -64,7 +74,7 @@ function opText(op){
     if(Math.abs(shift)>1e-9)s+=(s?'+':'')+fmt(shift);
     return s||'0';
   });
-  return `${expr.join(',')},${op.parity}`;
+  return `${expr.join(',')},${op.parity>0?'+1':'-1'}`;
 }
 function spinMatch(a,b,tol=0.0002){return a.every((x,i)=>near(x,b[i],tol*Math.max(1,Math.abs(x),Math.abs(b[i]))));}
 function findSite(sites,pos,element,occ){
@@ -94,7 +104,7 @@ function toCrystal(cart,l){
   return [dot(cart,cross(B,C)),dot(cart,cross(C,A)),dot(cart,cross(A,B))].map(x=>x/volume);
 }
 function fromCrystal(crystal,l){const v=basis(l).map(b=>{const n=Math.hypot(...b);return b.map(x=>x/n);});return [0,1,2].map(i=>v.reduce((s,col,j)=>s+col[i]*crystal[j],0));}
-function latticeText(l){return ['a','b','c','alpha','beta','gamma'].map(k=>`_cell_${k.startsWith('angle')?'':'length_'}${k} ${fmt(l[k])}`);}
+function latticeText(l){return ['a','b','c','alpha','beta','gamma'].map(k=>`_cell_${k.startsWith('angle')?'':'length_'}${k} ${dec(l[k])}`);}
 function catalogOps(sites,parentOps,N){
   const candidates=[];
   const unique=new Set();
@@ -152,11 +162,6 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
   const lattice={...structure.lattice,a:structure.lattice.a*N[0],b:structure.lattice.b*N[1],c:structure.lattice.c*N[2]};
   const norm=Math.hypot(...axis);
   const u=norm>1e-10?axis.map(x=>x/norm):[0,0,1];
-  const rotate=(v,angle)=>{
-    const cross=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
-    const dot=u.reduce((s,x,i)=>s+x*v[i],0),c=Math.cos(angle),s=Math.sin(angle);
-    return v.map((x,i)=>x*c+cross[i]*s+u[i]*dot*(1-c));
-  };
   const sites=[];
   const chosen=q.map((v,i)=>approx[i].n/approx[i].d);
   for(let ix=0;ix<N[0];ix++)for(let iy=0;iy<N[1];iy++)for(let iz=0;iz<N[2];iz++){
@@ -166,13 +171,12 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
       const setting=individualSettings ? individual : (settings[atom.sourceSiteIndex]||{enabled:false,mx:0,my:0,mz:0});
       const pos0=[atom.x+ix,atom.y+iy,atom.z+iz];
       const pos=pos0.map((v,i)=>wrap(v/N[i]));
-      const phase=2*Math.PI*chosen.reduce((s,k,i)=>s+k*pos0[i],0);
       let moment=setting.enabled?[setting.mx,setting.my,setting.mz].map(Number):[0,0,0];
       if(moment.some(v=>!Number.isFinite(v)))throw new Error(`Invalid moment for ${atom.sourceLabel}.`);
       if(setting.enabled && !individualSettings){
-        if(mode==='helical')moment=rotate(moment,(chirality==='CW'?1:-1)*phase);
-        else if(mode==='sinusoidal')moment=moment.map(v=>v*Math.cos(phase));
-        else if(Math.cos(phase)<0)moment=moment.map(v=>-v);
+        // Same convention as the magnetic-reflection calculator and the
+        // viewer: the phase is 2*pi*k.r of the atomic position r.
+        moment=modulatedMoment(moment,chosen[0]*pos0[0]+chosen[1]*pos0[1]+chosen[2]*pos0[2],{mode,axis:u,chirality});
       }
       sites.push({pos,element:atom.element,occupancy:atom.occupancy,moment:toCrystal(moment,lattice),sourceLabel:atom.sourceLabel});
     }
@@ -196,9 +200,11 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
   }
   const parentGroup=parentSpaceGroupMetadata(source);
   const nuclearOperations=nuclearOperationsFromMagnetic(ops);
-  const lines=[`data_generated_magnetic_structure`, '# Commensurate magnetic supercell generated from user-entered moments.', '# Magnetic symmetry operators were checked against every decorated atomic site.',`# Original k: ${q.join(' ')}`,
-    `_cell_length_a ${fmt(lattice.a)}` ,`_cell_length_b ${fmt(lattice.b)}` ,`_cell_length_c ${fmt(lattice.c)}`,
-    `_cell_angle_alpha ${fmt(lattice.alpha)}`,`_cell_angle_beta ${fmt(lattice.beta)}`,`_cell_angle_gamma ${fmt(lattice.gamma)}`,
+  // CIF2 header and MAGNDATA-style layout so that FullProf (mCIF_to_PCR),
+  // VESTA and other magCIF readers accept the file.
+  const lines=['#\\#CIF_2.0',`data_generated_magnetic_structure`, '# Commensurate magnetic supercell generated from user-entered moments.', '# Magnetic symmetry operators were checked against every decorated atomic site.',`# Original k: ${q.join(' ')}`,
+    `_cell_length_a ${dec(lattice.a)}` ,`_cell_length_b ${dec(lattice.b)}` ,`_cell_length_c ${dec(lattice.c)}`,
+    `_cell_angle_alpha ${dec(lattice.alpha)}`,`_cell_angle_beta ${dec(lattice.beta)}`,`_cell_angle_gamma ${dec(lattice.gamma)}`,
     ...parentGroup,
     // magCIF child_transform records the actual magnetic supercell relative
     // to the nuclear parent. _cell_length_* remains the child-cell lattice.
@@ -207,13 +213,16 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
       `_parent_space_group.child_transform_Pp_abc '${N.map((n,i)=>n===1?['a','b','c'][i]:`${n}${['a','b','c'][i]}`).join(',')};0,0,0'`
     ] : []),
     ...(p1Only ? ["_space_group_IT_number 1", "_space_group_name_H-M_alt 'P 1'"] : []),
-    "_space_group_magn.name_BNS '?'",'',
+    // Magnetic P1 is BNS 1.1; other groups are not classified here.
+    ...(p1Only ? ['_space_group_magn.number_BNS 1.1','_space_group_magn.name_BNS "P1"'] : ["_space_group_magn.name_BNS '?'"]),'',
     // Explicit ordinary-space-group operations let non-magnetic CIF readers
     // retain the nuclear symmetry instead of silently falling back to P1.
     'loop_', '_space_group_symop_id', '_space_group_symop_operation_xyz',
-    ...nuclearOperations.map((op,i)=>`${i+1} '${op}'`), '',
-    'loop_', '_parent_propagation_vector.id', '_parent_propagation_vector.kxkykz', `k1 '[${q.map(fmt).join(' ')}]'`, '',
-    'loop_','_space_group_symop_magn_operation.id','_space_group_symop_magn_operation.xyz',...ops.map((o,i)=>`${i+1} '${opText(o)}'`),'',
+    ...nuclearOperations.map((op,i)=>`${i+1} ${op}`), '',
+    'loop_', '_parent_propagation_vector.id', '_parent_propagation_vector.kxkykz', `k1 [${q.map(fmt).join(' ')}]`, '',
+    // Unquoted operators and an explicit centering loop, as in MAGNDATA files.
+    'loop_','_space_group_symop_magn_operation.id','_space_group_symop_magn_operation.xyz',...ops.map((o,i)=>`${i+1} ${opText(o)}`),'',
+    'loop_','_space_group_symop_magn_centering.id','_space_group_symop_magn_centering.xyz','1 x,y,z,+1','',
     'loop_','_atom_site_label','_atom_site_type_symbol','_atom_site_fract_x','_atom_site_fract_y','_atom_site_fract_z','_atom_site_occupancy'];
   // Labels must identify the element, and the moment loop must reference
   // exactly the same labels.  Symmetry splitting may turn one parent O1
@@ -225,9 +234,9 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     labelCounts.set(element,next);
     return `${element}${next}`;
   });
-  reps.forEach((s,i)=>lines.push(`${repLabels[i]} ${s.element} ${s.pos.map(fmt).join(' ')} ${fmt(s.occupancy)}`));
+  reps.forEach((s,i)=>lines.push(`${repLabels[i]} ${s.element} ${s.pos.map(dec).join(' ')} ${dec(s.occupancy)}`));
   lines.push('','loop_','_atom_site_moment.label','_atom_site_moment.crystalaxis_x','_atom_site_moment.crystalaxis_y','_atom_site_moment.crystalaxis_z');
-  reps.forEach((s,i)=>{if(s.moment.some(x=>Math.abs(x)>1e-8))lines.push(`${repLabels[i]} ${s.moment.map(fmt).join(' ')}`);});
+  reps.forEach((s,i)=>{if(s.moment.some(x=>Math.abs(x)>1e-8))lines.push(`${repLabels[i]} ${s.moment.map(dec).join(' ')}`);});
   const text=lines.join('\n')+'\n';
   const check=parseCifStructure(text);
   if(check.atoms.length!==dedup.length)throw new Error(`Export round-trip failed: expected ${dedup.length} atoms, parsed ${check.atoms.length}.`);

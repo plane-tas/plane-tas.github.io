@@ -188,7 +188,10 @@ function renderCifStructureView(){
   // Selection outlines belong only to the viewer, never to magnetic calculations.
   // Draw a complementary-color ring around each selected atom, retaining the
   // original stroke width and small gap around the atom's surface.
-  const magneticOverlays=fn.magneticStructureTraces(displayedAtoms,basis,source.structure); traces.push(...magneticOverlays);
+  // Safety: spin arrows for very many atoms can exhaust browser memory.
+  // Draw the crystal structure but omit the magnetic moments in that case.
+  const spinsSkipped=displayedAtoms.length>cifState.STRUCTURE_MAX_SPIN_ATOMS;
+  const magneticOverlays=spinsSkipped?[]:fn.magneticStructureTraces(displayedAtoms,basis,source.structure); traces.push(...magneticOverlays);
   const magneticSummary=fn.enabledPropagationVectorsForStructure();
   const effectiveK=fn.effectivePropagationVectorForStructure();
   const enabledMoments=[...fn.currentMomentSettings().values()].filter(x=>x.enabled).length;
@@ -200,7 +203,8 @@ function renderCifStructureView(){
       source.structure.magnetic && cifState.structureUnitCellMode!=='none' ? ' Magnetic unit cell shown.':'')+
     (bondRules.length?` ${bondRules.length} bond rule${bondRules.length===1?"":"s"}.`:"")+
     (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${cifState.structureMomentStructureType}${cifState.structureMomentStructureType==="helical"?` about ${cifState.structureMomentRotationAxis} (${cifState.structureMomentChirality})`:""}, k${effectiveK.index||1}=(${effectiveK.h}, ${effectiveK.k}, ${effectiveK.l})${effectiveK.count>1?" (selected propagation vector)":""}.`:"")+ (polyhedralWarning ? ` ${polyhedralWarning}` : "")+
-    (bondWarning ? ` ${bondWarning}` : "")+(cellTraces.warning||'')+styleCutoffWarning;
+    (bondWarning ? ` ${bondWarning}` : "")+(cellTraces.warning||'')+styleCutoffWarning+
+    (spinsSkipped?` Spins not drawn: more than ${cifState.STRUCTURE_MAX_SPIN_ATOMS} displayed atoms (reduce X/Y/Z repeat ranges).`:'');
   // Keep an explicit camera state independent of Plotly.react.  This prevents
   // later redraws (including range edits) from restoring the view-button camera
   // after the user has already rotated or zoomed the structure.

@@ -1,4 +1,5 @@
-// Nuclear reflection table: beam/filters, calculation, sorting and rendering.
+// Nuclear reflections: beam/filters, nuclear source structure and |F_N|^2 by reflection family.
+// The combined nuclear + magnetic table is rendered by reflection-table.js.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 export function installNuclearReflections(ctx){
   const {deps:{
@@ -8,11 +9,10 @@ export function installNuclearReflections(ctx){
     reciprocalSymmetryMatrices, reflectionStar
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    buildCifReflectionTable, clearCifReflectionRowSelection, currentCifReflectionBeam,
-    currentCifReflectionFilters, nuclearReflectionSource, nuclearReflectionWithSampleLattice,
-    nuclearStructureForSelectedCif,
-    renderCifReflectionTable, setCifReflectionSort, sortedCifReflections, syncCifReflectionBeamFrom,
-    syncCifReflectionBeamFromInstrument, updateCifReflectionSortHeaders
+    buildCifReflectionTable, currentCifReflectionBeam, currentCifReflectionFilters,
+    hklPassesDirectionFilter, nuclearReflectionSource, nuclearReflectionWithSampleLattice,
+    nuclearStructureForSelectedCif, selectedCifIsIncommensurate, syncCifReflectionBeamFrom,
+    syncCifReflectionBeamFromInstrument
   });
 
 
@@ -97,6 +97,16 @@ function reflectionAlongCurrentAxis(rl,hkl,axisHkl){
   return norm(cross(q,axis)) <= 1e-9*Math.max(1,qn*an);
 }
 
+// Direction rule for single-crystal display (hkl may be fractional):
+//   U only -> along U; V only -> along V; U + V -> in the U-V plane; neither -> all.
+function hklPassesDirectionFilter(rl,hkl,filters){
+  const U=[num("Uh"),num("Uk"),num("Ul")], V=[num("Vh"),num("Vk"),num("Vl")];
+  if(filters?.alongU && filters?.alongV) return reflectionInCurrentScatteringPlane(rl,hkl);
+  if(filters?.alongU) return reflectionAlongCurrentAxis(rl,hkl,U);
+  if(filters?.alongV) return reflectionAlongCurrentAxis(rl,hkl,V);
+  return true;
+}
+
 function buildCifReflectionTable(structure,sg,wavelength,filters={alongU:true,alongV:true,withinS2Max:true},twoThetaMax=180){
   if(!structure?.lattice) throw new Error("Generated CIF has no valid lattice.");
   const lambda=Number(wavelength);
@@ -152,7 +162,7 @@ function buildCifReflectionTable(structure,sg,wavelength,filters={alongU:true,al
     let intensity=nuclearStructureFactorSquared(structure,rep,qRep);
     if(!Number.isFinite(intensity)) intensity=0;
     const multiplicity=star.length;
-    rows.push({hkl:rep,intensity,multiplicity,totalIntensity:intensity*multiplicity,twoTheta,q:qRep,d});
+    rows.push({hkl:rep,star,intensity,multiplicity,totalIntensity:intensity*multiplicity,twoTheta,q:qRep,d});
   }
 
   // Do not show systematic/motif extinctions.  Exact extinctions can leave tiny
@@ -161,101 +171,6 @@ function buildCifReflectionTable(structure,sg,wavelength,filters={alongU:true,al
   const maxI=Math.max(0,...rows.map(r=>Math.abs(Number(r.intensity)||0)));
   const extinctTol=Math.max(1e-12,maxI*1e-12);
   return rows.filter(r=>Number(r.intensity)>extinctTol);
-}
-
-function sortedCifReflections(rows,sortState=cifState.cifReflectionSort){
-  const out=[...(rows||[])];
-  const key=sortState?.key||"intensity";
-  const dir=sortState?.direction==="asc" ? 1 : -1;
-  return out.sort((a,b)=>{
-    const av=Number(a[key]), bv=Number(b[key]);
-    const d=(av-bv)*dir;
-    return d || compareHkl(a.hkl,b.hkl);
-  });
-}
-
-function updateCifReflectionSortHeaders(){
-  for(const th of document.querySelectorAll(".cif-sortable-th:not(.magnetic-sortable-th)")){
-    const active=th.dataset.sortKey===cifState.cifReflectionSort.key;
-    const direction=active ? cifState.cifReflectionSort.direction : null;
-    const indicator=th.querySelector(".cif-sort-indicator");
-    if(indicator) indicator.textContent=active ? (direction==="asc" ? "▲" : "▼") : "";
-    th.setAttribute("aria-sort",active ? (direction==="asc" ? "ascending" : "descending") : "none");
-  }
-}
-
-function setCifReflectionSort(key){
-  if(cifState.cifReflectionSort.key===key){
-    cifState.cifReflectionSort={key,direction:cifState.cifReflectionSort.direction==="asc"?"desc":"asc"};
-  }else{
-    // Intensity-like columns are most useful descending; angular/spacing columns
-    // start ascending on first click.
-    const direction=(key==="intensity"||key==="totalIntensity"||key==="q") ? "desc" : "asc";
-    cifState.cifReflectionSort={key,direction};
-  }
-  updateCifReflectionSortHeaders();
-  renderCifReflectionTable();
-}
-
-function reflectionNumberText(value,digits=5){
-  const x=Number(value);
-  if(!Number.isFinite(x)) return "—";
-  const a=Math.abs(x);
-  if(a!==0 && (a>=1e5 || a<1e-4)) return x.toExponential(4);
-  return x.toFixed(digits);
-}
-
-function renderCifReflectionTable(){
-  const body=$("cifReflectionRows");
-  if(!body) return;
-  body.replaceChildren();
-  if(!cifState.lastGeneratedReflections.length){
-    cifState.selectedCifReflectionKey="";
-    const tr=document.createElement("tr"), td=document.createElement("td");
-    td.colSpan=7; td.className="cif-reflection-empty"; td.textContent="No reflections in the selected wavelength range.";
-    tr.appendChild(td); body.appendChild(tr);
-    return;
-  }
-  const rows=sortedCifReflections(cifState.lastGeneratedReflections,cifState.cifReflectionSort);
-  const availableKeys=new Set(rows.map(r=>hklKey(r.hkl)));
-  if(cifState.selectedCifReflectionKey && !availableKeys.has(cifState.selectedCifReflectionKey)) cifState.selectedCifReflectionKey="";
-  for(const r of rows){
-    const key=hklKey(r.hkl);
-    const tr=document.createElement("tr");
-    tr.dataset.reflectionKey=key;
-    tr.tabIndex=0;
-    tr.setAttribute("aria-selected",String(key===cifState.selectedCifReflectionKey));
-    tr.classList.toggle("cif-reflection-selected",key===cifState.selectedCifReflectionKey);
-    const values=[
-      `(${r.hkl.join(" ")})`,
-      reflectionNumberText(r.intensity/100,4),
-      String(r.multiplicity),
-      reflectionNumberText(r.totalIntensity/100,4),
-      reflectionNumberText(r.twoTheta,4),
-      reflectionNumberText(r.q,5),
-      reflectionNumberText(r.d,5)
-    ];
-    values.forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td);});
-    const toggle=()=>{
-      cifState.selectedCifReflectionKey=(cifState.selectedCifReflectionKey===key)?"":key;
-      renderCifReflectionTable();
-      if(cifState.selectedCifReflectionKey){
-        body.querySelector(`tr[data-reflection-key="${CSS.escape(cifState.selectedCifReflectionKey)}"]`)?.focus({preventScroll:true});
-      }
-    };
-    tr.addEventListener("click",toggle);
-    tr.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();toggle();}});
-    body.appendChild(tr);
-  }
-}
-
-function clearCifReflectionRowSelection(){
-  if(!cifState.selectedCifReflectionKey) return;
-  cifState.selectedCifReflectionKey='';
-  for(const row of document.querySelectorAll('#cifReflectionRows tr.cif-reflection-selected')){
-    row.classList.remove('cif-reflection-selected');
-    row.setAttribute('aria-selected','false');
-  }
 }
 
 // A reflection table describes the selected nuclear crystal, regardless of
@@ -277,6 +192,14 @@ function nuclearStructureForSelectedCif(){
   const groups=cifState.cifSpaceGroups?.length||0;
   const c=nuclearStructureCache;
   if(c.selected===selected && c.text===text && c.groups===groups) return c.structure;
+  // An incommensurate (superspace) mCIF is written in the nuclear cell itself:
+  // the atoms are the crystal structure; only the moments are modulated.
+  if(selectedCifIsIncommensurate(selected,text)){
+    const atoms=selected.atoms.map(({magneticMoment,magneticFourier,...atom})=>atom);
+    const structure={...selected,atoms,magnetic:false,incommensurateSingleQ:false};
+    nuclearStructureCache={selected,text,groups,structure};
+    return structure;
+  }
   // A generated mCIF uses a supercell: deduplicate translated atoms into
   // the parent nuclear cell before calculating peaks and indexing hkl.
   const hasMagneticTags=/_space_group_symop_magn_|_cell_wave_vector_[xyz]|_atom_site_moment(?:[._]|\s)/i.test(String(text||''));
@@ -285,6 +208,12 @@ function nuclearStructureForSelectedCif(){
     : selected;
   nuclearStructureCache={selected,text,groups,structure:structure||null};
   return structure||null;
+}
+// Superspace (incommensurate) magCIF: Fourier moment loop or cell wave vectors.
+function selectedCifIsIncommensurate(selected=getSelectedCifStructure(),text=getSelectedCifText()){
+  if(!selected) return false;
+  return !!selected.incommensurateSingleQ || (selected.atoms||[]).some(atom=>atom.magneticFourier) ||
+    /_cell_wave_vector_[xyz]|_atom_site_moment_fourier/i.test(String(text||''));
 }
 function nuclearReflectionSource(){
   // Live Structure editor overrides the loaded snapshot only after an edit.

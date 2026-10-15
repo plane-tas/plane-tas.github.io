@@ -291,24 +291,7 @@
   top:0;
   z-index:2;
 }
-/* Magnetic action buttons share all available width equally at every viewport. */
-#structurePanel #generatorMagneticReflectionsPane > .cif-reflection-toolbar{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:calc(8px * var(--tas-density));
-  width:100%;
-  min-width:0;
-}
-#structurePanel #generatorMagneticReflectionsPane > .cif-reflection-toolbar > button{
-  box-sizing:border-box;
-  width:100%;
-  min-width:0;
-  margin:0;
-  padding:calc(8px * var(--tas-density)) calc(4px * var(--tas-density));
-  white-space:normal;
-  overflow-wrap:anywhere;
-}
-#structurePanel #magneticReflectionMessage[hidden]{display:none!important;}
+#structurePanel #cifReflectionMessage[hidden]{display:none!important;}
 #structurePanel #generatorNuclearReflectionsPane .cif-reflection-plane-toggle{
   font-size:max(12px,calc(17px * var(--tas-density)))!important;
   line-height:1.3;
@@ -389,8 +372,7 @@
   min-height:0;
   overflow:hidden;
 }
-#structurePanel #generatorReflectionsPane .generator-reflection-settings,
-#structurePanel #generatorReflectionsPane .generator-reflection-tabs{
+#structurePanel #generatorReflectionsPane .generator-reflection-settings{
   flex:0 0 auto;
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-pane:not(.hidden){
@@ -435,14 +417,6 @@
   overflow-wrap: anywhere;
 }
 
-/* Magnetic reflections are unavailable until validated; keep the tab visible. */
-#structurePanel .generator-reflection-tabs > #generatorReflectionsMagnetic:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  pointer-events: none;
-  color: #66717b;
-  background: #e4e8ed;
-}
 #structurePanel .generator-height-limited .generator-unified-right > .generator-output-pane{
   min-height:0!important;
   max-height:100%;
@@ -476,3 +450,26 @@
 
 /* Uncertainty messages share the existing Cell Note typography. */
 #structurePanel #cifReflectionEstimateNotice{font-size:.85em;line-height:1.4;margin:4px 0 8px;}
+
+/* Reflections: Mode / Reflections / Lorentz / form-factor selectors in one equal-width row. */
+.magnetic-options{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:calc(10px * var(--tas-density));margin:0 0 calc(9px * var(--tas-density))}
+.magnetic-ion-selectors{display:contents}
+.magnetic-options label{display:flex;flex-direction:column;align-items:stretch;gap:calc(3px * var(--tas-density));min-width:0;font-size:calc(12px * var(--tas-density))}
+.magnetic-options select{width:100%;max-width:none;min-width:0}
+@media (max-width:640px){.magnetic-options{grid-auto-flow:row}}
+#structurePanel .cif-reflection-plane-toggle.is-inactive{opacity:.45}
+/* Powder pattern (Reflections, Mode = Powder). */
+#structurePanel .reflection-powder-section{flex:0 0 auto;margin:0 0 calc(8px * var(--tas-density));min-width:0}
+#structurePanel .reflection-powder-section[hidden]{display:none!important}
+#structurePanel .reflection-plot-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density)) calc(24px * var(--tas-density));margin-top:calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density))}
+#structurePanel .reflection-radio-group{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(10px * var(--tas-density))}
+#structurePanel .reflection-radio-group > span{font-weight:600;font-size:max(12px,calc(17px * var(--tas-density)))!important}
+#structurePanel .reflection-radio-group label,#structurePanel .reflection-plot-fwhm{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap}
+#structurePanel .reflection-plot-fwhm input{width:calc(70px * var(--tas-density))}
+#structurePanel .reflection-powder-plot{width:100%;height:calc(280px * var(--tas-density));min-width:0}
+#structurePanel #cifReflectionTableWrap.hidden{display:none!important}
+#structurePanel .reflection-powder-section:not([hidden]){flex:1 1 auto;display:flex;flex-direction:column;min-height:calc(320px * var(--tas-density))}
+#structurePanel .reflection-powder-section .reflection-powder-plot{flex:1 1 auto;min-height:calc(300px * var(--tas-density))}
+#structurePanel .reflection-powder-plot-wrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+#structurePanel .reflection-powder-plot-wrap > .reflection-plot-fwhm{position:absolute;top:calc(8px * var(--tas-density));left:calc(8px * var(--tas-density));z-index:2;font-size:max(12px,calc(15px * var(--tas-density)))}
+#structurePanel .reflection-powder-plot-wrap > .reflection-plot-xaxis{position:absolute;bottom:calc(4px * var(--tas-density));left:50%;transform:translateX(-50%);z-index:2;width:auto;min-width:calc(120px * var(--tas-density));max-width:none;font-size:max(12px,calc(16px * var(--tas-density)))}

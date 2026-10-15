@@ -1,4 +1,5 @@
-import {computeMagneticFormFactor, magneticIonConfigurations} from './magnetic-form-factor.js';
+import {automaticMagneticFormFactorWeight, computeMagneticFormFactor, magneticIonConfigurations} from './magnetic-form-factor.js';
+import {MAGNETIC_ION_DATA} from './magnetic-form-factor-data.js';
 // Bragg intensities from a fully specified COMMENSURATE magnetic motif.
 // Intensity is the unpolarized magnetic structure factor in barn per magnetic
 // cell, excluding scale, Lorentz, absorption, extinction and form-factor terms.
@@ -42,6 +43,27 @@ export function rationalDenominator(value,max=24,tol=1e-8){
   for(let d=1;d<=max;d++)if(Math.abs(v*d-Math.round(v*d))<=tol*d)return d;
   throw Error('Incommensurate k is not supported in the finite-cell Bragg calculator.');
 }
+// Moment of an atom at position r (parent-cell fractional coordinates,
+// including the lattice-cell offset) for a single-k structure. The phase is
+// 2*pi*k.r of the ATOM POSITION, so centring translations (R, C, I, F
+// lattices) and atoms inside the cell get their own phase automatically —
+// e.g. NiTiO3, k = (0,0,3/2): ferromagnetic Ni layers stacked antiparallel.
+//   collinear : m * sign(cos(2*pi*k.r)); at cos = 0 exactly, frac(k.r) = 1/4
+//               gives -m and 3/4 gives +m (deterministic tie-break).
+//   sinusoidal: m cos(2*pi*k.r)
+//   helical   : m rotated about `axis` by -/+ 2*pi*k.r (CCW / CW).
+export function modulatedMoment(m,kr,{mode='collinear',axis=[0,0,1],chirality='CCW'}={}){
+  let f=Number(kr)-Math.floor(Number(kr));
+  if(f>1-1e-9) f=0;
+  if(mode==='collinear') return (f<0.25-1e-9 || f>=0.75-1e-9) ? m.slice() : m.map(v=>-v);
+  const phase=twopi*f;
+  if(mode==='sinusoidal'){
+    const c=Math.cos(phase);
+    return m.map(v=>v*(Math.abs(c)<1e-12?0:c));
+  }
+  if(mode==='helical') return rotate(m,axis,(chirality==='CW'?1:-1)*phase);
+  throw Error('Unsupported magnetic structure type.');
+}
 export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode='collinear',axis='c',chirality='CCW',imported=false,maxAtoms=1500}){
   if(!structure?.atoms?.length)throw Error('No atomic structure loaded.');
   if(structure.incommensurateSingleQ || structure.atoms.some(a=>a.magneticFourier))
@@ -62,11 +84,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
         m=Array.isArray(atom.magneticMoment)?cartesianMoment(atom.magneticMoment,structure.lattice):[0,0,0];
       }else{
         m=(s?.enabled && [s.mx,s.my,s.mz].every(Number.isFinite))?[s.mx,s.my,s.mz]:[0,0,0];
-        const phase=twopi*dot(q,p);
-        if(mode==='helical')m=rotate(m,rotAxis,(chirality==='CW'?1:-1)*phase);
-        else if(mode==='sinusoidal')m=times(m,Math.cos(phase));
-        else if(mode==='collinear')m=times(m,Math.cos(phase)<0?-1:1);
-        else throw Error('Unsupported magnetic structure type.');
+        m=modulatedMoment(m,dot(q,p),{mode,axis:rotAxis,chirality});
       }
       sites.push({element:atom.element,occupancy:Number(atom.occupancy??1),
         fract:p.map((x,i)=>x/dims[i]), moment:m,sourceLabel:atom.sourceLabel});
@@ -74,7 +92,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
   }
   const lattice={...structure.lattice,a:structure.lattice.a*dims[0],b:structure.lattice.b*dims[1],c:structure.lattice.c*dims[2]};
   return {lattice,sites,replication:dims,source:imported?'mCIF':'Modify',
-    caveat:'Dipole approximation; f(Q)=1. No Lorentz, Debye-Waller, absorption, or instrument corrections.'};
+    caveat:'Dipole approximation with the selected magnetic-ion form factors (f = 1 where none is selected). Single magnetic domain. No Debye-Waller, absorption, or instrument corrections.'};
 }
 export function magneticStructureFactorSquared(motif,hkl,{formFactor=()=>1}={}){
   const Q=reciprocalVector(motif.lattice,hkl),q=norm(Q);
@@ -121,13 +139,22 @@ export function explicitMagneticIonFactors(cifText){
   }
   return result;
 }
+// Dipole-approximation form factor f(Q) = <j0> + c <j2> of the ion chosen for
+// an element (ionByElement: {Fe:'Fe3', ...}); 1 when no ion is chosen.
+// c follows the Toolbox default: 0 for 3d/4d/5d, (2-g)/g for 4f/5f ions.
 export function magneticIonFormFactor(element,Q,ionByElement={}){
   const symbol=String(element||'').match(/^[A-Z][a-z]?/)?.[0]||'';
   const ion=ionByElement[symbol];
   if(!ion)return 1;
-  const configs=magneticIonConfigurations(ion);
-  if(!configs.length)return 1;
-  return computeMagneticFormFactor(ion,Q,{config:configs[0],j2Weight:0}).f;
+  const entry=MAGNETIC_ION_DATA[ion]?.[0];
+  if(!entry)return 1;
+  const [config,term]=entry;
+  return computeMagneticFormFactor(ion,Q,{config,j2Weight:automaticMagneticFormFactorWeight(config,term)}).f;
+}
+// Magnetic elements (with a nonzero moment) of a motif, sorted.
+export function magneticElementsOfMotif(motif){
+  return [...new Set((motif?.sites||[]).filter(s=>s.moment&&norm(s.moment)>1e-12)
+    .map(s=>String(s.element||'').match(/^[A-Z][a-z]?/)?.[0]).filter(Boolean))].sort();
 }
 function magneticFormFactorDisplay(motif,Q,ionByElement){
   const elements=[...new Set(motif.sites.filter(s=>s.moment&&norm(s.moment)>1e-12).map(s=>s.element))].sort();

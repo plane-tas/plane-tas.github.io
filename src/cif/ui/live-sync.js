@@ -12,7 +12,6 @@ export function installLiveSync(ctx){
 cifState.liveEditorNuclearSource=null;
 cifState.liveEditorNuclearInvalid=false;
 cifState.liveNuclearCellReference="sample";
-cifState.magneticTableHasBeenCalculated=false;
 let liveReflectionRecalcTimer=0;
 let synchronizingLiveCell=false;
 const LIVE_REFLECTION_DELAY_MS=250;
@@ -114,8 +113,8 @@ function scheduleLiveReflectionRecalc({nuclear=true,magnetic=false}={}){
   clearTimeout(liveReflectionRecalcTimer);
   liveReflectionRecalcTimer=setTimeout(()=>{
     liveReflectionRecalcTimer=0;
-    if(nuclear) fn.recalculateGeneratedReflections();
-    if(magnetic && cifState.magneticTableHasBeenCalculated) fn.calculateMagneticReflectionTable();
+    // Nuclear and magnetic reflections share one table: recalculate both.
+    if(nuclear || magnetic) fn.recalculateGeneratedReflections();
   },LIVE_REFLECTION_DELAY_MS);
 }
 function readLiveEditorNuclearStructure(){

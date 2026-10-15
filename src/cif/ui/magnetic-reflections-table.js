@@ -1,6 +1,8 @@
-// Magnetic reflection table (calculation, sorting, CSV/model download).
+// Magnetic reflection table (calculation, sorting, CSV download).
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {buildMagneticMotif, explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
+import {buildMagneticMotif, explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, magneticElementsOfMotif, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
+import {availableMagneticIons} from '../../magnetic/magnetic-form-factor.js';
+import {chargeBalancedOxidationStates, compositionOfSites, preferredOxidationState} from '../../magnetic/oxidation-states.js';
 
 export function installMagneticReflectionsTable(ctx){
   const {deps:{
@@ -9,7 +11,7 @@ export function installMagneticReflectionsTable(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     calculateMagneticReflectionTable, initializeGeneratorTableOutsideClick,
-    initializeMagneticReflections
+    initializeMagneticReflections, refreshMagneticIonSelectors
   });
 let lastMagneticMotif=null;
 let lastMagneticRows=[];
@@ -19,8 +21,8 @@ function sortedMagneticReflections(rows){
   const {key,direction}=magneticReflectionSort;
   const factor=direction==='asc'?1:-1;
   return [...rows].sort((a,b)=>{
-    const av=Number(key==='formFactor'?a.formFactorSort:a[key]);
-    const bv=Number(key==='formFactor'?b.formFactorSort:b[key]);
+    const value=r=>Number(key==='formFactor'?r.formFactorSort:key==='intensity'?displayedIntensity(r):r[key]);
+    const av=value(a),bv=value(b);
     return (av-bv)*factor || compareHkl(a.hkl,b.hkl);
   });
 }
@@ -65,7 +67,7 @@ function renderMagneticReflectionRows(){
     tr.tabIndex=0;
     tr.classList.toggle('cif-reflection-selected',key===selectedMagneticReflectionKey);
     tr.setAttribute('aria-selected',String(key===selectedMagneticReflectionKey));
-    const values=[`(${indexHkl.map(v=>Number(v.toFixed(8))).join(' ')})`,row.formFactor??'1',Number(row.intensity).toFixed(7),Number(row.twoTheta).toFixed(4),Number(row.q).toFixed(5),Number(row.d).toFixed(5)];
+    const values=[`(${indexHkl.map(v=>Number(v.toFixed(8))).join(' ')})`,row.formFactor??'1',Number(displayedIntensity(row)).toFixed(7),Number(row.twoTheta).toFixed(4),Number(row.q).toFixed(5),Number(row.d).toFixed(5)];
     for(const value of values){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}
     const toggle=()=>{
       selectedMagneticReflectionKey=selectedMagneticReflectionKey===key?'':key;
@@ -83,6 +85,85 @@ function renderMagneticReflectionRows(){
 }
 
 cifState.GENERATOR_REFLECTION_MODE_KEY='tas-simulator-generator-reflection-mode-v1';
+
+// ---- Lorentz factor applied to the displayed |F_M|^2 ----
+const LORENTZ_MODES={
+  none:{label:'|F<sub>M</sub>|²',factor:()=>1},
+  single:{label:'|F<sub>M</sub>|² / sin2θ',factor:tth=>1/Math.max(1e-6,Math.sin(tth*Math.PI/180))},
+  powder:{label:'|F<sub>M</sub>|² / (sinθ sin2θ)',factor:tth=>1/Math.max(1e-6,Math.sin(tth*Math.PI/360)*Math.sin(tth*Math.PI/180))}
+};
+function lorentzMode(){ const v=$('magneticLorentzMode')?.value; return LORENTZ_MODES[v]?v:'none'; }
+const lorentzFactor=row=>LORENTZ_MODES[lorentzMode()].factor(Number(row.twoTheta));
+const displayedIntensity=row=>row.intensity*lorentzFactor(row);
+function updateMagneticIntensityHeader(){
+  const header=$('magneticIntensityHeader'); if(!header) return;
+  const cell=lastMagneticMotif && !(!!lastMagneticParentIndexing || lastMagneticMotif.source!=='mCIF') ? 'magnetic' : 'parent';
+  header.innerHTML=`${LORENTZ_MODES[lorentzMode()].label} per ${cell} cell (barn)`;
+}
+
+// ---- Magnetic-ion choice (form factor) per element that carries a spin ----
+// 'auto' = oxidation state from the CIF, else charge balance, else the most
+// common state. Choices are kept per loaded file only (not persisted).
+const AUTO='auto';
+let magneticIonChoice={},magneticIonChoiceFile='',lastAutoIons={};
+const ionLabel=ion=>{ const m=String(ion).match(/^([A-Z][a-z]?)(\d+)$/); return m ? `${m[1]}${m[2]==='0'?' (neutral)':m[2]+'+'}` : ion; };
+function ionsForElement(element){ return availableMagneticIons().filter(ion=>ion.replace(/\d+$/,'')===element); }
+function autoMagneticIons(motif){
+  const fromFile=explicitMagneticIonFactors(getSelectedCifText());
+  const balanced=chargeBalancedOxidationStates(compositionOfSites(motif?.sites));
+  const out={};
+  for(const element of magneticElementsOfMotif(motif)){
+    const ions=ionsForElement(element);
+    const pick=(ox,how)=>ox!=null && ions.includes(`${element}${ox}`) ? {ion:`${element}${ox}`,how} : null;
+    out[element]=(fromFile[element] && ions.includes(fromFile[element]) ? {ion:fromFile[element],how:'CIF'} : null)
+      || pick(balanced?.[element],'charge balance')
+      || pick(preferredOxidationState(element),'most common')
+      || {ion:'',how:'unknown'};
+  }
+  return out;
+}
+function currentMagneticMotif(){ try{ return magneticModelFromEditor(); }catch(_e){ return null; } }
+function refreshMagneticIonSelectors(motif=currentMagneticMotif()){
+  const box=$('magneticIonSelectors'); if(!box) return;
+  const text=String(getSelectedCifText()||'');
+  const fileKey=`${text.length}:${text.slice(0,256)}:${text.slice(-256)}`;
+  if(fileKey!==magneticIonChoiceFile){ magneticIonChoiceFile=fileKey; magneticIonChoice={}; }
+  lastAutoIons=autoMagneticIons(motif);
+  box.replaceChildren();
+  for(const element of Object.keys(lastAutoIons)){
+    const ions=ionsForElement(element),auto=lastAutoIons[element];
+    const label=document.createElement('label');
+    const caption=document.createElement('span');
+    caption.textContent=`Form factor (${element})`;
+    const select=document.createElement('select');
+    select.dataset.element=element;
+    select.dataset.noPersist='';
+    select.id=`magneticIon-${element}`;
+    select.title=`Magnetic form factor used for ${element}`;
+    const options=[[AUTO,auto.ion?`Auto: ${ionLabel(auto.ion)} (${auto.how})`:'Auto: f = 1 (unknown)'],['','f(Q) = 1'],...ions.map(ion=>[ion,ionLabel(ion)])];
+    for(const [value,text] of options){
+      const option=document.createElement('option');
+      option.value=value; option.textContent=text;
+      select.appendChild(option);
+    }
+    const wanted=magneticIonChoice[element];
+    select.value=(wanted==='' || ions.includes(wanted)) ? wanted : AUTO;
+    select.addEventListener('change',()=>{
+      magneticIonChoice[element]=select.value;
+      if(cifState.magneticTableHasBeenCalculated) calculateMagneticReflectionTable();
+    });
+    label.append(caption,select);
+    box.appendChild(label);
+  }
+}
+function selectedMagneticIons(){
+  const out={};
+  for(const sel of document.querySelectorAll('#magneticIonSelectors select[data-element]')){
+    const ion=sel.value===AUTO ? lastAutoIons[sel.dataset.element]?.ion : sel.value;
+    if(ion) out[sel.dataset.element]=ion;
+  }
+  return out;
+}
 function magneticModelFromEditor(){
   // The generated CIF draft contains *nuclear* atom sites only and may take
   // precedence in the 3-D viewer. Never let that draft silently replace an
@@ -110,7 +191,6 @@ function calculateMagneticReflectionTable(){
   body.replaceChildren();
   lastMagneticRows=[];lastMagneticMotif=null;lastMagneticParentIndexing=null;
   if($('magneticDownloadTable'))$('magneticDownloadTable').disabled=true;
-  if($('magneticExportBnsInput'))$('magneticExportBnsInput').disabled=true;
   try{
     const motif=magneticModelFromEditor();
     const beam=fn.currentCifReflectionBeam();
@@ -120,7 +200,8 @@ function calculateMagneticReflectionTable(){
       const inst=currentInstrument();
       twoThetaMax=Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf));
     }
-    const ionByElement=explicitMagneticIonFactors(getSelectedCifText());
+    refreshMagneticIonSelectors(motif);
+    const ionByElement=selectedMagneticIons();
     const rows=magneticBraggPeaks(motif,beam.wavelength,{twoThetaMax,ionByElement});
     const spinCount=motif.sites.filter(site=>Math.hypot(...(site.moment||[0,0,0]))>1e-10).length;
     let diagnostic='';
@@ -132,7 +213,7 @@ function calculateMagneticReflectionTable(){
         else diagnostic=' Nonzero moments exist, but no magnetic peaks pass the wavelength range/intensity threshold. Try shorter wavelength and verify the magnetic motif.';
       }
     }
-    lastMagneticMotif=motif;lastMagneticRows=rows;
+    lastMagneticMotif=motif;
     // Only recover the parent reference for mCIFs written by this generator.
     // All structure factors remain evaluated in the actual magnetic cell.
     const fileText=getSelectedCifText();
@@ -142,6 +223,13 @@ function calculateMagneticReflectionTable(){
     lastMagneticParentIndexing=parentInfo;
     const displayRep=parentInfo?.replication || motif.replication;
     const parentKnown=!!parentInfo || motif.source!=='mCIF';
+    // |F|^2 is evaluated in the magnetic cell, which contains N parent cells.
+    // Bragg intensities scale as |F|^2/V^2, so |F_M|^2/N^2 is directly
+    // comparable with the nuclear |F_N|^2 per parent cell. Without a known
+    // parent cell, report per magnetic cell and say so.
+    const nParent=parentKnown ? displayRep.reduce((a,b)=>a*b,1) : 1;
+    lastMagneticRows=rows.map(row=>({...row,intensityMagneticCell:row.intensity,intensity:row.intensity/(nParent*nParent)}));
+    updateMagneticIntensityHeader();
     renderMagneticReflectionRows();
     const cellDescription=parentInfo
       ? `Magnetic supercell ${displayRep.join('×')} relative to the parent cell (parent c=${Number(parentInfo.lattice.c).toFixed(4)} Å; magnetic c=${Number(motif.lattice.c).toFixed(4)} Å).`
@@ -152,7 +240,6 @@ function calculateMagneticReflectionTable(){
     message.textContent=rows.length ? '' : (diagnostic.trim() || 'No magnetic reflections were found in the selected range.');
     message.hidden=!message.textContent;
     $('magneticDownloadTable').disabled=!rows.length;
-    $('magneticExportBnsInput').disabled=false;
   }catch(err){
     message.textContent=err?.message||String(err);
     message.hidden=false;
@@ -163,16 +250,16 @@ function downloadMagneticCsv(){
   const replication=lastMagneticParentIndexing?.replication || lastMagneticMotif?.replication || [1,1,1];
   const known=!!lastMagneticParentIndexing || lastMagneticMotif?.source!=='mCIF';
   const prefix=known?'parent':'magnetic';
-  const lines=[`${prefix}_h,${prefix}_k,${prefix}_l,form_factor,FM2_barn,two_theta_deg,Q_inv_A,d_A`,
+  // Per parent cell (comparable with nuclear |F_N|^2) when the parent cell is
+  // known, plus the raw per-magnetic-cell value; otherwise only the latter.
+  const mode=lorentzMode(),withL=mode!=='none';
+  const lCols=withL?`,lorentz_${mode==='single'?'1_over_sin2theta':'1_over_sintheta_sin2theta'},FM2_times_L_barn_per_${known?'parent':'magnetic'}_cell`:'';
+  const lines=[`${prefix}_h,${prefix}_k,${prefix}_l,form_factor,${known?'FM2_barn_per_parent_cell,':''}FM2_barn_per_magnetic_cell,two_theta_deg,Q_inv_A,d_A${lCols}`,
     ...sortedMagneticReflections(lastMagneticRows).map(r=>[
       ...(known?hklInParentCell(r.hkl,replication):r.hkl),
-      `"${String(r.formFactor??'1').replace(/"/g,'""')}"`,r.intensity,r.twoTheta,r.q,r.d].join(','))];
+      `"${String(r.formFactor??'1').replace(/"/g,'""')}"`,...(known?[r.intensity]:[]),r.intensityMagneticCell,r.twoTheta,r.q,r.d,
+      ...(withL?[lorentzFactor(r),displayedIntensity(r)]:[])].join(','))];
   fn.downloadGeneratedCif(lines.join('\n'),'magnetic_reflections.csv');
-}
-function downloadBnsModel(){
-  if(!lastMagneticMotif)return;
-  const json=JSON.stringify({version:1,...lastMagneticMotif},null,2);
-  fn.downloadGeneratedCif(json,'magnetic_model_for_bns.json');
 }
 function initializeGeneratorTableOutsideClick(){
   if(document.documentElement.dataset.cifTableOutsideClickBound) return;
@@ -198,7 +285,8 @@ function initializeMagneticReflections(){
   button.dataset.bound='1';
   button.addEventListener('click',calculateMagneticReflectionTable);
   $('magneticDownloadTable')?.addEventListener('click',downloadMagneticCsv);
-  $('magneticExportBnsInput')?.addEventListener('click',downloadBnsModel);
+  $('magneticLorentzMode')?.addEventListener('change',()=>{updateMagneticIntensityHeader();renderMagneticReflectionRows();});
+  updateMagneticIntensityHeader();
   for(const th of document.querySelectorAll('.magnetic-sortable-th')){
     const activate=()=>setMagneticReflectionSort(th.dataset.sortKey);
     th.addEventListener('click',activate);

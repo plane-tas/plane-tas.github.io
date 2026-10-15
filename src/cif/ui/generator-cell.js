@@ -25,12 +25,14 @@ function setCifGeneratedReady(ready){
 
 function clearCifReflectionTable(message="No reflections available."){
   cifState.lastGeneratedReflections=[];
+  cifState.reflectionData=null;
+  fn.renderCifReflectionTable?.();
   if($("cifDownloadTable")) $("cifDownloadTable").disabled=true;
   const body=$("cifReflectionRows");
   if(body){
     body.replaceChildren();
     const tr=document.createElement("tr"), td=document.createElement("td");
-    td.colSpan=7; td.className="cif-reflection-empty"; td.textContent=message;
+    td.colSpan=$("cifReflectionHead")?.rows?.[0]?.cells?.length||9; td.className="cif-reflection-empty"; td.textContent=message;
     tr.appendChild(td); body.appendChild(tr);
   }
   if($("cifReflectionSummary")) $("cifReflectionSummary").textContent=message;

@@ -20,7 +20,8 @@ import {installGeneratorAtoms} from './ui/generator-atoms.js';
 import {installGeneratorBuild} from './ui/generator-build.js';
 import {installNuclearReflections} from './ui/nuclear-reflections.js';
 import {installLiveSync} from './ui/live-sync.js';
-import {installMagneticReflectionsTable} from './ui/magnetic-reflections-table.js';
+import {installMagneticReflections} from './ui/magnetic-reflections.js';
+import {installReflectionTable} from './ui/reflection-table.js';
 import {installGeneratorOutput} from './ui/generator-output.js';
 import {installMcifGenerator} from './ui/mcif-generator.js';
 import {installGeneratorInit} from './ui/generator-init.js';
@@ -56,7 +57,8 @@ export function createCifUI(deps){
   installGeneratorBuild(ctx);
   installNuclearReflections(ctx);
   installLiveSync(ctx);
-  installMagneticReflectionsTable(ctx);
+  installMagneticReflections(ctx);
+  installReflectionTable(ctx);
   installGeneratorOutput(ctx);
   installMcifGenerator(ctx);
   installGeneratorInit(ctx);
@@ -72,7 +74,6 @@ export function createCifUI(deps){
   // the tables always reflect the restored conditions.
   function refreshAfterStateRestore(){
     fn.recalculateGeneratedReflections();
-    if(ctx.state.magneticTableHasBeenCalculated) fn.calculateMagneticReflectionTable();
   }
 
   return {

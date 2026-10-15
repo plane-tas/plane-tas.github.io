@@ -30,7 +30,9 @@ cifState.STYLE_MAX_BOND_ATOMS=850;
 cifState.STYLE_MAX_BOND_SEGMENTS=12000;
 cifState.STYLE_MAX_BOND_RULES=24;
 cifState.STRUCTURE_MAX_REPLICATION_TESTS=250000;
-cifState.STRUCTURE_MAX_DISPLAYED_ATOMS=6000;
+// Display safety limits (about half of the size that still rendered reliably).
+cifState.STRUCTURE_MAX_DISPLAYED_ATOMS=3000;
+cifState.STRUCTURE_MAX_SPIN_ATOMS=3000;
 // Maximum distance between two points of ONE unit cell. For skew cells the
 // longest body diagonal may be a+b-c, a-b+c or -a+b+c, NOT just a+b+c.
 function styleCellDiagonalLimit(basis){
