@@ -46,8 +46,8 @@ function parentAppearanceOrbits(structure){
   const text=getSelectedCifText();
   const parent=fn.crystallographicStructureFromMcif(selected,text);
   const qs=fn.propagationVectorsFromMcif(text,selected);
-  const relation=qs.length===1 ? parentIndexingFromMcif(text,selected.lattice,
-    [qs[0].h,qs[0].k,qs[0].l]) : null;
+  const relation=qs.length<=1 ? parentIndexingFromMcif(text,selected.lattice,
+    qs.length?[qs[0].h,qs[0].k,qs[0].l]:null) : null;
   if(!parent?.asymmetricSites?.length || !relation?.replication){
     appearanceOrbitCache.set(selected,null);return null;
   }

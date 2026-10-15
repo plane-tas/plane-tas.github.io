@@ -111,19 +111,19 @@ function computeMagneticReflections({wavelength,twoThetaMax=180}){
   try{
     const ionByElement=selectedMagneticIons();
     const raw=magneticBraggPeaks(motif,wavelength,{twoThetaMax,ionByElement});
-    let message='';
+    let message=motif.ambiguousSites ? `Collinear: ${motif.ambiguousSites} magnetic atom(s) lie on a node of cos(2πk·r) (k·r ≈ 1/4 or 3/4), so their sign is arbitrary for this k. Check the 3-D structure; use Sinusoidal, another k, or Manual spins if it is not the intended structure.` : '';
     if(!raw.length){
       const unrestricted=twoThetaMax<179.999 ? magneticBraggPeaks(motif,wavelength,{twoThetaMax:180,ionByElement}) : [];
-      message=unrestricted.length
+      message+=(message?' ':'')+(unrestricted.length
         ? `${unrestricted.length} magnetic reflections exist beyond the instrument 2θ limit (${Number(twoThetaMax).toFixed(2)}°).`
-        : 'No magnetic reflections in the selected wavelength range.';
+        : 'No magnetic reflections in the selected wavelength range.');
     }
     // Only recover the parent reference for mCIFs written by this generator.
     // All structure factors remain evaluated in the actual magnetic cell.
     const fileText=getSelectedCifText();
     const fileQ=fn.propagationVectorsFromMcif(fileText,getSelectedCifStructure());
-    const parentInfo=(motif.source==='mCIF' && fileQ.length===1)
-      ? parentIndexingFromMcif(fileText,motif.lattice,[fileQ[0].h,fileQ[0].k,fileQ[0].l]) : null;
+    const parentInfo=(motif.source==='mCIF' && fileQ.length<=1)
+      ? parentIndexingFromMcif(fileText,motif.lattice,fileQ.length?[fileQ[0].h,fileQ[0].k,fileQ[0].l]:null) : null;
     const replication=parentInfo?.replication || motif.replication;
     const parentKnown=!!parentInfo || motif.source!=='mCIF';
     // |F|^2 is evaluated in the magnetic cell, which contains N parent cells.

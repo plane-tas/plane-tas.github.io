@@ -1,7 +1,7 @@
 // Commensurate magnetic structure exporter. The displayed spins, not the
 // parent crystallographic space group, determine the retained magnetic group.
 import {parseCifDocument, parseCifStructure} from './cif-structure.js';
-import {modulatedMoment} from '../magnetic/magnetic-reflections.js';
+import {collinearSignAmbiguous, modulatedMoment} from '../magnetic/magnetic-reflections.js';
 
 const wrap=x=>((x%1)+1)%1;
 const near=(a,b,tol=2e-5)=>Math.abs(a-b)<=tol;
@@ -163,6 +163,7 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
   const norm=Math.hypot(...axis);
   const u=norm>1e-10?axis.map(x=>x/norm):[0,0,1];
   const sites=[];
+  let ambiguousSites=0;
   const chosen=q.map((v,i)=>approx[i].n/approx[i].d);
   for(let ix=0;ix<N[0];ix++)for(let iy=0;iy<N[1];iy++)for(let iz=0;iz<N[2];iz++){
     for(const [atomIndex,atom] of structure.atoms.entries()){
@@ -176,7 +177,9 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
       if(setting.enabled && !individualSettings){
         // Same convention as the magnetic-reflection calculator and the
         // viewer: the phase is 2*pi*k.r of the atomic position r.
-        moment=modulatedMoment(moment,chosen[0]*pos0[0]+chosen[1]*pos0[1]+chosen[2]*pos0[2],{mode,axis:u,chirality});
+        const kr=chosen[0]*pos0[0]+chosen[1]*pos0[1]+chosen[2]*pos0[2];
+        if(mode==='collinear' && collinearSignAmbiguous(kr)) ambiguousSites++;
+        moment=modulatedMoment(moment,kr,{mode,axis:u,chirality});
       }
       sites.push({pos,element:atom.element,occupancy:atom.occupancy,moment:toCrystal(moment,lattice),sourceLabel:atom.sourceLabel});
     }
@@ -246,5 +249,5 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     const moment=found.magneticMoment||[0,0,0];
     if(!spinMatch(moment,site.moment,0.0003))throw new Error(`Export round-trip failed: magnetic moment mismatch at ${site.element}.`);
   }
-  return {text,supercell:N,approximatedQ:chosen,atomCount:dedup.length,representatives:reps.length,operationCount:ops.length};
+  return {text,supercell:N,approximatedQ:chosen,atomCount:dedup.length,representatives:reps.length,operationCount:ops.length,ambiguousSites};
 }

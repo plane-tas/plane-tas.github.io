@@ -204,7 +204,8 @@ function renderCifStructureView(){
     (bondRules.length?` ${bondRules.length} bond rule${bondRules.length===1?"":"s"}.`:"")+
     (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${cifState.structureMomentStructureType}${cifState.structureMomentStructureType==="helical"?` about ${cifState.structureMomentRotationAxis} (${cifState.structureMomentChirality})`:""}, k${effectiveK.index||1}=(${effectiveK.h}, ${effectiveK.k}, ${effectiveK.l})${effectiveK.count>1?" (selected propagation vector)":""}.`:"")+ (polyhedralWarning ? ` ${polyhedralWarning}` : "")+
     (bondWarning ? ` ${bondWarning}` : "")+(cellTraces.warning||'')+styleCutoffWarning+
-    (spinsSkipped?` Spins not drawn: more than ${cifState.STRUCTURE_MAX_SPIN_ATOMS} displayed atoms (reduce X/Y/Z repeat ranges).`:'');
+    (spinsSkipped?` Spins not drawn: more than ${cifState.STRUCTURE_MAX_SPIN_ATOMS} displayed atoms (reduce X/Y/Z repeat ranges).`:'')+
+    (!spinsSkipped && cifState.collinearAmbiguousDisplayed?` Warning: ${cifState.collinearAmbiguousDisplayed} displayed spin(s) lie on a node of cos(2πk·r); their collinear sign is arbitrary for this k.`:'');
   // Keep an explicit camera state independent of Plotly.react.  This prevents
   // later redraws (including range edits) from restoring the view-button camera
   // after the user has already rotated or zoomed the structure.

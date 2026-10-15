@@ -1,6 +1,6 @@
 // Magnetic moment arrows and propagation-vector selection for the viewer.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {modulatedMoment} from '../../magnetic/magnetic-reflections.js';
+import {collinearSignAmbiguous, modulatedMoment} from '../../magnetic/magnetic-reflections.js';
 export function installMomentTraces(ctx){
   const {deps:{
     $, PI
@@ -136,6 +136,7 @@ function refreshMomentPropagationVectorSelect(){
   }else select.value=String(chosen);
 }
 function magneticStructureTraces(atoms,basis,structure){
+  cifState.collinearAmbiguousDisplayed=0;
   const q=effectivePropagationVectorForStructure();
   const settings=fn.currentMomentSettings();
   if(!settings.size) return [];
@@ -173,6 +174,7 @@ function magneticStructureTraces(atoms,basis,structure){
       // Same single-k model as the magnetic-reflection calculator and the
       // mCIF export (modulatedMoment): phase 2*pi*k.r of the atom position r.
       const kr=q.h*frac[0]+q.k*frac[1]+q.l*frac[2];
+      if(cifState.structureMomentStructureType==='collinear' && collinearSignAmbiguous(kr)) cifState.collinearAmbiguousDisplayed=(cifState.collinearAmbiguousDisplayed||0)+1;
       const modulated=modulatedMoment(moment,kr,{mode:cifState.structureMomentStructureType,
         axis:rotationAxis,chirality:cifState.structureMomentChirality});
       const mod=fn.vecNorm(modulated);

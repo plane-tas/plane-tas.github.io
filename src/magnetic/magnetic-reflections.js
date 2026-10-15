@@ -64,6 +64,11 @@ export function modulatedMoment(m,kr,{mode='collinear',axis=[0,0,1],chirality='C
   if(mode==='helical') return rotate(m,axis,(chirality==='CW'?1:-1)*phase);
   throw Error('Unsupported magnetic structure type.');
 }
+// Collinear sign is ill-defined where cos(2*pi*k.r) ~ 0 (k.r ~ 1/4, 3/4):
+// e.g. bcc with k = (0,0,1/2) puts the body centre on a node.
+export function collinearSignAmbiguous(kr,tol=0.1){
+  return Math.abs(Math.cos(twopi*Number(kr)))<tol;
+}
 export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode='collinear',axis='c',chirality='CCW',imported=false,maxAtoms=1500}){
   if(!structure?.atoms?.length)throw Error('No atomic structure loaded.');
   if(structure.incommensurateSingleQ || structure.atoms.some(a=>a.magneticFourier))
@@ -74,6 +79,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
   const parentBasis=latticeVectors(structure.lattice);
   const rotAxis=parentBasis[['a','b','c'].indexOf(axis)]||parentBasis[2];
   const sites=[];
+  let ambiguousSites=0;
   for(let ix=0;ix<dims[0];ix++)for(let iy=0;iy<dims[1];iy++)for(let iz=0;iz<dims[2];iz++){
     for(const atom of structure.atoms){
       const p=[atom.x+ix,atom.y+iy,atom.z+iz];
@@ -84,6 +90,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
         m=Array.isArray(atom.magneticMoment)?cartesianMoment(atom.magneticMoment,structure.lattice):[0,0,0];
       }else{
         m=(s?.enabled && [s.mx,s.my,s.mz].every(Number.isFinite))?[s.mx,s.my,s.mz]:[0,0,0];
+        if(mode==='collinear' && norm(m)>1e-12 && collinearSignAmbiguous(dot(q,p))) ambiguousSites++;
         m=modulatedMoment(m,dot(q,p),{mode,axis:rotAxis,chirality});
       }
       sites.push({element:atom.element,occupancy:Number(atom.occupancy??1),
@@ -91,7 +98,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
     }
   }
   const lattice={...structure.lattice,a:structure.lattice.a*dims[0],b:structure.lattice.b*dims[1],c:structure.lattice.c*dims[2]};
-  return {lattice,sites,replication:dims,source:imported?'mCIF':'Modify',
+  return {lattice,sites,replication:dims,source:imported?'mCIF':'Modify',ambiguousSites,
     caveat:'Dipole approximation with the selected magnetic-ion form factors (f = 1 where none is selected). Single magnetic domain. No Debye-Waller, absorption, or instrument corrections.'};
 }
 export function magneticStructureFactorSquared(motif,hkl,{formFactor=()=>1}={}){
@@ -184,7 +191,9 @@ export function magneticBraggPeaks(motif,wavelength,{twoThetaMax=180,maxCandidat
     }
   }
   const max=Math.max(0,...result.map(r=>r.intensity));
-  return result.filter(r=>r.intensity>Math.max(1e-12,max*1e-10)).sort((a,b)=>b.intensity-a.intensity);
+  // 1e-6 of the strongest peak: rounded file coordinates (e.g. 0.33333) leave
+  // ~1e-8 residues at systematically absent positions; drop them as zero.
+  return result.filter(r=>r.intensity>Math.max(1e-12,max*1e-6)).sort((a,b)=>b.intensity-a.intensity);
 }
 
 // Parent indexing for the app's explicitly tagged commensurate supercell exports.
@@ -196,8 +205,10 @@ export function parentIndexingFromMcif(text, magneticLattice, q){
     line.toLowerCase().startsWith(name.toLowerCase()+' '))?.slice(name.length).trim().replace(/^[\"']|[\"']$/g,'');
   const hasParent=/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src);
   if(!hasParent)return null;
-  const parent=tag('_parent_space_group.transform_Pp_abc');
-  const child=tag('_parent_space_group.child_transform_Pp_abc');
+  // FullProf writes an empty transform_Pp_abc ''; treat ''/?/. as absent.
+  const blank=v=>v===undefined||/^(?:|\?|\.)$/.test(String(v).trim())?undefined:v;
+  const parent=blank(tag('_parent_space_group.transform_Pp_abc'));
+  const child=blank(tag('_parent_space_group.child_transform_Pp_abc'));
   const identity=/^a\s*,\s*b\s*,\s*c\s*;\s*0\s*,\s*0\s*,\s*0$/i;
   // Support an explicitly declared, zero-origin, orthogonal-index (diagonal)
   // parent-to-child supercell mapping. More general sheared/transposed mCIF

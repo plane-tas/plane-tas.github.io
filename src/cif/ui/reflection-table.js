@@ -315,14 +315,15 @@ function renderReflectionPowderPlot(){
   const xTitle=axis==='q'?'Q (Å⁻¹)':axis==='d'?'d (Å)':'2θ (deg)';
   const yMax=Math.max(...y)||1;
   const hkl=h=>`(${h.map(v=>Number(Number(v).toFixed(4))).join(' ')})`;
-  const tick=(list,level,name,color)=>({x:list.map(p=>conv(p.twoTheta)),y:list.map(()=>-level*yMax),
+  // Each tick row shows only its own contribution: I_N on nuclear, I_M on magnetic.
+  const tick=(list,level,name,color,key,label)=>({x:list.map(p=>conv(p.twoTheta)),y:list.map(()=>-level*yMax),
     type:'scatter',mode:'markers',name,marker:{symbol:'line-ns-open',size:12,color,line:{width:1.5,color}},
-    customdata:list.map(p=>[hkl(p.hkl),p.mult,p.In,p.Im]),
-    hovertemplate:'%{customdata[0]}  Mult %{customdata[1]}<br>I_N = %{customdata[2]:.4g}<br>I_M = %{customdata[3]:.4g}<extra></extra>'});
+    customdata:list.map(p=>[hkl(p.hkl),p.mult,p[key]]),
+    hovertemplate:`%{customdata[0]}  Mult %{customdata[1]}<br>${label} = %{customdata[2]:.4g}<extra></extra>`});
   const traces=[{x:tth.map(conv),y,type:'scatter',mode:'lines',name:'Pattern',line:{width:1.5,color:'#1f4e8c'},
     hovertemplate:`${xTitle.split(' ')[0]} = %{x:.4f}<br>I = %{y:.4g}<extra></extra>`}];
-  if(part!=='M') traces.push(tick(peaks.filter(p=>p.In>0&&inRange(p)),0.05,'Nuclear','#2e7d32'));
-  if(part!=='N') traces.push(tick(peaks.filter(p=>p.Im>0&&inRange(p)),part==='M'?0.05:0.11,'Magnetic','#c62828'));
+  if(part!=='M') traces.push(tick(peaks.filter(p=>p.In>0&&inRange(p)),0.05,'Nuclear','#2e7d32','In','I_N'));
+  if(part!=='N') traces.push(tick(peaks.filter(p=>p.Im>0&&inRange(p)),part==='M'?0.05:0.11,'Magnetic','#c62828','Im','I_M'));
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:56,b:70},font:{size:18},
     // The axis title is the #reflectionPlotXAxis selector placed under the plot.
     xaxis:{title:{text:''},tickfont:{size:18},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1},

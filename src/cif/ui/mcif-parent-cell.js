@@ -63,7 +63,8 @@ function estimatedParentIndexingFromMcif(parsed,text){
   const nCells=replication.reduce((x,y)=>x*y,1);
   if(nCells>128||parsed.atoms.length>4000||parsed.atoms.length%nCells!==0)return null;
   const wrap=v=>((v%1)+1)%1;
-  const quant=v=>Math.round(wrap(v)*1e6)%1000000;
+  // 1e-4 grid: tolerant of coordinates rounded to ~6 decimals in the file.
+  const quant=v=>Math.round(wrap(v)*1e4)%10000;
   const key=atom=>[
     atom.element,Number(atom.occupancy??1).toFixed(6),
     ...['x','y','z'].map((ax,i)=>quant(Number(atom[ax])*replication[i]))
@@ -94,29 +95,40 @@ function estimatedParentIndexingFromMcif(parsed,text){
 
 function parentNuclearStructureFromMcif(parsed,text){
   if(!parsed?.magnetic || !Array.isArray(parsed.atoms) || !parsed.atoms.length) return null;
+  // Some writers (e.g. FullProf) omit the propagation-vector loop. An explicit
+  // diagonal child transform still fixes the parent cell without k.
   const q=propagationVectorsFromMcif(text,parsed);
-  if(q.length!==1) return null;
-  const parent=parentIndexingFromMcif(text,parsed.lattice,[q[0].h,q[0].k,q[0].l])
-    || estimatedParentIndexingFromMcif(parsed,text);
+  if(q.length>1) return null;
+  const parent=parentIndexingFromMcif(text,parsed.lattice,q.length?[q[0].h,q[0].k,q[0].l]:null)
+    || (q.length===1 ? estimatedParentIndexingFromMcif(parsed,text) : null);
   if(!parent) return null;
   const rep=parent.replication;
   // A child supercell must be a translation period of every commensurate k.
-  if(![q[0].h,q[0].k,q[0].l].every((v,i)=>
+  if(q.length===1 && ![q[0].h,q[0].k,q[0].l].every((v,i)=>
        Number.isFinite(Number(v))&&Math.abs(Number(v)*rep[i]-Math.round(Number(v)*rep[i]))<1e-8))return null;
   const wrap=v=>{const w=((v%1)+1)%1;return Math.abs(w-1)<1e-8 || w<1e-8?0:w;};
-  const dedup=new Map();
+  // Translated copies must be merged with a tolerance: mCIF coordinates are
+  // usually rounded (e.g. 0.111111 / 0.444444), so after scaling to the parent
+  // cell two copies of one site can differ by a few 1e-6. Exact-key merging
+  // kept every copy and made nuclear |F|^2 N^2 times too large.
+  const tol=1e-4;
+  const same=(a,b)=>a.every((v,i)=>{const d=v-b[i];return Math.abs(d-Math.round(d))<tol;});
+  const merged=[];
   for(const atom of parsed.atoms){
     const position=['x','y','z'].map((key,i)=>wrap(Number(atom[key])*rep[i]));
     if(position.some(v=>!Number.isFinite(v))) return null;
-    const key=[atom.element,...position.map(v=>Math.round(v*1e7)),Math.round(Number(atom.occupancy??1)*1e7)].join('|');
-    if(!dedup.has(key)){
+    const occupancy=Number(atom.occupancy??1);
+    const hit=merged.some(site=>site.element===atom.element &&
+      Math.abs(Number(site.occupancy??1)-occupancy)<1e-5 && same(site.position,position));
+    if(!hit){
       // Magnetism does not alter nuclear scattering lengths, occupancies or Biso.
       // Never attach magnetic moments to a nuclear reflection model.
       const {magneticMoment,magneticFourier,...nuclearAtom}=atom;
-      dedup.set(key,{...nuclearAtom,x:position[0],y:position[1],z:position[2]});
+      merged.push({element:atom.element,occupancy,position,
+        atom:{...nuclearAtom,x:position[0],y:position[1],z:position[2]}});
     }
   }
-  return {...parsed,lattice:parent.lattice,atoms:[...dedup.values()],magnetic:false,
+  return {...parsed,lattice:parent.lattice,atoms:merged.map(site=>site.atom),magnetic:false,
     parentCellReference:parent.reference,parentCellEstimated:!!parent.estimated,
     parentReplication:parent.replication};
 }

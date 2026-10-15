@@ -61,10 +61,10 @@ function resolvedViewerParent(source){
   if(!selected || source.structure.asymmetricSites!==selected.asymmetricSites)return null;
   const text=getSelectedCifText();
   const q=fn.propagationVectorsFromMcif(text,selected);
-  if(q.length!==1)return null;
-  const parent=parentIndexingFromMcif(text,selected.lattice,[q[0].h,q[0].k,q[0].l])
-    || fn.estimatedParentIndexingFromMcif(selected,text);
-  if(parent?.replication && ![q[0].h,q[0].k,q[0].l].every((v,i)=>
+  if(q.length>1)return null;
+  const parent=parentIndexingFromMcif(text,selected.lattice,q.length?[q[0].h,q[0].k,q[0].l]:null)
+    || (q.length===1 ? fn.estimatedParentIndexingFromMcif(selected,text) : null);
+  if(q.length===1 && parent?.replication && ![q[0].h,q[0].k,q[0].l].every((v,i)=>
        Math.abs(Number(v)*parent.replication[i]-Math.round(Number(v)*parent.replication[i]))<1e-8))return null;
   if(!parent || !Array.isArray(parent.replication) || parent.replication.length!==3 ||
      !parent.replication.every(n=>Number.isInteger(n)&&n>=1))return null;
