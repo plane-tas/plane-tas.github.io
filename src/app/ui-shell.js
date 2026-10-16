@@ -546,7 +546,7 @@ function restoreLeftPanelState(){
       ? v.__darkAssets.map(card=>({
           enabled:card?.enabled!==undefined ? !!card.enabled : true,
           se:String(card?.se||""), ref:String(card?.ref||"Reference Q"),
-          rotation:Number(card?.rotation), refH:Number(card?.refH), refK:Number(card?.refK), refL:Number(card?.refL),
+          rotation:Number(card?.rotation), refH:String(card?.refH??''), refK:String(card?.refK??''), refL:String(card?.refL??''),
           ranges:Array.isArray(card?.ranges) ? card.ranges.map(r=>({from:Number(r?.from),to:Number(r?.to),offset:Number(r?.offset)})) : [{}]
         }))
       : null;

@@ -199,9 +199,9 @@ function createDarkAsset(slot,values={}){
       <label>Rotation (deg)<input id="${ids.rotation}" type="number" value="0" step="1"></label>
     </div>
     <div id="${ids.refRow}" class="grid3">
-      <label>h<input id="${ids.refH}" type="number" value="1" step="0.1"></label>
-      <label>k<input id="${ids.refK}" type="number" value="0" step="0.1"></label>
-      <label>l<input id="${ids.refL}" type="number" value="0" step="0.1"></label>
+      <label>h<input id="${ids.refH}" type="text" inputmode="text" data-fraction="" value="1"></label>
+      <label>k<input id="${ids.refK}" type="text" inputmode="text" data-fraction="" value="0"></label>
+      <label>l<input id="${ids.refL}" type="text" inputmode="text" data-fraction="" value="0"></label>
     </div>
     <input id="${ids.rangeCount}" type="hidden" value="1">
     <div class="dark-table" data-dark-range-table="${slot}"></div>
@@ -217,6 +217,10 @@ function refreshDarkEnvironmentSelect(slot){
   if([...select.options].some(o=>o.value===keep)) select.value=keep;
 }
 
+function rawNumericText(id){
+  const raw=String($(id)?.value??"").trim();
+  return Number.isFinite(parseNumericValue(raw)) ? raw : num(id);
+}
 function snapshotDarkAsset(slot){
   const ids=darkAssetIds(slot);
   return {
@@ -224,7 +228,8 @@ function snapshotDarkAsset(slot){
     se:$(ids.se)?.value||"",
     ref:checkedValue(ids.ref)||"Reference Q",
     rotation:num(ids.rotation),
-    refH:num(ids.refH), refK:num(ids.refK), refL:num(ids.refL),
+    // Keep the typed text (e.g. "1/2") when it is a valid number or fraction.
+    refH:rawNumericText(ids.refH), refK:rawNumericText(ids.refK), refL:rawNumericText(ids.refL),
     ranges:darkRangeValues(slot)
   };
 }
@@ -239,9 +244,9 @@ function applyDarkAssetValues(slot,values={}){
   }
   setRadio(ids.ref,values.ref||"Reference Q");
   if($(ids.rotation)) $(ids.rotation).value=Number.isFinite(Number(values.rotation))?String(values.rotation):"0";
-  if($(ids.refH)) $(ids.refH).value=Number.isFinite(Number(values.refH))?String(values.refH):"1";
-  if($(ids.refK)) $(ids.refK).value=Number.isFinite(Number(values.refK))?String(values.refK):"0";
-  if($(ids.refL)) $(ids.refL).value=Number.isFinite(Number(values.refL))?String(values.refL):"0";
+  if($(ids.refH)) $(ids.refH).value=Number.isFinite(parseNumericValue(values.refH))?String(values.refH).trim():"1";
+  if($(ids.refK)) $(ids.refK).value=Number.isFinite(parseNumericValue(values.refK))?String(values.refK).trim():"0";
+  if($(ids.refL)) $(ids.refL).value=Number.isFinite(parseNumericValue(values.refL))?String(values.refL).trim():"0";
   replaceDarkRanges(slot,values.ranges);
   updateDarkReferenceUI(slot);
 }

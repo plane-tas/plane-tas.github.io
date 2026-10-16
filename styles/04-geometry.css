@@ -27,7 +27,7 @@
 #singleMain .geometry-card .geometry-target .grid4{
   grid-template-columns:repeat(4,minmax(0,1fr));
 }
-#singleMain .geometry-card .geometry-target .grid4 input[type=number]{
+#singleMain .geometry-card .geometry-target .grid4 input[type=number],#singleMain .geometry-card .geometry-target .grid4 input[data-fraction]{
   width:100%;
   min-width:0;
 }
@@ -557,7 +557,7 @@
 }
 @media(max-width:1250px){.s2-conversion-card{overflow-x:auto}.s2-conversion-grid{grid-template-columns:repeat(6,minmax(calc(150px * var(--tas-density)),1fr));min-width:calc(980px * var(--tas-density))}}
 .geometry-scan-target{padding:calc(8px * var(--tas-density)) 0 calc(2px * var(--tas-density))}
-.geometry-scan-grid label,.geometry-scan-grid input[type=number]{min-width:0;width:100%;max-width:none}
+.geometry-scan-grid label,.geometry-scan-grid input[type=number],.geometry-scan-grid input[data-fraction]{min-width:0;width:100%;max-width:none}
 .geometry-scan-empty{min-height:calc(1px * var(--tas-density))}
 .geometry-scan-output-pane{background:#fff;padding:calc(8px * var(--tas-density))}
 .geometry-scan-point-row label{flex:1}

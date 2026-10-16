@@ -62,7 +62,7 @@
   font-weight:650;
 }
 #resolutionInstrumentDetails h3{font-size:calc(13px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
-#resolutionInstrumentDetails input[type=number],
+#resolutionInstrumentDetails input[type=number],#resolutionInstrumentDetails input[data-fraction],
 #resolutionInstrumentDetails input[type=text]{
   width:100%;
   min-width:0;
@@ -76,14 +76,14 @@
   gap:calc(8px * var(--tas-density));
   align-items:end;
 }
-#resolutionCalculation #singleInputs input[type=number]{
+#resolutionCalculation #singleInputs input[type=number],#resolutionCalculation #singleInputs input[data-fraction]{
   width:100%;
   min-width:0;
   max-width:none;
 }
 
 /* Scan entries should also fill their grid cells consistently. */
-#resolutionCalculation #scanInputs input[type=number]{
+#resolutionCalculation #scanInputs input[type=number],#resolutionCalculation #scanInputs input[data-fraction]{
   width:100%;
   min-width:0;
   max-width:none;
@@ -114,7 +114,7 @@
 @media(max-width:600px){
   #resolutionCalculation #singleInputs{grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(4px * var(--tas-density))}
   #resolutionCalculation #singleInputs label{font-size:calc(11.5px * var(--tas-density))}
-  #resolutionCalculation #singleInputs input[type=number]{padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
+  #resolutionCalculation #singleInputs input[type=number],#resolutionCalculation #singleInputs input[data-fraction]{padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
 }
 
 /* v105: Resolution Scan is explicitly calculated to keep common editing responsive. */
