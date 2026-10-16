@@ -9,6 +9,7 @@ export function createQEVectorMap(deps){
     setScatteringPlaneWarning, getPowderCache, getSingleCache
   }=deps;
 
+let qeVectorMeasureCanvas=null;
 function qeRluNiceStep(span){
   const raw=Math.max(1e-12,Math.abs(span)/9);
   const decade=Math.pow(10,Math.floor(Math.log10(raw)));
@@ -240,19 +241,40 @@ function renderQEVectorMap(cache){
     const tickText=multiple
       ?pathPoints.map((_,i)=>qePathAxisCoordinateLabel(i))
       :tickVals.map(axisNumber);
-    const labelPixelWidth=text=>Math.max(0,String(text).length*17*0.56);
+    // Measure the real rendered width (canvas, same font as the annotations).
+    // A per-character estimate overstates labels such as "(0.5, 0, 1)".
+    // tas-plot-density.js scales every Plotly font (and margin) by the UI
+    // density, so the labels are 17*density px wide on screen, not 17 px.
+    const uiDensity=(()=>{const d=Number(window.tasUIDensity?.());return d>0?d:1;})();
+    const labelPixelWidth=text=>{
+      const t=String(text);
+      try{
+        const ctx=(qeVectorMeasureCanvas||(qeVectorMeasureCanvas=document.createElement('canvas'))).getContext('2d');
+        ctx.font=`${17*uiDensity}px ${plot._fullLayout?.font?.family||'"Open Sans", verdana, arial, sans-serif'}`;
+        const w=ctx.measureText(t).width;
+        if(w>0) return w;
+      }catch(_e){}
+      return Math.max(0,t.length*17*uiDensity*0.56);
+    };
     const longestVertexLabel=Math.max(...pathPoints.map((_,i)=>labelPixelWidth(qePathAxisCoordinateLabel(i))));
     const sideMargin=Math.ceil(Math.max(88,longestVertexLabel/2+24));
     const plotPixelWidth=plot.getBoundingClientRect().width||plot.clientWidth||540;
-    const staggeredPathLabels=(width=plotPixelWidth)=>{
+    // Rows are assigned from the ACTUAL plot-area width and the CURRENT x range
+    // (after zoom). Labels outside the range are not drawn and never force a row.
+    const staggeredPathLabels=(width=plotPixelWidth,{areaWidth=null,range=null}={})=>{
       if(!multiple) return {annotations:[],rowCount:0};
-      const usableWidth=Math.max(60,width-2*sideMargin);
+      const usableWidth=Math.max(60,Number(areaWidth)>0?Number(areaWidth):width-2*sideMargin*uiDensity);
+      const [r0,r1]=Array.isArray(range)&&range.length===2&&Number(range[1])>Number(range[0]) ? range.map(Number) : [hMin,hMax];
+      const span=Math.max(r1-r0,1e-9);
       const lastRight=[];
       const annotations=knots.map((x,i)=>{
         const width=labelPixelWidth(tickText[i]);
-        const center=x/Math.max(hMax,1e-9)*usableWidth;
+        const center=(x-r0)/span*usableWidth;
+        const visible=x>=r0-span*1e-6 && x<=r1+span*1e-6;
+        if(!visible) return {x,xref:'x',y:0,yref:'paper',yshift:-11,
+          text:tickText[i],showarrow:false,xanchor:'center',yanchor:'top',font:{size:17}};
         const left=center-width/2;
-        let row=lastRight.findIndex(right=>left>=right+9);
+        let row=lastRight.findIndex(right=>left>=right+9*uiDensity);
         if(row<0){row=lastRight.length;lastRight.push(-Infinity);}
         lastRight[row]=center+width/2;
         return {x,xref:'x',y:0,yref:'paper',yshift:-11-21*row,
@@ -429,6 +451,7 @@ function renderQEVectorMap(cache){
     Promise.resolve(renderPromise).then(()=>{
       if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
       installQEVectorDoubleClickReset(plot);
+      plot.__tasPathRefreshAxisLabels?.();
       // Force the current path's axes when a vertex is added/removed/edited.
       // Otherwise Plotly may reuse the last double-click/zoom state.
       if(pathChanged) return Plotly.relayout(plot,{
@@ -441,20 +464,42 @@ function renderQEVectorMap(cache){
     // A responsive Plotly resize does not re-run the label row selection.
     // Recalculate the horizontal-label rows when the parent pane changes width
     // (for example when a tablet rotates or the browser becomes narrower).
+    let appliedRows=pathLabelLayout.annotations.map(a=>a.yshift).join(',');
     plot.__tasPathUpdateAxisLabels=width=>{
       if(!multiple || !plot.isConnected || $('qeVectorMapPane')?.classList.contains('hidden')) return;
-      const fresh=staggeredPathLabels(width);
+      const size=plot._fullLayout?._size;
+      const fresh=staggeredPathLabels(width,{
+        // The plot-area width is unaffected by the bottom margin we change here.
+        areaWidth:size?.w,range:plot._fullLayout?.xaxis?.range});
+      const rows=fresh.annotations.map(a=>a.yshift).join(',');
+      if(rows===appliedRows) return;
+      appliedRows=rows;
       const axisAnnotations=[
         {x:0.5,xref:'paper',y:0,yref:'paper',
           yshift:-(48+21*fresh.rowCount),text:axisTitle,showarrow:false,
           xanchor:'center',yanchor:'top',font:{size:15}},
         ...fresh.annotations
       ];
+      // Plotly.relayout bypasses the density adapter (tas-plot-density.js
+      // wraps newPlot/react only): scale fonts and the margin here, otherwise
+      // a resize/zoom would enlarge the labels and the bottom margin.
+      const d=(()=>{const v=Number(window.tasUIDensity?.());return v>0?v:1;})();
       Plotly.relayout(plot,{
-        annotations:axisAnnotations,
-        'margin.b':80+21*fresh.rowCount
+        annotations:axisAnnotations.map(a=>({...a,font:{...a.font,size:a.font.size*d}})),
+        'margin.b':(80+21*fresh.rowCount)*d
       }).catch(err=>console.warn('Q path label resize:',err));
     };
+    plot.__tasPathRefreshAxisLabels=()=>{
+      const width=plot.getBoundingClientRect().width;
+      if(width>0) plot.__tasPathUpdateAxisLabels?.(width);
+    };
+    // Zoom/pan changes which labels are visible and how far apart they are.
+    if(!plot.__tasPathRelayoutBound && typeof plot.on==='function'){
+      plot.__tasPathRelayoutBound=true;
+      plot.on('plotly_relayout',ev=>{
+        if(ev && Object.keys(ev).some(k=>k.startsWith('xaxis.'))) plot.__tasPathRefreshAxisLabels?.();
+      });
+    }
     if(typeof ResizeObserver!=='undefined' && !plot.__tasPathResizeObserver){
       plot.__tasPathLastWidth=plotPixelWidth;
       plot.__tasPathResizeObserver=new ResizeObserver(entries=>{
