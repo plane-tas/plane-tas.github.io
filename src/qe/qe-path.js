@@ -21,15 +21,16 @@ function qeSpurionWarnings(cache, hw){
   const fixedEi=Number(cache?.Ei);
   const candidates=[];
 
-  // Convention used in the warning label:
-  // "nki-mkf" corresponds to ki/kf = n/m.
-  // Therefore Ei/Ef = (n/m)^2.
+  // Loop variables: ki/kf = n/m (n > m), i.e. Ei/Ef = (n/m)^2. Physically
+  // the m-th order of ki equals the n-th order of kf:  m*ki = n*kf.
+  // The warning is therefore labelled "m ki - n kf" (e.g. ki-2kf, 2ki-3kf).
   //
   // Only include an incident higher-order component while its energy
-  // n^2 * Ei is <= 100 meV, since the reactor spectrum is negligible above it.
-  // The upper n bound below is intentionally generous; the 100-meV test is
-  // the actual cutoff.
-  for(let n=2;n<=12;n++){
+  // m^2 * Ei is <= 100 meV, since the reactor spectrum is negligible above it.
+  // The 100-meV test limits the incident order m. The analyzer order n has no
+  // such cutoff, so it is capped at 4 (PG(008)); higher orders are negligible
+  // and would only flood the warning (ki-5kf ... ki-12kf at fixed Ei).
+  for(let n=2;n<=4;n++){
     for(let m=1;m<n;m++){
       let hws, EiAtSpurion, EfAtSpurion;
       const r=(n/m)*(n/m);
@@ -47,11 +48,13 @@ function qeSpurionWarnings(cache, hw){
       }
 
       if(!(EiAtSpurion>0) || !(EfAtSpurion>0) || !Number.isFinite(hws)) continue;
-      if(n*n*EiAtSpurion > 100 + 1e-9) continue;
+      // The incident component is the m-th order of ki (energy m^2 Ei).
+      if(m*m*EiAtSpurion > 100 + 1e-9) continue;
 
       // Reduce duplicate ratios (e.g. 4/2 == 2/1); keep the lowest-order label.
       if(candidates.some(x=>Math.abs(x.hw-hws)<1e-9)) continue;
-      candidates.push({label:`${n}ki-${m}kf`,hw:hws});
+      const coefficient=c=>c===1?'':String(c);
+      candidates.push({label:`${coefficient(m)}ki-${coefficient(n)}kf`,hw:hws});
     }
   }
 
