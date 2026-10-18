@@ -1587,14 +1587,15 @@ export function createScriptWorkspace(deps){
     updateTimeLoopIndentation();
     if(!errors.length){
       const structure=ensureTimeLoopPairIds();
-      let darkCache=null;
-      if(checkedValue('sampleMode')==='single' && $('addDark')?.checked){
-        try{ darkCache=deps.singleCache || calculateSingleCrystal(); }catch(_e){ darkCache=null; }
+      let darkCache=null, angleCache=null;
+      if(checkedValue('sampleMode')==='single'){
+        try{ angleCache=deps.singleCache || calculateSingleCrystal(); }catch(_e){ angleCache=null; }
+        if($('addDark')?.checked) darkCache=angleCache;
       }
       for(let i=0;i<rows.length;i++){
         const result=results[i];
         if(!result?.ok || result.kind==='loop' || result.kind==='endloop') continue;
-        const rowWarnings=timeRowMotionWarnings(rows[i],result,i+1,structure,darkCache);
+        const rowWarnings=timeRowMotionWarnings(rows[i],result,i+1,structure,darkCache,angleCache);
         if(rowWarnings.length){
           warnings.push(...rowWarnings);
           setTimeScanS2LimitWarning(rows[i],true,rowWarnings.join(' / '));
@@ -2861,7 +2862,7 @@ export function createScriptWorkspace(deps){
     return blocks.length ? `Command ${index}: Dark angle ${blocks.join(' / ')} (${detail}).` : null;
   }
 
-  function timeRowMotionWarnings(row,result,index,structure,darkCache=null){
+  function timeRowMotionWarnings(row,result,index,structure,darkCache=null,angleCache=null){
     const meta=timeCommandMeta(result.command);
     if(!['s1','s2','th2th','qe','hkle','br'].includes(meta.target)) return [];
     const contextResult=timeLoopContextsForRow(row,structure);
@@ -2950,6 +2951,12 @@ export function createScriptWorkspace(deps){
         const reach=timeReachabilityFromQ(q,hw);
         if(!checkReachability(reach)) continue;
         checkS2(reach.s2,reach.Ei);
+        // S1 limits (and an unusable orientation reference) need the full
+        // UB/motor-angle calculation: identical to the Angle calculation.
+        if(angleCache && typeof deps.geometryPointWarnings==='function'){
+          try{ for(const w of deps.geometryPointWarnings(angleCache,{h:hkl[0],k:hkl[1],l:hkl[2],hw})) add(w); }
+          catch(_e){ /* reachability was already reported above */ }
+        }
         if(darkCache?.addDark){
           for(const block of qeDarkBlockWarningsForHKLE(darkCache,hkl,hw)) add(block);
         }
@@ -2958,7 +2965,7 @@ export function createScriptWorkspace(deps){
     if(!issues.size) return [];
     // Keep the order consistent regardless of which scan point failed first.
     const order=['ki blocked','kf blocked','fixed blocked','S1 out of range',
-      'S2 out of range','scattering triangle cannot be formed',
+      'S1 unavailable (reference Q)','S2 out of range','scattering triangle cannot be formed',
       'Ei/Ef out of range','invalid Q','inaccessible Q–E point',
       'HKL outside U–V scattering plane','th2th: previous S2 position unavailable'];
     const sorted=[...issues].sort((a,b)=>order.indexOf(a)-order.indexOf(b));

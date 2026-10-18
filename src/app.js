@@ -43,6 +43,7 @@ import {createQESingleRender} from './qe/qe-single-render.js';
 import {createQEVectorMap} from './qe/qe-vector-map.js';
 import {createRecalc} from './app/recalc.js';
 import {createGeometryTargets} from './geometry/geometry-targets.js';
+import {createGeometrySliders} from './geometry/geometry-sliders.js';
 
 const $ = id => document.getElementById(id);
 const instruments = new Map();
@@ -51,7 +52,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, formatAutoHKL, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, calcOne, matrixText, traceEllipse, baseLayout, resolutionPlotLimitsFromEntries, formatAngle, renderResolution, resolutionScanPoints, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, powderQFromS2AtHW, powderSignedS2FromQAtHW, powderLinkDriver, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryScanPoints, syncGeometryScanPointSlider, geometryDisplayedMotorAngles, geometryScanStatusWarnings, geometryScanErrorStatus, geometryPointWarnings, updateGeometryPlaneWarning, renderGeometryScanTable, currentGeometryScanOutputTab, setGeometryScanOutputTab, moveGeometryPlotForMode, setGeometryCalculationMode, updateGeometryAnglesVisibility, updateGeometryCalculationModeVisibility, geometryResultSummaryHtml, renderGeometry, safeResizePlot, plotHasLayout, ensureVisiblePrimaryPlots, scheduleVisiblePrimaryPlotRecovery, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, setupAppHeader, rightPanelControls, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, globalUIPersistentControls, currentCifOutputTab, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, leftPanelControls, resolutionInstrumentDetailControls, saveLeftPanelState, setSavedControl, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, darkSampleRangeForConvention, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal, calculateSingleCrystalCore;
@@ -101,11 +102,13 @@ const {
 const {
   currentQEMapUnit, qeCommitPathText, qeDefaultPathText, qeFormatPathNumber, qePathAxisCoordinateLabel,
   qePathInput, qePathMapLabel, qePathPointXY, qePhysicalRluCoordinates, qePlaneRluBasis,
-  qeSelectedPathHKL, qeSpurionWarnings, qeXYForUnit, updateQESpurionWarning, bindQEPathControls
+  qeSelectedPathHKL, qeSpurionWarnings, qeXYForUnit, updateQESpurionWarning, bindQEPathControls,
+  syncQEPathSnapDefault
 }=createQEPath({
   $, checkedValue, hklToQ, num, parseNumericValue,
   renderQEVectorMap:(...args)=>renderQEVectorMap(...args),
-  renderSingle:(...args)=>renderSingle(...args), getSingleCache:()=>singleCache
+  renderSingle:(...args)=>renderSingle(...args), getSingleCache:()=>singleCache,
+  renderGeometry:(...args)=>renderGeometry(...args)
 });
 
 const {
@@ -128,7 +131,7 @@ const {
 
 const {
   ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
-  renderSingle
+  renderSingle, updateGeometryTargetMarker
 }=createQESingleRender({
   $, backgroundColor, bindSingleRluGrid:(...args)=>bindSingleRluGrid(...args),
   bindSingleZoomPeakScaling, collectResolutionBase:(...args)=>collectResolutionBase(...args),
@@ -139,7 +142,7 @@ const {
   renderQEVectorMap:(...args)=>renderQEVectorMap(...args), selectedBackgrounds, selectedS1Sign,
   selectedTasSense, singleColorbarTicks, singleMarkerSizes, singleNuclearLabelStyle,
   tasMotorAngles:(...args)=>tasMotorAngles(...args), updateQESpurionWarning,
-  updateS2MaxDisplayForQERange
+  updateS2MaxDisplayForQERange, hklToQ
 });
 
 const {
@@ -164,7 +167,9 @@ const {
   updateAutoW:(...args)=>updateAutoW(...args), updateEnergyLabel, updateModeVisibility,
   updateResolutionPlaneWarning:(...args)=>updateResolutionPlaneWarning(...args), updateS2MaxDisplay,
   getSingleCache:()=>singleCache, setSingleCache:(value)=>{ singleCache=value; },
-  getPowderCache:()=>powderCache, setPowderCache:(value)=>{ powderCache=value; }
+  getPowderCache:()=>powderCache, setPowderCache:(value)=>{ powderCache=value; },
+  targetHWMapIndex:(...args)=>targetHWMapIndex(...args),
+  syncQEPathSnapDefault:(...args)=>syncQEPathSnapDefault(...args)
 });
 
 const {
@@ -180,6 +185,7 @@ const {
 const legacyRangeInstruments = new Map();
 
 let singleCache = null;
+let geometrySliders = null;
 let powderCache = null;
 let selectedCifStructure = null;
 let selectedCifFileName = "";
@@ -500,12 +506,11 @@ function updateModeVisibility(){
   $("qeSpurionWarning")?.classList.toggle("hidden",!single);
   $("powderPlot")?.classList.toggle("hidden",single);
   $("qeMapTabVector")?.classList.toggle("hidden",!single);
+  // Powder has a single map and no HKL path: hide the map tabs and the
+  // HKL path box of the Constant E map.
+  document.querySelector('#qePanel .qe-map-tabs')?.classList.toggle("hidden",!single);
+  document.querySelector('#qeConstantMapPane .qe-constant-path-input')?.classList.toggle("hidden",!single);
   if(!single && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
-  if($('qeMapUnit')){
-    $('qeMapUnit').disabled=!single;
-    // Keep the selected Q unit while viewing Powder. A disabled select must
-    // not overwrite the saved Single-crystal preference on mode switches.
-  }
   updateGeometryCalculationModeVisibility();
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
@@ -571,7 +576,35 @@ $("instrument").addEventListener("change",()=>{
 bindDynamicSidebarUI();
 
 
-$("hwSlider").addEventListener("input",()=>{ if(singleCache) renderSingle(singleCache,Number($("hwSlider").value)); });
+// The Constant E map energy and the Angle calculation hbar-omega are one value.
+// The map shows the nearest calculated slice; the Angle calculation keeps the
+// exact entered value. Map slider / entry -> geomHW; geomHW (typed or its
+// slider) -> map slice.
+function targetHWMapIndex(cache){
+  const hw=num('geomHW');
+  return Number.isFinite(hw) && cache?.hwList?.length ? nearestHWIndex(cache,hw) : null;
+}
+function setTargetHWFromMap(i){
+  const v=singleCache?.hwList?.[i];
+  if(Number.isFinite(v) && $('geomHW')) $('geomHW').value=String(Number(v.toFixed(4)));
+}
+// Returns true when the map (and with it the TAS geometry) was redrawn.
+function syncMapHWFromTarget(){
+  if(!singleCache || checkedValue('sampleMode')!=='single') return false;
+  const i=targetHWMapIndex(singleCache);
+  if(i===null || i===Number($('hwSlider')?.value)) return false;
+  renderSingle(singleCache,i);
+  return true;
+}
+$("hwSlider").addEventListener("input",()=>{
+  if(!singleCache) return;
+  const i=Number($("hwSlider").value);
+  setTargetHWFromMap(i);
+  renderSingle(singleCache,i);
+});
+$("hwSlider").addEventListener("change",()=>saveRightPanelState());
+$('geomHW')?.addEventListener('input',syncMapHWFromTarget);
+$('geomHW')?.addEventListener('change',syncMapHWFromTarget);
 $('qeMapTabConstant')?.addEventListener('click',()=>setQEMapTab('constant'));
 $('qeMapTabVector')?.addEventListener('click',()=>setQEMapTab('vector'));
 bindQEPathControls();
@@ -632,7 +665,7 @@ document.querySelectorAll("input,select").forEach(el=>{
     "hwSlider",
     "geomScanPointSlider",
     "scanSlider",
-    'qeVectorHKLPath',
+    'qeVectorHKLPath','qePathHKLConstant','qePathSnap',
     ...GEOMETRY_SCAN_INPUT_IDS
   ].includes(el.id)) return;
 
@@ -679,11 +712,8 @@ async function initialize(){
   clearError(); fillCrystal('monoCrystal','dMono');fillCrystal('anaCrystal','dAna');initializeSidebarCrystalSelectors();updateModeVisibility();updateEnergyLabel();updateCalcMode();updateSupermirrorUI();updateAutoW();
   initializeScriptWorkspaceUI();
   try{
-    const savedSnap=localStorage.getItem('tas-qe-path-snap-v1');
-    if($('qePathSnap') && [...$('qePathSnap').options].some(o=>o.value===savedSnap))
-      $('qePathSnap').value=savedSnap;
-    const savedUnit=localStorage.getItem('tas-qe-map-unit-v1');
-    if($('qeMapUnit') && (savedUnit==='ainv'||savedUnit==='rlu')) $('qeMapUnit').value=savedUnit;
+    // Snap 1/n: the user's explicit choice, else the lattice default.
+    syncQEPathSnapDefault();
     const savedMapTab=localStorage.getItem('tas-qe-map-tab-v1');
     setQEMapTab(savedMapTab==='vector'?'vector':'constant');
   }catch(_e){ setQEMapTab('constant'); }
@@ -776,10 +806,9 @@ async function initialize(){
   for(const id of ['energy','energyMode','sense','s1sign']) $(id)?.addEventListener('change',()=>{
     if(checkedValue('sampleMode')==='powder') syncPowderLinkedInputs();
   });
-  $('hwEntry').addEventListener('change',()=>{if(singleCache){const i=nearestHWIndex(singleCache,Number($('hwEntry').value));renderSingle(singleCache,i);saveRightPanelState();}});
+  $('hwEntry').addEventListener('change',()=>{if(singleCache){const i=nearestHWIndex(singleCache,Number($('hwEntry').value));setTargetHWFromMap(i);renderSingle(singleCache,i);saveRightPanelState();}});
   $('s2Slider').addEventListener('input',()=>{$('s2Entry').value=Number($('s2Slider').value).toFixed(1);if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
   $('s2Entry').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
-  $('displayNuclearLabels').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
   $('displayS2Ring').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);
@@ -962,6 +991,7 @@ async function initialize(){
   geometryDisplayedMotorAngles,
   geometryScanStatusWarnings,
   geometryScanErrorStatus,
+  geometryPointWarnings,
   updateGeometryPlaneWarning,
   renderGeometryScanTable,
   currentGeometryScanOutputTab,
@@ -979,8 +1009,19 @@ async function initialize(){
   makeSpiceScatteringPlaneBasis, norm, num, parseNumericValue, powderGeometryTarget, qeDarkBlockWarningsForHKLE,
   qeGeometryAngles, rad2deg, scale, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
   selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
-  tasConvention, qeSpurionWarnings, userFacingTasMessage, getSingleCache:()=>singleCache
+  tasConvention, qeSpurionWarnings, userFacingTasMessage, getSingleCache:()=>singleCache,
+  syncGeometrySliders:(...args)=>geometrySliders?.syncGeometrySliders(...args),
+  updateGeometryTargetMarker:(...args)=>updateGeometryTargetMarker(...args)
 }));
+// U / V / hbar-omega sliders of Angle calculation & TAS geometry (Single).
+geometrySliders=createGeometrySliders({
+  $, checkedValue, collectResolutionBase:(...args)=>collectResolutionBase(...args), getSingleCache:()=>singleCache,
+  hklToQ, makeSpiceScatteringPlaneBasis, norm, dot, num,
+  geometryCalculationMode:(...args)=>geometryCalculationMode(...args),
+  renderGeometryNow:()=>{ if(singleCache && checkedValue('sampleMode')==='single') renderGeometry(singleCache,Number($('hwSlider')?.value)||0); },
+  syncMapHWFromTarget:()=>syncMapHWFromTarget()
+});
+geometrySliders.bindGeometrySliders();
 
 ({
   currentGeometryCardTab,
@@ -995,6 +1036,7 @@ async function initialize(){
   $, add, buildResolutionLattice, calculateSingleCrystal, checkedValue, clamp, cross,
   currentInstrument, dot, effectiveS2MaxAtEi, hklToQ, tasConvention, norm, num,
   parseNumericValue, qeDarkBlockWarningsForHKLE, rad2deg, renderGeometry,
+  geometryPointWarnings:(...args)=>geometryPointWarnings(...args),
   resizeVisiblePlots:(...args)=>resizeVisiblePlots(...args), safeResizePlot:(...args)=>safeResizePlot(...args), scale, userFacingTasMessage,
   get singleCache(){ return singleCache; },
   get powderCache(){ return powderCache; }

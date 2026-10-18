@@ -448,7 +448,7 @@
 #structurePanel .structure-style-modes input{
   margin:0;
   flex:0 0 auto;
-  accent-color:var(--accent-color,#337ab7);
+  accent-color:var(--tas-accent);
 }
 #cifGeneratorPanel .cif-thermal-header{
   font-size:max(14px,calc(15px * var(--tas-density)))!important;

@@ -40,19 +40,25 @@ function setGeometryKiOrientationCondition(mode){
     // on the previously entered Q.  Start from the corresponding fundamental
     // U/V Bragg position at elastic transfer so a previous high-Q target cannot
     // select a higher-|Q| solution.
-    const currentHKL=(usesV?V:U).slice();
     const hw=0;
-    $("geomH").value=currentHKL[0];
-    $("geomK").value=currentHKL[1];
-    $("geomL").value=currentHKL[2];
-    $("geomHW").value=0;
-    const qCurrent=hklToQ(b.rl,currentHKL), qNorm=norm(qCurrent);
-    if(!(qNorm>1e-12)) throw new Error(`${usesV?"V":"U"} must be non-zero.`);
     const em=b.config.energy_mode;
     const Ei=em==="Ei fixed"?Number(b.config.Ei):Number(b.config.Ef)+hw;
     const Ef=em==="Ei fixed"?Number(b.config.Ei)-hw:Number(b.config.Ef);
     if(!(Ei>0) || !(Ef>0)) throw new Error("Ei and Ef must be positive.");
     const ki=Math.sqrt(Ei/2.072), kf=Math.sqrt(Ef/2.072);
+    // When U (V) is beyond 2k (cold neutrons), use U/n (V/n) with the smallest
+    // accessible n -- the same virtual reference as the Sample orientation.
+    const axisHKL=(usesV?V:U).slice();
+    const axisQ=norm(hklToQ(b.rl,axisHKL));
+    if(!(axisQ>1e-12)) throw new Error(`${usesV?"V":"U"} must be non-zero.`);
+    const arg=axisQ/(2*ki);
+    const divisor=arg>1+1e-10 ? Math.ceil(arg-1e-10) : 1;
+    const currentHKL=axisHKL.map(v=>v/divisor);
+    $("geomH").value=currentHKL[0];
+    $("geomK").value=currentHKL[1];
+    $("geomL").value=currentHKL[2];
+    $("geomHW").value=0;
+    const qCurrent=hklToQ(b.rl,currentHKL), qNorm=norm(qCurrent);
     const cosS2=(ki*ki+kf*kf-qNorm*qNorm)/(2*ki*kf);
     if(cosS2<-1-1e-10||cosS2>1+1e-10) throw new Error("Current |Q| is not accessible at this energy transfer.");
     const s2Geom=rad2deg(Math.acos(clamp(cosS2,-1,1))), t=deg2rad(s2Geom);
@@ -146,7 +152,12 @@ function setGeometryKiOrientationCondition(mode){
       targetHKL=exactTargetHKL.map(x=>Number(x.toFixed(3)));
     }
     setGeometryTargetHKL(targetHKL);
-  }catch(err){ console.error(err); alert(err?.message||String(err)); }
+  }catch(err){
+    // No modal dialog: the regular Angle calculation output below already
+    // reports why the target is unavailable. Just refresh it.
+    console.warn('Geometry quick target:',err?.message||err);
+    scheduleRecalc();
+  }
 }
 function setGeometryKiPerpU(){ setGeometryKiOrientationCondition("perpU"); }
 function setGeometryKiPerpV(){ setGeometryKiOrientationCondition("perpV"); }

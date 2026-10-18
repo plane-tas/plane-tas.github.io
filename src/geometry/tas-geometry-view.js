@@ -38,7 +38,9 @@ export function createTasGeometryView(deps){
     tasConvention,
     qeSpurionWarnings,
     userFacingTasMessage,
-    getSingleCache
+    getSingleCache,
+    syncGeometrySliders,
+    updateGeometryTargetMarker
   }=deps;
 
 function geometryCalculationMode(){
@@ -96,6 +98,15 @@ function geometryScanStatusWarnings(target,displayedAngles){
   return warnings;
 }
 
+// Motor-limit status of one H, K, L, hbar-omega point, exactly as the Angle
+// calculation shows it (used by the Script / Time-estimate validation).
+function geometryPointWarnings(cache,calc){
+  const target=qeGeometryAngles(cache,null,null,calc);
+  const a=geometryDisplayedMotorAngles(target,false);
+  const out=geometryScanStatusWarnings(target,a);
+  if(target.angles?.warning) out.push('S1 unavailable (reference Q)');
+  return out;
+}
 function geometryScanErrorStatus(err){
   const raw=String(err?.message || err || '');
   if(/kinematically inaccessible|requested Q and energy transfer/i.test(raw)) return 'No scattering triangle';
@@ -277,6 +288,10 @@ function renderGeometry(cache,index=0){
   // Schematic placement depends on physical scattering Sense only.
   const displaySense=convention.sense;
   const scanMode=!isPowder && geometryCalculationMode()==='scan';
+  // Keep the U / V / hbar-omega sliders and the Constant E map marker on the
+  // current target (Single only).
+  syncGeometrySliders?.();
+  if(!isPowder) updateGeometryTargetMarker?.(cache);
   const scanPoints=scanMode ? geometryScanPoints() : [];
   updateGeometryPlaneWarning(scanPoints);
   const scanIndex=scanMode ? syncGeometryScanPointSlider(scanPoints.length) : 0;
@@ -676,6 +691,20 @@ function renderGeometry(cache,index=0){
   }
   // Keep the same anti-overzoom floor, but at ~1.5x larger display scale.
   span=Math.max(span,(4.0/geometryDisplayScale)*L);
+  // Fixed drawing scale while only the target (H, K, L, hbar-omega) changes:
+  // within one instrument/energy/plane context the span never shrinks, so the
+  // monochromator anchor and the scale stay put while dragging the sliders.
+  // It grows only if a new configuration would otherwise be clipped.
+  const geometryPlotEl=$('geometryPlot');
+  const spanContext=[isPowder,isDiffractometer,displaySense,cache.energyMode,cache.Ei,cache.Ef,
+    num('Uh'),num('Uk'),num('Ul'),num('Vh'),num('Vk'),num('Vl'),
+    num('a'),num('b'),num('c'),num('alpha'),num('beta'),num('gamma'),
+    currentInstrument()?.name||'',(cache.hwList||[]).length,cache.hwList?.[0],cache.hwList?.[(cache.hwList?.length||1)-1]].join('|');
+  if(target && geometryPlotEl){
+    const kept=geometryPlotEl.__tasGeometrySpan;
+    if(kept && kept.key===spanContext) span=Math.max(span,kept.span);
+    geometryPlotEl.__tasGeometrySpan={key:spanContext,span};
+  }
   const xMin=mono[0]-monoFracX*span, xMax=xMin+span;
   const yMin=mono[1]-monoFracY*span, yMax=yMin+span;
 
@@ -695,7 +724,12 @@ function renderGeometry(cache,index=0){
 
   const geometryPlot=$('geometryPlot');
   const geometryPlotVisible=geometryPlot && !geometryPlot.closest('.hidden');
-  if(geometryPlotVisible){
+  // An inaccessible Single-crystal target keeps the last valid drawing (dimmed)
+  // instead of switching to a schematic with a different scale and anchor.
+  const keepPrevious=!target && !isPowder && geometryPlot?.__tasGeometryValid;
+  geometryPlot?.classList.toggle('geometry-plot-stale',!!keepPrevious);
+  if(geometryPlotVisible && !keepPrevious){
+    if(geometryPlot) geometryPlot.__tasGeometryValid=!!target;
     Plotly.react("geometryPlot",traces,{
       xaxis:{range:[xMin,xMax],showgrid:false,zeroline:false,showticklabels:false,fixedrange:true,constrain:"domain"},
       yaxis:{range:[yMin,yMax],showgrid:false,zeroline:false,showticklabels:false,scaleanchor:"x",scaleratio:1,fixedrange:true,constrain:"domain"},
@@ -712,6 +746,7 @@ function renderGeometry(cache,index=0){
     geometryDisplayedMotorAngles,
     geometryScanStatusWarnings,
     geometryScanErrorStatus,
+    geometryPointWarnings,
     updateGeometryPlaneWarning,
     renderGeometryScanTable,
     currentGeometryScanOutputTab,

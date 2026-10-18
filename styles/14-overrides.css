@@ -542,3 +542,39 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   font-size:calc(16px * var(--tas-density))!important;
   line-height:1.3;
 }
+
+/* hbar-omega / U / V / linear-combination sliders: 4 aligned columns. */
+.geometry-sliders{grid-template-columns:max-content minmax(0,1fr) calc(52px * var(--tas-density)) max-content!important;}
+.geometry-sliders .geometry-slider-combo{display:contents;}
+.geometry-combo-label{display:inline-flex;align-items:center;gap:calc(3px * var(--tas-density));white-space:nowrap;}
+.geometry-combo-label input{width:calc(42px * var(--tas-density))!important;min-width:0!important;padding:calc(2px * var(--tas-density)) calc(4px * var(--tas-density));text-align:right;}
+#geomComboSetOrigin{padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));white-space:nowrap;}
+.geometry-sliders .geometry-slider-row > *,
+.geometry-sliders .geometry-combo-label input{font-size:max(13px,calc(16px * var(--tas-density)));}
+/* Snap 1/n entry and the Constant E map HKL path box (same path as Q vector–E). */
+#qePathSnap{width:calc(64px * var(--tas-density))!important;min-width:0!important;text-align:center;}
+.qe-path-snap-label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(3px * var(--tas-density));}
+.qe-constant-path-input{margin-top:calc(6px * var(--tas-density));}
+.qe-constant-path-input{display:flex!important;align-items:center;gap:calc(6px * var(--tas-density));}
+.qe-constant-path-input label{flex:none;}
+.qe-constant-path-input input{flex:1 1 auto;width:auto!important;min-width:0!important;}
+/* Powder: no map tabs and no HKL path box (beats the display rules above). */
+#qePanel .qe-map-tabs.hidden,
+#qePanel .qe-constant-path-input.hidden{display:none!important;}
+
+/* Q-E Range fitted to the visible workspace height (see ui-shell.js). */
+#qePanel.qe-fit-left #singlePlot,
+#qePanel.qe-fit-left #powderPlot,
+#qePanel.qe-fit-left #qeVectorPlot{
+  height:var(--qe-fit-left)!important;
+  min-height:0!important;
+}
+#qePanel.qe-fit-right #geometryPlot{
+  height:var(--qe-fit-right)!important;
+  min-height:0!important;
+}
+
+/* One accent colour (dark blue) for every slider, checkbox and radio button,
+   independent of the browser / OS default accent. */
+:root{--tas-accent:#466d98}
+input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-accent)}

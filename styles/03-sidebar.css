@@ -14,7 +14,7 @@
   border:calc(1.5px * var(--tas-density)) solid #111 !important;
 }
 .dark-asset input[type=checkbox]{
-  accent-color:#1677ff !important;
+  accent-color:var(--tas-accent) !important;
 }
 .dark-asset .checkbox-label span{
   color:#111 !important;

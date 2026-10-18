@@ -615,7 +615,7 @@
   min-width:calc(15px * var(--tas-density));
   cursor:pointer;
   margin:0;
-  accent-color:#306fa0;
+  accent-color:var(--tas-accent);
 }
 
 /* Bonds / Polyhedral headers should remain readable at normal density. */

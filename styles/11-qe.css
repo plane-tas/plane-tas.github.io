@@ -141,7 +141,7 @@
 }
 #qeConstantMapPane .qe-spurion-warning:empty{display:none}
 #qeConstantMapPane .qe-range-control{justify-content:start}
-#qeConstantMapPane .qe-range-control input[type=range]{accent-color:#466d98}
+#qeConstantMapPane .qe-range-control input[type=range]{accent-color:var(--tas-accent)}
 #singlePlot{height:calc(760px * var(--tas-density));min-height:calc(760px * var(--tas-density))}
 #qeDisplayControls{
   display:flex;

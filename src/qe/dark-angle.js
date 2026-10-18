@@ -44,8 +44,10 @@ export function createDarkAngle(deps){
     if(!(qRef>1e-12) || !(E0>0)) return 0;
 
     const k0=Math.sqrt(E0/2.072);
-    const arg=qRef/(2*k0);
-    if(arg>1+1e-10) return 0;
+    // Same virtual reference as effectiveOrientationReference: U/n (V/n) with
+    // the smallest n that is kinematically accessible.
+    let arg=qRef/(2*k0);
+    if(arg>1+1e-10) arg/=Math.ceil(arg-1e-10);
 
     const halfS2Ref=rad2deg(Math.asin(clamp(arg,-1,1)));
     const parallelOffset=(orientationMode==='parallelU' || orientationMode==='parallelV') ? -90 : 0;

@@ -649,3 +649,16 @@
   margin:0!important;
   cursor:pointer;
 }
+
+/* hbar-omega / U / V sliders between the Angle result and the TAS geometry plot.
+   One grid for all rows so the slider tracks line up whatever the label width. */
+.geometry-sliders{display:grid;grid-template-columns:max-content minmax(0,1fr) calc(70px * var(--tas-density));align-items:center;column-gap:calc(10px * var(--tas-density));row-gap:calc(4px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density));}
+.geometry-sliders .geometry-slider-row{display:contents;}
+.geometry-sliders .geometry-slider-row span{white-space:nowrap;}
+.geometry-sliders .geometry-slider-row input[type=range]{width:100%;padding:0;border:0;}
+.geometry-sliders .geometry-slider-row output{text-align:right;font-variant-numeric:tabular-nums;}
+/* Keep the result box height constant (3 result lines + warning line), so the
+   TAS drawing below never jumps when a target becomes inaccessible. */
+#geometryAnglesPane .geometry-angles{min-height:calc(4 * 1.55em + 20px * var(--tas-density));}
+/* Last valid drawing shown while the current target is inaccessible. */
+#geometryPlot.geometry-plot-stale{opacity:0.35;}

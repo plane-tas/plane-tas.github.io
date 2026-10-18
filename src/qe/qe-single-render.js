@@ -10,7 +10,7 @@ export function createQESingleRender(deps){
     qePathMapLabel, qePathPointXY, qePhysicalRluCoordinates, qeSelectedPathHKL, qeXYForUnit,
     renderGeometry, renderQEVectorMap, selectedBackgrounds, selectedS1Sign, selectedTasSense,
     singleColorbarTicks, singleMarkerSizes, singleNuclearLabelStyle, tasMotorAngles,
-    updateQESpurionWarning, updateS2MaxDisplayForQERange
+    updateQESpurionWarning, updateS2MaxDisplayForQERange, hklToQ
   }=deps;
 
 // Shared legend UI for Constant E, Q-vector–E and Powder. Keep independent
@@ -18,8 +18,13 @@ export function createQESingleRender(deps){
 const qeLegendVisibilityByPlot=new Map();
 function qeLegendKey(trace){
   if(['nuclear-data','nuclear-labels','nuclear-legend'].includes(trace.meta)) return 'Nuclear Bragg peaks';
-  if(trace.name==='Accessible Q–E') return 'Accessible Q';
-  return trace.legendgroup || trace.name || '';
+  const name=String(trace.name||'');
+  // The same item must have the same key in the Constant E and the Q vector–E
+  // map, so one shared legend entry toggles it in both.
+  if(name.startsWith('Accessible Q')) return 'Accessible Q';
+  const bg=name.match(/^(BG\d+):/); if(bg) return bg[1];
+  if(/^Dark angle \((ki side|kf side|fixed)\)$/.test(name)) return name;
+  return trace.legendgroup || name || '';
 }
 function qeLegendSymbol(symbol,color){
   // Use the same marker shapes as the corresponding magnetic peaks in the map.
@@ -55,28 +60,45 @@ function qeLegendSymbol(symbol,color){
   }
   return svg;
 }
+// Constant E map and Q vector–E map share ONE legend (#qeSharedLegend):
+// the union of their items, each toggling the item in both plots.
+const QE_SHARED_PLOTS=['singlePlot','qeVectorPlot'];
+const qeSharedTraces=new Map();
 function renderQEExternalLegend(hostId,plotId,traces){
+  if(QE_SHARED_PLOTS.includes(plotId) && $('qeSharedLegend')){
+    qeSharedTraces.set(plotId,traces);
+    return renderLegendInto('qeSharedLegend','qe-shared',
+      QE_SHARED_PLOTS.filter(id=>qeSharedTraces.has(id) && !$(id)?.closest('.hidden')).map(id=>[id,qeSharedTraces.get(id)]));
+  }
+  return renderLegendInto(hostId,plotId,[[plotId,traces]]);
+}
+function renderLegendInto(hostId,visibilityId,plotTraces){
   const host=$(hostId);
   if(!host) return;
   host.replaceChildren();
-  let visibility=qeLegendVisibilityByPlot.get(plotId);
-  if(!visibility){visibility=new Map();qeLegendVisibilityByPlot.set(plotId,visibility);}
+  let visibility=qeLegendVisibilityByPlot.get(visibilityId);
+  if(!visibility){visibility=new Map();qeLegendVisibilityByPlot.set(visibilityId,visibility);}
+  const allTraces=plotTraces.flatMap(([,traces])=>traces);
   const keys=[];
-  for(const trace of traces){
+  for(const trace of allTraces){
     const key=qeLegendKey(trace);
     if(key && trace.showlegend!==false && !keys.includes(key)) keys.push(key);
   }
   const setVisibility=()=>{
-    const indices=traces.map((tr,i)=>keys.includes(qeLegendKey(tr))?i:-1).filter(i=>i>=0);
-    if(indices.length){
-      Plotly.restyle(plotId,{visible:indices.map(i=>visibility.get(qeLegendKey(traces[i]))===false?'legendonly':true)},indices);
+    for(const [plotId] of plotTraces){
+      const gd=$(plotId);
+      const data=Array.isArray(gd?.data) ? gd.data : [];
+      const indices=data.map((tr,i)=>keys.includes(qeLegendKey(tr))?i:-1).filter(i=>i>=0);
+      if(indices.length){
+        Plotly.restyle(plotId,{visible:indices.map(i=>visibility.get(qeLegendKey(data[i]))===false?'legendonly':true)},indices);
+      }
     }
     host.querySelectorAll('.qe-legend-item').forEach(el=>{
       el.setAttribute('aria-pressed',String(visibility.get(el.dataset.legendKey)!==false));
     });
   };
   for(const key of keys){
-    const exemplar=traces.find(tr=>qeLegendKey(tr)===key && tr.showlegend!==false);
+    const exemplar=allTraces.find(tr=>qeLegendKey(tr)===key && tr.showlegend!==false);
     const button=document.createElement('button');
     button.type='button';button.className='qe-legend-item';button.dataset.legendKey=key;
     button.title='Click to show/hide; double-click to isolate';
@@ -112,9 +134,43 @@ function renderQEExternalLegend(hostId,plotId,traces){
     host.appendChild(button);
   }
   // Respect the selected legend visibility across recalculations.
-  for(const trace of traces){
+  for(const trace of allTraces){
     if(visibility.get(qeLegendKey(trace))===false) trace.visible='legendonly';
   }
+}
+// Axis titles show the entered scattering-plane vectors, e.g. U (1, 1, 0).
+function planeVectorText(v){
+  if(!Array.isArray(v) || v.length!==3 || !v.every(x=>Number.isFinite(Number(x)))) return '';
+  const f=x=>{const n=Number(x);return Math.abs(n)<5e-4?'0':String(Number(n.toFixed(3)));};
+  return `(${v.map(f).join(', ')})`;
+}
+// Angle-calculation target on the Constant E map (physical plot coordinates).
+function geometryTargetHKL(){ return [num('geomH'),num('geomK'),num('geomL')]; }
+function geometryTargetMarkerXY(cache){
+  const hkl=geometryTargetHKL();
+  if(!cache || !hkl.every(Number.isFinite)) return null;
+  try{ const p=qePathPointXY(cache,hkl); return p.every(Number.isFinite)?p:null; }catch(_e){ return null; }
+}
+// Same label style as the nuclear/magnetic peaks: "(h,k,l)".
+function qeHKLLabel(hkl){
+  return `(${hkl.map(x=>{const v=Number(x);return Math.abs(v-Math.round(v))<1e-10?String(Math.round(v)):String(Number(v.toFixed(3)));}).join(',')})`;
+}
+// Hover: (h,k,l) and S1/S2 of the Angle calculation (at ITS hbar-omega).
+function geometryTargetHoverText(cache){
+  const hkl=geometryTargetHKL();
+  if(!hkl.every(Number.isFinite)) return '';
+  const hw=Number.isFinite(num('geomHW'))?num('geomHW'):0;
+  const angles=cache ? singleMapBraggHoverAngles(cache,hw)({label:'target',hkl}) : '';
+  return angles ? `${qeHKLLabel(hkl)}<br>${angles}` : qeHKLLabel(hkl);
+}
+// Move the marker without redrawing the whole map (sliders, typing, drag).
+function updateGeometryTargetMarker(cache){
+  const plot=$('singlePlot');
+  if(!plot || !Array.isArray(plot.data)) return;
+  const index=plot.data.findIndex(tr=>tr.meta==='qe-geometry-target');
+  if(index<0) return;
+  const p=geometryTargetMarkerXY(cache);
+  Plotly.restyle(plot,{x:[[p?p[0]:null]],y:[[p?p[1]:null]],customdata:[[geometryTargetHoverText(cache)]]},[index]);
 }
 function renderSingleExternalLegend(traces){
   renderQEExternalLegend('qePlotLegend','singlePlot',traces);
@@ -152,7 +208,13 @@ function singleMapBraggHoverAngles(cache,hw){
           angles=tasMotorAngles({h:peak.hkl[0],k:peak.hkl[1],l:peak.hkl[2],hw},base);
         }catch(_err){ /* Outside the scattering triangle or invalid motor setting. */ }
       }
-      angleResult=`S1=${showAngle(angles?.s1)}, S2=${showAngle(angles?.s2)}`;
+      let qText='';
+      try{
+        const q=base ? hklToQ(base.rl,peak.hkl) : null;
+        const qn=q ? Math.hypot(...q) : NaN;
+        if(Number.isFinite(qn)) qText=`|Q| = ${qn.toFixed(3)} Å⁻¹<br>`;
+      }catch(_err){}
+      angleResult=`${qText}S1=${showAngle(angles?.s1)}, S2=${showAngle(angles?.s2)}`;
       resultCache.set(key,angleResult);
     }
     return angleResult;
@@ -242,7 +304,8 @@ function renderSingle(cache,index=0){
       hovertemplate:"%{hovertext}<extra></extra>"
     },
   ];
-  if($("displayNuclearLabels")?.checked){
+  // Nuclear Bragg labels are always shown (automatic placement and size).
+  {
     const labelPts=visibleGpoints.filter(p=>p.label!=="");
     const labelStyle=singleNuclearLabelStyle(2*QplotX,2*QplotX);
     traces.push({
@@ -286,6 +349,7 @@ function renderSingle(cache,index=0){
     const pts=ring.x.map((x,j)=>T([x,ring.y[j]]));
     traces.push({
       x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),mode:"lines",showlegend:false,
+      name:(String(ring.hover||'').match(/^BG\d+: [^<]*/)||[''])[0]||undefined,
       line:{color:ring.color,width:1.5},hovertemplate:ring.hover+"<extra></extra>"
     });
   }
@@ -319,19 +383,27 @@ function renderSingle(cache,index=0){
   // selections remain visible while the energy slider or Q unit changes.
   if(qeSelectedPathHKL.length){
     const points=qeSelectedPathHKL.map(hkl=>qePathPointXY(cache,hkl));
-    traces.push({type:'scatter',mode:'lines+markers+text',showlegend:false,meta:'qe-selected-path',zorder:100,
+    traces.push({type:'scatter',mode:'lines+markers+text',showlegend:true,name:'Selected path',meta:'qe-selected-path',zorder:100,
       x:points.map(p=>p[0]),y:points.map(p=>p[1]),text:points.map((_,j)=>qePathMapLabel(j,cache)),
       textposition:'top center',textfont:{size:14,color:'#7e22ce'},
       marker:{size:13,color:'#9333ea',line:{color:'#fff',width:2}},
       line:{color:'#9333ea',width:2.5,dash:'dash'},
       // Match the nuclear/magnetic peak hover: use the shared TAS motor-angle
       // calculation at the currently selected energy, sense and S1 sign.
-      customdata:qeSelectedPathHKL.map(hkl=>[
-        hkl.map(v=>Number(v).toFixed(3)).join(', '),
-        peakHoverAngles({label:'HKL',hkl})
-      ]),
-      hovertemplate:'HKL = (%{customdata[0]})<br>%{customdata[1]}<extra></extra>'});
+      customdata:qeSelectedPathHKL.map(hkl=>[qeHKLLabel(hkl),peakHoverAngles({label:'HKL',hkl})]),
+      hovertemplate:'%{customdata[0]}<br>%{customdata[1]}<extra></extra>'});
   }
+  // Angle calculation & TAS geometry target: (h, k, l) only. Its hbar-omega is
+  // independent of this map's energy slice. Drag it to move H, K, L.
+  const geometryTarget=geometryTargetMarkerXY(cache);
+  // Magenta: distinct from the accessible-Q yellow, the dark-angle green/blue,
+  // the red magnetic and black nuclear peaks, the purple path and BG colours.
+  traces.push({type:'scatter',mode:'markers',showlegend:true,meta:'qe-geometry-target',zorder:110,
+    name:'Angle calculation target',
+    x:geometryTarget?[geometryTarget[0]]:[null],y:geometryTarget?[geometryTarget[1]]:[null],
+    marker:{size:17,symbol:'diamond',color:'#d6007a',line:{color:'#fff',width:2}},
+    customdata:[geometryTargetHoverText(cache)],
+    hovertemplate:'%{customdata}<extra></extra>'});
   // Plotly draws later traces on top. Keep the nuclear legend entry where it is,
   // but render the actual nuclear markers/labels last so BG1-BG4 and other
   // line traces cannot cover them.
@@ -358,8 +430,8 @@ function renderSingle(cache,index=0){
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?'U (r.l.u.)':'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
-    yaxis:{title:{text:unit==='rlu'?'V (r.l.u.)':'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
+    xaxis:{title:{text:unit==='rlu'?`U ${planeVectorText(cache.U)} (r.l.u.)`:'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
+    yaxis:{title:{text:unit==='rlu'?`V ${planeVectorText(cache.V)} (r.l.u.)`:'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
     ...(rluGrid?{shapes:rluGrid.shapes,annotations:rluGrid.annotations}:{}),
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
@@ -384,18 +456,9 @@ function renderSingle(cache,index=0){
 }
 
 
-function ensureNuclearLabelControl(){
-  if($("displayNuclearLabels")) return;
-  const plot=$("singlePlot");
-  const sliderRow=$("hwSlider")?.closest(".energy-slider-row");
-  if(!plot || !sliderRow) return;
-  const row=document.createElement("div");
-  row.className="nuclear-label-control";
-  row.innerHTML='<label class="checkbox-label"><input id="displayNuclearLabels" type="checkbox" checked><span>Display labels of nuclear Bragg peaks</span></label>';
-  const toolbar=document.querySelector('.qe-map-toolbar');
-  if(toolbar) row.insertBefore(toolbar,row.firstChild);
-  sliderRow.parentNode.insertBefore(row,sliderRow);
-}
+// The nuclear-label checkbox was removed (labels are always shown); kept as a
+// no-op for the existing call site.
+function ensureNuclearLabelControl(){}
 
 function ensureQESliderControls(){
   if(!$('hwEntry')){
@@ -464,6 +527,6 @@ function selectedQAtS2(cache,index,s2){
 
   return {
     ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
-    renderSingle
+    renderSingle, updateGeometryTargetMarker
   };
 }

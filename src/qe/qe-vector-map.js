@@ -16,7 +16,15 @@ function qeRluNiceStep(span){
   return [1,2,5,10].map(v=>v*decade).find(v=>v>=raw) || 10*decade;
 }
 
+// Plot frame of the Constant E map (the oblique r.l.u. grid replaces the
+// axis lines, so draw the frame as a shape on the constrained axis domain).
+const QE_MAP_FRAME={type:'rect',xref:'x domain',yref:'y domain',x0:0,x1:1,y0:0,y1:1,
+  line:{color:'#555',width:1.2},fillcolor:'rgba(0,0,0,0)',layer:'above'};
 function qeObliqueRluGrid(cache,xRange,yRange){
+  const grid=qeObliqueRluGridLines(cache,xRange,yRange);
+  return {...grid,shapes:[...grid.shapes,{...QE_MAP_FRAME}]};
+}
+function qeObliqueRluGridLines(cache,xRange,yRange){
   const b=qePlaneRluBasis(cache);
   const det=b.ux*b.vy-b.uy*b.vx;
   const empty={shapes:[],annotations:[],xTickVals:[],xTickText:[],yTickVals:[],yTickText:[]};

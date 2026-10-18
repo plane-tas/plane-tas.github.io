@@ -5,7 +5,7 @@ export function createRecalc(deps){
     $, calculatePowder, calculateSingleCrystal, checkedValue, clearError, clearResolutionResults,
     doSingleResolution, instrumentIsDiffractometer, renderGeometry, renderSingle, showError, updateAutoW,
     updateEnergyLabel, updateModeVisibility, updateResolutionPlaneWarning, updateS2MaxDisplay,
-    getPowderCache, getSingleCache, setPowderCache, setSingleCache
+    getPowderCache, getSingleCache, setPowderCache, setSingleCache, targetHWMapIndex, syncQEPathSnapDefault
   }=deps;
 
 let timer=null;
@@ -72,10 +72,14 @@ function recalculate(){
   try{
     if(checkedValue("sampleMode")==="single"){
       setSingleCache(calculateSingleCrystal());
+      // The Snap default follows the lattice (hexagonal / trigonal: 1/6).
+      syncQEPathSnapDefault?.();
       $("hwSlider").min=0;
       $("hwSlider").max=Math.max(0,getSingleCache().regions.length-1);
       $("hwSlider").step=1;
-      const idx=Math.min(Number($("hwSlider").value)||0,getSingleCache().regions.length-1);
+      // The map slice follows the Angle calculation hbar-omega.
+      const targetIndex=targetHWMapIndex?.(getSingleCache());
+      const idx=Math.min(targetIndex ?? (Number($("hwSlider").value)||0),getSingleCache().regions.length-1);
       $("hwSlider").value=idx;
       renderSingle(getSingleCache(),idx);
     } else {

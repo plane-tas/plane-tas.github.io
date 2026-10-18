@@ -109,7 +109,7 @@ function changePositionEditingMode(mode){
     if(mode==='individual'){
       try{next=expandPositionDraftToIndividual();}
       catch(err){const select=$('cifPositionEditingMode');if(select)select.value=sourceMode;
-        window.alert(err?.message||String(err));return;}
+        fn.setCifGeneratorMessage?.(err?.message||String(err),true);return;}
       cifState.positionManualSourceSignature=sourceSignature;
     }else next=cifState.positionModeDrafts.sites||fn.currentCifGeneratorAtomRows();
   }

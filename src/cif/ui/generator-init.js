@@ -266,7 +266,7 @@ async function initializeCifGenerator(){
     fn.initializeReflectionTable();
     fn.initializeGeneratorTableOutsideClick();
     $("tabCifGenerator")?.addEventListener("click",()=>requestAnimationFrame(fn.renderCifStructureIfVisible));
-    if($("cifSaveFigure")) $("cifSaveFigure").onclick=()=>fn.saveStructureFigure().catch(err=>{alert(`Save figure failed: ${err?.message||err}`);});
+    if($("cifSaveFigure")) $("cifSaveFigure").onclick=()=>fn.saveStructureFigure().catch(err=>{fn.setCifGeneratorMessage?.(`Save figure failed: ${err?.message||err}`,true);});
     
     const unitCellSelect=$("cifUnitCellMode");
     if(unitCellSelect){ unitCellSelect.value=cifState.structureUnitCellMode; unitCellSelect.addEventListener("change",()=>{ cifState.structureUnitCellMode=unitCellSelect.value; fn.saveStructureViewerState(); fn.renderCifStructureIfVisible(); }); }

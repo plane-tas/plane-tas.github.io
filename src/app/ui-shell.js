@@ -141,7 +141,69 @@ function scheduleVisiblePlotResize(){
   });
 }
 
+// Q-E Range: like the CIF/mCIF Generator, keep each column within the visible
+// part of the main workspace, so the controls below the plots (Select Path,
+// Snap, HKL, legend, sliders) are reachable without scrolling on short
+// screens. Only the plot heights shrink (never grow beyond the stylesheet
+// height). One-column layouts and very short viewports keep normal scrolling.
+const QE_FIT_MIN_PLOT=300;
+let qeViewportFrame=0;
+function requestQEViewportHeightSync(){
+  if(qeViewportFrame) return;
+  qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); });
+}
+function visibleElement(el){ return !!(el && el.getClientRects().length); }
+function syncQEViewportHeight(){
+  const panel=$('qePanel'), grid=document.querySelector('#singleMain .chart-grid'), main=panel?.closest('main');
+  if(!panel || !grid || !main) return;
+  const prev=[panel.style.getPropertyValue('--qe-fit-left'),panel.style.getPropertyValue('--qe-fit-right')].join('|');
+  // Measure the stylesheet (natural) heights first.
+  panel.classList.remove('qe-fit-left','qe-fit-right');
+  panel.style.removeProperty('--qe-fit-left');
+  panel.style.removeProperty('--qe-fit-right');
+  const twoColumns=getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length>=2;
+  if(visibleElement(panel) && twoColumns){
+    const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
+    const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
+    // Bottom of the column's own content (the grid stretches the columns).
+    const columnOverflow=column=>{
+      const cs=getComputedStyle(column);
+      let bottom=-Infinity;
+      for(const child of column.children) if(visibleElement(child)) bottom=Math.max(bottom,child.getBoundingClientRect().bottom);
+      if(!Number.isFinite(bottom)) return 0;
+      const end=bottom-mainRect.top+main.scrollTop
+        +(parseFloat(cs.paddingBottom)||0)+(parseFloat(cs.borderBottomWidth)||0)+(parseFloat(cs.marginBottom)||0);
+      return end-available;
+    };
+    const fit=(column,plots,side)=>{
+      const name=`--qe-${side}`;
+      const plot=plots.map(id=>$(id)).find(visibleElement);
+      if(!column || !plot) return;
+      const over=columnOverflow(column);
+      if(!(over>1)) return;
+      const height=Math.max(QE_FIT_MIN_PLOT,Math.floor(plot.offsetHeight-over));
+      if(height<plot.offsetHeight){ panel.style.setProperty(name,`${height}px`); panel.classList.add(`qe-${side}`); }
+    };
+    fit(grid.querySelector('.qe-main-plot-column'),['singlePlot','powderPlot','qeVectorPlot'],'fit-left');
+    fit(grid.querySelector('.geometry-card'),['geometryPlot'],'fit-right');
+  }
+  const next=[panel.style.getPropertyValue('--qe-fit-left'),panel.style.getPropertyValue('--qe-fit-right')].join('|');
+  if(next!==prev) scheduleVisiblePlotResize();
+}
+function initializeQEViewportHeightSync(){
+  window.addEventListener('resize',requestQEViewportHeightSync,{passive:true});
+  window.visualViewport?.addEventListener('resize',requestQEViewportHeightSync);
+  if(typeof ResizeObserver!=='undefined'){
+    // Pane sizes change on tab switches, Single/Powder, warnings and wrapping.
+    const observer=new ResizeObserver(requestQEViewportHeightSync);
+    for(const el of [document.querySelector('main'),$('qePanel'),$('qeConstantMapPane'),$('qeVectorMapPane'),
+      $('geometryAnglesPane'),$('geometryTimePane')]) if(el) observer.observe(el);
+  }
+  requestQEViewportHeightSync();
+}
+
 function initializeResponsivePlotResize(){
+  initializeQEViewportHeightSync();
   window.addEventListener('resize',scheduleVisiblePlotResize,{passive:true});
   if(typeof ResizeObserver!=="undefined"){
     const main=document.querySelector('main');
@@ -248,7 +310,8 @@ function setupAppHeader(){
 
 function rightPanelControls(){
   return [...document.querySelectorAll('#qePanel input[id], #qePanel select[id], #resolutionPanel input[id], #resolutionPanel select[id], #toolboxPanel input[id], #toolboxPanel select[id]')]
-    .filter(el=>!el.closest?.('.time-estimate-pane') && el.type!=='button' && el.type!=='submit' && el.type!=='file');
+    .filter(el=>!el.closest?.('.time-estimate-pane') && el.type!=='button' && el.type!=='submit' && el.type!=='file'
+      && el.dataset.noPersist===undefined);
 }
 
 function saveRightPanelState(){

@@ -50,16 +50,21 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
   }
   const usesV=mode==='perpV' || mode==='parallelV';
   const isParallel=mode==='parallelU' || mode==='parallelV';
-  const hkl=usesV
+  const axisHkl=usesV
     ? [num('Vh'),num('Vk'),num('Vl')]
     : [num('Uh'),num('Uk'),num('Ul')];
-  const qNorm=norm(hklToQ(rl,hkl));
+  const axisQ=norm(hklToQ(rl,axisHkl));
   const E=Number(fixedEnergyMeV);
-  if(!(qNorm>1e-12)) throw new Error(`${usesV?'V':'U'} must define a non-zero reciprocal-space vector.`);
+  if(!(axisQ>1e-12)) throw new Error(`${usesV?'V':'U'} must define a non-zero reciprocal-space vector.`);
   if(!(E>0)) throw new Error('A positive reference energy is required for ki orientation.');
   const k=Math.sqrt(E/2.072);
-  const arg=qNorm/(2*k);
-  if(arg>1+1e-10) throw new Error(`${usesV?'V':'U'} Bragg peak is inaccessible at the selected reference energy.`);
+  // The virtual Bragg reference only fixes the DIRECTION of U (V). When U is
+  // beyond 2k (e.g. (1,1,0) with cold neutrons) use U/n, n = 2, 3, ...: the
+  // smallest fraction that is kinematically accessible. Same rule as
+  // directBeamOrientationCorrection in dark-angle.js.
+  const divisor=virtualReferenceDivisor(axisQ,k);
+  const hkl=axisHkl.map(v=>v/divisor);
+  const arg=axisQ/divisor/(2*k);
   const s2Ref=2*rad2deg(Math.asin(clamp(arg,-1,1)));
 
   // The virtual Bragg reference follows the selected physical Sense and encoder polarity.
@@ -80,7 +85,13 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
   // ki ∥ U/V uses the same virtual elastic Bragg reference as ki ⟂ U/V,
   // but moves the S1=0 sample orientation by +90 degrees about the plane normal.
   if(isParallel) s1Ref+=c2Sign*90;
-  return {mode,hkl,s1:wrap180(s1Ref),s2Ref};
+  return {mode,hkl,s1:wrap180(s1Ref),s2Ref,divisor};
+}
+// Smallest n >= 1 such that |Q|/n <= 2k (the reference is reachable).
+function virtualReferenceDivisor(qNorm,k){
+  const arg=qNorm/(2*k);
+  if(!(arg>1+1e-10)) return 1;
+  return Math.ceil(arg-1e-10);
 }
 
 function tasMotorAngles(calc,b){

@@ -219,23 +219,19 @@
 </div><div class="qe-plot powder hidden" id="powderPlot"></div>
 <div class="qe-external-legend hidden" id="qePowderLegend" aria-label="Powder Q–E map legend"></div>
 <div class="nuclear-label-control" id="qeDisplayControls" aria-label="Constant E map display controls">
-  <div class="qe-toolbar-leading">
-    <div class="qe-map-toolbar"><label>Q unit<select id="qeMapUnit"><option value="rlu">r.l.u.</option><option value="ainv">Å⁻¹</option></select></label></div>
-    <label class="checkbox-label" title="Show labels of nuclear Bragg peaks"><input id="displayNuclearLabels" type="checkbox" checked><span>Nuclear Bragg labels</span></label>
-  </div>
   <div class="qe-path-tools" aria-label="Q path selection controls">
     <button id="qePathPickToggle" class="qe-path-pick" type="button" aria-pressed="false">Select Path</button>
     <button id="qePathUndo" type="button" disabled>Undo</button>
     <button id="qePathClear" type="button" disabled>Clear</button>
-    <label class="qe-path-snap-label" for="qePathSnap">Snap
-      <select id="qePathSnap" aria-label="Snap Q path points to reciprocal-lattice fractions">
-        <option value="auto">Auto</option>
-        <option value="off">Free</option>
-        <option value="10">1/10</option>
-        <option value="12">1/12</option>
-      </select>
-    </label>
+    <label class="qe-path-snap-label" for="qePathSnap">Snap 1/<input id="qePathSnap" type="text" inputmode="numeric" value="" placeholder="free" data-no-persist="" aria-label="Snap Q path points and the dragged Angle-calculation target to multiples of 1/n of U and V (empty = free)" title="Snap to multiples of 1/n of U and V. Default: 1/6 for hexagonal/trigonal (60° or 120°) lattices, otherwise 1/4. Clear the box (or enter 0) for free positioning."/></label>
   </div>
+</div>
+<div class="qe-vector-path-input qe-constant-path-input">
+  <label for="qePathHKLConstant">HKL</label>
+  <input id="qePathHKLConstant" type="text" spellcheck="false" autocomplete="off" data-no-persist=""
+    value=""
+    placeholder="1 0 0, 1/2 0 0, 1/3 1/3 0, 1 0 0"
+    aria-label="HKL path (same as the Q vector–E map path)"/>
 </div>
 <div class="qe-external-legend" id="qePlotLegend" aria-label="Constant E map legend"></div>
 </div>
@@ -259,10 +255,6 @@
 <button aria-controls="geometryTimePane" aria-selected="false" class="geometry-card-tab" id="geometryTabTime" role="tab" type="button">Time estimate</button>
 </div>
 <div aria-labelledby="geometryTabAngles" class="geometry-card-pane" id="geometryAnglesPane" role="tabpanel">
-<div aria-label="Angle calculation mode" class="geometry-card-tabs geometry-inner-tabs" id="geometryCalcModeTabs" role="tablist">
-<button aria-controls="singleGeometryTarget" aria-selected="true" class="geometry-card-tab active" id="geometryModeSingle" role="tab" type="button">Single</button>
-<button aria-controls="scanGeometryTarget" aria-selected="false" class="geometry-card-tab" id="geometryModeScan" role="tab" type="button">Scan</button>
-</div>
 <div class="geometry-target">
 <div id="singleGeometryTarget">
 <div class="geometry-target-row"><div class="grid4"><label>h<input id="geomH" type="text" inputmode="text" data-fraction="" value="1"/></label><label>k<input id="geomK" type="text" inputmode="text" data-fraction="" value="0"/></label><label>l<input id="geomL" type="text" inputmode="text" data-fraction="" value="0"/></label><label>ħω (meV)<input id="geomHW" step="0.1" type="number" value="0"/></label></div><div class="geometry-target-buttons"><div class="geometry-target-all-buttons"><button id="geomSetU" type="button">Set U</button><button id="geomSetV" type="button">Set V</button><button id="geomPerpU" type="button">ki ⟂ U</button><button class="hidden" id="geomPerpV" type="button">ki ⟂ V</button><button class="hidden" id="geomParallelU" type="button">ki ∥ U</button><button class="hidden" id="geomParallelV" type="button">ki ∥ V</button><button class="hidden" id="geomSetBragg" type="button">Set Bragg peak</button></div></div></div>
@@ -278,6 +270,12 @@
 </div>
 <div aria-live="polite" class="orientation-plane-warning hidden" id="geometryPlaneWarning"></div>
 <div class="geometry-angles" id="geometryAngles">Enter a target Q and ħω to calculate TAS angles.</div>
+</div>
+<div class="geometry-sliders" id="geometrySliders" aria-label="Target Q and energy-transfer sliders">
+<label class="geometry-slider-row"><span>ħω (meV)</span><input id="geomSliderHW" data-no-persist="" type="range" min="-10" max="10" step="0.1" value="0"/><output id="geomSliderHWValue">0</output><span></span></label>
+<label class="geometry-slider-row"><span id="geomSliderULabel">U (1, 0, 0)</span><input id="geomSliderU" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="1"/><output id="geomSliderUValue">1</output><span></span></label>
+<label class="geometry-slider-row"><span id="geomSliderVLabel">V (0, 1, 0)</span><input id="geomSliderV" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0"/><output id="geomSliderVValue">0</output><span></span></label>
+<div class="geometry-slider-row geometry-slider-combo"><span class="geometry-combo-label"><input id="geomComboU" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of U"/>·U + <input id="geomComboV" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of V"/>·V</span><input id="geomSliderCombo" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0" aria-label="Move the target along the linear combination of U and V"/><output id="geomSliderComboValue">0</output><button id="geomComboSetOrigin" type="button" title="Use the current target as the origin (slider = 0)">Set origin</button></div>
 </div>
 <div id="geometryDefaultPlotMount"><div class="qe-plot geometry" id="geometryPlot"></div></div>
 <div class="geometry-scan-output hidden" id="geometryScanOutput">
