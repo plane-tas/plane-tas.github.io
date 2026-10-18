@@ -5,8 +5,25 @@ import {dot} from '../core/tas-core.js';
 export function createQEPath(deps){
   const {
     $, checkedValue, hklToQ, num, parseNumericValue, renderQEVectorMap, renderSingle, getSingleCache,
-    renderGeometry
+    renderGeometry, rangeTable
   }=deps;
+
+// Highest neutron energy that reaches the sample position: "spurion_Ei_max"
+// in the instrument JSON if given; otherwise the instrument's Ei upper limit
+// (largest Ei of its S2-limit table, e.g. ~20 meV on CTAX), and in no case
+// above 100 meV (the reactor spectrum is negligible there).
+function qeSpurionEnergyLimit(cache){
+  let limit=100;
+  // Optional explicit value in the instrument JSON (meV).
+  const explicit=Number(cache?.inst?.spurion_Ei_max);
+  if(Number.isFinite(explicit) && explicit>0) return explicit;
+  try{
+    const table=cache?.inst ? rangeTable(cache.inst) : [];
+    const eiMax=Math.max(...table.map(x=>Number(x.Ei)).filter(Number.isFinite));
+    if(Number.isFinite(eiMax) && eiMax>0) limit=Math.min(limit,eiMax);
+  }catch(_e){ /* no table: keep the 100-meV limit */ }
+  return limit;
+}
 
 // Higher-order wavelength contamination warning.
 // A label "nki-mkf" denotes an elastic event for the contaminating harmonics,
@@ -21,14 +38,19 @@ function qeSpurionWarnings(cache, hw){
   const fixedEf=Number(cache?.Ef);
   const fixedEi=Number(cache?.Ei);
   const candidates=[];
+  // With Ei fixed the selected Ei itself is always delivered.
+  const energyLimit=Math.max(qeSpurionEnergyLimit(cache),
+    cache.energyMode==="Ei fixed" && fixedEi>0 ? fixedEi : 0);
+  const hwLo=Math.min(...list), hwHi=Math.max(...list);
+  const hwStep=list.length>1 ? Math.abs(list[1]-list[0]) : 0.1;
 
   // Loop variables: ki/kf = n/m (n > m), i.e. Ei/Ef = (n/m)^2. Physically
   // the m-th order of ki equals the n-th order of kf:  m*ki = n*kf.
   // The warning is therefore labelled "m ki - n kf" (e.g. ki-2kf, 2ki-3kf).
   //
-  // Only include an incident higher-order component while its energy
-  // m^2 * Ei is <= 100 meV, since the reactor spectrum is negligible above it.
-  // The 100-meV test limits the incident order m. The analyzer order n has no
+  // Only include a combination whose contaminating neutrons (energy
+  // m^2 * Ei = n^2 * Ef) can actually be delivered: at most the instrument's
+  // Ei upper limit (and never above 100 meV). This limits the incident order m. The analyzer order n has no
   // such cutoff, so it is capped at 4 (PG(008)); higher orders are negligible
   // and would only flood the warning (ki-5kf ... ki-12kf at fixed Ei).
   for(let n=2;n<=4;n++){
@@ -50,7 +72,10 @@ function qeSpurionWarnings(cache, hw){
 
       if(!(EiAtSpurion>0) || !(EfAtSpurion>0) || !Number.isFinite(hws)) continue;
       // The incident component is the m-th order of ki (energy m^2 Ei).
-      if(m*m*EiAtSpurion > 100 + 1e-9) continue;
+      if(m*m*EiAtSpurion > energyLimit + 1e-9) continue;
+      // Outside the calculated hbar-omega range: nothing to mark (otherwise
+      // the nearest points would be the edge of the map).
+      if(hws<hwLo-hwStep || hws>hwHi+hwStep) continue;
 
       // Reduce duplicate ratios (e.g. 4/2 == 2/1); keep the lowest-order label.
       if(candidates.some(x=>Math.abs(x.hw-hws)<1e-9)) continue;

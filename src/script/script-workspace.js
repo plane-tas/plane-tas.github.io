@@ -1883,7 +1883,7 @@ export function createScriptWorkspace(deps){
     if(!pane) return;
     const infoRow=pane.querySelector('.time-info-row');
     const commandActions=document.querySelector('.script-command-actions');
-    const asetToggle=$('scriptAsetToggle');
+    const asetToggle=$('scriptToSpice');
     if(!timeEstimateHomeParent){
       timeEstimateHomeParent=pane.parentElement;
       timeEstimateHomeNextSibling=pane.nextSibling;
@@ -3375,22 +3375,29 @@ export function createScriptWorkspace(deps){
       const workspace=document.querySelector('#scriptPanel .script-workspace');
       if(!workspace) return;
       workspace.classList.toggle('aset-collapsed',!!collapsed);
-      const button=$('scriptAsetToggle');
-      if(button){
-        button.textContent=collapsed?'▶ Show ASET':'◀ Hide ASET';
-        button.setAttribute('aria-expanded',String(!collapsed));
-      }
+      // Sticky-note tab on the open ASET pane; a narrow rail when collapsed.
+      $('scriptAsetTab')?.setAttribute('aria-expanded',String(!collapsed));
+      $('scriptAsetRail')?.setAttribute('aria-expanded',String(!collapsed));
+      updateAsetRailCount();
     };
+    function updateAsetRailCount(){
+      const out=$('scriptAsetRailCount');
+      if(out) out.textContent=String(document.querySelectorAll('#scriptAsetList [data-aset-row]').length);
+    }
+    if($('scriptAsetList') && typeof MutationObserver==='function')
+      new MutationObserver(updateAsetRailCount).observe($('scriptAsetList'),{childList:true});
     let initialAsetCollapsed=false;
     try{ initialAsetCollapsed=localStorage.getItem(V51_ASET_COLLAPSED_STORAGE_KEY)==='1'; }catch(_e){}
     applyAsetCollapsedState(initialAsetCollapsed);
-    $('scriptAsetToggle')?.addEventListener('click',()=>{
+    const toggleAsetPane=()=>{
       const workspace=document.querySelector('#scriptPanel .script-workspace'); if(!workspace) return;
       const collapsed=!workspace.classList.contains('aset-collapsed');
       applyAsetCollapsedState(collapsed);
       try{ localStorage.setItem(V51_ASET_COLLAPSED_STORAGE_KEY,collapsed?'1':'0'); }catch(_e){}
       requestAnimationFrame(resizeVisiblePlots);
-    });
+    };
+    $('scriptAsetTab')?.addEventListener('click',toggleAsetPane);
+    $('scriptAsetRail')?.addEventListener('click',toggleAsetPane);
     try{ if(area) area.value=localStorage.getItem(SPICE_SCRIPT_STORAGE_KEY)||''; }catch(_e){}
     area?.addEventListener('scroll',()=>{ if(backdrop){backdrop.scrollTop=area.scrollTop;backdrop.scrollLeft=area.scrollLeft;} if(numbers) numbers.scrollTop=area.scrollTop; });
     area?.addEventListener('input',()=>{

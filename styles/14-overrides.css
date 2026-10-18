@@ -578,3 +578,72 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
    independent of the browser / OS default accent. */
 :root{--tas-accent:#466d98}
 input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-accent)}
+
+/* Script fitted to the visible workspace height (see ui-shell.js): the three
+   panes keep their headings/buttons and scroll their lists inside. */
+#scriptPanel.script-height-limited .script-workspace{height:var(--script-fit-height);align-items:stretch}
+#scriptPanel.script-height-limited :is(.script-aset-pane,.script-command-pane,.script-spice-pane){
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;
+}
+/* The ASET pane carries the sticky-note tab outside its right edge. */
+#scriptPanel.script-height-limited .script-aset-pane{overflow:visible}
+#scriptPanel.script-height-limited .script-aset-list{flex:1 1 0;min-height:0;max-height:none;overflow-y:auto}
+#scriptPanel.script-height-limited #scriptTimeMount{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+/* Command list: takes the remaining height and scrolls; the buttons, scan
+   times and messages below it stay visible. */
+#scriptPanel.script-height-limited #scriptTimeMount>.time-estimate-pane{display:flex!important;flex-direction:column;flex:1 1 0;min-height:0}
+#scriptPanel.script-height-limited #scriptTimeMount>.time-estimate-pane>*{flex:0 0 auto}
+#scriptPanel.script-height-limited #scriptTimeMount .time-scan-table-wrap{
+  flex:0 1 auto;min-height:calc(130px * var(--tas-density));max-height:none;overflow-y:auto;scrollbar-gutter:stable;
+}
+#scriptPanel.script-height-limited #scriptTimeMount .time-scan-table-wrap .time-scan-header{position:sticky;top:0;z-index:3;background:#f7f7f7}
+#scriptPanel.script-height-limited .script-spice-editor{flex:1 1 0;height:auto;min-height:0;max-height:none}
+#scriptPanel.script-height-limited :is(.script-pane-heading,.script-message){flex:0 0 auto}
+
+/* Script ASET drawer: a sticky-note tab on the right edge of the open ASET
+   pane; when collapsed, a narrow rail ("ASET" + count) takes its place. */
+#scriptPanel{--aset-tab-w:max(20px,calc(26px * var(--tas-density)))}
+#scriptPanel .script-aset-pane{position:relative}
+#scriptPanel .script-workspace:not(.aset-collapsed) .script-command-pane{margin-left:var(--aset-tab-w)}
+#scriptPanel .script-aset-tab,
+#scriptPanel .script-aset-rail{
+  writing-mode:vertical-rl;
+  display:flex;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density));
+  padding:calc(10px * var(--tas-density)) 0!important;
+  border:1px solid var(--tas-accent)!important;
+  background:#e8eef5!important;color:#2f4d6e!important;
+  font-weight:650;font-size:max(12px,calc(14px * var(--tas-density)))!important;
+  line-height:1;cursor:pointer;white-space:nowrap;
+}
+#scriptPanel .script-aset-tab{
+  position:absolute;z-index:4;
+  top:calc(44px * var(--tas-density));
+  right:calc(-1 * var(--aset-tab-w) - 1px);
+  width:var(--aset-tab-w)!important;min-width:0!important;
+  border-left:0!important;border-radius:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density)) 0!important;
+}
+#scriptPanel .script-aset-rail{display:none!important;min-width:0!important;width:auto!important;
+  border-radius:calc(8px * var(--tas-density))!important;justify-content:flex-start;
+  padding-top:calc(14px * var(--tas-density))!important}
+#scriptPanel .script-aset-tab:hover,#scriptPanel .script-aset-rail:hover{background:#d9e3ee!important}
+#scriptPanel .script-aset-rail-count{
+  writing-mode:horizontal-tb;min-width:1.6em;text-align:center;
+  padding:calc(1px * var(--tas-density)) calc(5px * var(--tas-density));
+  border-radius:calc(8px * var(--tas-density));background:#fff;font-size:max(11px,calc(12px * var(--tas-density)));
+}
+#scriptPanel .script-workspace.aset-collapsed .script-aset-rail{display:flex!important}
+@media(min-width:1181px){
+  #scriptPanel .script-workspace.aset-collapsed{
+    grid-template-columns:var(--aset-rail-w,max(30px,calc(38px * var(--tas-density)))) repeat(2,minmax(0,1fr))!important;
+  }
+}
+/* One-column layout: horizontal bars instead of the vertical tab / rail. */
+@media(max-width:1180px){
+  #scriptPanel .script-workspace:not(.aset-collapsed) .script-command-pane{margin-left:0}
+  #scriptPanel .script-aset-tab{
+    position:static;writing-mode:horizontal-tb;width:100%!important;margin-top:calc(8px * var(--tas-density));
+    border:1px solid var(--tas-accent)!important;border-radius:calc(6px * var(--tas-density))!important;
+    padding:calc(5px * var(--tas-density)) 0!important;
+  }
+  #scriptPanel .script-aset-rail{writing-mode:horizontal-tb;justify-content:center;padding:calc(6px * var(--tas-density)) 0!important}
+}

@@ -150,7 +150,7 @@ const QE_FIT_MIN_PLOT=300;
 let qeViewportFrame=0;
 function requestQEViewportHeightSync(){
   if(qeViewportFrame) return;
-  qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); });
+  qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); syncScriptViewportHeight(); });
 }
 function visibleElement(el){ return !!(el && el.getClientRects().length); }
 function syncQEViewportHeight(){
@@ -190,6 +190,30 @@ function syncQEViewportHeight(){
   const next=[panel.style.getPropertyValue('--qe-fit-left'),panel.style.getPropertyValue('--qe-fit-right')].join('|');
   if(next!==prev) scheduleVisiblePlotResize();
 }
+// Script: the same idea. In the multi-column layout the workspace takes the
+// visible height of the main area; ASET list, command list and SPICE editor
+// scroll inside their panes instead of the page.
+const SCRIPT_FIT_MIN=360;
+function syncScriptViewportHeight(){
+  const panel=$('scriptPanel'), ws=panel?.querySelector('.script-workspace'), card=panel?.querySelector('.script-card');
+  const main=panel?.closest('main');
+  if(!panel || !ws || !card || !main) return;
+  const prev=panel.style.getPropertyValue('--script-fit-height');
+  panel.classList.remove('script-height-limited');
+  panel.style.removeProperty('--script-fit-height');
+  const columns=getComputedStyle(ws).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+  if(visibleElement(panel) && columns>=2){
+    const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main), cs=getComputedStyle(card);
+    const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
+    const wsTop=ws.getBoundingClientRect().top-mainRect.top+main.scrollTop;
+    const below=(card.getBoundingClientRect().bottom-ws.getBoundingClientRect().bottom)+(parseFloat(cs.marginBottom)||0);
+    const height=Math.floor(available-wsTop-below);
+    if(height>=SCRIPT_FIT_MIN){
+      panel.style.setProperty('--script-fit-height',`${height}px`);
+      panel.classList.add('script-height-limited');
+    }
+  }
+}
 function initializeQEViewportHeightSync(){
   window.addEventListener('resize',requestQEViewportHeightSync,{passive:true});
   window.visualViewport?.addEventListener('resize',requestQEViewportHeightSync);
@@ -197,7 +221,7 @@ function initializeQEViewportHeightSync(){
     // Pane sizes change on tab switches, Single/Powder, warnings and wrapping.
     const observer=new ResizeObserver(requestQEViewportHeightSync);
     for(const el of [document.querySelector('main'),$('qePanel'),$('qeConstantMapPane'),$('qeVectorMapPane'),
-      $('geometryAnglesPane'),$('geometryTimePane')]) if(el) observer.observe(el);
+      $('geometryAnglesPane'),$('geometryTimePane'),$('scriptPanel')]) if(el) observer.observe(el);
   }
   requestQEViewportHeightSync();
 }

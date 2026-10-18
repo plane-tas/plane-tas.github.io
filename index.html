@@ -745,14 +745,16 @@
 <div aria-labelledby="tabScript" class="tab-panel hidden" id="scriptPanel" role="tabpanel">
 <section class="calc-card script-card">
 <div class="script-workspace">
-<div class="script-aset-pane">
+<button aria-controls="scriptAsetPane" aria-expanded="false" class="script-aset-rail" id="scriptAsetRail" title="Show the ASET editor" type="button"><span class="script-aset-rail-label">▶ ASET</span><span class="script-aset-rail-count" id="scriptAsetRailCount"></span></button>
+<div class="script-aset-pane" id="scriptAsetPane">
+<button aria-controls="scriptAsetPane" aria-expanded="true" class="script-aset-tab" id="scriptAsetTab" title="Hide the ASET editor" type="button">ASET ◀</button>
 <div class="script-pane-heading script-aset-heading"><span>ASET</span><div class="script-aset-heading-actions"><button aria-controls="scriptAsetHelp" aria-expanded="false" class="info-toggle-button" id="scriptAsetInfoToggle" title="Show ASET information" type="button">ⓘ Info</button><button id="scriptAsetAdd" type="button">+ Add ASET</button></div></div>
 <div class="time-info-panel script-aset-help hidden" id="scriptAsetHelp">Each ASET is a SPICE command template. Use <code>&lt;value&gt;</code> for one-value Details and <code>&lt;range&gt;</code> for initial/final/step Details. Repeat placeholders to create multiple Detail boxes. For ASET lines beginning with <code>scan</code> or <code>scanrel</code>, <code>preset mcu</code> is added automatically from that command row's MCU value. Separate commands with commas or line breaks.</div>
 <div class="script-aset-table-header"><span>No</span><span>Target</span><span>SPICE template</span><span></span></div>
 <div class="script-aset-list" id="scriptAsetList"></div>
 </div>
 <div class="script-command-pane">
-<div class="script-pane-heading script-command-heading"><span>Time estimate commands</span><div class="script-command-actions"><button id="scriptAsetToggle" title="Hide or show the ASET editor" type="button">◀ Hide ASET</button><button id="scriptToSpice" title="Convert Time estimate commands to SPICE" type="button">→ SPICE</button></div></div>
+<div class="script-pane-heading script-command-heading"><span>Time estimate commands</span><div class="script-command-actions"><button id="scriptToSpice" title="Convert Time estimate commands to SPICE" type="button">→ SPICE</button></div></div>
 <div class="script-time-mount" id="scriptTimeMount"></div>
 </div>
 <div class="script-spice-pane">

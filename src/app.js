@@ -108,7 +108,7 @@ const {
   $, checkedValue, hklToQ, num, parseNumericValue,
   renderQEVectorMap:(...args)=>renderQEVectorMap(...args),
   renderSingle:(...args)=>renderSingle(...args), getSingleCache:()=>singleCache,
-  renderGeometry:(...args)=>renderGeometry(...args)
+  renderGeometry:(...args)=>renderGeometry(...args), rangeTable:(...args)=>rangeTable(...args)
 });
 
 const {
