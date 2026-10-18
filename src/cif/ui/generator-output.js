@@ -17,15 +17,13 @@ function recalculateGeneratedReflections(){
     fn.clearCifReflectionTable('Complete valid Unit Cell / Positions values to calculate nuclear reflections.');
     return;
   }
-  let beam,twoThetaMax=180,filters;
+  // Reflections are always calculated up to 2θ = 180°; "within instrument
+  // 2θ max" only limits what the table and the graph show.
+  const twoThetaMax=180;
+  let beam,filters;
   try{
     beam=fn.currentCifReflectionBeam();
     filters=fn.currentCifReflectionFilters();
-    if(filters.withinS2Max){
-      const inst=currentInstrument();
-      twoThetaMax=Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf));
-      if(!Number.isFinite(twoThetaMax)) throw new Error("Instrument 2θ maximum is unavailable.");
-    }
   }catch(err){ fn.clearCifReflectionTable(err?.message||String(err)); return; }
   const notes=[];
   // Powder graph range: instrument S2 min to effective S2 max at this energy.

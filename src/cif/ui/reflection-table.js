@@ -59,6 +59,11 @@ function setReflectionData({nuclear=null,magnetic=null,notes=[],wavelength=null,
 
 // ---- Display options ----
 const mode=()=>$('reflectionMode')?.value==='graph'?'graph':'table';
+// "within instrument 2θ max": display limit (rows are calculated to 180°).
+function displayTwoThetaMax(){
+  const max=Number(cifState.reflectionData?.plotRange?.max);
+  return fn.currentCifReflectionFilters().withinS2Max && Number.isFinite(max) && max>0 ? Math.min(180,max) : 180;
+}
 // The powder pattern always includes the powder Lorentz factor.
 const lorentzOn=()=>mode()==='graph' || $('reflectionLorentz')?.value!=='off';
 const codeFilter=()=>{
@@ -74,7 +79,8 @@ function displayRows(){
   const data=cifState.reflectionData;
   if(!data) return [];
   const want=codeFilter();
-  let rows=data.rows.filter(r=>want==='all' || r.code.includes(want));
+  const tthMax=displayTwoThetaMax();
+  let rows=data.rows.filter(r=>(want==='all' || r.code.includes(want)) && !(r.twoTheta>tthMax+1e-9));
   if(mode()==='table'){
     const filters=fn.currentCifReflectionFilters();
     if(data.lattice && (filters.alongU||filters.alongV)){
@@ -209,7 +215,9 @@ function updateOptionLabels(){
     else if(lorentz.dataset.tableValue!==undefined){ lorentz.value=lorentz.dataset.tableValue; delete lorentz.dataset.tableValue; }
     lorentz.title=graph?'Powder: L = 1/(2 sin²θ cosθ), always applied':'Single crystal ω scan: L = 1/sin 2θ (or 1 = none)';
   }
-  for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('is-inactive',graph); }
+  // along U / V and Download table belong to the single-crystal table only.
+  for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('hidden',graph); }
+  $('cifDownloadTable')?.classList.toggle('hidden',graph);
   // Incommensurate mCIF: only nuclear reflections can be calculated.
   const filter=$('reflectionCodeFilter'),inc=!!cifState.reflectionData?.incommensurate;
   if(filter){
@@ -217,7 +225,13 @@ function updateOptionLabels(){
     if(inc && filter.value!=='N'){ filter.dataset.beforeIncommensurate=filter.value; filter.value='N'; }
     else if(!inc && filter.dataset.beforeIncommensurate){ filter.value=filter.dataset.beforeIncommensurate; delete filter.dataset.beforeIncommensurate; }
   }
+  // The graph overlays N + M, N and M, so the Reflections selector is table-only.
+  $('reflectionCodeFilter')?.closest('label')?.classList.toggle('hidden',graph);
   $('cifReflectionTableWrap')?.classList.toggle('hidden',graph);
+  for(const tab of document.querySelectorAll('#generatorReflectionsPane [data-reflection-view]')){
+    const on=tab.dataset.reflectionView===mode();
+    tab.classList.toggle('active',on); tab.setAttribute('aria-selected',String(on));
+  }
 }
 function setMessage(text){
   const el=$('cifReflectionMessage'); if(!el) return;
@@ -279,7 +293,7 @@ function clearCifReflectionRowSelection(){
 
 // ---- Powder pattern (Gaussian peaks of constant FWHM in 2θ) ----
 const plotAxis=()=>{ const v=$('reflectionPlotXAxis')?.value; return v==='q'||v==='d'?v:'twoTheta'; };
-const plotPart=()=>codeFilter();
+const plotLog=()=>!!$('reflectionPlotLog')?.checked;
 function renderReflectionPowderPlot(){
   const section=$('reflectionPowderSection'),plot=$('reflectionPowderPlot');
   if(!section||!plot) return;
@@ -287,54 +301,95 @@ function renderReflectionPowderPlot(){
   section.hidden=!show;
   if(!show || !window.Plotly || plot.closest('.hidden')) return;
   const data=cifState.reflectionData,lambda=Number(data?.wavelength);
-  const part=plotPart();
+  const incommensurate=!!data?.incommensurate;
   const groups=data&&lambda>0 ? powderGroups(data.rows) : [];
   const peaks=groups.map(g=>{
     const L=lorentzFactor(g.twoTheta);
-    return {...g,In:g.mult*g.fn2*L,Im:g.mult*g.fm2*L};
-  }).map(g=>({...g,area:part==='N'?g.In:part==='M'?g.Im:g.In+g.Im})).filter(g=>g.area>0);
+    const In=g.mult*g.fn2*L, Im=incommensurate?0:g.mult*g.fm2*L;
+    return {...g,In,Im,area:In+Im};
+  }).filter(g=>g.area>0);
   if(!peaks.length){ window.Plotly.purge(plot); plot.textContent='No powder reflections to plot.'; return; }
   if(plot.textContent && !plot._fullLayout) plot.textContent='';
   let H=Number($('reflectionPlotFwhm')?.value);
   if(!(H>0)) H=0.3;
-  // Display range: instrument S2 min to effective S2 max (fallback: around the peaks).
-  const range=data.plotRange;
-  const t0=Number.isFinite(range?.min)&&range.min>0 ? range.min : Math.max(0.2,Math.min(...peaks.map(p=>p.twoTheta))-5*H);
-  const t1=Number.isFinite(range?.max)&&range.max>t0 ? Math.min(179.9,range.max) : Math.min(179.9,Math.max(...peaks.map(p=>p.twoTheta))+5*H);
+  // Display range: instrument S2 min to effective S2 max when "within
+  // instrument 2θ max" is ticked, otherwise up to 180°.
+  const range=data.plotRange, within=fn.currentCifReflectionFilters().withinS2Max;
+  const tMaxPeaks=Math.max(...peaks.map(p=>p.twoTheta));
+  const t0=within && Number.isFinite(range?.min)&&range.min>0 ? range.min : Math.max(0.2,Math.min(...peaks.map(p=>p.twoTheta))-5*H);
+  const t1=within && Number.isFinite(range?.max)&&range.max>t0 ? Math.min(179.9,range.max) : Math.min(179.9,tMaxPeaks+5*H);
   const inRange=p=>p.twoTheta>=t0-1e-9&&p.twoTheta<=t1+1e-9;
   const step=Math.max(H/12,(t1-t0)/20000);
   const tth=[];for(let t=t0;t<=t1+1e-9;t+=step) tth.push(t);
-  const y=new Array(tth.length).fill(0);
   const c=4*Math.LN2/(H*H),norm=2*Math.sqrt(Math.LN2/Math.PI)/H;
-  for(const p of peaks){
-    const i0=Math.max(0,Math.floor((p.twoTheta-5*H-t0)/step)),i1=Math.min(tth.length-1,Math.ceil((p.twoTheta+5*H-t0)/step));
-    for(let i=i0;i<=i1;i++){ const dx=tth[i]-p.twoTheta; y[i]+=p.area*norm*Math.exp(-c*dx*dx); }
-  }
+  const pattern=key=>{
+    const y=new Array(tth.length).fill(0);
+    for(const p of peaks){
+      const area=p[key]; if(!(area>0)) continue;
+      const i0=Math.max(0,Math.floor((p.twoTheta-5*H-t0)/step)),i1=Math.min(tth.length-1,Math.ceil((p.twoTheta+5*H-t0)/step));
+      for(let i=i0;i<=i1;i++){ const dx=tth[i]-p.twoTheta; y[i]+=area*norm*Math.exp(-c*dx*dx); }
+    }
+    return y;
+  };
+  const yN=pattern('In'), yM=pattern('Im'), yT=yN.map((v,i)=>v+yM[i]);
+  const hasM=yM.some(v=>v>0), hasN=yN.some(v=>v>0);
   const axis=plotAxis();
   const conv=t=>{ const s=Math.sin(t*Math.PI/360); return axis==='q'?4*Math.PI*s/lambda:axis==='d'?lambda/(2*s):t; };
   const xTitle=axis==='q'?'Q (Å⁻¹)':axis==='d'?'d (Å)':'2θ (deg)';
-  const yMax=Math.max(...y)||1;
+  const yMax=Math.max(...yT)||1;
+  // Log axis: zero intensity is drawn on the bottom of the axis (baseline),
+  // four decades below the strongest peak.
+  const log=plotLog(), floor=yMax*1e-4;
+  const shown=y=>log ? y.map(v=>Math.max(v,floor)) : y;
+  const xs=tth.map(conv);
   const hkl=h=>`(${h.map(v=>Number(Number(v).toFixed(4))).join(' ')})`;
-  // Each tick row shows only its own contribution: I_N on nuclear, I_M on magnetic.
-  const tick=(list,level,name,color,key,label)=>({x:list.map(p=>conv(p.twoTheta)),y:list.map(()=>-level*yMax),
-    type:'scatter',mode:'markers',name,marker:{symbol:'line-ns-open',size:12,color,line:{width:1.5,color}},
-    customdata:list.map(p=>[hkl(p.hkl),p.mult,p[key]]),
-    hovertemplate:`%{customdata[0]}  Mult %{customdata[1]}<br>${label} = %{customdata[2]:.4g}<extra></extra>`});
-  const traces=[{x:tth.map(conv),y,type:'scatter',mode:'lines',name:'Pattern',line:{width:1.5,color:'#1f4e8c'},
-    hovertemplate:`${xTitle.split(' ')[0]} = %{x:.4f}<br>I = %{y:.4g}<extra></extra>`}];
-  if(part!=='M') traces.push(tick(peaks.filter(p=>p.In>0&&inRange(p)),0.05,'Nuclear','#2e7d32','In','I_N'));
-  if(part!=='N') traces.push(tick(peaks.filter(p=>p.Im>0&&inRange(p)),part==='M'?0.05:0.11,'Magnetic','#c62828','Im','I_M'));
-  window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:56,b:70},font:{size:18},
-    // The axis title is the #reflectionPlotXAxis selector placed under the plot.
-    // Display from 0 (2θ, Q); the pattern itself is computed only in the
-    // instrument S2 range. d has no finite value at 2θ = 0: autorange.
-    xaxis:{title:{text:''},tickfont:{size:18},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,
-      ...(axis==='d' ? {autorange:true} : {range:[0,conv(t1)]})},
-    yaxis:{tickfont:{size:18},title:{text:'Intensity (arb. units)',standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,
-      range:[-(part==='all'?0.17:0.11)*yMax,1.05*yMax]},
-    // Legend above the frame (top right); the FWHM field sits at the same height, top left.
-    showlegend:true,legend:{orientation:'h',x:1,xanchor:'right',y:1.02,yanchor:'bottom',bgcolor:'rgba(0,0,0,0)'},uirevision:`powder-${axis}`
-  },{responsive:true,displaylogo:false});
+  const hover=label=>`${xTitle.split(' ')[0]} = %{x:.4f}<br>${label} = %{y:.4g}<extra></extra>`;
+  // Patterns: total (N + M), nuclear and magnetic, overlaid.
+  const traces=[];
+  if(hasN && hasM) traces.push({x:xs,y:shown(yT),type:'scatter',mode:'lines',name:'N + M',line:{width:2,color:'#1f4e8c'},hovertemplate:hover('I')});
+  if(hasN) traces.push({x:xs,y:shown(yN),type:'scatter',mode:'lines',name:'N',line:{width:1.4,color:'#2e7d32'},hovertemplate:hover('I_N')});
+  if(hasM) traces.push({x:xs,y:shown(yM),type:'scatter',mode:'lines',name:'M',line:{width:1.4,color:'#c62828'},hovertemplate:hover('I_M')});
+  // Peak ticks in a strip below the pattern (works for linear and log axes).
+  // Hover: indices, multiplicity and the position on the selected x axis.
+  const xLabel=axis==='q'?'Q':axis==='d'?'d':'2θ', xUnit=axis==='q'?' Å⁻¹':axis==='d'?' Å':'°';
+  const tick=(list,level,name,color)=>({x:list.map(p=>conv(p.twoTheta)),y:list.map(()=>level),yaxis:'y2',
+    type:'scatter',mode:'markers',name,showlegend:false,marker:{symbol:'line-ns-open',size:12,color,line:{width:1.5,color}},
+    customdata:list.map(p=>[hkl(p.hkl),p.mult]),
+    hovertemplate:`${name.split(' ')[0]} %{customdata[0]}<br>Mult %{customdata[1]}<br>${xLabel} = %{x:.4f}${xUnit}<extra></extra>`});
+  const tickN=peaks.filter(p=>p.In>0&&inRange(p)), tickM=peaks.filter(p=>p.Im>0&&inRange(p));
+  if(tickN.length) traces.push(tick(tickN,tickM.length?0.7:0.5,'Nuclear peaks','#2e7d32'));
+  if(tickM.length) traces.push(tick(tickM,tickN.length?0.3:0.5,'Magnetic peaks','#c62828'));
+  // View restored by a double-click (the current calculation's range).
+  const xView=axis==='d' ? null : [0,conv(t1)];
+  const yView=log ? [Math.log10(floor),Math.log10(yMax*1.6)] : [0,1.05*yMax];
+  // Copies go into the layout: Plotly mutates layout range arrays when zooming.
+  plot.__tasPowderView={x:xView,y:yView};
+  const grid={showgrid:true,gridcolor:'#d5dbe2',minor:{showgrid:true,gridcolor:'#eef1f5',ticks:''}};
+  // Same font size for both axis titles, tick labels and the legend.
+  const FONT=18;
+  window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},
+    // d has no finite value at 2θ = 0: autorange.
+    xaxis:{title:{text:xTitle,font:{size:FONT},standoff:10},tickfont:{size:FONT},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
+      anchor:'y2',...(xView ? {range:xView.slice()} : {autorange:true})},
+    yaxis:{domain:[0.13,1],tickfont:{size:FONT},title:{text:'Intensity (arb. units)',font:{size:FONT},standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
+      type:log?'log':'linear',range:yView.slice(),...(log?{exponentformat:'power'}:{})},
+    yaxis2:{domain:[0,0.1],range:[0,1],showticklabels:false,showgrid:false,zeroline:false,fixedrange:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
+    // Legend above the frame (top right); FWHM and Log sit at the same height, top left.
+    // Legend below the plot (under the x-axis selector), never over peaks.
+    showlegend:true,legend:{orientation:'h',xref:'paper',x:0.5,xanchor:'center',yref:'container',y:0,yanchor:'bottom',
+      bgcolor:'rgba(0,0,0,0)',font:{size:FONT}},uirevision:`powder-${axis}-${log}`
+  // Double-click returns to the current view (not Plotly's first-draw range
+  // or its autorange, which would include the tick strip and the log baseline).
+  },{responsive:true,displaylogo:false,doubleClick:false});
+  if(!plot.__tasPowderDoubleClick){
+    plot.__tasPowderDoubleClick=true;
+    // The event fires before Plotly's own handling: apply the view afterwards.
+    plot.on('plotly_doubleclick',()=>requestAnimationFrame(()=>{
+      const view=plot.__tasPowderView; if(!view || !plot.isConnected) return;
+      window.Plotly.relayout(plot,{...(view.x?{'xaxis.range':view.x.slice(),'xaxis.autorange':false}:{'xaxis.autorange':true}),
+        'yaxis.range':view.y.slice(),'yaxis.autorange':false});
+    }));
+  }
 }
 
 // ---- CSV ----
@@ -379,8 +434,17 @@ function initializeReflectionTable(){
   for(const id of ['reflectionMode','reflectionLorentz','reflectionCodeFilter']){
     $(id)?.addEventListener('change',renderCifReflectionTable);
   }
-  // Plot controls: x axis and FWHM (the contribution follows the Reflections selector).
+  // Plot controls: x axis, FWHM and log intensity.
   $('reflectionPlotXAxis')?.addEventListener('change',renderReflectionPowderPlot);
+  $('reflectionPlotLog')?.addEventListener('change',renderReflectionPowderPlot);
+  // Table / Graph view tabs drive the (hidden) Mode selector.
+  for(const tab of document.querySelectorAll('#generatorReflectionsPane [data-reflection-view]')){
+    tab.addEventListener('click',()=>{
+      const sel=$('reflectionMode'); if(!sel || sel.value===tab.dataset.reflectionView) return;
+      sel.value=tab.dataset.reflectionView;
+      sel.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+  }
   $('reflectionPlotFwhm')?.addEventListener('input',renderReflectionPowderPlot);
   if(!window.Plotly) window.addEventListener('load',()=>renderReflectionPowderPlot(),{once:true});
   renderCifReflectionTable();

@@ -647,3 +647,30 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   }
   #scriptPanel .script-aset-rail{writing-mode:horizontal-tb;justify-content:center;padding:calc(6px * var(--tas-density)) 0!important}
 }
+
+/* Reflections: Table / Graph view tabs, wrapping option row, plot controls. */
+#cifReflectionsPanel > .reflection-view-tabs{margin:0 0 calc(8px * var(--tas-density))}
+
+#structurePanel .magnetic-options.reflection-options{
+  grid-auto-flow:row;
+  grid-template-columns:repeat(auto-fill,minmax(calc(170px * var(--tas-density)),1fr));
+}
+#structurePanel .magnetic-options .hidden{display:none!important}
+/* Graph controls: a normal row above the plot (never over the axes). */
+#structurePanel .reflection-powder-plot-wrap > .reflection-plot-controls{
+  position:static;display:flex;flex-wrap:wrap;align-items:center;
+  gap:calc(6px * var(--tas-density)) calc(18px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density)) 0;
+  font-size:max(12px,calc(15px * var(--tas-density)));
+}
+#structurePanel .reflection-plot-xaxis-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:inherit}
+#structurePanel .reflection-plot-controls .reflection-plot-xaxis{position:static;transform:none;width:auto;min-width:0;font-size:inherit}
+#structurePanel .reflection-plot-controls .reflection-plot-fwhm{position:static;font-size:inherit}
+#structurePanel .reflection-plot-log{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;font-size:inherit}
+#structurePanel .reflection-powder-plot-wrap > .reflection-plot-controls{justify-content:flex-start;align-self:stretch}
+#structurePanel .reflection-plot-controls :is(.reflection-plot-log,.reflection-plot-fwhm,.reflection-plot-xaxis-label){
+  font-size:max(12px,calc(15px * var(--tas-density)))!important;font-weight:400;margin:0;
+}
+#structurePanel .reflection-plot-controls :is(input[type=number],select){font-size:max(12px,calc(15px * var(--tas-density)))!important}
+/* Keep a usable plot height on narrow windows (margins hold the axis titles and legend). */
+#structurePanel .reflection-powder-section .reflection-powder-plot{min-height:calc(440px * var(--tas-density))}
