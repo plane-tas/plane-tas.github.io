@@ -16,6 +16,13 @@ function qeRluNiceStep(span){
   return [1,2,5,10].map(v=>v*decade).find(v=>v>=raw) || 10*decade;
 }
 
+// Number of minor intervals per major grid step: 1-2-5 steps are split into
+// 0.2-0.5-1 minor steps (a "2" mantissa uses four 0.5 intervals).
+function qeMinorDivisions(step){
+  const mantissa=Math.abs(step)/Math.pow(10,Math.floor(Math.log10(Math.abs(step))));
+  return Math.abs(mantissa-2)<1e-6 ? 4 : 5;
+}
+
 // Plot frame of the Constant E map (the oblique r.l.u. grid replaces the
 // axis lines, so draw the frame as a shape on the constrained axis domain).
 const QE_MAP_FRAME={type:'rect',xref:'x domain',yref:'y domain',x0:0,x1:1,y0:0,y1:1,
@@ -40,7 +47,7 @@ function qeObliqueRluGridLines(cache,xRange,yRange){
     type:'line',xref:'x',yref:'y',
     x0:origin[0]-delta[0],y0:origin[1]-delta[1],
     x1:origin[0]+delta[0],y1:origin[1]+delta[1],
-    layer:'above',line:{color:zero?'rgba(80,90,105,0.67)':'rgba(105,115,130,0.31)',width:zero?1.4:0.85}
+    layer:'above',line:{color:zero?'rgba(70,80,95,0.75)':'rgba(90,100,115,0.48)',width:zero?1.8:1.3}
   });
   const toXY=(u,v)=>[b.ux*u+b.vx*v,b.uy*u+b.vy*v];
   const fmt=v=>Math.abs(v)<1e-9?'0':String(Number(v.toPrecision(6)));
@@ -48,6 +55,26 @@ function qeObliqueRluGridLines(cache,xRange,yRange){
   const nU0=Math.ceil(umin/ustep-1e-9),nU1=Math.floor(umax/ustep+1e-9);
   const nV0=Math.ceil(vmin/vstep-1e-9),nV1=Math.floor(vmax/vstep+1e-9);
   const eps=1e-8*Math.max(xmax-xmin,ymax-ymin,1);
+  // Minor grid: lighter u/v=constant lines between the major lines.  They are
+  // pushed first so the major lines are drawn on top of them.
+  const minorLine=(origin,delta)=>({
+    type:'line',xref:'x',yref:'y',
+    x0:origin[0]-delta[0],y0:origin[1]-delta[1],
+    x1:origin[0]+delta[0],y1:origin[1]+delta[1],
+    layer:'above',line:{color:'rgba(105,115,130,0.20)',width:0.9}
+  });
+  const umStep=ustep/qeMinorDivisions(ustep),vmStep=vstep/qeMinorDivisions(vstep);
+  const mU0=Math.ceil(umin/umStep-1e-9),mU1=Math.floor(umax/umStep+1e-9);
+  const mV0=Math.ceil(vmin/vmStep-1e-9),mV1=Math.floor(vmax/vmStep+1e-9);
+  const onMajor=(value,step)=>Math.abs(value/step-Math.round(value/step))<1e-6;
+  for(let n=mU0;n<=mU1 && n<mU0+400;n++){
+    const u=n*umStep;
+    if(!onMajor(u,ustep)) shapes.push(minorLine(toXY(u,(vmin+vmax)/2),[b.vx*spanV/2,b.vy*spanV/2]));
+  }
+  for(let n=mV0;n<=mV1 && n<mV0+400;n++){
+    const v=n*vmStep;
+    if(!onMajor(v,vstep)) shapes.push(minorLine(toXY((umin+umax)/2,v),[b.ux*spanU/2,b.uy*spanU/2]));
+  }
   // In r.l.u. mode the graph is still physically orthonormal (Å^-1), but
   // u/v=constant grid lines are oblique.  Place Plotly's axis ticks exactly
   // where those same grid lines intersect the BOTTOM and LEFT frame edges.
@@ -230,11 +257,32 @@ function renderQEVectorMap(cache){
     const xVals=samples.map(p=>p.x),hMin=0,hMax=totalDistance*xScale;
     const knots=[0,...paths.map(p=>(p.start+p.length)*xScale)];
     const tickVals=[];
+    // Minor x grid positions (path coordinate).  A single segment subdivides
+    // its regular tick step; a multi-vertex path subdivides each segment at
+    // round r.l.u. increments of its dominant varying index.
+    const xMinorVals=[];
     if(multiple){
       tickVals.push(...knots);
+      for(const path of paths){
+        const variable=Math.max(...path.a.map((v,k)=>Math.abs(path.b[k]-v)));
+        if(!(variable>1e-9) || !(path.length>0)) continue;
+        const raw=variable/5,decade=Math.pow(10,Math.floor(Math.log10(raw)));
+        const step=([1,2,5,10].find(m=>m*decade>=raw*(1-1e-9))||10)*decade;
+        for(let n=1;n<50;n++){
+          const t=n*step/variable;
+          if(t>1-1e-9) break;
+          xMinorVals.push((path.start+t*path.length)*xScale);
+        }
+      }
     }else{
       const roughStep=hMax/8,base10=Math.pow(10,Math.floor(Math.log10(roughStep)));
       const tickStep=([1,2,2.5,5,10].find(s=>s*base10>=roughStep)||10)*base10;
+      const minorStep=tickStep/qeMinorDivisions(tickStep);
+      for(let n=1;n<200;n++){
+        const x=n*minorStep;
+        if(x>hMax+minorStep*1e-9) break;
+        if(Math.abs(x/tickStep-Math.round(x/tickStep))>1e-6) xMinorVals.push(x);
+      }
       for(let i=0;i<=12;i++){
         const tick=i*tickStep;
         if(tick>hMax+tickStep*1e-9) break;
@@ -418,9 +466,19 @@ function renderQEVectorMap(cache){
     const yGridVals=[];
     for(let y=0;y<=hwMax+1e-9;y+=yGridStep) yGridVals.push(Number(y.toFixed(12)));
     if(hwMax>0 && !yGridVals.some(y=>Math.abs(y-hwMax)<1e-9)) yGridVals.push(hwMax);
+    const yMinorStep=yGridStep/qeMinorDivisions(yGridStep);
+    const yMinorVals=[];
+    for(let n=1;n<200;n++){
+      const y=n*yMinorStep;
+      if(y>hwMax+yMinorStep*1e-9) break;
+      if(Math.abs(y/yGridStep-Math.round(y/yGridStep))>1e-6) yMinorVals.push(y);
+    }
+    const minorGridLine={color:'rgba(105,115,125,0.20)',width:0.9};
     const frontGridShapes=[
-      ...tickVals.map(x=>({type:'line',xref:'x',yref:'paper',x0:x,x1:x,y0:0,y1:1,layer:'above',line:{color:'rgba(105,115,125,0.50)',width:1}})),
-      ...yGridVals.map(y=>({type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:y,y1:y,layer:'above',line:{color:'rgba(105,115,125,0.50)',width:1}}))
+      ...xMinorVals.map(x=>({type:'line',xref:'x',yref:'paper',x0:x,x1:x,y0:0,y1:1,layer:'above',line:minorGridLine})),
+      ...yMinorVals.map(y=>({type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:y,y1:y,layer:'above',line:minorGridLine})),
+      ...tickVals.map(x=>({type:'line',xref:'x',yref:'paper',x0:x,x1:x,y0:0,y1:1,layer:'above',line:{color:'rgba(105,115,125,0.58)',width:1.3}})),
+      ...yGridVals.map(y=>({type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:y,y1:y,layer:'above',line:{color:'rgba(105,115,125,0.58)',width:1.3}}))
     ];
 
     renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);

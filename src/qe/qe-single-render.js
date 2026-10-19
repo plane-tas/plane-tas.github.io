@@ -284,13 +284,15 @@ function renderSingle(cache,index=0){
       zorder:0,
       marker:cache.cifStructure ? {
         color:visibleGpoints.map(p=>Number.isFinite(p.sfNorm)?p.sfNorm:0),
-        colorscale:[[0,"rgb(245,245,245)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
+        colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
         colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:0.62,x:1.01,xanchor:"left",y:0.52,
           ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
-        line:{color:"rgba(80,80,80,0.55)",width:0.4}
+        // A dark rim keeps weak (near-white) peaks visible on any background
+        // while the fill still encodes |F_N|².
+        line:{color:"rgb(25,25,25)",width:1.3}
       } : {color:"black",size:initialMarkerSizes.nuclear},
       hovertext:visibleGpoints.map(p=>{
         if(!p.label) return p.label;
@@ -430,8 +432,8 @@ function renderSingle(cache,index=0){
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?`U ${planeVectorText(cache.U)} (r.l.u.)`:'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
-    yaxis:{title:{text:unit==='rlu'?`V ${planeVectorText(cache.V)} (r.l.u.)`:'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
+    xaxis:{title:{text:unit==='rlu'?`U ${planeVectorText(cache.U)} (r.l.u.)`:'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
+    yaxis:{title:{text:unit==='rlu'?`V ${planeVectorText(cache.V)} (r.l.u.)`:'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
     ...(rluGrid?{shapes:rluGrid.shapes,annotations:rluGrid.annotations}:{}),
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}

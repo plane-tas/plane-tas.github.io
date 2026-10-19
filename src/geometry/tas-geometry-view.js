@@ -1,4 +1,4 @@
-import {darkDirectBeamZeroShiftDeg} from "../core/tas-conventions.js";
+import {darkDirectBeamZeroShiftDeg, displayedMotorAngles} from "../core/tas-conventions.js";
 
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
@@ -73,11 +73,8 @@ function syncGeometryScanPointSlider(pointCount){
 function geometryDisplayedMotorAngles(target,isPowder,sense,displaySense){
   void sense; void displaySense;
   const a=target.angles;
-  return {
-    m1:-Number(a.m1), m2:-Number(a.m2),
-    s1:isPowder ? 0 : Number(a.s1), s2:Number(a.s2),
-    a1:-Number(a.a1), a2:-Number(a.a2)
-  };
+  const shown=displayedMotorAngles({m1:Number(a.m1),m2:Number(a.m2),s1:Number(a.s1),s2:Number(a.s2),a1:Number(a.a1),a2:Number(a.a2)},isPowder);
+  return shown;
 }
 
 // Angle calculation output only: display motor angles to two decimals.
@@ -308,6 +305,10 @@ function renderGeometry(cache,index=0){
   catch(err){ targetError=userFacingTasMessage(err?.message || String(err)); }
 
   const L=2.05;
+  // The region around the sample (mono-sample and sample-analyzer legs, the
+  // ki/kf/Q/U/V vectors and the Dark-angle guide) is drawn 1.5x larger than
+  // the outer legs, so Dark angles and vectors stay readable.
+  const SAMPLE_REGION_SCALE=1.5;
   let source,mono,sample,analyzer,detector;
   let thetaKi,thetaKf,thetaOut;
   let monoPlaneAngle,anaPlaneAngle;
@@ -315,7 +316,7 @@ function renderGeometry(cache,index=0){
   // Vector-display lengths are derived from the actual wave-vector magnitudes.
   // The fixed-energy side is the visual scale reference: Ef fixed -> kf fixed,
   // Ei fixed -> ki fixed.  Flight-path leg lengths remain schematic/equal.
-  let kiVectorLen=0.50*L, kfVectorLen=0.50*L, qVectorLen=1.38;
+  let kiVectorLen=0.50*L*SAMPLE_REGION_SCALE, kfVectorLen=0.50*L*SAMPLE_REGION_SCALE, qVectorLen=1.38*SAMPLE_REGION_SCALE;
 
   if(target){
     // Build one canonical (+-+) drawing, then make -+- an exact left/right
@@ -341,7 +342,7 @@ function renderGeometry(cache,index=0){
     source=[-L,0];
     mono=[0,0];
     thetaKi=deg2rad(angles.m2);
-    sample=[mono[0]+L*Math.cos(thetaKi),mono[1]+L*Math.sin(thetaKi)];
+    sample=[mono[0]+SAMPLE_REGION_SCALE*L*Math.cos(thetaKi),mono[1]+SAMPLE_REGION_SCALE*L*Math.sin(thetaKi)];
     // Build the detector arm in the canonical +-+ drawing frame. In that
     // frame the physical S2 arm is clockwise. The -+- schematic is produced
     // by the single display reflection below, which turns this same physical
@@ -349,13 +350,13 @@ function renderGeometry(cache,index=0){
     // Sense sign here as well, or -+- is reflected twice and appears clockwise.
     const s2Draw=-Math.abs(Number(angles.s2));
     thetaKf=thetaKi+deg2rad(s2Draw);
-    analyzer=[sample[0]+0.90*L*Math.cos(thetaKf),sample[1]+0.90*L*Math.sin(thetaKf)];
+    analyzer=[sample[0]+SAMPLE_REGION_SCALE*0.90*L*Math.cos(thetaKf),sample[1]+SAMPLE_REGION_SCALE*0.90*L*Math.sin(thetaKf)];
     thetaOut=thetaKf+deg2rad(angles.a2);
     // Diffractometer: schematic flight paths on either side of the sample
     // must have equal displayed lengths.  This does NOT alter the L1/L2
     // distances in instrument JSON or any scattering-angle calculation.
     detector=isDiffractometer
-      ? [sample[0]+L*Math.cos(thetaKf),sample[1]+L*Math.sin(thetaKf)]
+      ? [sample[0]+SAMPLE_REGION_SCALE*L*Math.cos(thetaKf),sample[1]+SAMPLE_REGION_SCALE*L*Math.sin(thetaKf)]
       : [analyzer[0]+0.80*L*Math.cos(thetaOut),analyzer[1]+0.80*L*Math.sin(thetaOut)];
     monoPlaneAngle=deg2rad(angles.m1);
     anaPlaneAngle=thetaKf+deg2rad(angles.a1);
@@ -371,7 +372,7 @@ function renderGeometry(cache,index=0){
     // flight-path geometry.  The fixed-energy wave vector always has the same
     // displayed length, and the other beam/Q vectors use the identical scale.
     const kFixed=(cache.energyMode==="Ef fixed") ? kf : ki;
-    const vectorScale=(Number.isFinite(kFixed) && kFixed>1e-12) ? (0.50*L/kFixed) : 1;
+    const vectorScale=(Number.isFinite(kFixed) && kFixed>1e-12) ? (SAMPLE_REGION_SCALE*0.50*L/kFixed) : 1;
     kiVectorLen=vectorScale*ki;
     kfVectorLen=vectorScale*kf;
     qVectorLen=vectorScale*qMag;
@@ -432,7 +433,7 @@ function renderGeometry(cache,index=0){
   // The guide circle belongs to the dark-angle overlay, so hide it together
   // with the dark-angle sectors when the left-panel "show" checkbox is off.
   const showDarkGeometry=!isPowder && Boolean($("addDark")?.checked);
-  const darkRadius=1.0;
+  const darkRadius=1.0*SAMPLE_REGION_SCALE;
   if(showDarkGeometry){
     const circle=linspace(0,2*Math.PI,181);
     traces.push({x:circle.map(t=>sample[0]+darkRadius*Math.cos(t)),y:circle.map(t=>sample[1]+darkRadius*Math.sin(t)),mode:"lines",line:{color:"#d9d9d9",width:1},hoverinfo:"skip",showlegend:false});
@@ -626,22 +627,62 @@ function renderGeometry(cache,index=0){
   const kiLabelSide=Math.sin(qAngle-thetaKi)>=0 ? -1 : 1;
   const qLabelSide=Math.sin(thetaKf-qAngle)>=0 ? -1 : 1;
   const qCenterLabel=vectorLabel(qNearCenter,'<i>Q</i>',qAngle,qLabelSide,'#202020');
+  // Component captions sit on the open side of their component, so they do
+  // not lie on a flight path, a vector or another caption.
+  const unitVec=v=>{const n=Math.hypot(v[0],v[1]);return n>1e-12?[v[0]/n,v[1]/n]:[0,0];};
+  const openSideLabel=(point,dir,text,distPx=16)=>{
+    const [ax,ay]=dir;
+    const xanchor=ax>0.35?'left':ax<-0.35?'right':'center';
+    const yanchor=ay>0.35?'bottom':ay<-0.35?'top':'middle';
+    return equipmentLabel(point,text,Math.round(ax*distPx),Math.round(ay*distPx),xanchor,yanchor);
+  };
+  // Analyzer: opposite to the bisector of its sample and detector legs.
+  const anaDir=(()=>{
+    const a=unitVec([sample[0]-analyzer[0],sample[1]-analyzer[1]]);
+    const b=unitVec([detector[0]-analyzer[0],detector[1]-analyzer[1]]);
+    let d=unitVec([-(a[0]+b[0]),-(a[1]+b[1])]);
+    if(Math.hypot(d[0],d[1])<0.5) d=unitVec([-a[1],a[0]]);
+    return d;
+  })();
+  // Detector: continue its incoming leg beyond the detector.
+  const detFrom=isDiffractometer ? sample : analyzer;
+  const detDir=unitVec([detector[0]-detFrom[0],detector[1]-detFrom[1]]);
+  // Sample: just outside the Dark-angle guide circle, in the direction that is
+  // farthest from every line leaving the sample (ki, kf, Q, U, V).
+  const sampleDir=(()=>{
+    const used=[thetaKi+Math.PI,thetaKf,qAngle];
+    if(!isPowder && uEnd && vEnd) used.push(uArrowAngle,vArrowAngle);
+    let best=Math.PI/2, bestGap=-1;
+    for(let k=0;k<72;k++){
+      const t=k*Math.PI/36;
+      const gap=Math.min(...used.map(u=>Math.abs(Math.atan2(Math.sin(t-u),Math.cos(t-u)))));
+      // Prefer upper directions slightly when gaps are similar.
+      const score=gap+0.08*Math.sin(t);
+      if(score>bestGap){ bestGap=score; best=t; }
+    }
+    return [Math.cos(best),Math.sin(best)];
+  })();
+  // Outside the outermost Dark-angle arc when the guide is shown, otherwise
+  // close to the sample.
+  const outerDarkSlot=Math.max(1,...(cache.darkAssets||[]).map(a=>Number(a.slot)||1));
+  const sampleLabelRadius=showDarkGeometry ? 1.06*darkRadius*(1+0.1*(outerDarkSlot-1)) : 0.30*darkRadius;
+  const sampleLabelAnchor=[sample[0]+sampleLabelRadius*sampleDir[0],sample[1]+sampleLabelRadius*sampleDir[1]];
   const annotations=[];
   if(!isPowder && uEnd && vEnd){
     annotations.push(
       {x:uEnd[0],y:uEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:uColor},
       {x:vEnd[0],y:vEnd[1],ax:sample[0],ay:sample[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.4,arrowcolor:vColor},
-      {x:uEnd[0]+0.16*Math.cos(uArrowAngle),y:uEnd[1]+0.16*Math.sin(uArrowAngle),text:'U',showarrow:false,font:{color:uColor,size:19}},
-      {x:vEnd[0]+0.16*Math.cos(vArrowAngle),y:vEnd[1]+0.16*Math.sin(vArrowAngle),text:'V',showarrow:false,font:{color:vColor,size:19}}
+      {x:uEnd[0]+0.22*Math.cos(uArrowAngle),y:uEnd[1]+0.22*Math.sin(uArrowAngle),text:'U',showarrow:false,font:{color:uColor,size:19}},
+      {x:vEnd[0]+0.22*Math.cos(vArrowAngle),y:vEnd[1]+0.22*Math.sin(vArrowAngle),text:'V',showarrow:false,font:{color:vColor,size:19}}
     );
   }
   annotations.push(
     equipmentLabel(mono,'Monochromator',outward*16,13,outward<0?'right':'left'),
     // Shift the sample name farther away from the U/V arrows and their tip
     // labels. Keep the placement symmetric for the two scattering senses.
-    equipmentLabel(sample,'Sample',-outward*20,59,'center','bottom'),
-    ...(!isDiffractometer ? [equipmentLabel(analyzer,'Analyzer',outward*15,12,outward<0?'right':'left')] : []),
-    equipmentLabel(detector,'Detector',0,-22,'center','top'),
+    openSideLabel(sampleLabelAnchor,sampleDir,'Sample',4),
+    ...(!isDiffractometer ? [openSideLabel(analyzer,anaDir,'Analyzer')] : []),
+    openSideLabel(detector,detDir,'Detector',20),
     {x:kiArrow.head[0],y:kiArrow.head[1],ax:kiArrow.tail[0],ay:kiArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#7ac943'},
     {x:kfArrow.head[0],y:kfArrow.head[1],ax:kfArrow.tail[0],ay:kfArrow.tail[1],xref:'x',yref:'y',axref:'x',ayref:'y',text:'',showarrow:true,arrowhead:3,arrowsize:1.1,arrowwidth:2.8,arrowcolor:'#58c7e8'},
     vectorLabel(kiNearCenter,'<i>k</i><sub>i</sub>',thetaKi,kiLabelSide,'#398a12'),
@@ -654,13 +695,18 @@ function renderGeometry(cache,index=0){
   // specified in pixels above.  These are guard points, NOT physical geometry.
   // They prevent labels at the outside of the drawing from being clipped.
   const monoLabel=[mono[0]+outward*2.2,mono[1]+0.45];
-  const anaLabel=[analyzer[0]+outward*1.6,analyzer[1]+0.4];
-  const sampleLabel=[sample[0]-outward*0.9,sample[1]+0.9];
-  const detLabel=[detector[0],detector[1]-0.95];
+  // Caption guard points (captions are about 1.9 data units wide).
+  const captionGuards=(point,dir,extra=0)=>{
+    const xs=dir[0]>0.35?[point[0]+1.9]:dir[0]<-0.35?[point[0]-1.9]:[point[0]-1.0,point[0]+1.0];
+    return xs.map(x=>[x+dir[0]*extra,point[1]+dir[1]*(0.7+extra)]);
+  };
+  const sampleLabelPoints=captionGuards(sampleLabelAnchor,sampleDir);
+  const detLabelPoints=captionGuards(detector,detDir,0.3);
+  const anaLabelPoints=captionGuards(analyzer,anaDir);
 
   // Auto-fit the full TAS drawing to the geometry card.
-  const fitPoints=[source,mono,sample,detector,kiArrow.tail,kiArrow.head,kfArrow.head,qEnd,monoLabel,sampleLabel,detLabel];
-  if(!isDiffractometer) fitPoints.push(analyzer,anaLabel);
+  const fitPoints=[source,mono,sample,detector,kiArrow.tail,kiArrow.head,kfArrow.head,qEnd,monoLabel,...sampleLabelPoints,...detLabelPoints];
+  if(!isDiffractometer) fitPoints.push(analyzer,...anaLabelPoints);
   if(!isPowder && uEnd && vEnd) fitPoints.push(uEnd,vEnd);
   // Reserve the same orientation-guide envelope for both sample modes. Powder
   // hides U/V, but retaining this fit radius keeps the TAS drawing scale and
@@ -670,43 +716,48 @@ function renderGeometry(cache,index=0){
     [sample[0]-radial,sample[1]],[sample[0]+radial,sample[1]],
     [sample[0],sample[1]-radial],[sample[0],sample[1]+radial]
   );
-  // Display layout only.
-  // Keep the drawing away from the chart edges so the longer component
-  // names remain visible in narrow cards, including both mirrored senses.
-  const monoFracX=displaySense==="+-+" ? 0.35 : 0.65;
-  const monoFracY=0.78;
-
-  // Reduce the auto-fit whitespace by about 1.5x.  Fit constraints below still
-  // win whenever the actual TAS geometry/labels need more room, so this enlarges
-  // roomy drawings without blindly cropping wide configurations.
-  const geometryDisplayScale=1.5;
-  const fitPad=(0.32/geometryDisplayScale)*L;
-  let span=(2.5/geometryDisplayScale)*L;
+  // Display layout only.  The first drawing of a context (instrument, energy,
+  // scattering plane, plot size, ...) fits the drawing's bounding box into the
+  // whole plot area and records where the monochromator sits in it.  While
+  // only the target (H, K, L, hbar-omega) changes, the monochromator keeps
+  // exactly that place on screen: the scale is kept, and it is reduced (about
+  // the monochromator) only when the new drawing would otherwise be clipped.
+  const fitPad=0.30*L;
+  const need={left:0,right:0,down:0,up:0};
   for(const p of fitPoints){
     const dx=p[0]-mono[0], dy=p[1]-mono[1];
-    if(dx<0) span=Math.max(span,(-dx+fitPad)/monoFracX);
-    else if(dx>0) span=Math.max(span,(dx+fitPad)/(1-monoFracX));
-    if(dy<0) span=Math.max(span,(-dy+fitPad)/monoFracY);
-    else if(dy>0) span=Math.max(span,(dy+fitPad)/(1-monoFracY));
+    need.left=Math.max(need.left,-dx); need.right=Math.max(need.right,dx);
+    need.down=Math.max(need.down,-dy); need.up=Math.max(need.up,dy);
   }
-  // Keep the same anti-overzoom floor, but at ~1.5x larger display scale.
-  span=Math.max(span,(4.0/geometryDisplayScale)*L);
-  // Fixed drawing scale while only the target (H, K, L, hbar-omega) changes:
-  // within one instrument/energy/plane context the span never shrinks, so the
-  // monochromator anchor and the scale stay put while dragging the sliders.
-  // It grows only if a new configuration would otherwise be clipped.
+  for(const key of Object.keys(need)) need[key]+=fitPad;
   const geometryPlotEl=$('geometryPlot');
-  const spanContext=[isPowder,isDiffractometer,displaySense,cache.energyMode,cache.Ei,cache.Ef,
+  // x and y share one scale (scaleanchor): the x range is the y range times
+  // the plot-area aspect ratio.
+  const plotW=(geometryPlotEl?.clientWidth||0)-20, plotH=(geometryPlotEl?.clientHeight||0)-22;
+  const aspect=plotW>50 && plotH>50 ? plotW/plotH : 1;
+  const layoutContext=[isPowder,isDiffractometer,displaySense,cache.energyMode,cache.Ei,cache.Ef,
     num('Uh'),num('Uk'),num('Ul'),num('Vh'),num('Vk'),num('Vl'),
     num('a'),num('b'),num('c'),num('alpha'),num('beta'),num('gamma'),
-    currentInstrument()?.name||'',(cache.hwList||[]).length,cache.hwList?.[0],cache.hwList?.[(cache.hwList?.length||1)-1]].join('|');
-  if(target && geometryPlotEl){
-    const kept=geometryPlotEl.__tasGeometrySpan;
-    if(kept && kept.key===spanContext) span=Math.max(span,kept.span);
-    geometryPlotEl.__tasGeometrySpan={key:spanContext,span};
+    currentInstrument()?.name||'',(cache.hwList||[]).length,cache.hwList?.[0],cache.hwList?.[(cache.hwList?.length||1)-1],
+    aspect.toFixed(2)].join('|');
+  const kept=target ? geometryPlotEl?.__tasGeometryLayout : null;
+  let fx, fy, ySpan;
+  if(kept && kept.key===layoutContext){
+    // Same monochromator fractions; grow the span only if something would be clipped.
+    ({fx,fy}=kept);
+    ySpan=Math.max(kept.ySpan,
+      need.left/(fx*aspect),need.right/((1-fx)*aspect),need.down/fy,need.up/(1-fy));
+  }else{
+    // Anti-overzoom floor for very compact drawings.
+    ySpan=Math.max((need.left+need.right)/aspect,need.down+need.up,2.4*L);
+    const xSpan0=ySpan*aspect;
+    fx=(need.left+(xSpan0-need.left-need.right)/2)/xSpan0;
+    fy=(need.down+(ySpan-need.down-need.up)/2)/ySpan;
   }
-  const xMin=mono[0]-monoFracX*span, xMax=xMin+span;
-  const yMin=mono[1]-monoFracY*span, yMax=yMin+span;
+  if(target && geometryPlotEl) geometryPlotEl.__tasGeometryLayout={key:layoutContext,fx,fy,ySpan};
+  const xSpan=ySpan*aspect;
+  const xMin=mono[0]-fx*xSpan, xMax=xMin+xSpan;
+  const yMin=mono[1]-fy*ySpan, yMax=yMin+ySpan;
 
   const angleBox=$("geometryAngles");
   if(scanMode){

@@ -1,3 +1,5 @@
+import {displayedMotorAngles} from '../core/tas-conventions.js';
+
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
 export function createResolutionUI(deps){
@@ -167,19 +169,36 @@ function traceEllipse(p,name,dash='solid'){
 // supplies limits precomputed over every scan point; those same limits are then
 // reused for every slider position so the apparent ellipse evolution is not
 // contaminated by changing plot scales.
-function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null){
+// fonts: {title, axis, tick} sizes.  The Resolution tab keeps its large tick
+// labels; the compact Angle calculation view passes smaller sizes.
+const RESOLUTION_PLOT_FONTS={title:22,axis:20,tick:21};
+// Major grid darker, minor grid lighter.
+const RESOLUTION_MAJOR_GRID={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1};
+const RESOLUTION_MINOR_GRID={showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''};
+// Q axes: only three labelled ticks (-a, 0, a) with a round a, so the small
+// δQ numbers are never crowded or rotated.  Minor grid lines subdivide a.
+function resolutionQTicks(lim){
+  const raw=0.8*Number(lim);
+  if(!(raw>0) || !Number.isFinite(raw)) return {minor:{...RESOLUTION_MINOR_GRID}};
+  const decade=Math.pow(10,Math.floor(Math.log10(raw)));
+  const mantissa=[1,2,2.5,5,10].filter(m=>m*decade<=raw*(1+1e-9)).pop()||1;
+  const a=Number((mantissa*decade).toPrecision(6));
+  const divisions=Math.abs(mantissa-2)<1e-9 ? 4 : 5;
+  return {tickmode:'array',tickvals:[-a,0,a],minor:{...RESOLUTION_MINOR_GRID,tickmode:'linear',tick0:0,dtick:a/divisions}};
+}
+function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null,fonts=RESOLUTION_PLOT_FONTS,yIsQ=false){
   const safe=(v,fallback=1)=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):fallback;
   const xl=safe(xlim), yl=safe(ylim);
   return {
     uirevision:plotId||'resolutionPlots',
-    title:{text:title,font:{size:16}},
+    title:{text:title,font:{size:fonts.title}},
     // Leave space below the x-axis title at native compact density.  An
     // automatic margin also accommodates longer axis names and mobile fonts.
-    margin:{l:88,r:22,t:48,b:94,autoexpand:true},
+    margin:fonts.margin || {l:88,r:22,t:52,b:94,autoexpand:true},
     // The card border and the plot axes serve different purposes: the plot
     // frame is confined to the data area; the card encloses each full chart.
-    xaxis:{title:{text:xlabel,standoff:13},automargin:true,tickfont:{size:21},range:[-xl,xl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
-    yaxis:{title:{text:ylabel,standoff:12},automargin:true,tickfont:{size:21},range:[-yl,yl],zeroline:true,showgrid:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
+    xaxis:{title:{text:xlabel,standoff:13,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-xl,xl],zeroline:true,...RESOLUTION_MAJOR_GRID,...resolutionQTicks(xl),showline:true,mirror:true,linecolor:'#586472',linewidth:1},
+    yaxis:{title:{text:ylabel,standoff:12,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-yl,yl],zeroline:true,...RESOLUTION_MAJOR_GRID,...(yIsQ?resolutionQTicks(yl):{minor:{...RESOLUTION_MINOR_GRID}}),showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
     hovermode:'closest',hoverdistance:18,
     showlegend:false
   };
@@ -205,67 +224,70 @@ function formatAngle(value,absolute=false){
   return v.toFixed(3);
 }
 
-function renderResolution(entry,indexInfo='',plotLimits=null){
-  if(resolutionIsUnavailable()){
-    clearResolutionResults();
-    return;
-  }
-  const {result:r,calc,unitMode,lc,angles}=entry;
-  const limits=plotLimits || r.lim;
-  const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
-  const ax=r.displayAxes || {U:lc.sv1,V:lc.sv2,W:lc.sv3};
-  const fmtAxis=v=>`(${v.map(x=>{
+function formatResolutionAxis(v){
+  return `(${v.map(x=>{
     const y=Number(x);
     return Math.abs(y-Math.round(y))<1e-10 ? String(Math.round(y)) : Number(y.toPrecision(6)).toString();
   }).join(', ')})`;
-
-  $('result').classList.remove('hidden');
-
-  // Display the signed S2 motor angle produced by the common convention.
-  const s2Display=angles.s2;
-
-  // Use the energies returned by the resolution calculation itself.  This
-  // works for both fixed-Ei and fixed-Ef modes without recomputing energies.
-  const {Ei,Ef}=r.energies;
-  $('summary').innerHTML=
-    `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
-    `ℏω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
-    `<div><b>Resolution</b> δQ//${fmtAxis(ax.U)}=${r.display.U.toFixed(4)} (${r.display.Ucoh.toFixed(4)}) ${qUnit}, `+
+}
+function resolutionDisplayAxes(r,lc){
+  return r.displayAxes || {U:lc.sv1,V:lc.sv2,W:lc.sv3};
+}
+// One-line FWHM summary shared by the Resolution tab and Angle calculation.
+// Values in parentheses are the coherent (slice) widths.
+function resolutionWidthsHtml(r,unitMode,lc){
+  const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
+  const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
+  return `<b>Resolution</b> δQ//${fmtAxis(ax.U)}=${r.display.U.toFixed(4)} (${r.display.Ucoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.V)}=${r.display.V.toFixed(4)} (${r.display.Vcoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.W)}=${r.display.W.toFixed(4)} (${r.display.Wcoh.toFixed(4)}) ${qUnit}, `+
-    `δℏω=${r.display.E.toFixed(4)} (${r.display.Ecoh.toFixed(4)}) meV</div>`+
-    `<div><b>Resolution axes</b> U=${fmtAxis(ax.U)}, V=${fmtAxis(ax.V)}, W=${fmtAxis(ax.W)}</div>`+
-    `<div><b>Angles (deg)</b> M1=${formatAngle(angles.m1)}, M2=${formatAngle(angles.m2)}, `+
-    `S1=${formatAngle(angles.s1)}, S2=${formatAngle(s2Display)}, `+
-    `A1=${formatAngle(angles.a1)}, A2=${formatAngle(angles.a2)}`+
-    `${angles.warning ? ` &nbsp;⚠ ${angles.warning}` : ''}</div>`;
-
-  // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
-  // RM_U is the same matrix rotated to the U-based orthogonal frame.
-  // In this display V denotes the automatically orthogonalized in-plane V.
-  $('matrix').textContent=
-    `Local matrix order (Q∥, Q⊥, E, Qout)\n${matrixText(r.RM)}\n\n`+
-    `U-based matrix order (U, U⊥ (in-plane), E, U⊥ (out-of-plane))\n${matrixText(r.RM_U)}`;
-
-  Plotly.react(
-    'plotUE',
+    `δℏω=${r.display.E.toFixed(4)} (${r.display.Ecoh.toFixed(4)}) meV`;
+}
+// Plotly's built-in double-click "reset" returns to the axis ranges of the
+// plot's first draw (an earlier point), which looks like a random scale.
+// Disable it and return to the ranges of the current calculation instead.
+function reactResolutionPlot(id,traces,layout){
+  const gd=$(id);
+  if(!gd) return;
+  gd.__tasResolutionView={x:layout.xaxis.range.slice(),y:layout.yaxis.range.slice()};
+  Promise.resolve(Plotly.react(gd,traces,layout,{responsive:true,doubleClick:false}))
+    .then(()=>installResolutionDoubleClick(gd))
+    .catch(err=>console.warn('Resolution plot warning:',err));
+}
+function installResolutionDoubleClick(gd){
+  if(!gd || typeof gd.on!=='function' || gd.__tasResolutionDoubleClick) return;
+  gd.__tasResolutionDoubleClick=()=>requestAnimationFrame(()=>{
+    const view=gd.__tasResolutionView;
+    if(!view || !gd.isConnected) return;
+    Plotly.relayout(gd,{
+      'xaxis.range':view.x.slice(),'yaxis.range':view.y.slice(),
+      'xaxis.autorange':false,'yaxis.autorange':false
+    }).catch(err=>console.warn('Resolution plot reset:',err));
+  });
+  gd.on('plotly_doubleclick',gd.__tasResolutionDoubleClick);
+}
+const RESOLUTION_PLOT_IDS={UE:'plotUE',VE:'plotVE',UV:'plotUV',WE:'plotWE'};
+// Draw the four projection/slice ellipse plots into the given plot elements.
+function renderResolutionPlots(r,unitMode,lc,limits,ids=RESOLUTION_PLOT_IDS,fonts=RESOLUTION_PLOT_FONTS){
+  const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
+  const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
+  const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δℏω`;
+  reactResolutionPlot(
+    ids.UE,
     [traceEllipse(r.ellipses.projUE,'projection'),traceEllipse(r.ellipses.sliceUE,'slice','dash')],
-    baseLayout('δQ vs ℏω ellipse',`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δℏω (meV)',limits.U,limits.E,false,'plotUE'),
-    {responsive:true}
+    baseLayout(qeTitle(ax.U),`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δℏω (meV)',limits.U,limits.E,false,ids.UE,fonts),
   );
 
-  Plotly.react(
-    'plotVE',
+  reactResolutionPlot(
+    ids.VE,
     [traceEllipse(r.ellipses.projVE,'projection'),traceEllipse(r.ellipses.sliceVE,'slice','dash')],
-    baseLayout('δQ vs ℏω ellipse',`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δℏω (meV)',limits.V,limits.E,false,'plotVE'),
-    {responsive:true}
+    baseLayout(qeTitle(ax.V),`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δℏω (meV)',limits.V,limits.E,false,ids.VE,fonts),
   );
 
-  Plotly.react(
-    'plotWE',
+  reactResolutionPlot(
+    ids.WE,
     [traceEllipse(r.ellipses.projWE,'projection'),traceEllipse(r.ellipses.sliceWE,'slice','dash')],
-    baseLayout('δQ vs ℏω ellipse',`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δℏω (meV)',limits.W,limits.E,false,'plotWE'),
-    {responsive:true}
+    baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δℏω (meV)',limits.W,limits.E,false,ids.WE,fonts),
   );
 
   // Scattering-plane display scaling:
@@ -276,18 +298,54 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   const uvEqual=(unitMode!=='rlu');
   const uLim=uvEqual ? Math.max(limits.U,limits.V) : limits.U;
   const vLim=uvEqual ? uLim : limits.V;
-  Plotly.react(
-    'plotUV',
+  reactResolutionPlot(
+    ids.UV,
     [traceEllipse(r.ellipses.projUV,'projection'),traceEllipse(r.ellipses.sliceUV,'slice','dash')],
     baseLayout(
-      'Scattering-plane resolution ellipse',
+      `δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,
       `δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,
       `δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,
-      uLim,vLim,uvEqual,'plotUV'
+      uLim,vLim,uvEqual,ids.UV,fonts,true
     ),
-    {responsive:true}
   );
+}
 
+function renderResolution(entry,indexInfo='',plotLimits=null){
+  if(resolutionIsUnavailable()){
+    clearResolutionResults();
+    return;
+  }
+  const {result:r,calc,unitMode,lc,angles}=entry;
+  const limits=plotLimits || r.lim;
+  const ax=resolutionDisplayAxes(r,lc);
+  const fmtAxis=formatResolutionAxis;
+
+  $('result').classList.remove('hidden');
+
+  // Show the motor angles exactly as Angle calculation does (same signs).
+  const shown=displayedMotorAngles(angles);
+
+  // Use the energies returned by the resolution calculation itself.  This
+  // works for both fixed-Ei and fixed-Ef modes without recomputing energies.
+  const {Ei,Ef}=r.energies;
+  $('summary').innerHTML=
+    `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
+    `ℏω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
+    `<div>${resolutionWidthsHtml(r,unitMode,lc)}</div>`+
+    `<div><b>Resolution axes</b> U=${fmtAxis(ax.U)}, V=${fmtAxis(ax.V)}, W=${fmtAxis(ax.W)}</div>`+
+    `<div><b>Angles (deg)</b> M1=${formatAngle(shown.m1)}, M2=${formatAngle(shown.m2)}, `+
+    `S1=${formatAngle(shown.s1)}, S2=${formatAngle(shown.s2)}, `+
+    `A1=${formatAngle(shown.a1)}, A2=${formatAngle(shown.a2)}`+
+    `${angles.warning ? ` &nbsp;⚠ ${angles.warning}` : ''}</div>`;
+
+  // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
+  // RM_U is the same matrix rotated to the U-based orthogonal frame.
+  // In this display V denotes the automatically orthogonalized in-plane V.
+  $('matrix').textContent=
+    `Local matrix order (Q∥, Q⊥, E, Qout)\n${matrixText(r.RM)}\n\n`+
+    `U-based matrix order (U, U⊥ (in-plane), E, U⊥ (out-of-plane))\n${matrixText(r.RM_U)}`;
+
+  renderResolutionPlots(r,unitMode,lc,limits);
 }
 function resolutionScanPoints(){
   const nRaw=Math.round(num('npts'));

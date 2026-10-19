@@ -150,17 +150,17 @@ const QE_FIT_MIN_PLOT=300;
 let qeViewportFrame=0;
 function requestQEViewportHeightSync(){
   if(qeViewportFrame) return;
-  qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); syncScriptViewportHeight(); });
+  qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); syncScriptViewportHeight(); syncResolutionViewportHeight(); });
 }
 function visibleElement(el){ return !!(el && el.getClientRects().length); }
 function syncQEViewportHeight(){
   const panel=$('qePanel'), grid=document.querySelector('#singleMain .chart-grid'), main=panel?.closest('main');
   if(!panel || !grid || !main) return;
-  const prev=[panel.style.getPropertyValue('--qe-fit-left'),panel.style.getPropertyValue('--qe-fit-right')].join('|');
+  const fitVars=['--qe-fit-left','--qe-fit-right'];
+  const prev=fitVars.map(name=>panel.style.getPropertyValue(name)).join('|');
   // Measure the stylesheet (natural) heights first.
   panel.classList.remove('qe-fit-left','qe-fit-right');
-  panel.style.removeProperty('--qe-fit-left');
-  panel.style.removeProperty('--qe-fit-right');
+  for(const name of fitVars) panel.style.removeProperty(name);
   const twoColumns=getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length>=2;
   if(visibleElement(panel) && twoColumns){
     const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
@@ -187,8 +187,35 @@ function syncQEViewportHeight(){
     fit(grid.querySelector('.qe-main-plot-column'),['singlePlot','powderPlot','qeVectorPlot'],'fit-left');
     fit(grid.querySelector('.geometry-card'),['geometryPlot'],'fit-right');
   }
-  const next=[panel.style.getPropertyValue('--qe-fit-left'),panel.style.getPropertyValue('--qe-fit-right')].join('|');
+  const next=fitVars.map(name=>panel.style.getPropertyValue(name)).join('|');
   if(next!==prev) scheduleVisiblePlotResize();
+}
+function gridColumnCount(el){
+  return getComputedStyle(el).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
+}
+// Resolution tab: the same idea for the four ellipse plots.  Only the plots are
+// fitted into the visible height; the matrices below them still scroll.
+const RES_FIT_MIN_PLOT=200;
+function syncResolutionViewportHeight(){
+  const panel=$('resolutionPanel'), plots=document.querySelector('#result .plots'), main=panel?.closest('main');
+  const workspace=panel?.querySelector('.resolution-workspace');
+  if(!panel || !plots || !main) return;
+  const prev=panel.style.getPropertyValue('--res-fit-plot');
+  panel.classList.remove('res-fit');
+  panel.style.removeProperty('--res-fit-plot');
+  const first=plots.firstElementChild;
+  if(visibleElement(panel) && visibleElement(first) && (!workspace || gridColumnCount(workspace)>=2)){
+    const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
+    const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
+    const bottom=plots.getBoundingClientRect().bottom-mainRect.top+main.scrollTop;
+    const over=bottom-available;
+    if(over>1){
+      const rows=Math.ceil(plots.children.length/Math.max(1,gridColumnCount(plots)));
+      const height=Math.max(RES_FIT_MIN_PLOT,Math.floor(first.offsetHeight-over/rows));
+      if(height<first.offsetHeight){ panel.style.setProperty('--res-fit-plot',`${height}px`); panel.classList.add('res-fit'); }
+    }
+  }
+  if(panel.style.getPropertyValue('--res-fit-plot')!==prev) scheduleVisiblePlotResize();
 }
 // Script: the same idea. In the multi-column layout the workspace takes the
 // visible height of the main area; ASET list, command list and SPICE editor
@@ -221,7 +248,7 @@ function initializeQEViewportHeightSync(){
     // Pane sizes change on tab switches, Single/Powder, warnings and wrapping.
     const observer=new ResizeObserver(requestQEViewportHeightSync);
     for(const el of [document.querySelector('main'),$('qePanel'),$('qeConstantMapPane'),$('qeVectorMapPane'),
-      $('geometryAnglesPane'),$('geometryTimePane'),$('scriptPanel')]) if(el) observer.observe(el);
+      $('geometryAnglesPane'),$('geometryTimePane'),$('scriptPanel'),$('resolutionPanel'),$('result')]) if(el) observer.observe(el);
   }
   requestQEViewportHeightSync();
 }

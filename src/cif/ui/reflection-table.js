@@ -364,7 +364,8 @@ function renderReflectionPowderPlot(){
   const yView=log ? [Math.log10(floor),Math.log10(yMax*1.6)] : [0,1.05*yMax];
   // Copies go into the layout: Plotly mutates layout range arrays when zooming.
   plot.__tasPowderView={x:xView,y:yView};
-  const grid={showgrid:true,gridcolor:'#d5dbe2',minor:{showgrid:true,gridcolor:'#eef1f5',ticks:''}};
+  // Major grid darker, minor grid lighter (shared look).
+  const grid={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1,minor:{showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''}};
   // Same font size for both axis titles, tick labels and the legend.
   const FONT=18;
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},

@@ -674,3 +674,8 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #structurePanel .reflection-plot-controls :is(input[type=number],select){font-size:max(12px,calc(15px * var(--tas-density)))!important}
 /* Keep a usable plot height on narrow windows (margins hold the axis titles and legend). */
 #structurePanel .reflection-powder-section .reflection-powder-plot{min-height:calc(440px * var(--tas-density))}
+
+/* Resolution ellipse plots fitted to the visible workspace height (ui-shell.js). */
+#resolutionPanel.res-fit #result .plots>div{
+  height:var(--res-fit-plot)!important;
+}
