@@ -171,15 +171,15 @@ export function calcQDark(s1,s2,ki,kf,s1Offset,QrefXY,sense,energyMode=null){
 }
 
 // User-facing motor angles (Angle calculation, Script/Time-estimate checks and
-// the Resolution tab): the monochromator and analyzer angles are shown with the
-// opposite sign of the internal tasMotorAngles() branch; S1 and S2 are unchanged.
-// Powder has no sample rotation, so its S1 is shown as 0.
+// the Resolution tab).  M1/M2 and A1/A2 are shown with the signs of
+// tasMotorAngles(), i.e. counter-clockwise positive: negative for -+- and
+// positive for +-+.  S1 and S2 are unchanged.  Powder has no sample rotation,
+// so its S1 is shown as 0.  Display only: no calculation uses these values.
 export function displayedMotorAngles(angles,isPowder=false){
   const a=angles||{};
-  const neg=v=>v===null || v===undefined ? v : -Number(v);
   return {
-    m1:neg(a.m1), m2:neg(a.m2),
+    m1:a.m1, m2:a.m2,
     s1:isPowder ? 0 : a.s1, s2:a.s2,
-    a1:neg(a.a1), a2:neg(a.a2)
+    a1:a.a1, a2:a.a2
   };
 }
