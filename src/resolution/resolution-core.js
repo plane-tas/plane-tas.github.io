@@ -10,6 +10,9 @@ const R2D=180/PI;
 const GAUSS_SIGMA_FROM_FWHM=0.4246609;
 const E2K2=2.072;
 const E2K2_RES=2.072142;
+// Popovici sample: contained in a sphere of this diameter (metres).  Like the
+// instrument sizes (full dimensions, squared), the diameter enters <x^2> as D^2.
+const SAMPLE_DIAMETER_M=0.02;
 
 const sind=d=>Math.sin(d*D2R), cosd=d=>Math.cos(d*D2R), tand=d=>Math.tan(d*D2R);
 const asind=x=>Math.asin(x)*R2D, acosd=x=>Math.acos(x)*R2D, atand=x=>Math.atan(x)*R2D;
@@ -253,7 +256,10 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   }
   const alpha2=div2h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   let alpha3;
-  if(AHF){ const W=ana_width*numAh*sind(A3), af=2*atand((W/2)/L2); alpha3=af/180*PI*GAUSS_SIGMA_FROM_FWHM*Math.sqrt(8*Math.log(2)/12); }
+  // Horizontally focusing analyzer: Soller 3 is replaced by the angular size of
+  // the analyzer seen from the sample.  The beam meets the analyzer face at the
+  // Bragg angle thetaA, so the projected width is W*|sin(thetaA)| (A3 = 2*thetaA).
+  if(AHF){ const W=ana_width*numAh*Math.abs(sind(A3/2)), af=2*atand((W/2)/L2); alpha3=af/180*PI*GAUSS_SIGMA_FROM_FWHM*Math.sqrt(8*Math.log(2)/12); }
   else alpha3=div3h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const alpha4=div4h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const beta2=div2v/60/180*PI*GAUSS_SIGMA_FROM_FWHM, beta3=div3v/60/180*PI*GAUSS_SIGMA_FROM_FWHM, beta4=div4v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
@@ -281,13 +287,17 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     const bshape=diag([beam_width*beam_width,beam_height*beam_height]);
     const mshape=diag([(mono_thickness)**2,(numMh*mono_width)**2,(numMv*mono_height)**2]);
     const psi=thetaS-phi, rot=[[cosd(psi),sind(psi),0],[-sind(psi),cosd(psi),0],[0,0,1]];
-    const sshape=matmul(matmul(rot,eye(3)),transpose(rot));
+    const sshape=matmul(matmul(rot,diag([SAMPLE_DIAMETER_M**2,SAMPLE_DIAMETER_M**2,SAMPLE_DIAMETER_M**2])),transpose(rot));
     const ashape=diag([(ana_thickness)**2,(numAh*ana_width)**2,(numAv*ana_height)**2]);
     const dshape=diag([det_width*det_width,det_height*det_height]);
     const S=inverse(blockDiag(bshape,mshape,sshape,ashape,dshape));
     const f=(Lx,Ly)=>1/(1/Lx+1/Ly);
-    const Vcurv=(Lx,Ly,th)=>2*f(Lx,Ly)*Math.abs(sind(th));
-    const Hcurv=(Lx,Ly,th)=>2*f(Lx,Ly)/Math.abs(sind(th));
+    // Focusing radii carry the sign of sin(theta): T contains 2/(rho*sin(theta))
+    // and 2*sin(theta)/rho', which must equal +(1/Lx+1/Ly) for focusing in both
+    // scattering senses.  With |sin| the -+- (and anti-W analyzer) branches were
+    // defocused instead of focused.
+    const Vcurv=(Lx,Ly,th)=>2*f(Lx,Ly)*sind(th);
+    const Hcurv=(Lx,Ly,th)=>2*f(Lx,Ly)/sind(th);
     const monorv=MVF?Vcurv(L0,L1,thetaM):1e10, monorh=MHF?Hcurv(L0,L1,thetaM):1e10;
     const anarv=AVF?Vcurv(L2,L3,thetaA):1e10, anarh=AHF?Hcurv(L2,L3,thetaA):1e10;
     const T=zeros(4,13), D=zeros(8,13);
