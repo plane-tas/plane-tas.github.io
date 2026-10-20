@@ -242,8 +242,29 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const Q=Math.sqrt(ki*ki+kf*kf-2*ki*kf*cosd(A2));
   const phi=Math.atan2(-kf*sind(2*thetaS),ki-kf*cosd(2*thetaS))*R2D;
 
+  // A blank (or non-positive) collimator entry means "no Soller collimator".
+  // The divergence is then the geometric one allowed by the two components it
+  // connects: FWHM = 2*atan(max(a,b)/(2L)), with a, b the larger width
+  // (horizontal; crystals projected by |sin(theta)|) or height (vertical) of
+  // the components and L their distance.  This value is used like a collimator
+  // in both Popovici and Cooper-Nathans.
+  const isOpen=v=>!(Number(v)>0)||!Number.isFinite(Number(v));
+  const toSigma=arcmin=>arcmin/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
+  const sinM=Math.abs(sind(A1/2)), sinA=Math.abs(sind(A3/2));
+  const sD=Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01;
+  const sH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
+  const mW=numMh*mono_width*sinM, mH=numMv*mono_height, aW=numAh*ana_width*sinA, aH=numAv*ana_height;
+  const geomSigma=(a,b,L)=>2*Math.atan(Math.max(a,b)/(2*L))*GAUSS_SIGMA_FROM_FWHM;
+  const geomDiv={
+    h1:geomSigma(beam_width,mW,L0), v1:geomSigma(beam_height,mH,L0),
+    h2:geomSigma(mW,sD,L1), v2:geomSigma(mH,sH,L1),
+    h3:geomSigma(sD,aW,L2), v3:geomSigma(sH,aH,L2),
+    h4:geomSigma(aW,det_width,L3), v4:geomSigma(aH,det_height,L3)
+  };
+  const collSigma=(v,key)=>isOpen(v) ? geomDiv[key] : toSigma(v);
+
   let alpha1,beta1;
-  if(!gm1){ alpha1=div1h/60/180*PI*GAUSS_SIGMA_FROM_FWHM; beta1=div1v/60/180*PI*GAUSS_SIGMA_FROM_FWHM; }
+  if(!gm1){ alpha1=collSigma(div1h,'h1'); beta1=collSigma(div1v,'v1'); }
   else {
     const NA=6.022e23, ro=8.908, MNi=58.69, bc=1.03e-12, lambda=Math.sqrt(81.81/Ei)*1e-8;
     const val=lambda*Math.sqrt(NA*ro/MNi*bc/PI);
@@ -256,15 +277,15 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     alpha1=div1m*thetaC/Math.sqrt(3); beta1=alpha1;
     div1h=alpha1/GAUSS_SIGMA_FROM_FWHM*180/PI*60; div1v=div1h;
   }
-  const alpha2=div2h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
+  const alpha2=collSigma(div2h,'h2');
   let alpha3;
   // Horizontally focusing analyzer: Soller 3 is replaced by the angular size of
   // the analyzer seen from the sample.  The beam meets the analyzer face at the
   // Bragg angle thetaA, so the projected width is W*|sin(thetaA)| (A3 = 2*thetaA).
   if(AHF){ const W=ana_width*numAh*Math.abs(sind(A3/2)), af=2*atand((W/2)/L2); alpha3=af/180*PI*GAUSS_SIGMA_FROM_FWHM*Math.sqrt(8*Math.log(2)/12); }
-  else alpha3=div3h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
-  const alpha4=div4h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
-  const beta2=div2v/60/180*PI*GAUSS_SIGMA_FROM_FWHM, beta3=div3v/60/180*PI*GAUSS_SIGMA_FROM_FWHM, beta4=div4v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
+  else alpha3=collSigma(div3h,'h3');
+  const alpha4=collSigma(div4h,'h4');
+  const beta2=collSigma(div2v,'v2'), beta3=collSigma(div3v,'v3'), beta4=collSigma(div4v,'v4');
   const etaM=mos_mono_h/60/180*PI*GAUSS_SIGMA_FROM_FWHM, etaMp=mos_mono_v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const etaA=mos_ana_h/60/180*PI*GAUSS_SIGMA_FROM_FWHM, etaAp=mos_ana_v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const etaS=mos_sam_h/60/180*PI*GAUSS_SIGMA_FROM_FWHM, etaSp=mos_sam_v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;

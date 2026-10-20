@@ -133,6 +133,12 @@ function calcOne(calc){
      (!$('monoCrystal')?.value || !(b.mos.d_mono>0))) {
     throw new Error('Resolution unavailable: this diffractometer has no configured monochromator crystal/d-spacing. Specify it in the instrument JSON.');
   }
+  // TAS: a blank collimator means "none" (geometry-limited).  Diffractometer
+  // JSONs leave unknown values blank, so there a blank stays an error.
+  if(currentInstrument()?.instrument_type==='diffractometer' &&
+     ['div_1st_h','div_1st_v','div_2nd_h','div_2nd_v','div_3rd_h','div_3rd_v','div_4th_h','div_4th_v'].some(k=>!(b.col[k]>0))) {
+    throw new Error('Collimation and crystal mosaic values must be non-zero for the resolution calculation.');
+  }
 
   // Resolution sense convention:
   // The resolution core already defines the physical +-+ / -+- branches.

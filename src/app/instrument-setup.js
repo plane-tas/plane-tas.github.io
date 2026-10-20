@@ -148,6 +148,8 @@ function validateEffectiveS2Max(S2max,S2min,Ei){
 
 function normalizeCrystalName(name){ const aliases={PG002:"PG(002)",PG004:"PG(004)",Be002:"Be(002)",Si111:"Si(111)"}; return aliases[name]||name; }
 function setIf(id,x){ if($(id)&&x!==undefined&&x!==null&&Number.isFinite(Number(x))) $(id).value=x; }
+// Collimator: a key present with null / "" means "no collimator" (blank field).
+function setColl(id,col,key){ if(!$(id)) return; if(key in col && (col[key]===null||col[key]==='')) $(id).value=''; else setIf(id,col[key]); }
 function setBool(id,x){ if($(id)&&x!==undefined&&x!==null) $(id).checked=!!x; }
 function setSelect(id,x){ if(!$(id)||x===undefined||x===null) return; if([...$(id).options].some(o=>o.value===String(x))) $(id).value=String(x); }
 const CRYSTALS={'PG(002)':3.355,'PG(004)':1.677,'Be(002)':1.792,'Heusler':3.437,'CoFe':1.771,'Ge(111)':3.266,'Ge(113)':1.705923,'Ge(115)':1.088865,'Ge(311)':1.714,'Ge(511)':1.089,'Ge(533)':0.863,'Si(111)':3.135,'Si(220)':1.920,'Si(400)':1.358,'Si(331)':1.246,'Si(333)':1.045,'Si(440)':0.960,'Cu(111)':2.087,'Cu(002)':1.807,'Cu(220)':1.278,'Other':null};
@@ -328,7 +330,7 @@ function applyInstrumentDefaults(){
   setSelect("method",(inst.approximation||{}).method);
 
   const mono=inst.monochromator||{}, ana=inst.analyzer||{}, col=inst.collimator||{}, sm=inst.supermirror||{}, dist=inst.distance||{}, beam=inst.beam||{}, det=inst.detector||{};
-  setBool("gm1",sm.enabled); setIf("div1m",sm.m_value); setIf("div1h",col['1st_h']);setIf("div1v",col['1st_v']);setIf("div2h",col['2nd_h']);setIf("div2v",col['2nd_v']);setIf("div3h",col['3rd_h']);setIf("div3v",col['3rd_v']);setIf("div4h",col['4th_h']);setIf("div4v",col['4th_v']);
+  setBool("gm1",sm.enabled); setIf("div1m",sm.m_value); setColl("div1h",col,'1st_h');setColl("div1v",col,'1st_v');setColl("div2h",col,'2nd_h');setColl("div2v",col,'2nd_v');setColl("div3h",col,'3rd_h');setColl("div3v",col,'3rd_v');setColl("div4h",col,'4th_h');setColl("div4v",col,'4th_v');
   setBool("monoHF",mono.hfocus);setBool("monoVF",mono.vfocus);setBool("anaHF",ana.hfocus);setBool("anaVF",ana.vfocus);setIf("monoHB",mono.blade_h);setIf("monoVB",mono.blade_v);setIf("anaHB",ana.blade_h);setIf("anaVB",ana.blade_v);
   applyInstrumentCrystalAvailability();
   setIf("mosMonoH",mono.mosaic_h);setIf("mosMonoV",mono.mosaic_v);setIf("mosAnaH",ana.mosaic_h);setIf("mosAnaV",ana.mosaic_v);
