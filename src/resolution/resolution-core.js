@@ -10,9 +10,6 @@ const R2D=180/PI;
 const GAUSS_SIGMA_FROM_FWHM=0.4246609;
 const E2K2=2.072;
 const E2K2_RES=2.072142;
-// Popovici sample: contained in a sphere of this diameter (metres).  Like the
-// instrument sizes (full dimensions, squared), the diameter enters <x^2> as D^2.
-const SAMPLE_DIAMETER_M=0.02;
 
 const sind=d=>Math.sin(d*D2R), cosd=d=>Math.cos(d*D2R), tand=d=>Math.tan(d*D2R);
 const asind=x=>Math.asin(x)*R2D, acosd=x=>Math.acos(x)*R2D, atand=x=>Math.atan(x)*R2D;
@@ -251,8 +248,13 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     const NA=6.022e23, ro=8.908, MNi=58.69, bc=1.03e-12, lambda=Math.sqrt(81.81/Ei)*1e-8;
     const val=lambda*Math.sqrt(NA*ro/MNi*bc/PI);
     if(Math.abs(val)>1) throw new Error('Supermirror divergence expression is outside arcsin domain.');
-    div1h=div1m*2*asind(val)*60; div1v=div1h;
-    alpha1=div1h/60/180*PI*GAUSS_SIGMA_FROM_FWHM; beta1=alpha1;
+    // A guide (supermirror, m-value) transmits a roughly rectangular angular
+    // profile of full width 2*m*theta_c; its standard deviation is
+    // m*theta_c/sqrt(3) (ResLib manual Sec. II F; ResMat.m).  theta_c is the
+    // natural-Ni critical angle at this wavelength (about 0.1 deg per A).
+    const thetaC=Math.asin(val);
+    alpha1=div1m*thetaC/Math.sqrt(3); beta1=alpha1;
+    div1h=alpha1/GAUSS_SIGMA_FROM_FWHM*180/PI*60; div1v=div1h;
   }
   const alpha2=div2h/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   let alpha3;
@@ -284,12 +286,26 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const HF=matmul(matmul(A,term),transpose(A));
   let Minv;
   if(method==='Popovici'){
-    const bshape=diag([beam_width*beam_width,beam_height*beam_height]);
-    const mshape=diag([(mono_thickness)**2,(numMh*mono_width)**2,(numMv*mono_height)**2]);
+    // Shape matrices hold second moments <x^2> of uniform distributions
+    // (ResLib manual Sec. III A; Popovici 1975, App. 3), all in metres:
+    // a full rectangular size A gives A^2/12, a circular cross section of
+    // diameter D gives D^2/16 (sqrt<x^2> = D/4).
+    const rect=a=>a*a/12, circ=d=>d*d/16;
+    const bshape=geom.beam_shape==='circle'
+      ? diag([circ(beam_width),circ(beam_height)])
+      : diag([rect(beam_width),rect(beam_height)]);
+    const mshape=diag([rect(mono_thickness),rect(numMh*mono_width),rect(numMv*mono_height)]);
+    // Sample: vertical cylinder (diameter d, height h).  Its horizontal cross
+    // section is isotropic, so the rotation to the Q frame leaves it unchanged.
+    const sampleD=Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01;
+    const sampleH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
     const psi=thetaS-phi, rot=[[cosd(psi),sind(psi),0],[-sind(psi),cosd(psi),0],[0,0,1]];
-    const sshape=matmul(matmul(rot,diag([SAMPLE_DIAMETER_M**2,SAMPLE_DIAMETER_M**2,SAMPLE_DIAMETER_M**2])),transpose(rot));
-    const ashape=diag([(ana_thickness)**2,(numAh*ana_width)**2,(numAv*ana_height)**2]);
-    const dshape=diag([det_width*det_width,det_height*det_height]);
+    const sshape=matmul(matmul(rot,diag([circ(sampleD),circ(sampleD),rect(sampleH)])),transpose(rot));
+    const ashape=diag([rect(ana_thickness),rect(numAh*ana_width),rect(numAv*ana_height)]);
+    // Detector: rectangle (width x height) or vertical cylinder (diameter x height).
+    const dshape=geom.det_shape==='rectangle'
+      ? diag([rect(det_width),rect(det_height)])
+      : diag([circ(det_width),rect(det_height)]);
     const S=inverse(blockDiag(bshape,mshape,sshape,ashape,dshape));
     const f=(Lx,Ly)=>1/(1/Lx+1/Ly);
     // Focusing radii carry the sign of sin(theta): T contains 2/(rho*sin(theta))

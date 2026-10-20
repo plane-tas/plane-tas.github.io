@@ -256,3 +256,7 @@
   font-weight: 650 !important;
   line-height: inherit;
 }
+
+/* Component size: shape choice (Source / Detector). */
+#resolutionInstrumentDetails .resolution-shape-radios{display:flex;flex-wrap:wrap;gap:calc(4px * var(--tas-density)) calc(14px * var(--tas-density));margin:0 0 calc(4px * var(--tas-density))}
+#resolutionInstrumentDetails .resolution-shape-radios .checkbox-label{min-height:0;align-self:auto}

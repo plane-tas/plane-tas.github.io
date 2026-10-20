@@ -24,6 +24,7 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 
 - TAS resolution (Cooper–Nathans or Popovici) using instrument parameters from configuration JSON files.
 - Single-point and scan calculations, with projected and sliced resolution ellipses, widths and resolution matrices.
+- Popovici uses component sizes in cm (distances in m), converted to second moments as in the ResLib manual (rectangle A²/12, circle/cylinder D²/16); the source is a rectangle or circle, the detector a rectangle or cylinder, and the sample a cylinder (diameter, height).
 - Not available for diffractometer presets.
 
 ### Structure editor and reflections

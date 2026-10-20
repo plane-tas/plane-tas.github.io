@@ -341,7 +341,14 @@ function applyInstrumentDefaults(){
       ? String(lsd) : '';
   }
   if($('detectorType')) $('detectorType').value=String(det.type||'single').toLowerCase()==='anger'?'anger':'single';
-  setIf("beamW",beam.width);setIf("beamH",beam.height);setIf("monoW",mono.width);setIf("monoH",mono.height);setIf("monoT",mono.thickness);setIf("anaW",ana.width);setIf("anaH",ana.height);setIf("anaT",ana.thickness);setIf("detW",det.width);setIf("detH",det.height);
+  // Component sizes in instrument JSON are full dimensions in cm.
+  setIf("srcWcm",beam.width);setIf("srcHcm",beam.height);setIf("monoWcm",mono.width);setIf("monoHcm",mono.height);setIf("monoTcm",mono.thickness);setIf("anaWcm",ana.width);setIf("anaHcm",ana.height);setIf("anaTcm",ana.thickness);setIf("detWcm",det.width);setIf("detHcm",det.height);
+  const sourceCircle=String(beam.shape||'rectangle').toLowerCase()==='circle';
+  if($('sourceShapeRect')) $('sourceShapeRect').checked=!sourceCircle;
+  if($('sourceShapeCircle')) $('sourceShapeCircle').checked=sourceCircle;
+  const detectorRect=String(det.shape||'cylinder').toLowerCase()==='rectangle';
+  if($('detectorShapeRect')) $('detectorShapeRect').checked=detectorRect;
+  if($('detectorShapeCylinder')) $('detectorShapeCylinder').checked=!detectorRect;
   if(instrumentIsDiffractometer(inst)){
     // A missing JSON value means "not specified", NOT a value inherited from
     // the previous instrument or from static HTML defaults. This is critical
@@ -357,10 +364,10 @@ function applyInstrumentDefaults(){
       ['mosMonoH',mono.mosaic_h],['mosMonoV',mono.mosaic_v],
       ['mosAnaH',ana.mosaic_h],['mosAnaV',ana.mosaic_v],
       ['L0',dist.L0],['L1',dist.L1],['L2',dist.L2],['L3',dist.L3],
-      ['beamW',beam.width],['beamH',beam.height],
-      ['monoW',mono.width],['monoH',mono.height],['monoT',mono.thickness],
-      ['anaW',ana.width],['anaH',ana.height],['anaT',ana.thickness],
-      ['detW',det.width],['detH',det.height]
+      ['srcWcm',beam.width],['srcHcm',beam.height],
+      ['monoWcm',mono.width],['monoHcm',mono.height],['monoTcm',mono.thickness],
+      ['anaWcm',ana.width],['anaHcm',ana.height],['anaTcm',ana.thickness],
+      ['detWcm',det.width],['detHcm',det.height]
     ];
     for(const [id,value] of optionalFields){
       if(value===undefined || value===null || !Number.isFinite(Number(value))){

@@ -95,7 +95,14 @@ function collectResolutionBase(){
   const focusing={monochromator:{horizontal:{enabled:$('monoHF').checked,blades:num('monoHB')},vertical:{enabled:$('monoVF').checked,blades:num('monoVB')}},analyzer:{horizontal:{enabled:$('anaHF').checked,blades:num('anaHB')},vertical:{enabled:$('anaVF').checked,blades:num('anaVB')}}};
   const col={gm_1st:$('gm1').checked,div_1st_m:num('div1m'),div_1st_h:num('div1h'),div_1st_v:num('div1v'),div_2nd_h:num('div2h'),div_2nd_v:num('div2v'),div_3rd_h:num('div3h'),div_3rd_v:num('div3v'),div_4th_h:num('div4h'),div_4th_v:num('div4v')};
   const mos={d_mono:num('dMono'),mos_mono_h:num('mosMonoH'),mos_mono_v:num('mosMonoV'),mos_sam_h:num('mosSamH'),mos_sam_v:num('mosSamV'),d_ana:num('dAna'),mos_ana_h:num('mosAnaH'),mos_ana_v:num('mosAnaV')};
-  const geom={L0:num('L0'),L1:num('L1'),L2:num('L2'),L3:num('L3'),beam_width:num('beamW'),beam_height:num('beamH'),mono_width:num('monoW'),mono_height:num('monoH'),mono_thickness:num('monoT'),ana_width:num('anaW'),ana_height:num('anaH'),ana_thickness:num('anaT'),det_width:num('detW'),det_height:num('detH')};
+  // Distances are entered in m, component sizes in cm; the core works in m.
+  const cm=id=>num(id)/100;
+  const geom={L0:num('L0'),L1:num('L1'),L2:num('L2'),L3:num('L3'),
+    beam_width:cm('srcWcm'),beam_height:cm('srcHcm'),beam_shape:$('sourceShapeCircle')?.checked?'circle':'rectangle',
+    mono_width:cm('monoWcm'),mono_height:cm('monoHcm'),mono_thickness:cm('monoTcm'),
+    sample_diameter:cm('sampleDcm'),sample_height:cm('sampleHcm'),
+    ana_width:cm('anaWcm'),ana_height:cm('anaHcm'),ana_thickness:cm('anaTcm'),
+    det_width:cm('detWcm'),det_height:cm('detHcm'),det_shape:$('detectorShapeRect')?.checked?'rectangle':'cylinder'};
   if(currentInstrument()?.instrument_type==='diffractometer'){
     // Analyzer-free diffraction instruments have no PG analyzer.  The existing
     // TAS-only Cooper-Nathans/Popovici model still requires an analyzer slot:

@@ -21,9 +21,9 @@
     "crystal": "PG002",
     "mosaic_h": 30,
     "mosaic_v": 30,
-    "width": 0.0762,
-    "height": 0.1016,
-    "thickness": 0.0025,
+    "width": 7.62,
+    "height": 10.16,
+    "thickness": 0.25,
     "vfocus": true,
     "hfocus": false,
     "blade_h": 1,
@@ -33,18 +33,19 @@
     "crystal": "PG002",
     "mosaic_h": 40,
     "mosaic_v": 40,
-    "width": 0.0762,
-    "height": 0.07,
-    "thickness": 0.002,
+    "width": 7.62,
+    "height": 7,
+    "thickness": 0.2,
     "vfocus": true,
     "hfocus": false,
     "blade_h": 1,
     "blade_v": 1
   },
   "detector": {
-    "width": 0.04,
-    "height": 0.12,
-    "type": "single"
+    "width": 4,
+    "height": 12,
+    "type": "single",
+    "shape": "cylinder"
   },
   "configuration": {
     "energy_mode": "Ef fixed",
@@ -60,8 +61,9 @@
     "L3": 0.86
   },
   "beam": {
-    "width": 0.15,
-    "height": 0.15
+    "width": 15,
+    "height": 15,
+    "shape": "rectangle"
   },
   "s2_dep_ei": "no",
   "S2_min": 5,
