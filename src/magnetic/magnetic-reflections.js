@@ -215,12 +215,20 @@ export function parentIndexingFromMcif(text, magneticLattice, q){
   const src=String(text||'');
   const tag=(name)=>src.split(/\r?\n/).map(line=>line.trim()).find(line=>
     line.toLowerCase().startsWith(name.toLowerCase()+' '))?.slice(name.length).trim().replace(/^[\"']|[\"']$/g,'');
-  const hasParent=/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src);
-  if(!hasParent)return null;
   // FullProf writes an empty transform_Pp_abc ''; treat ''/?/. as absent.
   const blank=v=>v===undefined||/^(?:|\?|\.)$/.test(String(v).trim())?undefined:v;
   const parent=blank(tag('_parent_space_group.transform_Pp_abc'));
   const child=blank(tag('_parent_space_group.child_transform_Pp_abc'));
+  // k = 0: the magnetic structure has the periodicity of the nuclear one, so
+  // the magnetic cell is the parent cell unless a transform says otherwise.
+  const kZero=Array.isArray(q)&&q.length===3&&q.every(v=>Number.isFinite(Number(v))&&Math.abs(Number(v))<1e-12);
+  if(kZero && parent===undefined && child===undefined){
+    const lattice={...magneticLattice};
+    if(['a','b','c'].every(key=>Number(lattice[key])>0))
+      return {replication:[1,1,1],lattice,reference:'k = 0: magnetic cell = nuclear cell',kZero:true};
+  }
+  const hasParent=/_parent_space_group\.(?:IT_number|name_H-M_alt)/i.test(src);
+  if(!hasParent)return null;
   const identity=/^a\s*,\s*b\s*,\s*c\s*;\s*0\s*,\s*0\s*,\s*0$/i;
   // Support an explicitly declared, zero-origin, orthogonal-index (diagonal)
   // parent-to-child supercell mapping. More general sheared/transposed mCIF

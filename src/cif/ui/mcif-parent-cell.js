@@ -33,6 +33,19 @@ function propagationVectorsFromMcif(text,parsed){
       j++;
     }
   }
+  // Single (non-loop) form: _parent_propagation_vector.kxkykz "[0 0 0]"
+  if(!result.length){
+    for(let i=0;i<lines.length;i++){
+      const m=lines[i].trim().match(/^_parent_propagation_vector[._]kxkykz(?:\s+(.*))?$/i);
+      if(!m) continue;
+      let value=(m[1]||'').trim();
+      if(!value && i+1<lines.length) value=lines[i+1].trim();
+      const bracket=value.match(/\[([^\]]+)\]/);
+      const components=(bracket ? bracket[1] : value.replace(/^["']|["']$/g,'')).split(/[\s,]+/).filter(Boolean);
+      const nums=components.map(component=>parseNumericValue(component));
+      if(nums.length===3 && nums.every(Number.isFinite)) result.push({h:nums[0],k:nums[1],l:nums[2],enabled:true});
+    }
+  }
   if(!result.length && parsed?.incommensurateSingleQ) for(const q of (parsed.propagationVectors||[])) result.push({h:q.h,k:q.k,l:q.l,enabled:true});
   return result;
 }
@@ -129,7 +142,7 @@ function parentNuclearStructureFromMcif(parsed,text){
     }
   }
   return {...parsed,lattice:parent.lattice,atoms:merged.map(site=>site.atom),magnetic:false,
-    parentCellReference:parent.reference,parentCellEstimated:!!parent.estimated,
+    parentCellReference:parent.reference,parentCellEstimated:!!parent.estimated,parentCellKZero:!!parent.kZero,
     parentReplication:parent.replication};
 }
 
@@ -197,7 +210,8 @@ function crystallographicStructureFromMcif(parsed,text){
   const sg=cifState.cifSpaceGroups.find(g=>g.number===parent.number);
   // When the actual parent setting is not documented, P1 is only an
   // indexing/calculation fallback, NOT a claim that the parent SG is P1.
-  if(!sg && !nuclear.parentCellEstimated)return null;
+  // k = 0 without a parent space group: the cell is certain, P1 is the basis.
+  if(!sg && !nuclear.parentCellEstimated && !nuclear.parentCellKZero)return null;
   const operations=sg?.operations||['x,y,z'];
   const sites=parentSiteOrbitRepresentatives(nuclear.atoms,operations);
   if(!sites?.length)return null;

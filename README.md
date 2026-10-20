@@ -42,7 +42,7 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 - **Incommensurate and multi-k magnetic structures are not supported** for magnetic reflections or mCIF export. An incommensurate single-k mCIF can still be loaded to view the structure and to calculate nuclear reflections. Additional propagation vectors in the sidebar only mark magnetic-peak positions on the Q–E maps.
 - **mCIF output is always written in magnetic space group P1** (a commensurate supercell with all moments listed). The magnetic space group (BNS) is not identified.
 - Moments of a loaded mCIF can be edited while keeping the magnetic symmetry given in the file. This is distinct from generating a new P1 mCIF.
-- For an imported mCIF, the parent crystallographic cell is reconstructed from explicit cell-transformation data where possible. If a diagonal candidate is independently verified from atomic translations and k, it is labeled **Estimated** and nuclear peaks use the estimated structure. If a reliable parent cannot be determined, nuclear reflections are not calculated; a parent cell is **not** deduced from BNS alone.
+- For an imported mCIF, the parent crystallographic cell is reconstructed from explicit cell-transformation data where possible. For k = 0 without a cell transformation, the magnetic cell is the nuclear cell (P1 is used as the calculation basis when no parent space group is given). If a diagonal candidate is independently verified from atomic translations and k, it is labeled **Estimated** and nuclear peaks use the estimated structure. If a reliable parent cannot be determined, nuclear reflections are not calculated; a parent cell is **not** deduced from BNS alone.
 
 ### Script and time estimate
 
