@@ -24,7 +24,7 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 
 - TAS resolution (Cooper–Nathans or Popovici) using instrument parameters from configuration JSON files.
 - Single-point and scan calculations, with projected and sliced resolution ellipses, widths and resolution matrices.
-- Popovici uses component sizes in cm (distances in m), converted to second moments as in the ResLib manual (rectangle A²/12, circle/cylinder D²/16); the source is a rectangle or circle, the detector a rectangle or cylinder, and the sample a cylinder (diameter, height).
+- Popovici uses component sizes in cm (distances in m), converted to second moments as in Popovici (1975) (rectangle A²/12, circle/cylinder D²/16); the source is a rectangle or circle, the detector a rectangle or cylinder, and the sample a cylinder (diameter, height).
 - Not available for diffractometer presets.
 
 ### Structure editor and reflections
@@ -87,16 +87,6 @@ The browser application uses plain ES modules (no build step). All code lives in
 | `src/script/` | Measurement scripts, SPICE and time estimates |
 
 Static data stays at the project root because it is loaded by path: `instrument/`, `BG_material/`, `sample_environments/`, `neutron-data.json` and `space-groups.json`.
-
-### Local development
-
-Serve the project directory over HTTP (ES modules and the data directories do not load from `file://`), for example:
-
-```
-python -m http.server 8888
-```
-
-Then open `http://localhost:8888/`. After changing code, force-reload the page (Ctrl + Shift + R) so the browser does not use cached modules.
 
 ## User manual
 

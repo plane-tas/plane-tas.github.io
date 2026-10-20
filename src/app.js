@@ -214,7 +214,7 @@ function num(id){
 
 // TAS convention routing.
 //
-// SPICE/TAKIN scattering Sense and the sample-axis motor sign are independent
+// SPICE scattering Sense and the sample-axis motor sign are independent
 // instrument properties.  The UI therefore exposes them separately:
 //
 // Legacy four-state values are accepted only while importing older settings.

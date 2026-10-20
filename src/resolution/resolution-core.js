@@ -271,7 +271,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     if(Math.abs(val)>1) throw new Error('Supermirror divergence expression is outside arcsin domain.');
     // A guide (supermirror, m-value) transmits a roughly rectangular angular
     // profile of full width 2*m*theta_c; its standard deviation is
-    // m*theta_c/sqrt(3) (ResLib manual Sec. II F; ResMat.m).  theta_c is the
+    // m*theta_c/sqrt(3).  theta_c is the
     // natural-Ni critical angle at this wavelength (about 0.1 deg per A).
     const thetaC=Math.asin(val);
     alpha1=div1m*thetaC/Math.sqrt(3); beta1=alpha1;
@@ -308,7 +308,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   let Minv;
   if(method==='Popovici'){
     // Shape matrices hold second moments <x^2> of uniform distributions
-    // (ResLib manual Sec. III A; Popovici 1975, App. 3), all in metres:
+    // (Popovici 1975, App. 3), all in metres:
     // a full rectangular size A gives A^2/12, a circular cross section of
     // diameter D gives D^2/16 (sqrt<x^2> = D/4).
     const rect=a=>a*a/12, circ=d=>d*d/16;
