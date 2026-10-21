@@ -44,6 +44,7 @@ import {createQEVectorMap} from './qe/qe-vector-map.js';
 import {createRecalc} from './app/recalc.js';
 import {createGeometryTargets} from './geometry/geometry-targets.js';
 import {createGeometrySliders} from './geometry/geometry-sliders.js';
+import {installGeometryNumericInputs} from './app/numeric-inputs.js';
 
 const $ = id => document.getElementById(id);
 const instruments = new Map();
@@ -574,6 +575,7 @@ $("instrument").addEventListener("change",()=>{
 });
 
 bindDynamicSidebarUI();
+installGeometryNumericInputs($,parseNumericValue);
 
 
 // The Constant E map energy and the Angle calculation hbar-omega are one value.

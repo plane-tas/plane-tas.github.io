@@ -8,6 +8,10 @@ export function createGeometrySliders(deps){
 
   const ids={u:'geomSliderU',v:'geomSliderV',hw:'geomSliderHW',combo:'geomSliderCombo'};
   let syncing=false;
+  // Exact target in slider coordinates.  A range input snaps its value to its
+  // step, so the unmoved sliders must not be read back (that rounded the other
+  // H/K/L and hbar-omega entries to the slider steps).
+  const exact={a:NaN,b:NaN,hw:NaN};
   const fmt=(x,d)=>{const v=Number(x);return Math.abs(v)<0.5*Math.pow(10,-d)?'0':String(Number(v.toFixed(d)));};
 
   // Plane basis and the decomposition hkl = a*U + b*V + rest.
@@ -86,6 +90,7 @@ export function createGeometrySliders(deps){
       if($('geomSliderULabel')) $('geomSliderULabel').textContent=`U ${vec(p.U)}`;
       if($('geomSliderVLabel')) $('geomSliderVLabel').textContent=`V ${vec(p.V)}`;
       box.dataset.rest=JSON.stringify(d.rest);
+      exact.a=d.a; exact.b=d.b; exact.hw=hw;
       // Keep t; the origin follows the target.
       const [c1,c2]=comboDirection();
       combo.a0=d.a-combo.t*c1; combo.b0=d.b-combo.t*c2;
@@ -107,8 +112,10 @@ export function createGeometrySliders(deps){
   }
   function applyFromSliders(source){
     const p=plane();
-    let a=Number($(ids.u).value), c=Number($(ids.v).value);
-    const hw=Number($(ids.hw).value);
+    const pick=(value,id)=>Number.isFinite(value)?value:Number($(id).value);
+    let a=source==='u'?Number($(ids.u).value):pick(exact.a,ids.u);
+    let c=source==='v'?Number($(ids.v).value):pick(exact.b,ids.v);
+    const hw=source==='hw'?Number($(ids.hw).value):pick(exact.hw,ids.hw);
     const [c1,c2]=comboDirection();
     if(source==='combo'){
       combo.t=Number($(ids.combo).value);
@@ -125,6 +132,7 @@ export function createGeometrySliders(deps){
     }else{
       combo.a0=a-combo.t*c1; combo.b0=c-combo.t*c2;
     }
+    exact.a=a; exact.b=c; exact.hw=hw;
     writeTarget(p,a,c,hw);
   }
   function setComboOrigin(){

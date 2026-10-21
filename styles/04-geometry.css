@@ -662,3 +662,4 @@
 #geometryAnglesPane .geometry-angles{min-height:calc(4 * 1.55em + 20px * var(--tas-density));}
 /* Last valid drawing shown while the current target is inaccessible. */
 #geometryPlot.geometry-plot-stale{opacity:0.35;}
+.numeric-entry-rejected{border-color:#c44 !important;box-shadow:0 0 0 2px rgba(204,68,68,.25)}

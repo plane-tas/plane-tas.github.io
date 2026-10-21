@@ -248,7 +248,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     ? target.q
     : norm(hklToQ(cache.rl,[target.calc.h,target.calc.k,target.calc.l]));
   const hklLine=!isPowder
-    ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(3)).join(', ')})</div>`
+    ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(4)).join(', ')})</div>`
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
   const diffractometer=currentInstrument()?.instrument_type==='diffractometer';

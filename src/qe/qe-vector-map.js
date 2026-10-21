@@ -228,19 +228,29 @@ function renderQEVectorMap(cache){
     const xScale=multiple?1:variableLength/totalDistance;
     const axisNumber=value=>qeFormatPathNumber(value);
     let axisTitle='HKL path';
-    if(!multiple){
-      const coefficients=dh.map(d=>d/variableLength);
-      const firstVaryingIndex=coefficients.findIndex(c=>Math.abs(c)>1e-10);
-      const axisSymbol=['h','k','l'][firstVaryingIndex]||'h';
-      const axisTerm=(base,coefficient)=>{
-        if(Math.abs(coefficient)<1e-10) return axisNumber(base);
-        const sign=coefficient<0?'-':'+';
-        const abs=Math.abs(coefficient);
-        const coeff=Math.abs(abs-1)<1e-10?'':axisNumber(abs);
-        const variable=`${coeff}${axisSymbol}`;
-        return Math.abs(base)<1e-10?(coefficient<0?'-':'')+variable:`${axisNumber(base)}${sign}${variable}`;
-      };
-      axisTitle=`(${first.map((v,i)=>axisTerm(v,coefficients[i])).join(', ')})`;
+    // Two points: when the path can be written with one index as the
+    // variable -- only one of h, k, l changes, or the changing ones are equal
+    // or opposite to it, e.g. (h, h, 0) or (h, -h, 1) -- the x axis is
+    // labelled with the actual value of that index (l from 3 to -3, say).
+    // Otherwise (e.g. (0,0,0) -> (0,1,2)) no single number describes a point:
+    // the ticks carry no numbers and the end points are given as HKL.
+    const varyingIndices=dh.map((d,i)=>Math.abs(d)>1e-10?i:-1).filter(i=>i>=0);
+    let singleIndex=-1;
+    const ratios=[0,0,0];
+    if(!multiple && varyingIndices.length){
+      const i0=varyingIndices[0];
+      const ok=varyingIndices.every(j=>{
+        const r=dh[j]/dh[i0];
+        if(!(Math.abs(Math.abs(r)-1)<1e-9)) return false;
+        ratios[j]=Math.sign(r);
+        return Math.abs(first[j]-ratios[j]*first[i0])<1e-9;
+      });
+      if(ok) singleIndex=i0;
+    }
+    const singleSign=singleIndex>=0 ? Math.sign(dh[singleIndex]) : 1;
+    if(singleIndex>=0){
+      const symbol=['h','k','l'][singleIndex];
+      axisTitle=`(${first.map((v,i)=>ratios[i]===1?symbol:ratios[i]===-1?`-${symbol}`:axisNumber(v)).join(', ')})`;
     }
     // Allocate samples proportional to each segment's length and include
     // its two endpoints; deduplicate shared vertices for a monotonic x axis.
@@ -278,25 +288,29 @@ function renderQEVectorMap(cache){
       const roughStep=hMax/8,base10=Math.pow(10,Math.floor(Math.log10(roughStep)));
       const tickStep=([1,2,2.5,5,10].find(s=>s*base10>=roughStep)||10)*base10;
       const minorStep=tickStep/qeMinorDivisions(tickStep);
-      for(let n=1;n<200;n++){
-        const x=n*minorStep;
-        if(x>hMax+minorStep*1e-9) break;
-        if(Math.abs(x/tickStep-Math.round(x/tickStep))>1e-6) xMinorVals.push(x);
+      // Grid in the varying index itself (x = |change of that index|), so the
+      // ticks fall on round h/k/l values; otherwise on round path lengths.
+      const origin=singleIndex>=0 ? first[singleIndex] : 0;
+      const sign=singleIndex>=0 ? singleSign : 1;
+      const lo=Math.min(origin,origin+sign*hMax), hi=Math.max(origin,origin+sign*hMax);
+      const toX=value=>(value-origin)*sign;
+      for(let n=Math.ceil(lo/minorStep-1e-9);n*minorStep<=hi+minorStep*1e-9;n++){
+        const value=n*minorStep;
+        if(Math.abs(value/tickStep-Math.round(value/tickStep))>1e-6) xMinorVals.push(toX(value));
       }
-      for(let i=0;i<=12;i++){
-        const tick=i*tickStep;
-        if(tick>hMax+tickStep*1e-9) break;
-        tickVals.push(Number(tick.toPrecision(12)));
+      for(let n=Math.ceil(lo/tickStep-1e-9);n*tickStep<=hi+tickStep*1e-9;n++){
+        tickVals.push(Number(toX(n*tickStep).toPrecision(12)));
       }
-      // The right endpoint may not be a multiple of the automatic tick step.
-      if(!tickVals.some(value=>Math.abs(value-hMax)<1e-9)) tickVals.push(hMax);
+      tickVals.sort((a,b)=>a-b);
     }
     // Keep every vertex as an x-axis tick, but draw the HKL coordinates as
     // horizontal annotations.  Plotly's native tickangle rotates *all* labels;
     // stagger individual labels into rows when their bounding boxes overlap.
     const tickText=multiple
       ?pathPoints.map((_,i)=>qePathAxisCoordinateLabel(i))
-      :tickVals.map(axisNumber);
+      :singleIndex>=0
+        ?tickVals.map(x=>axisNumber(first[singleIndex]+singleSign*x))
+        :tickVals.map(()=>'');
     // Measure the real rendered width (canvas, same font as the annotations).
     // A per-character estimate overstates labels such as "(0.5, 0, 1)".
     // tas-plot-density.js scales every Plotly font (and margin) by the UI
