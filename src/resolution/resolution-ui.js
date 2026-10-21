@@ -100,7 +100,8 @@ function collectResolutionBase(){
   const geom={L0:num('L0'),L1:num('L1'),L2:num('L2'),L3:num('L3'),
     beam_width:cm('srcWcm'),beam_height:cm('srcHcm'),beam_shape:$('sourceShapeCircle')?.checked?'circle':'rectangle',
     mono_width:cm('monoWcm'),mono_height:cm('monoHcm'),mono_thickness:cm('monoTcm'),
-    sample_diameter:cm('sampleDcm'),sample_height:cm('sampleHcm'),
+    sample_shape:$('sampleShapeCylinder')?.checked?'cylinder':'box',
+    sample_u:cm('sampleUcm'),sample_v:cm('sampleVcm'),sample_diameter:cm('sampleDcm'),sample_height:cm('sampleHcm'),
     ana_width:cm('anaWcm'),ana_height:cm('anaHcm'),ana_thickness:cm('anaTcm'),
     det_width:cm('detWcm'),det_height:cm('detHcm'),det_shape:$('detectorShapeRect')?.checked?'rectangle':'cylinder'};
   if(currentInstrument()?.instrument_type==='diffractometer'){

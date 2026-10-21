@@ -251,7 +251,9 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const isOpen=v=>!(Number(v)>0)||!Number.isFinite(Number(v));
   const toSigma=arcmin=>arcmin/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const sinM=Math.abs(sind(A1/2)), sinA=Math.abs(sind(A3/2));
-  const sD=Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01;
+  const sD=geom.sample_shape==='box'
+    ? Math.max(Number(geom.sample_u)>0?Number(geom.sample_u):0.01, Number(geom.sample_v)>0?Number(geom.sample_v):0.01)
+    : (Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01);
   const sH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
   const mW=numMh*mono_width*sinM, mH=numMv*mono_height, aW=numAh*ana_width*sinA, aH=numAv*ana_height;
   const geomSigma=(a,b,L)=>2*Math.atan(Math.max(a,b)/(2*L))*GAUSS_SIGMA_FROM_FWHM;
@@ -316,12 +318,33 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
       ? diag([circ(beam_width),circ(beam_height)])
       : diag([rect(beam_width),rect(beam_height)]);
     const mshape=diag([rect(mono_thickness),rect(numMh*mono_width),rect(numMv*mono_height)]);
-    // Sample: vertical cylinder (diameter d, height h).  Its horizontal cross
-    // section is isotropic, so the rotation to the Q frame leaves it unchanged.
     const sampleD=Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01;
     const sampleH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
     const psi=thetaS-phi, rot=[[cosd(psi),sind(psi),0],[-sind(psi),cosd(psi),0],[0,0,1]];
-    const sshape=matmul(matmul(rot,diag([circ(sampleD),circ(sampleD),rect(sampleH)])),transpose(rot));
+    // Sample shape in the local resolution frame (x || Q, y in plane, z up),
+    // the same frame as the resolution matrix RM.
+    //   cylinder: diameter d, height h      -> diag(d^2/16, d^2/16, h^2/12)
+    //   box: edge lengths along U and along the in-plane direction
+    //        perpendicular to U (V side), height h; each edge a gives a^2/12
+    //        along its own direction, rotated into the Q frame.
+    let sampleLocal;
+    if(geom.sample_shape==='box'){
+      // 0.1 mm floor keeps the shape matrix invertible for very thin plates.
+      const Lu=Number(geom.sample_u)>0 ? Math.max(Number(geom.sample_u),1e-4) : 0.01;
+      const Lv=Number(geom.sample_v)>0 ? Math.max(Number(geom.sample_v),1e-4) : 0.01;
+      const qOutS=Qsample[2], qPlane=[Qsample[0],Qsample[1],0];
+      if(Math.abs(qOutS)>1e-8*Math.max(qnorm,1)) throw new Error('Calculation Q is out of plane: the requested resolution point lies outside the scattering plane defined by U and V.');
+      const ex=normalize(qPlane), ey=normalize(cross([0,0,1],ex));
+      const uS=normalize(qFromUB(UB,lc.sv1));
+      const vS=normalize(qFromUB(UB,inferOrthogonalInPlaneHKL(rl,lc.sv1,lc.sv2)));
+      const cu=[dot(uS,ex),dot(uS,ey)], cv=[dot(vS,ex),dot(vS,ey)];
+      const a=rect(Lu), b=rect(Lv);
+      const sxx=a*cu[0]*cu[0]+b*cv[0]*cv[0], syy=a*cu[1]*cu[1]+b*cv[1]*cv[1], sxy=a*cu[0]*cu[1]+b*cv[0]*cv[1];
+      sampleLocal=[[sxx,sxy,0],[sxy,syy,0],[0,0,rect(sampleH)]];
+    } else sampleLocal=diag([circ(sampleD),circ(sampleD),rect(sampleH)]);
+    // Q frame -> Popovici sample frame: S' = R^T S R (as ResMat; irrelevant
+    // for an isotropic cylinder, essential for a box).
+    const sshape=matmul(matmul(transpose(rot),sampleLocal),rot);
     const ashape=diag([rect(ana_thickness),rect(numAh*ana_width),rect(numAv*ana_height)]);
     // Detector: rectangle (width x height) or vertical cylinder (diameter x height).
     const dshape=geom.det_shape==='rectangle'
