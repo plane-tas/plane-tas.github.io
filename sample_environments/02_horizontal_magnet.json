@@ -1,16 +1,26 @@
 {
-  "name": "Horizontal Magnet",
+  "name": "MAG-G",
   "dark_angle_reference": "Reference Q",
   "dark_angle_ranges": [
     {
-      "from": -45,
-      "to": 45,
+      "from": -7.5,
+      "to": 7.5,
       "offset": 0
     },
     {
-      "from": -45,
-      "to": 45,
+      "from": -7.5,
+      "to": 7.5,
       "offset": 180
+    },
+    {
+      "from": -15,
+      "to": 15,
+      "offset": 90
+    },
+    {
+      "from": -15,
+      "to": 15,
+      "offset": 270
     }
   ]
 }
