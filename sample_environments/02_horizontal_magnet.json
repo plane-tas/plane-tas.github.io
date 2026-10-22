@@ -3,24 +3,24 @@
   "dark_angle_reference": "Reference Q",
   "dark_angle_ranges": [
     {
-      "from": -7.5,
-      "to": 7.5,
+      "from": 7.5,
+      "to": 75,
       "offset": 0
     },
     {
-      "from": -7.5,
-      "to": 7.5,
-      "offset": 180
+      "from": 105,
+      "to": 172.5,
+      "offset": 0
     },
     {
-      "from": -15,
-      "to": 15,
-      "offset": 90
+      "from": -172.5,
+      "to": -105,
+      "offset": 0
     },
     {
-      "from": -15,
-      "to": 15,
-      "offset": 270
+      "from": -75,
+      "to": -7.5,
+      "offset": 0
     }
   ]
 }
