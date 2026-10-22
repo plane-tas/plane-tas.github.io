@@ -169,6 +169,7 @@ export function initializeMagneticFormFactorUI(){
   function clearError(){info.textContent='';info.classList.remove('error');}
   function render(){
     clearError();download.disabled=true;
+    syncIonSearchText();
     try{
       ensureConfigMatchesIon();
       const opts=currentOptions();
@@ -216,6 +217,83 @@ export function initializeMagneticFormFactorUI(){
     }catch(error){setError(error);}
   }
   ion.addEventListener('change',()=>{syncConfig();render();});
+  installIonSearch();
+  // Searchable ion field.  Typing filters the list by the start of the ion
+  // name ("N" -> Ni, Nb, Nd, Np; "ni2" -> Ni2+), kept in atomic-number order.
+  function installIonSearch(){
+    const search=$('magffIonSearch'),list=$('magffIonList');
+    if(!search||!list)return;
+    const norm=t=>String(t).replace(/\s+/g,'').toLowerCase();
+    let items=[],active=-1;
+    const isOpen=()=>!list.classList.contains('hidden');
+    function close(){
+      list.classList.add('hidden');search.setAttribute('aria-expanded','false');
+      search.removeAttribute('aria-activedescendant');
+    }
+    function paint(){
+      list.replaceChildren();
+      if(!items.length){
+        const empty=document.createElement('span');
+        empty.className='magff-ion-empty';empty.textContent='No matching ion';
+        list.append(empty);return;
+      }
+      items.forEach((label,i)=>{
+        const option=document.createElement('span');
+        option.className='magff-ion-option';option.id=`magffIonOpt-${i}`;
+        option.setAttribute('role','option');
+        option.setAttribute('aria-selected',String(i===active));
+        option.textContent=displayIon(label);
+        option.addEventListener('mousedown',event=>{event.preventDefault();choose(label);});
+        list.append(option);
+      });
+      if(active>=0){
+        search.setAttribute('aria-activedescendant',`magffIonOpt-${active}`);
+        list.children[active]?.scrollIntoView({block:'nearest'});
+      }
+    }
+    function open(query){
+      const q=norm(query);
+      items=q?ionNames.filter(label=>norm(displayIon(label)).startsWith(q)||norm(label).startsWith(q)):ionNames.slice();
+      active=q?(items.length?0:-1):Math.max(0,items.indexOf(ion.value));
+      list.classList.remove('hidden');search.setAttribute('aria-expanded','true');
+      paint();
+    }
+    function choose(label){
+      if(label && label!==ion.value){
+        ion.value=label;
+        ion.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      search.value=displayIon(ion.value);
+      close();
+      // Typing right after a choice starts a new search.
+      if(document.activeElement===search)search.select();
+    }
+    search.addEventListener('focus',()=>{search.select();open('');});
+    // Re-clicking the field after a choice: select its text (after the
+    // browser has placed the caret) so typing starts a new search.
+    search.addEventListener('click',()=>{if(!isOpen()){open('');setTimeout(()=>search.select(),0);}});
+    search.addEventListener('input',()=>open(search.value));
+    search.addEventListener('keydown',event=>{
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+        event.preventDefault();
+        if(!isOpen()){open(search.value);return;}
+        if(!items.length)return;
+        active=(active+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
+        paint();
+      }else if(event.key==='Enter'){
+        event.preventDefault();
+        if(isOpen()&&items.length)choose(items[Math.max(0,active)]);
+      }else if(event.key==='Escape'){
+        if(isOpen()){event.preventDefault();close();search.value=displayIon(ion.value);}
+      }
+    });
+    search.addEventListener('blur',()=>{close();search.value=displayIon(ion.value);});
+    search.value=displayIon(ion.value);
+  }
+  function syncIonSearchText(){
+    const search=$('magffIonSearch');
+    if(search && document.activeElement!==search)search.value=displayIon(ion.value);
+  }
   config.addEventListener('change',()=>{syncFreeIonAvailability();render();});
   mode.addEventListener('change',()=>{syncFreeIonAvailability();weightLabel.classList.toggle('hidden',mode.value!=='custom');render();});
   weight.addEventListener('input',render);

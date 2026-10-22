@@ -624,3 +624,12 @@
   font-size: var(--plane-tab-select-caption-font) !important;
   font-weight: 400 !important;
 }
+/* Magnetic ion: searchable combobox (type "N" -> Ni, Nb, Nd, Np). The native
+   select stays in the DOM as the stored value but is not shown. */
+#toolboxFormFactorPane .magff-ion-combo{position:relative;display:block;min-width:0}
+#toolboxFormFactorPane select.magff-ion-native{display:none !important}
+#toolboxFormFactorPane .magff-ion-list{position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:40;max-height:calc(260px * var(--tas-density));overflow-y:auto;background:#fff;border:1px solid #9aa5b1;border-radius:calc(6px * var(--tas-density));box-shadow:0 6px 18px rgba(20,30,40,.18);padding:calc(3px * var(--tas-density)) 0}
+#toolboxFormFactorPane .magff-ion-list.hidden{display:none}
+#toolboxFormFactorPane .magff-ion-option{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));cursor:pointer;white-space:nowrap}
+#toolboxFormFactorPane .magff-ion-option[aria-selected="true"]{background:#dbe9f6}
+#toolboxFormFactorPane .magff-ion-empty{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));color:#5f6b76}
