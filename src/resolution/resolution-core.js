@@ -243,11 +243,14 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const phi=Math.atan2(-kf*sind(2*thetaS),ki-kf*cosd(2*thetaS))*R2D;
 
   // A blank (or non-positive) collimator entry means "no Soller collimator".
-  // The divergence is then the geometric one allowed by the two components it
-  // connects: FWHM = 2*atan(max(a,b)/(2L)), with a, b the larger width
-  // (horizontal; crystals projected by |sin(theta)|) or height (vertical) of
-  // the components and L their distance.  This value is used like a collimator
-  // in both Popovici and Cooper-Nathans.
+  //  - Popovici: no collimator at all (G entry 0); the divergence is limited
+  //    only by the component sizes already in the shape matrices.
+  //  - Cooper-Nathans (no component sizes): the geometric divergence of the
+  //    two components it connects.  Two apertures a and b at distance L pass a
+  //    trapezoidal angular profile (uniform a/L convolved with uniform b/L),
+  //    used with the same variance: sigma^2 = ((a/L)^2 + (b/L)^2)/12.
+  //    a, b are widths (horizontal; crystals projected by |sin(theta)|) or
+  //    heights (vertical).
   const isOpen=v=>!(Number(v)>0)||!Number.isFinite(Number(v));
   const toSigma=arcmin=>arcmin/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
   const sinM=Math.abs(sind(A1/2)), sinA=Math.abs(sind(A3/2));
@@ -256,14 +259,18 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     : (Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01);
   const sH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
   const mW=numMh*mono_width*sinM, mH=numMv*mono_height, aW=numAh*ana_width*sinA, aH=numAv*ana_height;
-  const geomSigma=(a,b,L)=>2*Math.atan(Math.max(a,b)/(2*L))*GAUSS_SIGMA_FROM_FWHM;
+  const geomSigma=(a,b,L)=>{
+    const ta=2*Math.atan(a/(2*L)), tb=2*Math.atan(b/(2*L));
+    return Math.sqrt((ta*ta+tb*tb)/12);
+  };
   const geomDiv={
     h1:geomSigma(beam_width,mW,L0), v1:geomSigma(beam_height,mH,L0),
     h2:geomSigma(mW,sD,L1), v2:geomSigma(mH,sH,L1),
     h3:geomSigma(sD,aW,L2), v3:geomSigma(sH,aH,L2),
     h4:geomSigma(aW,det_width,L3), v4:geomSigma(aH,det_height,L3)
   };
-  const collSigma=(v,key)=>isOpen(v) ? geomDiv[key] : toSigma(v);
+  const openSlot={};
+  const collSigma=(v,key)=>{ if(isOpen(v)){ openSlot[key]=true; return geomDiv[key]; } return toSigma(v); };
 
   let alpha1,beta1;
   if(!gm1){ alpha1=collSigma(div1h,'h1'); beta1=collSigma(div1v,'v1'); }
@@ -295,6 +302,14 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   if(positive.some(x=>!Number.isFinite(x)||Math.abs(x)<1e-15)) throw new Error('Collimation and crystal mosaic values must be non-zero for the resolution calculation.');
 
   const G=diag([alpha1,alpha2,beta1,beta2,alpha3,alpha4,beta3,beta4].map(x=>1/(x*x)));
+  // Popovici: a blank slot transmits everything (no Soller collimator).  The
+  // supermirror (1st) and the focusing-analyzer acceptance (3rd) are kept.
+  const slotKeys=['h1','h2','v1','v2','h3','h4','v3','v4'];
+  const Gpop=diag([alpha1,alpha2,beta1,beta2,alpha3,alpha4,beta3,beta4].map((x,i)=>{
+    const key=slotKeys[i];
+    const replaced=(gm1&&(key==='h1'||key==='v1'))||(AHF&&key==='h3');
+    return (openSlot[key]&&!replaced) ? 0 : 1/(x*x);
+  }));
   const F=diag([etaM,etaMp,etaA,etaAp].map(x=>1/(x*x)));
   const A=zeros(6,8), C=zeros(4,8), B=zeros(4,6);
   A[0][0]=ki/(2*tand(thetaM)); A[0][1]=-A[0][0]; A[3][4]=kf/(2*tand(thetaA)); A[3][5]=-A[3][4];
@@ -371,7 +386,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     D[6][7]=-1/L2; D[6][10]=-D[6][7]; D[5][8]=cosd(thetaA)/L3; D[5][9]=sind(thetaA)/L3; D[5][11]=1/L3; D[7][10]=-D[5][11]; D[7][12]=D[5][11];
     const STFT=add(S,matmul(matmul(transpose(T),F),T));
     const core1=matmul(matmul(D,inverse(STFT)),transpose(D));
-    const core2=add(inverse(core1),G);
+    const core2=add(inverse(core1),Gpop);
     const inner=inverse(core2);
     Minv=matmul(matmul(matmul(matmul(B,A),inner),transpose(A)),transpose(B));
   } else if(method==='Cooper-Nathans'){
