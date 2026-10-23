@@ -1,7 +1,7 @@
 // mCIF generation: P1 single-k export and modified imported mCIF.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {CIF_OUTPUT_FORMAT_STORAGE_KEY} from './constants.js';
-import {exportCommensurateMcif, rationalApprox} from '../mcif-export.js';
+import {atomSiteKey, exportCommensurateMcif, rationalApprox} from '../mcif-export.js';
 
 export function installMcifGenerator(ctx){
   const {deps:{
@@ -144,7 +144,7 @@ function importedMagneticModel(){
   if(fn.spinEditingIsIndividual(source)){
     // Manual spins: one setting per expanded mCIF atom (Cartesian, mCIF cell).
     return {lattice:source.lattice,atoms:source.atoms.map((atom,i)=>{
-      const key=`individual:0,0,0:${i}`;
+      const key=`individual:0,0,0:${atomSiteKey(atom)}`;
       return {atom,setting:live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(atom,source)};
     })};
   }
@@ -183,7 +183,7 @@ function individualSettingsFromMagneticModel(structure,model){
       });
       const setting=best>=0?model.atoms[best].setting:null;
       if(best>=0) used.add(best);
-      out[`${ix},${iy},${iz}:${i}`]=setting?{...setting}:{enabled:false,mx:0,my:0,mz:0};
+      out[`${ix},${iy},${iz}:${atomSiteKey(atom)}`]=setting?{...setting}:{enabled:false,mx:0,my:0,mz:0};
     });
   }
   const lost=model.atoms.filter((m,j)=>m.setting.enabled && !used.has(j));

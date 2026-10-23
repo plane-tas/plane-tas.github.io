@@ -1,7 +1,7 @@
 // Magnetic moments: spin settings, Fourier/explicit moments and the Spins table.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {rationalApprox} from '../mcif-export.js';
-import {modulatedMoment} from '../../magnetic/magnetic-reflections.js';
+import {atomSiteKey, rationalApprox} from '../mcif-export.js';
+import {modulatedMoment, symmetryPhaseShift} from '../../magnetic/magnetic-reflections.js';
 
 export function installSpinTable(ctx){
   const {deps:{
@@ -30,9 +30,11 @@ function magneticCandidateSites(structure){
   });
 }
 function momentKey(site){ return `${site.siteIndex}:${site.label||site.element}`; }
-// The key uses the expanded atom index, not a crystallographic label: a CIF may
-// have multiple symmetry-equivalent positions with the same source label.
-const individualSpinKey=(ix,iy,iz,atomIndex)=>`individual:${ix},${iy},${iz}:${atomIndex}`;
+// The key uses the atom's element and position in the cell, not a label (a CIF
+// may have several symmetry-equivalent positions with the same source label)
+// and not its index (the selected CIF and the Generator draft may list the
+// same atoms in a different order).
+const individualSpinKey=(ix,iy,iz,atom)=>`individual:${ix},${iy},${iz}:${atomSiteKey(atom)}`;
 function individualSpinDimensions(){
   const q=fn.effectivePropagationVectorForStructure();
   return [q.h,q.k,q.l].map(v=>rationalApprox(v).d);
@@ -49,7 +51,7 @@ function individualSpinCandidates(structure){
   for(let ix=0;ix<N[0];ix++)for(let iy=0;iy<N[1];iy++)for(let iz=0;iz<N[2];iz++)
     structure.atoms.forEach((atom,atomIndex)=>{
       if(structure.magnetic && !Array.isArray(atom.magneticMoment) && !atom.magneticFourier)return;
-      const key=individualSpinKey(ix,iy,iz,atomIndex);
+      const key=individualSpinKey(ix,iy,iz,atom);
       const parent=structure.asymmetricSites?.[atom.sourceSiteIndex]||atom;
       const pos=[atom.x+ix,atom.y+iy,atom.z+iz];
       const label=String(atom.sourceLabel||atom.element);
@@ -77,8 +79,10 @@ function initialIndividualSpin(site,structure){
   const q=fn.effectivePropagationVectorForStructure();
   const approx=[q.h,q.k,q.l].map(v=>rationalApprox(v));
   const vec=[parent.mx,parent.my,parent.mz];
-  // Phase 2*pi*k.r of this supercell site's position (see modulatedMoment).
-  const kL=[site.x,site.y,site.z].reduce((sum,v,i)=>sum+Number(v)*approx[i].n/approx[i].d,0);
+  // Single-k phase of this supercell site (see symmetryPhaseShift).
+  const atom=structure.atoms?.[site.individualIndex];
+  const T=symmetryPhaseShift(atom);
+  const kL=[site.x,site.y,site.z].reduce((sum,v,i)=>sum+(Number(v)+T[i])*approx[i].n/approx[i].d,0);
   const b=fn.directLatticeBasis(structure.lattice);
   const result=modulatedMoment(vec,kL,{mode:cifState.structureMomentStructureType,
     axis:fn.structureMomentRotationAxisVector(b),chirality:cifState.structureMomentChirality});
@@ -89,14 +93,14 @@ function individualSettingForAtom(atom,structure,settings){
   const N=individualSpinDimensions();
   const cell=atom.cell||[0,0,0];
   const component=(v,i)=>((Math.round(v)%N[i])+N[i])%N[i];
-  const key=individualSpinKey(...cell.map(component),atom.expandedAtomIndex);
-  const stored=settings.get(key)||cifState.structureMomentSettings.get(key);
-  if(stored)return stored;
   const base=structure.atoms?.[atom.expandedAtomIndex];
   if(!base)return null;
+  const key=individualSpinKey(...cell.map(component),base);
+  const stored=settings.get(key)||cifState.structureMomentSettings.get(key);
+  if(stored)return stored;
   const parent=structure.asymmetricSites?.[base.sourceSiteIndex]||base;
   return initialIndividualSpin({...base,x:atom.phaseX,y:atom.phaseY,z:atom.phaseZ,
-    siteIndex:base.sourceSiteIndex,parentSite:parent},structure);
+    siteIndex:base.sourceSiteIndex,parentSite:parent,individualIndex:atom.expandedAtomIndex},structure);
 }
 
 // mCIF crystalaxis values are components along unit crystallographic
@@ -306,7 +310,7 @@ function updateMagneticMomentRows(structure){
       const angles=fn.directionToPolar([setting.mx,setting.my,setting.mz]);
       for(const [field,title,value] of [["theta","Polar angle from +z (degrees)",angles.theta],["phi","Azimuth from +x toward +y (degrees)",angles.phi],["moment","Physical magnetic moment magnitude (μB)",fn.vecNorm([setting.mx,setting.my,setting.mz])]]){
         const input=document.createElement("input");
-        input.type="number"; input.step="0.01"; if(field==="moment") input.min="0";
+        input.type="number"; input.step=field==="moment"?"0.01":"1"; if(field==="moment") input.min="0";
         input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(value);
         input.dataset.momentField=field;input.title=title;input.setAttribute("aria-label",`${site.label||site.element}: ${title}`);
         momentInputs.push(input);fieldCells.push(makeCell("value",input));

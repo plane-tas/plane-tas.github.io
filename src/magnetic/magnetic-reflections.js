@@ -64,6 +64,16 @@ export function modulatedMoment(m,kr,{mode='collinear',axis=[0,0,1],chirality='C
   if(mode==='helical') return rotate(m,axis,(chirality==='CW'?1:-1)*phase);
   throw Error('Unsupported magnetic structure type.');
 }
+// Phase reference of an atom relative to its position in the cell (see
+// parseCifStructure: phaseRef = r_s + w + T for the atom W r_s + w + T made
+// from asymmetric site r_s by {W|w}). The phase of the atom drawn at r in
+// cell R is 2*pi*k.(R + r + shift) = 2*pi*k.(R + T + w + r_s):
+// rotations of a site keep its phase, translations carry k.t. Zero for
+// atoms without a reference (identity images, edited structures).
+export function symmetryPhaseShift(atom){
+  return [[atom?.phaseRefX,atom?.x],[atom?.phaseRefY,atom?.y],[atom?.phaseRefZ,atom?.z]]
+    .map(([s,x])=>Number.isFinite(Number(s))&&Number.isFinite(Number(x))?Number(s)-Number(x):0);
+}
 // Collinear sign is ill-defined where cos(2*pi*k.r) ~ 0 (k.r ~ 1/4, 3/4):
 // e.g. bcc with k = (0,0,1/2) puts the body centre on a node.
 export function collinearSignAmbiguous(kr,tol=0.1){
@@ -83,11 +93,12 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
   for(let ix=0;ix<dims[0];ix++)for(let iy=0;iy<dims[1];iy++)for(let iz=0;iz<dims[2];iz++){
     for(const atom of structure.atoms){
       const p=[atom.x+ix,atom.y+iy,atom.z+iz];
+      const kr=dot(q,p)+dot(q,symmetryPhaseShift(atom));
       const key=`${atom.sourceSiteIndex}:${structure.asymmetricSites?.[atom.sourceSiteIndex]?.label||atom.sourceLabel||atom.element}`;
       const s=settings.get(key);
       let m=(s?.enabled && [s.mx,s.my,s.mz].every(Number.isFinite))?[s.mx,s.my,s.mz]:[0,0,0];
-      if(mode==='collinear' && norm(m)>1e-12 && collinearSignAmbiguous(dot(q,p))) ambiguousSites++;
-      m=modulatedMoment(m,dot(q,p),{mode,axis:rotAxis,chirality});
+      if(mode==='collinear' && norm(m)>1e-12 && collinearSignAmbiguous(kr)) ambiguousSites++;
+      m=modulatedMoment(m,kr,{mode,axis:rotAxis,chirality});
       // Biso/Uaniso travel with the site: the magnetic and nuclear amplitudes
       // of one atom share the same Debye-Waller factor.
       sites.push({element:atom.element,occupancy:Number(atom.occupancy??1),

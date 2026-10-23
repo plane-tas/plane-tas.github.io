@@ -1,5 +1,6 @@
 // Imported magnetic structures: Modify drafts, original/modified moments and Spins row selection.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {atomSiteKey} from '../mcif-export.js';
 export function installMagneticEdit(ctx){
   const {deps:{
     $, getPropagationVectors, getSelectedCifStructure, setPropagationVectorsFromFile
@@ -209,7 +210,7 @@ function selectedSpinContainsAtom(atom){
     const site=cifState.visibleSpinSelectionSites.get(key);
     if(!site)continue;
     if(site.individualKey){
-      if(atom.expandedAtomIndex!==site.individualIndex)continue;
+      if(atomSiteKey(atom)!==atomSiteKey(site))continue;
       if(!Array.isArray(atom.cell) || !site.individualCell?.every((v,i)=>v===atom.cell[i]))continue;
       return true;
     }

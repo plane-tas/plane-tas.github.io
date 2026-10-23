@@ -171,9 +171,13 @@ function evalSymComponent(expr,xyz){
 }
 
 function applySymmetryOperation(op,xyz){
+  return applySymmetryOperationRaw(op,xyz).map(wrap01);
+}
+// Image of a position under a symmetry operation, NOT wrapped into the cell.
+function applySymmetryOperationRaw(op,xyz){
   const parts=String(op).split(',');
   if(parts.length!==3) throw new Error(`Unsupported CIF symmetry operation: ${op}`);
-  return parts.map(p=>wrap01(evalSymComponent(p,xyz)));
+  return parts.map(p=>evalSymComponent(p,xyz));
 }
 
 function elementKey(raw){
@@ -348,7 +352,8 @@ function magneticFourierMoments(doc,warnings){
   }
   return {supported:byLabel.size>0,q,byLabel};
 }
-function applyMagneticOperator(op,p){return op.origin.map((v,i)=>wrap01(v+op.R[i].reduce((sum,x,j)=>sum+x*p[j],0)));}
+function applyMagneticOperatorRaw(op,p){return op.origin.map((v,i)=>v+op.R[i].reduce((sum,x,j)=>sum+x*p[j],0));}
+function applyMagneticOperator(op,p){return applyMagneticOperatorRaw(op,p).map(wrap01);}
 function transformAxialMoment(op,m){
   const factor=op.parity*determinant3(op.R);
   return op.R.map(row=>factor*row.reduce((sum,x,j)=>sum+x*m[j],0));
@@ -471,7 +476,11 @@ export function parseCifStructure(text){
     const unique=[];
     const opsToUse=(superspaceOps && fourier) ? superspaceOps : (magneticOps||symops);
     for(const op of opsToUse){
-      const p=(magneticOps||superspaceOps)?applyMagneticOperator(op,xyz):applySymmetryOperation(op,xyz);
+      const applyRaw=v=>(magneticOps||superspaceOps)?applyMagneticOperatorRaw(op,v):applySymmetryOperationRaw(op,v);
+      const raw=applyRaw(xyz);
+      // Translation part w of the operation {W|w}: raw = W xyz + w.
+      const shift=applyRaw([0,0,0]);
+      const p=raw.map(wrap01);
       const R=(magneticOps||superspaceOps)?op.R:symmetryRotationMatrix(op);
       const transformedMoment=moment ? ((magneticOps||superspaceOps)?transformAxialMoment(op,moment):moment.slice()) : null;
       const transformedFourier=fourier ? {q:fourier.q.slice(),cos:fourier.cos.slice(),sin:fourier.sin.slice(),phaseSign:(op.phaseSign ?? 1),phaseShift:(op.phaseShift ?? 0),transformR:R,transformFactor:(op.parity ?? 1)*determinant3(R)} : null;
@@ -483,6 +492,7 @@ export function parseCifStructure(text){
         // at reflections that are extinct for the true special position).
         existing.sum=existing.sum.map((v,i)=>{const d=p[i]-existing.p[i];return v+existing.p[i]+d-Math.round(d);});
         existing.count++;
+        existing.raws.push({raw,shift});
         // Sunny's set_dipoles_from_mcif! rejects incompatible moments produced
         // for the same site by different magnetic symmetry operations.
         const previous=existing.magneticMoment;
@@ -490,18 +500,37 @@ export function parseCifStructure(text){
           throw new Error(`Inconsistent mCIF magnetic symmetry for ${siteLabel} at (${p.map(v=>v.toFixed(6)).join(', ')}).`);
         }
       }else{
-        unique.push({p,sum:p.slice(),count:1,U:U0?transformSymmetricTensor(U0,R):null,magneticMoment:transformedMoment,magneticFourier:transformedFourier});
+        unique.push({p,raws:[{raw,shift}],sum:p.slice(),count:1,U:U0?transformSymmetricTensor(U0,R):null,magneticMoment:transformedMoment,magneticFourier:transformedFourier});
       }
     }
     const sourceSiteIndex=asymmetricSites.length-1;
-    for(const item of unique) item.p=item.sum.map(v=>wrap01(v/item.count));
+    for(const item of unique){
+      item.p=item.sum.map(v=>wrap01(v/item.count));
+      // Single-k phase reference (FullProf-like: phases come from
+      // translations, not from the rotation part of an operation). The atom
+      // drawn at p in the cell is W xyz + w + T for an operation {W|w} and a
+      // lattice vector T; its phase is 2*pi*k.(xyz + w + T) (+ cell index), so
+      // atoms that one asymmetric site generates by rotations share the phase
+      // of that site, while lattice, centring and screw/glide translations
+      // carry k.t. Of the operations that land on this site, the one whose
+      // image is nearest to the asymmetric-site coordinates is used (first on
+      // a tie).
+      let best=null, bestD=Infinity;
+      for(const {raw:r,shift:w} of item.raws){
+        const T=item.p.map((v,i)=>Math.round(v-r[i]));
+        const d=r.reduce((sum,v,i)=>sum+(v-xyz[i])**2,0);
+        if(d<bestD-1e-9){ best=xyz.map((v,i)=>v+w[i]+T[i]); bestD=d; }
+      }
+      item.phaseRef=best||item.p.slice();
+    }
     for(const item of unique) atoms.push({
       element, occupancy:Number.isFinite(occupancy)?occupancy:1,
       Biso:Number.isFinite(Biso)?Biso:0, Uaniso:item.U,
       x:item.p[0],y:item.p[1],z:item.p[2], bRe:b[0],bIm:b[1],
       sourceLabel:siteLabel, sourceSiteIndex, magneticMoment:item.magneticMoment,
       magneticFourier:item.magneticFourier,
-      sourceX:xyz[0], sourceY:xyz[1], sourceZ:xyz[2]
+      sourceX:xyz[0], sourceY:xyz[1], sourceZ:xyz[2],
+      phaseRefX:item.phaseRef[0], phaseRefY:item.phaseRef[1], phaseRefZ:item.phaseRef[2]
     });
   }
 

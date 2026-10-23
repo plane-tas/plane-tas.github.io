@@ -13,6 +13,7 @@
 //   CIF, Manual             one moment per atom of the k supercell.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {buildMagneticMotif, cartesianMoment, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
+import {atomSiteKey} from '../mcif-export.js';
 
 export function installMagneticModel(ctx){
   const {deps:{
@@ -68,7 +69,7 @@ function mcifModel(structure,selected){
   if(fn.spinEditingIsIndividual(structure)){
     const live=fn.currentMomentSettings();
     sites=structure.atoms.map((atom,i)=>{
-      const key=`individual:0,0,0:${i}`;
+      const key=`individual:0,0,0:${atomSiteKey(atom)}`;
       const setting=live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(atom,structure);
       const moment=setting?.enabled ? [setting.mx,setting.my,setting.mz].map(v=>Number(v)||0) : [0,0,0];
       return siteFromAtom(atom,[atom.x,atom.y,atom.z],moment);

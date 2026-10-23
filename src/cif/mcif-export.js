@@ -1,9 +1,15 @@
 // Commensurate magnetic structure exporter. The displayed spins, not the
 // parent crystallographic space group, determine the retained magnetic group.
 import {parseCifDocument, parseCifStructure} from './cif-structure.js';
-import {collinearSignAmbiguous, modulatedMoment} from '../magnetic/magnetic-reflections.js';
+import {collinearSignAmbiguous, modulatedMoment, symmetryPhaseShift} from '../magnetic/magnetic-reflections.js';
 
 const wrap=x=>((x%1)+1)%1;
+// Identity of an expanded atom that does not depend on the order in which a
+// symmetry expansion lists the atoms: element and position in the cell.
+export function atomSiteKey(atom){
+  const w=v=>{let x=wrap(Number(v)); if(x>1-5e-5) x=0; return x.toFixed(4);};
+  return `${atom?.element||''}@${w(atom?.x)},${w(atom?.y)},${w(atom?.z)}`;
+}
 const near=(a,b,tol=2e-5)=>Math.abs(a-b)<=tol;
 const nearFrac=(a,b,tol=2e-5)=>Math.abs(wrap(a-b+0.5)-0.5)<=tol;
 const det=R=>R[0][0]*(R[1][1]*R[2][2]-R[1][2]*R[2][1])-R[0][1]*(R[1][0]*R[2][2]-R[1][2]*R[2][0])+R[0][2]*(R[1][0]*R[2][1]-R[1][1]*R[2][0]);
@@ -167,7 +173,7 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
   const chosen=q.map((v,i)=>approx[i].n/approx[i].d);
   for(let ix=0;ix<N[0];ix++)for(let iy=0;iy<N[1];iy++)for(let iz=0;iz<N[2];iz++){
     for(const [atomIndex,atom] of structure.atoms.entries()){
-      const individual=individualSettings?.[`${ix},${iy},${iz}:${atomIndex}`];
+      const individual=individualSettings?.[`${ix},${iy},${iz}:${atomSiteKey(atom)}`];
       if(individualSettings && !individual) throw new Error(`Missing individual spin for atom ${atomIndex} in cell (${ix},${iy},${iz}).`);
       const setting=individualSettings ? individual : (settings[atom.sourceSiteIndex]||{enabled:false,mx:0,my:0,mz:0});
       const pos0=[atom.x+ix,atom.y+iy,atom.z+iz];
@@ -176,8 +182,9 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
       if(moment.some(v=>!Number.isFinite(v)))throw new Error(`Invalid moment for ${atom.sourceLabel}.`);
       if(setting.enabled && !individualSettings){
         // Same convention as the magnetic-reflection calculator and the
-        // viewer: the phase is 2*pi*k.r of the atomic position r.
-        const kr=chosen[0]*pos0[0]+chosen[1]*pos0[1]+chosen[2]*pos0[2];
+        // viewer: the phase is 2*pi*k.(R + T + w + r_s), see symmetryPhaseShift.
+        const T=symmetryPhaseShift(atom);
+        const kr=chosen[0]*(pos0[0]+T[0])+chosen[1]*(pos0[1]+T[1])+chosen[2]*(pos0[2]+T[2]);
         if(mode==='collinear' && collinearSignAmbiguous(kr)) ambiguousSites++;
         moment=modulatedMoment(moment,kr,{mode,axis:u,chirality});
       }
