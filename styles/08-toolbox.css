@@ -485,7 +485,7 @@
 /* v47: compact four-field form-factor control row. */
 #toolboxFormFactorPane .magff-main-row{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:calc(10px * var(--tas-density));
   align-items:end;
   min-width:0;
@@ -633,3 +633,8 @@
 #toolboxFormFactorPane .magff-ion-option{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));cursor:pointer;white-space:nowrap}
 #toolboxFormFactorPane .magff-ion-option[aria-selected="true"]{background:#dbe9f6}
 #toolboxFormFactorPane .magff-ion-empty{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));color:#5f6b76}
+/* j0 / j2 explanation between the entry boxes and the plot. */
+.magff-model{margin:calc(6px * var(--tas-density)) 0 calc(2px * var(--tas-density));padding:calc(7px * var(--tas-density)) calc(10px * var(--tas-density));background:#f4f7fa;border:1px solid #d5dde5;border-radius:calc(6px * var(--tas-density));font-size:calc(18px * var(--tas-density));line-height:1.5;color:#26323d}
+.magff-model:empty{display:none}
+/* c shows the weight in use; it is editable only with Custom c. */
+#toolboxFormFactorPane #magffWeight[readonly]{background:#f1f3f5;color:#3d4954;cursor:default}

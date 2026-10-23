@@ -482,13 +482,14 @@
 <option value="free">Free-ion Landé</option>
 <option value="custom">Custom c</option>
 </select></label>
+<label title="Weight of ⟨j2⟩: f(Q) = ⟨j0⟩ + c⟨j2⟩. Editable with j2 contribution = Custom c.">c<input aria-label="j2 weight c" id="magffWeight" step="0.05" type="number" value="0" readonly=""/></label>
 <label>Q (Å⁻¹)<input id="magffQPoint" inputmode="decimal" max="10" min="0" step="any" type="number" value="2"/></label>
 <label>|f(Q)|²<input aria-label="Squared magnetic form factor" id="magffIntensity" inputmode="decimal" min="0" step="any" type="number" value=""/></label>
 </div>
 <div class="magff-extra-row">
 <label class="hidden" id="magffConfigLabel">Electron configuration<select id="magffConfig"></select></label>
-<label class="hidden" id="magffWeightLabel">Custom c<input id="magffWeight" step="0.05" type="number" value="0"/></label>
 </div>
+<div aria-live="polite" class="magff-model" id="magffModel"></div>
 <div aria-live="polite" class="magff-info" id="magffInfo" role="status"></div>
 <div aria-label="Squared magnetic form factor versus momentum transfer" class="magff-plot" id="magffPlot" role="img"></div>
 <input aria-label="Q slider" class="magff-plot-slider" id="magffQSlider" max="10" min="0" step="0.01" type="range" value="2"/>

@@ -90,7 +90,7 @@ export function initializeMagneticFormFactorUI(){
   if(!ion || ion.dataset.initialized==='true') return ()=>{};
   ion.dataset.initialized='true';
   const config=$('magffConfig'),configLabel=$('magffConfigLabel');
-  const mode=$('magffWeightMode'),weight=$('magffWeight'),weightLabel=$('magffWeightLabel');
+  const mode=$('magffWeightMode'),weight=$('magffWeight');
   const qField=$('magffQPoint'),qSlider=$('magffQSlider');
   const intensityField=$('magffIntensity');
   const info=$('magffInfo'),plot=$('magffPlot'),download=$('magffDownload');
@@ -146,7 +146,6 @@ export function initializeMagneticFormFactorUI(){
     // Avoid leaving the calculator in a broken state when the ion changes.
     if(!supported && mode.value==='free'){
       mode.value='auto';
-      weightLabel.classList.add('hidden');
     }
   }
   function currentOptions(){
@@ -162,7 +161,21 @@ export function initializeMagneticFormFactorUI(){
     if(!Number.isFinite(c))throw new Error('Invalid j2 weight.');
     return {config:config.value,j2Weight:c};
   }
+  // The c box always shows the weight in use; it is editable only in Custom.
+  function syncWeightField(c){
+    const custom=mode.value==='custom';
+    weight.readOnly=!custom;
+    weight.setAttribute('aria-readonly',String(!custom));
+    if(!custom)weight.value=String(Number(Number(c).toFixed(4)));
+  }
+  // One-line statement of how <j0> and <j2> enter f(Q) at the current Q.
+  function showModel(opts,point){
+    const box=$('magffModel'); if(!box) return;
+    const n3=x=>Number(x).toFixed(3);
+    box.textContent=`f(Q) = ⟨j0⟩ + c⟨j2⟩, c = ${Number(Number(opts.j2Weight).toFixed(4))}, ⟨j0⟩ = ${n3(point.j0)}, ⟨j2⟩ = ${n3(point.j2)}.`;
+  }
   function setError(error){
+    $('magffModel')?.replaceChildren();
     info.textContent=String(error?.message||error);
     info.classList.add('error');
   }
@@ -179,7 +192,9 @@ export function initializeMagneticFormFactorUI(){
       const curve=grid.map(x=>computeMagneticFormFactor(ion.value,x,opts));
       const values=curve.map(point=>point.fSquared);
       if(values.some(v=>!Number.isFinite(v)))throw new Error('Cannot calculate form factor for this ion.');
-      const {f,fSquared}=computeMagneticFormFactor(ion.value,q,opts);
+      const {f,fSquared,j0,j2}=computeMagneticFormFactor(ion.value,q,opts);
+      syncWeightField(opts.j2Weight);
+      showModel(opts,{q,f,j0,j2});
       qSlider.value=String(q);
       intensityField.value=fmt(fSquared);
       exportRows=grid.map((x,i)=>[x,curve[i].f,values[i]]);
@@ -295,7 +310,8 @@ export function initializeMagneticFormFactorUI(){
     if(search && document.activeElement!==search)search.value=displayIon(ion.value);
   }
   config.addEventListener('change',()=>{syncFreeIonAvailability();render();});
-  mode.addEventListener('change',()=>{syncFreeIonAvailability();weightLabel.classList.toggle('hidden',mode.value!=='custom');render();});
+  // Switching to Custom keeps the value in use as the starting point.
+  mode.addEventListener('change',()=>{syncFreeIonAvailability();render();});
   weight.addEventListener('input',render);
   qField.addEventListener('input',render);
   qSlider.addEventListener('input',()=>{qField.value=qSlider.value;render();});
