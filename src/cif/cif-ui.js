@@ -75,6 +75,13 @@ export function createCifUI(deps){
   // already filled the tables. app.js calls this once every restore is done so
   // the tables always reflect the restored conditions.
   function refreshAfterStateRestore(){
+    // The generic restore writes input values without events and skips
+    // read-only (symmetry-constrained) cell fields, so Sample and Structure
+    // editor cells can disagree (e.g. hexagonal a restored, b not). Re-sync
+    // them: a loaded CIF's editor draft is authoritative, otherwise Sample.
+    const reference=ctx.state.liveNuclearCellReference;
+    fn.syncCrystallographicCell(deps.getSelectedCifStructure?.()?'editor':'sample',{refresh:false,commit:true});
+    ctx.state.liveNuclearCellReference=reference;
     fn.recalculateGeneratedReflections();
   }
 

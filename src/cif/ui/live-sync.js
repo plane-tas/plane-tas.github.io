@@ -99,6 +99,9 @@ function syncCrystallographicCell(origin,{refresh=true,changedId="",commit=false
       if(from && to) to.value=from.value;
     }
     fn.updateCifSpaceGroupInfo();
+    // A Sample-side edit also changes the Generator cell; keep its saved draft
+    // in step so both sides agree after a reload.
+    if(sampleOrigin) fn.saveCifGeneratorAtomsState?.();
     cifState.liveNuclearCellReference="editor";
     if(refresh){
       updateLiveEditorNuclearSource();

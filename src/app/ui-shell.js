@@ -459,6 +459,10 @@ function globalUIPersistentControls(){
     if(['button','submit','file'].includes(type)) return false;
     if(el.readOnly) return false; // derived outputs are recomputed, not restored
     if(el.dataset.noPersist!==undefined) return false; // per-file choices (magnetic ion)
+    // Spins and Structure-view controls belong to the per-structure viewer
+    // state (tas-simulator-structure-viewer-v2). Restoring an older global
+    // snapshot here, without change events, made them disagree with it.
+    if(/^(cifMoment|cifSpin|cifRange|cifUnitCell|cifShowXYZ)/.test(el.id)) return false;
     return true;
   });
 }

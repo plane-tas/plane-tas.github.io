@@ -197,6 +197,15 @@ function discardStructureEditingSession(){
   $("cifAtomColorRows")?.replaceChildren();
   cifState.structureControlSignature="";
 }
+// Spin rows built before a restore hold stale checkbox/XYZ values, and
+// updateMagneticMomentRows() would copy them back over the restored settings.
+// Drop them, and show the restored Spins controls (Direction, arrows, Mode,
+// structure type/axis/chirality) instead of whatever the page started with.
+function syncRestoredSpinControls(){
+  $("cifMagMomentRows")?.replaceChildren();
+  cifState.structureControlSignature="";
+  fn.prepareStructureViewerControls?.();
+}
 function resetStructureViewerStateToDefaults(){
   fn.clearSpinRowSelection({redraw:false});
   cifState.visibleSpinSelectionSites.clear();
@@ -242,6 +251,7 @@ function resetStructureViewerStateToDefaults(){
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value="one";
     const referenceSelect=$("cifUnitCellReference"); if(referenceSelect) referenceSelect.value="crystallographic";
     const xyzSelect=$("cifShowXYZ"); if(xyzSelect) xyzSelect.value="show";
+    syncRestoredSpinControls();
   }finally{ restoringStructureViewer=false; }
 }
 function saveStructureViewerState(){
@@ -398,6 +408,7 @@ function restoreStructureViewerState(){
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value=cifState.structureUnitCellMode;
     const referenceSelect=$("cifUnitCellReference"); if(referenceSelect) referenceSelect.value=cifState.structureUnitCellReference;
     const xyzSelect=$("cifShowXYZ"); if(xyzSelect) xyzSelect.value=cifState.structureShowXYZ?"show":"hide";
+    syncRestoredSpinControls();
     return true;
   }finally{ restoringStructureViewer=false; }
 }

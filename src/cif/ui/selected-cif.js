@@ -183,7 +183,10 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
     // auto-enabled checkboxes saved by earlier versions for the same CIF.
     // A newly imported nonmagnetic CIF has no magnetic moments. Never
     // inherit old nonzero vectors from browser storage or previous structures.
-    cifState.structureMomentSettings.clear();
+    // Startup restoration of the SAME file (persist=false) keeps the spins
+    // the user set; restoreStructureViewerState() already rejected saves of
+    // other structures.
+    if(persist) cifState.structureMomentSettings.clear();
     // Old rows can otherwise override the reset via currentMomentSettings().
     $("cifMagMomentRows")?.replaceChildren();
     cifState.structureControlSignature="";
