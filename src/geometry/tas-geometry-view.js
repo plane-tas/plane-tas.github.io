@@ -317,6 +317,13 @@ function renderGeometry(cache,index=0){
   // The fixed-energy side is the visual scale reference: Ef fixed -> kf fixed,
   // Ei fixed -> ki fixed.  Flight-path leg lengths remain schematic/equal.
   let kiVectorLen=0.50*L*SAMPLE_REGION_SCALE, kfVectorLen=0.50*L*SAMPLE_REGION_SCALE, qVectorLen=1.38*SAMPLE_REGION_SCALE;
+  // Longest displayed ki/kf/Q arrow: Q of elastic back-scattering at the
+  // fixed-k scale.  Larger (strongly inelastic, e.g. cold TAS) vectors are
+  // shrunk together, keeping their ratios, so they never rescale the figure.
+  const VECTOR_MAX_LEN=2*0.50*L*SAMPLE_REGION_SCALE;
+  // Canonical (+-+) points of the instrument over the whole hbar-omega range
+  // of the Q-E map and every S2, used to fix the figure scale (below).
+  let envelopeCanonical=[];
 
   if(target){
     // Build one canonical (+-+) drawing, then make -+- an exact left/right
@@ -372,10 +379,52 @@ function renderGeometry(cache,index=0){
     // flight-path geometry.  The fixed-energy wave vector always has the same
     // displayed length, and the other beam/Q vectors use the identical scale.
     const kFixed=(cache.energyMode==="Ef fixed") ? kf : ki;
-    const vectorScale=(Number.isFinite(kFixed) && kFixed>1e-12) ? (SAMPLE_REGION_SCALE*0.50*L/kFixed) : 1;
+    let vectorScale=(Number.isFinite(kFixed) && kFixed>1e-12) ? (SAMPLE_REGION_SCALE*0.50*L/kFixed) : 1;
+    const longest=vectorScale*Math.max(ki,kf,qMag);
+    if(longest>VECTOR_MAX_LEN) vectorScale*=VECTOR_MAX_LEN/longest;
     kiVectorLen=vectorScale*ki;
     kfVectorLen=vectorScale*kf;
     qVectorLen=vectorScale*qMag;
+
+    // Envelope of the drawing for this instrument and energy setting: the
+    // monochromator and analyzer take-off angles for every hbar-omega of the
+    // Q-E map (Bragg's law from the present angles) and S2 over the
+    // instrument's S2 min to effective S2 max.
+    // Fitting the view to this envelope, instead of only to the present
+    // target, keeps the scale and the monochromator fixed while sliders move.
+    try{
+      const tauM=2*ki*Math.sin(Math.abs(deg2rad(angles.m2))/2), sgnM=Math.sign(angles.m2)||1;
+      const tauA=2*kf*Math.sin(Math.abs(deg2rad(angles.a2))/2), sgnA=Math.sign(angles.a2)||1;
+      const hwValues=(cache.hwList||[]).map(Number).filter(Number.isFinite);
+      const hwMin=Math.min(0,...hwValues), hwMax=Math.max(0,...hwValues);
+      const E0=cache.energyMode==="Ei fixed" ? Number(cache.Ei) : Number(cache.Ef);
+      // S2 limits of the instrument (sidebar), plus the present S2.
+      const s2LoIn=Math.abs(Number($("S2min")?.value)), s2HiIn=Math.abs(Number($("S2maxEffective")?.value));
+      const s2Lo=Number.isFinite(s2LoIn)?Math.min(180,s2LoIn):0;
+      const s2Hi=Number.isFinite(s2HiIn)&&s2HiIn>s2Lo?Math.min(180,s2HiIn):180;
+      const s2List=[...Array.from({length:13},(_,j)=>s2Lo+(s2Hi-s2Lo)*j/12),Math.abs(Number(angles.s2))].filter(Number.isFinite);
+      for(let i=0;i<=8;i++){
+        const w=hwMin+(hwMax-hwMin)*i/8;
+        const Ei=cache.energyMode==="Ei fixed" ? E0 : E0+w, Ef=cache.energyMode==="Ei fixed" ? E0-w : E0;
+        if(!(Ei>0 && Ef>0)) continue;
+        const k1=Math.sqrt(Ei/2.072), k2=Math.sqrt(Ef/2.072);
+        if(tauM/(2*k1)>1 || tauA/(2*k2)>1) continue;
+        const tKi=deg2rad(sgnM*2*Math.asin(tauM/(2*k1))*180/Math.PI);
+        const a2w=sgnA*2*Math.asin(tauA/(2*k2))*180/Math.PI;
+        const s=[mono[0]+SAMPLE_REGION_SCALE*L*Math.cos(tKi),mono[1]+SAMPLE_REGION_SCALE*L*Math.sin(tKi)];
+        envelopeCanonical.push(s);
+        for(const s2 of s2List){
+          const tKf=tKi-deg2rad(s2);
+          const an=[s[0]+SAMPLE_REGION_SCALE*0.90*L*Math.cos(tKf),s[1]+SAMPLE_REGION_SCALE*0.90*L*Math.sin(tKf)];
+          if(isDiffractometer){
+            envelopeCanonical.push([s[0]+SAMPLE_REGION_SCALE*L*Math.cos(tKf),s[1]+SAMPLE_REGION_SCALE*L*Math.sin(tKf)]);
+          }else{
+            const tOut=tKf+deg2rad(a2w);
+            envelopeCanonical.push(an,[an[0]+0.80*L*Math.cos(tOut),an[1]+0.80*L*Math.sin(tOut)]);
+          }
+        }
+      }
+    }catch(_err){ envelopeCanonical=[]; }
 
     // Keep the calculated coordinates in one canonical (+-+) frame.
     // For -+-, the Plotly x-axis is reversed below.  Reversing the viewport,
@@ -408,6 +457,8 @@ function renderGeometry(cache,index=0){
   anaPlaneAngle-=Math.PI/2;
   qAngle-=Math.PI/2;
 
+  let envelope=envelopeCanonical.map(rotateCCW90);
+  if(displaySense==="-+-") envelope=envelope.map(([x,y])=>[-x,y]);
   if(displaySense==="-+-") {
     const reflectX=([x,y])=>[-x,y];
     source=reflectX(source); mono=reflectX(mono); sample=reflectX(sample);
@@ -711,7 +762,13 @@ function renderGeometry(cache,index=0){
   // Reserve the same orientation-guide envelope for both sample modes. Powder
   // hides U/V, but retaining this fit radius keeps the TAS drawing scale and
   // monochromator anchor consistent with the Single-crystal view.
-  const radial=Math.max(darkRadius,uvVectorLen,qVectorLen,kiVectorLen,kfVectorLen);
+  // Fixed sample-region radius (not the present vector lengths), so the
+  // figure does not rescale with hbar-omega or Q.
+  const outerDarkRadius=darkRadius*(1+0.1*(outerDarkSlot-1));
+  const radial=Math.max(outerDarkRadius*1.06,uvVectorLen,VECTOR_MAX_LEN,qVectorLen,kiVectorLen,kfVectorLen);
+  // Instrument envelope over the hbar-omega range and all S2, with room for
+  // the Analyzer / Detector captions around each possible position.
+  for(const p of envelope) fitPoints.push(p,[p[0]-1.9,p[1]-0.7],[p[0]+1.9,p[1]+0.7]);
   fitPoints.push(
     [sample[0]-radial,sample[1]],[sample[0]+radial,sample[1]],
     [sample[0],sample[1]-radial],[sample[0],sample[1]+radial]
