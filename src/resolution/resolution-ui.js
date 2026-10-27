@@ -40,6 +40,32 @@ export function createResolutionUI(deps){
 
 let scanResults=[];
 let scanResolutionPlotLimits=null;
+let lastResolutionRender=null;
+// Display frame: 'q' (Q∥, Q⊥, E, W), 'orthogonal' (U, U⊥in, E, U⊥out) or
+// 'lattice' (U, V, E, W).
+function resolutionCoordinates(){
+  const v=$('resolutionCoordinates')?.value;
+  return v==='lattice'||v==='q' ? v : 'orthogonal';
+}
+// Results of one calculation in the chosen frame (same fields as the core's
+// orthogonal result: display, lim, ellipses, displayAxes, qNorms).
+function resolutionFrame(r){
+  const c=resolutionCoordinates();
+  if(c==='lattice' && r?.lattice) return r.lattice;
+  if(c==='q' && r?.qframe) return r.qframe;
+  return r;
+}
+// Names of the three Q axes in the chosen frame.
+function resolutionAxisNames(r){
+  const c=resolutionCoordinates();
+  if(c==='q' && r?.qframe) return ['Q∥','Q⊥','W'];
+  if(c==='lattice' && r?.lattice) return ['U','V','W'];
+  return ['U','U⊥in','U⊥out'];
+}
+// Lattice U–V plot: 'shape' keeps the true ellipse shape and tilts the V
+// axis; 'coefficients' plots the U and V coefficients on square axes.
+const RESOLUTION_UV_VIEW_KEY='tas-resolution-uv-view-v1';
+let resolutionUVView=(()=>{ try{ return localStorage.getItem(RESOLUTION_UV_VIEW_KEY)==='coefficients'?'coefficients':'shape'; }catch(_e){ return 'shape'; } })();
 function resolutionIsUnavailable(){
   // updateCalcMode() calls this during startup before instrument JSON files
   // have been loaded.  An instrument is not selectable at that point.
@@ -192,7 +218,9 @@ const RESOLUTION_MINOR_GRID={showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks
 // Q axes: only three labelled ticks (-a, 0, a) with a round a, so the small
 // δQ numbers are never crowded or rotated.  Minor grid lines subdivide a.
 function resolutionQTicks(lim){
-  const raw=0.8*Number(lim);
+  // Largest round step within 90 % of the half range (0.05 rather than 0.025
+  // for a 0.06 half range), so the labels match the ellipse size.
+  const raw=0.9*Number(lim);
   if(!(raw>0) || !Number.isFinite(raw)) return {minor:{...RESOLUTION_MINOR_GRID}};
   const decade=Math.pow(10,Math.floor(Math.log10(raw)));
   const mantissa=[1,2,2.5,5,10].filter(m=>m*decade<=raw*(1+1e-9)).pop()||1;
@@ -232,6 +260,11 @@ function resolutionPlotLimitsFromEntries(entries){
   const U=maxLim('U'), V=maxLim('V'), W=maxLim('W'), E=maxLim('E');
   return {U,V,W,E};
 }
+// Plot limits of the entries in the chosen display frame.
+function resolutionFrameLimits(entries){
+  const valid=Array.isArray(entries)?entries.filter(Boolean):[];
+  return resolutionPlotLimitsFromEntries(valid.map(e=>({result:{lim:resolutionFrame(e.result).lim}})));
+}
 function formatAngle(value,absolute=false){
   if(value===null || value===undefined || !Number.isFinite(Number(value))) return '';
   const v=absolute ? Math.abs(Number(value)) : Number(value);
@@ -245,27 +278,27 @@ function formatResolutionAxis(v){
   }).join(', ')})`;
 }
 function resolutionDisplayAxes(r,lc){
-  return r.displayAxes || {U:lc.sv1,V:lc.sv2,W:lc.sv3};
+  return resolutionFrame(r)?.displayAxes || r.displayAxes || {U:lc.sv1,V:lc.sv2,W:lc.sv3};
 }
 // One-line FWHM summary shared by the Resolution tab and Angle calculation.
 // Values in parentheses are the coherent (slice) widths.
 function resolutionWidthsHtml(r,unitMode,lc){
   const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
-  const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
-  return `<b>Resolution</b> δQ//${fmtAxis(ax.U)}=${r.display.U.toFixed(4)} (${r.display.Ucoh.toFixed(4)}) ${qUnit}, `+
-    `δQ//${fmtAxis(ax.V)}=${r.display.V.toFixed(4)} (${r.display.Vcoh.toFixed(4)}) ${qUnit}, `+
-    `δQ//${fmtAxis(ax.W)}=${r.display.W.toFixed(4)} (${r.display.Wcoh.toFixed(4)}) ${qUnit}, `+
-    `δℏω=${r.display.E.toFixed(4)} (${r.display.Ecoh.toFixed(4)}) meV`;
+  const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis, d=resolutionFrame(r).display;
+  return `<b>Resolution</b> δQ//${fmtAxis(ax.U)}=${d.U.toFixed(4)} (${d.Ucoh.toFixed(4)}) ${qUnit}, `+
+    `δQ//${fmtAxis(ax.V)}=${d.V.toFixed(4)} (${d.Vcoh.toFixed(4)}) ${qUnit}, `+
+    `δQ//${fmtAxis(ax.W)}=${d.W.toFixed(4)} (${d.Wcoh.toFixed(4)}) ${qUnit}, `+
+    `δℏω=${d.E.toFixed(4)} (${d.Ecoh.toFixed(4)}) meV`;
 }
 // Plotly's built-in double-click "reset" returns to the axis ranges of the
 // plot's first draw (an earlier point), which looks like a random scale.
 // Disable it and return to the ranges of the current calculation instead.
-function reactResolutionPlot(id,traces,layout){
+function reactResolutionPlot(id,traces,layout,after=null){
   const gd=$(id);
   if(!gd) return;
   gd.__tasResolutionView={x:layout.xaxis.range.slice(),y:layout.yaxis.range.slice()};
   Promise.resolve(Plotly.react(gd,traces,layout,{responsive:true,doubleClick:false}))
-    .then(()=>installResolutionDoubleClick(gd))
+    .then(()=>{installResolutionDoubleClick(gd); if(after) after(gd);})
     .catch(err=>console.warn('Resolution plot warning:',err));
 }
 function installResolutionDoubleClick(gd){
@@ -285,43 +318,203 @@ const RESOLUTION_PLOT_IDS={UE:'plotUE',VE:'plotVE',UV:'plotUV',WE:'plotWE'};
 function renderResolutionPlots(r,unitMode,lc,limits,ids=RESOLUTION_PLOT_IDS,fonts=RESOLUTION_PLOT_FONTS){
   const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
   const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
+  const frame=resolutionFrame(r), el=frame.ellipses;
   const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δℏω`;
   reactResolutionPlot(
     ids.UE,
-    [traceEllipse(r.ellipses.projUE,'projection'),traceEllipse(r.ellipses.sliceUE,'slice','dash')],
+    [traceEllipse(el.projUE,'projection'),traceEllipse(el.sliceUE,'slice','dash')],
     baseLayout(qeTitle(ax.U),`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δℏω (meV)',limits.U,limits.E,false,ids.UE,fonts),
   );
 
   reactResolutionPlot(
     ids.VE,
-    [traceEllipse(r.ellipses.projVE,'projection'),traceEllipse(r.ellipses.sliceVE,'slice','dash')],
+    [traceEllipse(el.projVE,'projection'),traceEllipse(el.sliceVE,'slice','dash')],
     baseLayout(qeTitle(ax.V),`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δℏω (meV)',limits.V,limits.E,false,ids.VE,fonts),
   );
 
   reactResolutionPlot(
     ids.WE,
-    [traceEllipse(r.ellipses.projWE,'projection'),traceEllipse(r.ellipses.sliceWE,'slice','dash')],
+    [traceEllipse(el.projWE,'projection'),traceEllipse(el.sliceWE,'slice','dash')],
     baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δℏω (meV)',limits.W,limits.E,false,ids.WE,fonts),
   );
 
-  // Scattering-plane display scaling:
-  // - r.l.u.: U and V are different reciprocal-lattice coordinates, so give
-  //   each axis its own resolution range and do not force a 1:1 plot aspect.
-  // - Å^-1: both axes are physical reciprocal-space lengths, so keep a common
-  //   range and a 1:1 aspect ratio.
-  const uvEqual=(unitMode!=='rlu');
-  const uLim=uvEqual ? Math.max(limits.U,limits.V) : limits.U;
-  const vLim=uvEqual ? uLim : limits.V;
-  reactResolutionPlot(
-    ids.UV,
-    [traceEllipse(r.ellipses.projUV,'projection'),traceEllipse(r.ellipses.sliceUV,'slice','dash')],
-    baseLayout(
-      `δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,
-      `δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,
-      `δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,
-      uLim,vLim,uvEqual,ids.UV,fonts,true
-    ),
+  const lattice=resolutionCoordinates()==='lattice' && r.lattice;
+  const oblique=!!lattice && Math.abs(r.lattice.vDirection.cos)>1e-6;
+  if(ids===RESOLUTION_PLOT_IDS) syncResolutionUVHead(oblique);
+  const uvGd=$(ids.UV); if(uvGd) uvGd.__tasObliqueGrid=null;
+  if(oblique && resolutionUVView==='shape'){
+    renderObliqueUVPlot(r,unitMode,ax,ids.UV,fonts,limits);
+    return;
+  }
+  // Each axis keeps its own resolution range (r.l.u. and Å⁻¹ alike), so the
+  // ellipse fills the panel; a forced 1:1 aspect made Plotly widen the U
+  // range to fill the wide panel.
+  const uvEqual=false;
+  const uLim=limits.U, vLim=limits.V;
+  const layout=baseLayout(
+    `δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,
+    `δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,
+    `δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,
+    uLim,vLim,uvEqual,ids.UV,fonts,true
   );
+  reactResolutionPlot(ids.UV,[traceEllipse(el.projUV,'projection'),traceEllipse(el.sliceUV,'slice','dash')],layout);
+}
+// Round step for resolution axes: the largest 1, 2, 2.5 or 5 x 10^n that
+// still fits inside 90 % of the half range, so the labelled ticks sit near
+// the ellipse size (e.g. 0.05 rather than 0.025 for a 0.06 half range).
+function resolutionNiceStep(halfRange){
+  const raw=0.9*Number(halfRange);
+  if(!(raw>0) || !Number.isFinite(raw)) return 1;
+  const decade=Math.pow(10,Math.floor(Math.log10(raw)));
+  const mantissa=[1,2,2.5,5,10].filter(m=>m*decade<=raw*(1+1e-9)).pop()||1;
+  return Number((mantissa*decade).toPrecision(6));
+}
+// Oblique U/V grid for the true-shape U–V plot, built like the Constant E
+// map in r.l.u.: the plot is physically orthonormal, the u/v = constant lines
+// are drawn as shapes, and the axis ticks are placed where those lines meet
+// the bottom (U) and left (V) frame edges, with the axis titles outside.
+// basis: physical (x, y) of one unit of U and of V in the selected unit.
+function resolutionObliqueGrid(basis,xRange,yRange,uStep,vStep){
+  const {ux,uy,vx,vy}=basis, det=ux*vy-uy*vx;
+  const out={shapes:[],xTickVals:[],xTickText:[],yTickVals:[],yTickText:[]};
+  if(!(Math.abs(det)>1e-15)) return out;
+  const xmin=Math.min(...xRange),xmax=Math.max(...xRange),ymin=Math.min(...yRange),ymax=Math.max(...yRange);
+  const toUV=(x,y)=>[(x*vy-y*vx)/det,(ux*y-uy*x)/det];
+  const toXY=(u,v)=>[ux*u+vx*v,uy*u+vy*v];
+  const corners=[[xmin,ymin],[xmin,ymax],[xmax,ymin],[xmax,ymax]].map(p=>toUV(...p));
+  const umin=Math.min(...corners.map(p=>p[0])),umax=Math.max(...corners.map(p=>p[0]));
+  const vmin=Math.min(...corners.map(p=>p[1])),vmax=Math.max(...corners.map(p=>p[1]));
+  // Steps from the visible U and V ranges unless given.
+  // (U along x: the horizontal half range; V: the vertical half range over
+  // its y component), so the labelled ticks match the frame size.
+  if(!(uStep>0)) uStep=resolutionNiceStep((xmax-xmin)/2/Math.max(Math.abs(ux),1e-15));
+  if(!(vStep>0)) vStep=resolutionNiceStep((ymax-ymin)/2/Math.max(Math.abs(vy),1e-15));
+  const spanU=(umax-umin)+2*uStep, spanV=(vmax-vmin)+2*vStep;
+  const fmt=v=>Math.abs(v)<1e-12?'0':String(Number(v.toPrecision(6)));
+  const eps=1e-9*Math.max(xmax-xmin,ymax-ymin,1e-12);
+  const line=(origin,delta,style)=>({type:'line',xref:'x',yref:'y',layer:'below',
+    x0:origin[0]-delta[0],y0:origin[1]-delta[1],x1:origin[0]+delta[0],y1:origin[1]+delta[1],line:style});
+  const minorStyle={color:'#e8ebee',width:1}, majorStyle={color:'#bcc4cd',width:1}, zeroStyle={color:'#444',width:1};
+  const divisions=step=>{const m=step/Math.pow(10,Math.floor(Math.log10(step)));return Math.abs(m-2)<1e-6?4:5;};
+  const onMajor=(value,step)=>Math.abs(value/step-Math.round(value/step))<1e-6;
+  const uMinor=uStep/divisions(uStep), vMinor=vStep/divisions(vStep);
+  for(let n=Math.ceil(umin/uMinor-1e-9),i=0;n*uMinor<=umax+1e-12&&i<400;n++,i++){
+    const u=n*uMinor; if(!onMajor(u,uStep)) out.shapes.push(line(toXY(u,(vmin+vmax)/2),[vx*spanV/2,vy*spanV/2],minorStyle));
+  }
+  for(let n=Math.ceil(vmin/vMinor-1e-9),i=0;n*vMinor<=vmax+1e-12&&i<400;n++,i++){
+    const v=n*vMinor; if(!onMajor(v,vStep)) out.shapes.push(line(toXY((umin+umax)/2,v),[ux*spanU/2,uy*spanU/2],minorStyle));
+  }
+  for(let n=Math.ceil(umin/uStep-1e-9),i=0;n*uStep<=umax+1e-12&&i<60;n++,i++){
+    const u=n*uStep;
+    out.shapes.push(line(toXY(u,(vmin+vmax)/2),[vx*spanV/2,vy*spanV/2],n===0?zeroStyle:majorStyle));
+    if(Math.abs(vy)>1e-15){
+      const v=(ymin-uy*u)/vy, x=ux*u+vx*v;
+      if(x>=xmin-eps && x<=xmax+eps){ out.xTickVals.push(Math.max(xmin,Math.min(xmax,x))); out.xTickText.push(fmt(u)); }
+    }
+  }
+  for(let n=Math.ceil(vmin/vStep-1e-9),i=0;n*vStep<=vmax+1e-12&&i<60;n++,i++){
+    const v=n*vStep;
+    out.shapes.push(line(toXY((umin+umax)/2,v),[ux*spanU/2,uy*spanU/2],n===0?zeroStyle:majorStyle));
+    if(Math.abs(ux)>1e-15){
+      const u=(xmin-vx*v)/ux, y=uy*u+vy*v;
+      if(y>=ymin-eps && y<=ymax+eps){ out.yTickVals.push(Math.max(ymin,Math.min(ymax,y))); out.yTickText.push(fmt(v)); }
+    }
+  }
+  out.shapes.push({type:'rect',xref:'x domain',yref:'y domain',x0:0,x1:1,y0:0,y1:1,line:{color:'#586472',width:1},fillcolor:'rgba(0,0,0,0)',layer:'above'});
+  return out;
+}
+// True-shape U–V plot for non-orthogonal U and V: the ellipse is drawn in
+// physical (Å⁻¹) coordinates, x along U and y along the in-plane normal to U,
+// with an oblique U/V grid labelled in the selected unit.
+function renderObliqueUVPlot(r,unitMode,ax,id,fonts,limits){
+  const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹', fmtAxis=formatResolutionAxis;
+  const rlu=unitMode==='rlu';
+  const nU=rlu?r.qNorms.U:1, nVorth=rlu?r.qNorms.V:1, nV=rlu?r.lattice.qNorms.V:1;
+  const {cos,sin}=r.lattice.vDirection;
+  const phys=p=>({x:p.x.map(v=>v*nU),y:p.y.map(v=>v*nVorth)});
+  const proj=phys(r.ellipses.projUV), slice=phys(r.ellipses.sliceUV);
+  const basis={ux:nU,uy:0,vx:nV*cos,vy:nV*sin};
+  const toAB=(x,y)=>{const b=y/sin, a=x-b*cos; return [formatResolutionCoordinate(a/nU),formatResolutionCoordinate(b/nV)];};
+  const trace=(p,name,dash,color)=>({x:p.x,y:p.y,mode:'lines',name,line:{dash,color},
+    customdata:p.x.map((x,i)=>toAB(x,p.y[i])),
+    hovertemplate:`U: %{customdata[0]}<br>V: %{customdata[1]} (${qUnit})<extra></extra>`});
+  // Same ranges as the U–V view: U over ±limits.U and V over ±limits.V
+  // (the V range maps to y through the V component normal to U).  In r.l.u.
+  // and Å⁻¹ alike the two axes keep their own scales, as in the U–V
+  // view.  The x range is widened only when the tilted ellipse would
+  // otherwise be cut off.
+  const absMax=(...a)=>Math.max(0,...a.flat().map(Math.abs).filter(Number.isFinite));
+  const limU=Number(limits?.U)>0?Number(limits.U):0, limV=Number(limits?.V)>0?Number(limits.V):0;
+  const ellX=absMax(proj.x,slice.x), ellY=absMax(proj.y,slice.y);
+  const equal=false;
+  let halfX=Math.max(limU*nU,1.05*ellX), halfY=Math.max(limV*nV*Math.abs(sin),1.05*ellY);
+  if(!(halfX>0)) halfX=1; if(!(halfY>0)) halfY=1;
+  const xRange=[-halfX,halfX], yRange=[-halfY,halfY];
+  const grid=resolutionObliqueGrid(basis,xRange,yRange);
+  const axis=(title,range,vals,text)=>({title:{text:title,standoff:13,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},
+    range:range.slice(),tickmode:'array',tickvals:vals,ticktext:text,ticks:'outside',showgrid:false,zeroline:false,showline:false});
+  const layout={
+    uirevision:`${id}-oblique`,
+    title:{text:`δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,font:{size:fonts.title}},
+    margin:fonts.margin || {l:88,r:22,t:52,b:94,autoexpand:true},
+    xaxis:axis(`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,xRange,grid.xTickVals,grid.xTickText),
+    yaxis:{...axis(`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,yRange,grid.yTickVals,grid.yTickText),...(equal?{scaleanchor:'x',scaleratio:1}:{})},
+    shapes:grid.shapes,hovermode:'closest',hoverdistance:18,showlegend:false
+  };
+  const gd=$(id);
+  if(gd) gd.__tasObliqueGrid={basis};
+  reactResolutionPlot(id,[trace(proj,'projection','solid','#1f77b4'),trace(slice,'slice','dash','#ff7f0e')],layout,refreshObliqueGrid);
+  // Re-label the oblique grid after zooming, panning or resizing.
+  if(gd && !gd.__tasObliqueRelayout && typeof gd.on==='function'){
+    gd.__tasObliqueRelayout=true;
+    gd.on('plotly_relayout',event=>{
+      if(!Object.keys(event||{}).some(k=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(k))) return;
+      refreshObliqueGrid(gd);
+    });
+  }
+}
+// Rebuild the oblique grid for the axis ranges Plotly actually drew.
+function refreshObliqueGrid(gd){
+  const g=gd?.__tasObliqueGrid;
+  if(!g || gd.__tasObliqueBusy) return;
+  const xr=gd._fullLayout?.xaxis?.range, yr=gd._fullLayout?.yaxis?.range;
+  if(!Array.isArray(xr)||!Array.isArray(yr)) return;
+  const grid=resolutionObliqueGrid(g.basis,xr,yr);
+  gd.__tasObliqueBusy=true;
+  Promise.resolve(Plotly.relayout(gd,{shapes:grid.shapes,'xaxis.tickvals':grid.xTickVals,'xaxis.ticktext':grid.xTickText,
+    'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText}))
+    .catch(()=>{}).finally(()=>{gd.__tasObliqueBusy=false;});
+}
+// The U–V view selector (Calculation point toolbar) applies only to the
+// lattice frame with non-orthogonal U and V.
+function syncResolutionUVHead(show){
+  // The selector sits in the Calculation point toolbar, so toggling it never
+  // changes the plot sizes; it is enabled only when it has an effect.
+  const select=$('resolutionUVView');
+  if(!select) return;
+  if(select.value!==resolutionUVView) select.value=resolutionUVView;
+  select.disabled=!show;
+  select.title=show?'':'Only for U, V, E, W with U not perpendicular to V';
+}
+function bindResolutionUVView(){
+  const select=$('resolutionUVView');
+  if(!select || select.dataset.bound) return;
+  select.dataset.bound='1';
+  select.value=resolutionUVView;
+  select.addEventListener('change',()=>{
+    resolutionUVView=select.value==='coefficients'?'coefficients':'shape';
+    try{ localStorage.setItem(RESOLUTION_UV_VIEW_KEY,resolutionUVView); }catch(_e){}
+    rerenderResolution();
+  });
+}
+// Re-draw the last result in the current display frame (no recalculation).
+function rerenderResolution(){
+  if(!lastResolutionRender) return;
+  const {entry,indexInfo,scan}=lastResolutionRender;
+  if(scan && scanResults.length){
+    scanResolutionPlotLimits=resolutionFrameLimits(scanResults);
+    renderResolutionScan(Number($('scanSlider')?.value)||1);
+  }else renderResolution(entry,indexInfo,resolutionFrame(entry.result).lim);
 }
 
 function renderResolution(entry,indexInfo='',plotLimits=null){
@@ -330,8 +523,9 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     return;
   }
   const {result:r,calc,unitMode,lc,angles}=entry;
-  const limits=plotLimits || r.lim;
-  const ax=resolutionDisplayAxes(r,lc);
+  const limits=plotLimits || resolutionFrame(r).lim;
+  lastResolutionRender={entry,indexInfo,scan:indexInfo.startsWith('| scan')};
+  const ax=resolutionDisplayAxes(r,lc), axisNames=resolutionAxisNames(r);
   const fmtAxis=formatResolutionAxis;
 
   $('result').classList.remove('hidden');
@@ -346,7 +540,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
     `ℏω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
     `<div>${resolutionWidthsHtml(r,unitMode,lc)}</div>`+
-    `<div><b>Resolution axes</b> U=${fmtAxis(ax.U)}, V=${fmtAxis(ax.V)}, W=${fmtAxis(ax.W)}</div>`+
+    `<div><b>Resolution axes</b> ${axisNames[0]}=${fmtAxis(ax.U)}, ${axisNames[1]}=${fmtAxis(ax.V)}, ${axisNames[2]}=${fmtAxis(ax.W)}</div>`+
     `<div><b>Angles (deg)</b> M1=${formatAngle(shown.m1)}, M2=${formatAngle(shown.m2)}, `+
     `S1=${formatAngle(shown.s1)}, S2=${formatAngle(shown.s2)}, `+
     `A1=${formatAngle(shown.a1)}, A2=${formatAngle(shown.a2)}`+
@@ -357,8 +551,10 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   // In this display V denotes the automatically orthogonalized in-plane V.
   $('matrix').textContent=
     `Local matrix order (Q∥, Q⊥, E, Qout)\n${matrixText(r.RM)}\n\n`+
-    `U-based matrix order (U, U⊥ (in-plane), E, U⊥ (out-of-plane))\n${matrixText(r.RM_U)}`;
+    `U-based matrix order (U, U⊥in, E, U⊥out)\n${matrixText(r.RM_U)}`+
+    (r.lattice ? `\n\nLattice matrix order (U, V, E, W), oblique coordinates along unit U, V, W\n${matrixText(r.lattice.RM)}` : '');
 
+  bindResolutionUVView();
   renderResolutionPlots(r,unitMode,lc,limits);
 }
 function resolutionScanPoints(){
@@ -414,7 +610,7 @@ function doSingleResolution(){
     scanResolutionPlotLimits=null;
     $('scanNav').classList.add('hidden');
     // Single-point Calc: always fit to this calculation's resolution ellipse.
-    renderResolution(e,'',e.result.lim);
+    renderResolution(e,'',resolutionFrame(e.result).lim);
     $('calcSingleResolution')?.classList.remove('needs-calc');
   }catch(e){showResolutionCalculationWarning(e);}
 }
@@ -431,7 +627,7 @@ function doScanResolution(){
     // Use the largest required extent across the complete scan.  This is
     // especially important for constant-E Q scans, where the ellipse shape can
     // change strongly with Q; the slider must not rescale the plot underneath it.
-    scanResolutionPlotLimits=resolutionPlotLimitsFromEntries(scanResults);
+    scanResolutionPlotLimits=resolutionFrameLimits(scanResults);
     $('scanSlider').min=1;
     $('scanSlider').max=n;
     $('scanSlider').value=1;
@@ -452,15 +648,18 @@ function renderResolutionScan(i){
   i=Math.max(1,Math.min(scanResults.length,Number(i)));
   $('scanSlider').value=i;
   $('scanIndex').textContent=`${i} / ${scanResults.length}`;
-  renderResolution(scanResults[i-1],`| scan ${i}/${scanResults.length}`,scanResolutionPlotLimits || scanResults[i-1].result.lim);
+  renderResolution(scanResults[i-1],`| scan ${i}/${scanResults.length}`,scanResolutionPlotLimits || resolutionFrame(scanResults[i-1].result).lim);
 }
 
 function bindResolutionManualCalculation(){
   const panel=$('resolutionPanel');
   if(!panel || panel.dataset.manualResolutionBound==='1') return;
   panel.dataset.manualResolutionBound='1';
+  // Changing the display frame only re-draws the last result.
+  $('resolutionCoordinates')?.addEventListener('change',rerenderResolution);
   for(const control of panel.querySelectorAll('input, select')){
-    if(control.id==='scanSlider') continue;
+    // The scan slider and the display frame do not change the calculation.
+    if(control.id==='scanSlider' || control.id==='resolutionCoordinates' || control.id==='resolutionUVView') continue;
     const markCurrent=()=>{
       if($("calcMode")?.value==="scan") markResolutionScanDirty();
     };

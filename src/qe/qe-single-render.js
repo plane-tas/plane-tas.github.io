@@ -401,7 +401,7 @@ function renderSingle(cache,index=0){
   // Magenta: distinct from the accessible-Q yellow, the dark-angle green/blue,
   // the red magnetic and black nuclear peaks, the purple path and BG colours.
   traces.push({type:'scatter',mode:'markers',showlegend:true,meta:'qe-geometry-target',zorder:110,
-    name:'Angle calculation target',
+    name:'Angle calculation point',
     x:geometryTarget?[geometryTarget[0]]:[null],y:geometryTarget?[geometryTarget[1]]:[null],
     marker:{size:17,symbol:'diamond',color:'#d6007a',line:{color:'#fff',width:2}},
     customdata:[geometryTargetHoverText(cache)],

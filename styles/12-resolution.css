@@ -262,3 +262,8 @@
 #resolutionInstrumentDetails .resolution-shape-radios .checkbox-label{min-height:0;align-self:auto}
 #resolutionInstrumentDetails:has(#sampleShapeBox:checked) .sample-cylinder-only,
 #resolutionInstrumentDetails:has(#sampleShapeCylinder:checked) .sample-box-only{display:none}
+
+/* Approximation / Mode / Unit / Coordinates / U–V plot. */
+#resolutionCalculation .toolbar{grid-template-columns:repeat(5,minmax(0,1fr));}
+@media(max-width:620px){#resolutionCalculation .toolbar{grid-template-columns:repeat(2,minmax(0,1fr));}}
+

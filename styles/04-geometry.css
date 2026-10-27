@@ -226,6 +226,8 @@
   .time-estimate-controls .time-datetime-label{grid-column:span 2;}
 }
 
+/* Angle calculation point -> Resolution tab: at the right end of the button row. */
+.geometry-target-all-buttons>.geometry-to-resolution{margin-left:auto;white-space:nowrap;}
 /* v17: make Angle calculation actions/results match the surrounding Time estimate readability. */
 .geometry-target-buttons button{
   font-size:inherit;

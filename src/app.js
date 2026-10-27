@@ -651,6 +651,23 @@ $("geomPerpV").addEventListener("click",setGeometryKiPerpV);
 $("geomParallelU").addEventListener("click",setGeometryKiParallelU);
 $("geomParallelV").addEventListener("click",setGeometryKiParallelV);
 $("geomSetBragg").addEventListener("click",setGeometryTargetFromBragg);
+// Send the Angle calculation point to the Resolution tab (single point) and
+// open it there, where the instrument details can be adjusted.
+$("geomToResolution")?.addEventListener("click",()=>{
+  const mode=$("calcMode");
+  if(mode && mode.value!=="single"){ mode.value="single"; mode.dispatchEvent(new Event("change",{bubbles:true})); }
+  for(const [from,to] of [["geomH","h"],["geomK","k"],["geomL","l"],["geomHW","hw"]]){
+    const src=$(from), dst=$(to);
+    if(!src || !dst) continue;
+    dst.value=src.value;
+    dst.dispatchEvent(new Event("input",{bubbles:true}));
+    dst.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  setActiveTab("resolution");
+  saveRightPanelState?.();
+  saveGlobalUIState?.();
+  scheduleRecalc();
+});
 
 // Either S2 control may be used as the user's entry point.  Effective is an
 // absolute value; convert it to Delta before the normal recalculation handler
@@ -667,6 +684,8 @@ document.querySelectorAll("input,select").forEach(el=>{
     "hwSlider",
     "geomScanPointSlider",
     "scanSlider",
+    // Display frame of the Resolution results: redraws, no recalculation.
+    "resolutionCoordinates","resolutionUVView",
     'qeVectorHKLPath','qePathHKLConstant','qePathSnap',
     ...GEOMETRY_SCAN_INPUT_IDS
   ].includes(el.id)) return;
