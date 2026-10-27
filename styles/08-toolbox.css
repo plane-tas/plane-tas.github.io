@@ -485,7 +485,7 @@
 /* v47: compact four-field form-factor control row. */
 #toolboxFormFactorPane .magff-main-row{
   display:grid;
-  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-columns:repeat(6,minmax(0,1fr));
   gap:calc(10px * var(--tas-density));
   align-items:end;
   min-width:0;
@@ -520,7 +520,7 @@
 
 @media(max-width:620px){
   #toolboxFormFactorPane .magff-main-row{
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-columns:repeat(3,minmax(0,1fr));
     gap:calc(8px * var(--tas-density));
   }
   #toolboxAttenuationPane .absorption-beam-row{

@@ -1,5 +1,5 @@
 // Magnetic form factors ported from FormFactor.jl (Sunny dipole approximation).
-// Q is |momentum transfer| in Å^-1; the plot is |f(Q)|², not full magnetic intensity.
+// Q is |momentum transfer| in Å^-1; the plot shows f(Q) and |f(Q)|², not full magnetic intensity.
 import { MAGNETIC_ION_DATA } from './magnetic-form-factor-data.js';
 
 const FOUR_PI=4*Math.PI;
@@ -55,21 +55,24 @@ export function automaticMagneticFormFactorWeight(config,term){
   return 0;
 }
 
-export function magneticFormFactorIntensityRoots(label,target,opts={},maxQ=GRAPH_Q_MAX){
-  if(!Number.isFinite(target)||target<0||!Number.isFinite(maxQ)||maxQ<=0)return [];
-  const intensity=q=>computeMagneticFormFactor(label,q,opts).fSquared;
+// Q values in [0, maxQ] where f(Q) (which='f') or |f(Q)|² (which='fSquared')
+// equals target.  f can be negative at large Q (e.g. a large c<j2>).
+export function magneticFormFactorRoots(label,target,opts={},maxQ=GRAPH_Q_MAX,which='fSquared'){
+  if(!Number.isFinite(target)||!Number.isFinite(maxQ)||maxQ<=0)return [];
+  if(which!=='f' && target<0)return [];
+  const value=q=>computeMagneticFormFactor(label,q,opts)[which==='f'?'f':'fSquared'];
   const steps=1000, eps=1e-9;
   const roots=[];
-  let lo=0, flo=intensity(0)-target;
+  let lo=0, flo=value(0)-target;
   if(Math.abs(flo)<eps)roots.push(0);
   for(let i=1;i<=steps;i++){
     const hi=maxQ*i/steps;
-    const fhi=intensity(hi)-target;
+    const fhi=value(hi)-target;
     if(Math.abs(fhi)<eps)roots.push(hi);
     else if(flo*fhi<0){
       let l=lo,r=hi,a=flo;
       for(let iter=0;iter<42;iter++){
-        const mid=(l+r)/2, fm=intensity(mid)-target;
+        const mid=(l+r)/2, fm=value(mid)-target;
         if(a*fm<=0)r=mid; else{l=mid;a=fm;}
       }
       roots.push((l+r)/2);
@@ -77,6 +80,9 @@ export function magneticFormFactorIntensityRoots(label,target,opts={},maxQ=GRAPH
     lo=hi;flo=fhi;
   }
   return roots.filter((v,i)=>roots.findIndex(r=>Math.abs(v-r)<1e-5)===i);
+}
+export function magneticFormFactorIntensityRoots(label,target,opts={},maxQ=GRAPH_Q_MAX){
+  return magneticFormFactorRoots(label,target,opts,maxQ,'fSquared');
 }
 
 function displayIon(label){
@@ -92,7 +98,7 @@ export function initializeMagneticFormFactorUI(){
   const config=$('magffConfig'),configLabel=$('magffConfigLabel');
   const mode=$('magffWeightMode'),weight=$('magffWeight');
   const qField=$('magffQPoint'),qSlider=$('magffQSlider');
-  const intensityField=$('magffIntensity');
+  const intensityField=$('magffIntensity'),fField=$('magffValue');
   const info=$('magffInfo'),plot=$('magffPlot'),download=$('magffDownload');
   for(const label of ionNames)ion.add(new Option(displayIon(label),label));
   ion.value='Fe3';
@@ -197,18 +203,28 @@ export function initializeMagneticFormFactorUI(){
       showModel(opts,{q,f,j0,j2});
       qSlider.value=String(q);
       intensityField.value=fmt(fSquared);
+      if(fField)fField.value=fmt(f);
       exportRows=grid.map((x,i)=>[x,curve[i].f,values[i]]);
       download.disabled=false;
       if(window.Plotly && plot && !plot.closest('.hidden')){
+        // f(Q) can turn negative at large Q; extend the axis below 0 only then.
+        const fValues=curve.map(point=>point.f);
+        const fMin=Math.min(0,...fValues);
+        const yLow=fMin<-1e-6 ? Math.floor((fMin-0.02)*10)/10 : 0;
+        const hover='Q = %{x:.3f} Å⁻¹<br>f(Q) = %{customdata[0]:.5f}<br>|f(Q)|² = %{customdata[1]:.5f}<extra></extra>';
+        const both=curve.map(point=>[point.f,point.fSquared]);
         window.Plotly.react(plot,[
-          {x:grid,y:values,customdata:curve.map(point=>point.f),type:'scatter',mode:'lines',name:'|f(Q)|²',
-           hovertemplate:'Q = %{x:.3f} Å⁻¹<br>|f(Q)|² = %{y:.5f}<br>f(Q) = %{customdata:.5f}<extra></extra>'},
-          {x:[q],y:[fSquared],customdata:[f],type:'scatter',mode:'markers',name:'Selected Q',
-           marker:{size:10},hovertemplate:'Q = %{x:.3f} Å⁻¹<br>|f(Q)|² = %{y:.5f}<br>f(Q) = %{customdata:.5f}<extra></extra>'}
+          {x:grid,y:values,customdata:both,type:'scatter',mode:'lines',name:'|f(Q)|²',
+           line:{color:'#1f77b4',width:2.5},hovertemplate:hover},
+          {x:grid,y:fValues,customdata:both,type:'scatter',mode:'lines',name:'f(Q)',
+           line:{color:'#000000',width:2.5},hovertemplate:hover},
+          {x:[q,q],y:[fSquared,f],customdata:[[f,fSquared],[f,fSquared]],type:'scatter',mode:'markers',name:'Selected Q',
+           marker:{size:10,color:['#1f77b4','#000000']},hovertemplate:hover,showlegend:false}
         ],{autosize:true,margin:{l:65,r:22,t:18,b:57},
             xaxis:{title:'Q (Å⁻¹)',range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            yaxis:{title:'|f(Q)|²',range:[0,1],autorange:false,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            showlegend:false,uirevision:'magff-v41-ymax1'
+            yaxis:{title:'f(Q), |f(Q)|²',range:[yLow,1],autorange:false,zeroline:yLow<0,zerolinecolor:'#b8c0c8',showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
+            showlegend:true,legend:{x:0.99,y:0.99,xanchor:'right',yanchor:'top',bgcolor:'rgba(255,255,255,0.85)',bordercolor:'#d5dde5',borderwidth:1,font:{size:18}},
+            uirevision:`magff-v42-${yLow}`
         },{responsive:true,displaylogo:false});
       }
     }catch(error){
@@ -216,13 +232,16 @@ export function initializeMagneticFormFactorUI(){
       if(window.Plotly&&plot&&!plot.closest('.hidden'))window.Plotly.purge(plot);
     }
   }
-  function setQFromIntensity(raw){
+  // Find Q from an entered f(Q) (which='f') or |f(Q)|² (which='fSquared').
+  function setQFromValue(raw,which){
     clearError();
+    const name=which==='f'?'f(Q)':'|f(Q)|²';
     try{
-      if(String(raw).trim()==='')throw new Error('Enter |f(Q)|².');
+      if(String(raw).trim()==='')throw new Error(`Enter ${name}.`);
       const target=Number(raw),opts=currentOptions();
-      if(!Number.isFinite(target)||target<0)throw new Error('|f(Q)|² must be nonnegative.');
-      const roots=magneticFormFactorIntensityRoots(ion.value,target,opts,GRAPH_Q_MAX);
+      if(!Number.isFinite(target))throw new Error(`${name} must be a number.`);
+      if(which!=='f'&&target<0)throw new Error('|f(Q)|² must be nonnegative.');
+      const roots=magneticFormFactorRoots(ion.value,target,opts,GRAPH_Q_MAX,which);
       if(!roots.length)throw new Error('No Q in 0–10 Å⁻¹ gives that value.');
       // Empirical fits need not be monotonic: choose the Q closest to the current one.
       const previous=Number(qField.value);
@@ -315,8 +334,11 @@ export function initializeMagneticFormFactorUI(){
   weight.addEventListener('input',render);
   qField.addEventListener('input',render);
   qSlider.addEventListener('input',()=>{qField.value=qSlider.value;render();});
-  intensityField.addEventListener('change',()=>setQFromIntensity(intensityField.value));
-  intensityField.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();intensityField.blur();}});
+  for(const [field,which] of [[intensityField,'fSquared'],[fField,'f']]){
+    if(!field)continue;
+    field.addEventListener('change',()=>setQFromValue(field.value,which));
+    field.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();field.blur();}});
+  }
   download.addEventListener('click',()=>{
     if(!exportRows.length)return;
     const rows=['Q_A^-1,f(Q),abs_f(Q)^2',...exportRows.map(row=>row.map(v=>v.toPrecision(12)).join(','))];
