@@ -138,6 +138,15 @@ export function createToolbox({
       mass:joule/(C_LIGHT*C_LIGHT),field:E/MEV_PER_TESLA,joule,cal:joule/J_PER_CAL
     };
   }
+  // Displayed conversions: 5 significant digits; exponent form outside
+  // 1e-4 ... 1e6 (e.g. 2.6205e-38 kg).
+  function sig5(value){
+    const v=Number(value);
+    if(!Number.isFinite(v)) return '';
+    if(v===0) return '0';
+    if(Math.abs(v)>=1e6 || Math.abs(v)<1e-4) return v.toExponential(4);
+    return String(Number(v.toPrecision(5)));
+  }
   function setToolboxFrom(kind){
     if(toolboxUpdating) return;
     toolboxUpdating=true;
@@ -158,25 +167,18 @@ export function createToolbox({
       else if(kind==='toolCal') lambda=Math.sqrt(NEUTRON_E_LAMBDA/((value*J_PER_CAL)/J_PER_MEV));
       const v=toolboxValues(lambda);
       const formatted={
-        toolLambda:v.lambda.toFixed(6), toolEnergy:v.E.toFixed(6), toolK:v.k.toFixed(6),
-        toolTHz:v.thz.toFixed(6), toolTemp:v.temp.toFixed(6), toolCm:v.cm.toFixed(6),
-        toolVelocity:v.velocity.toFixed(3), toolMass:v.mass.toExponential(6),
-        toolField:v.field.toExponential(6), toolJ:v.joule.toExponential(6), toolCal:v.cal.toExponential(6)
+        toolLambda:sig5(v.lambda), toolEnergy:sig5(v.E), toolK:sig5(v.k),
+        toolTHz:sig5(v.thz), toolTemp:sig5(v.temp), toolCm:sig5(v.cm),
+        toolVelocity:sig5(v.velocity), toolMass:sig5(v.mass),
+        toolField:sig5(v.field), toolJ:sig5(v.joule), toolCal:sig5(v.cal)
       };
       for(const [id,text] of Object.entries(formatted)){ if(id!==kind && $(id)) $(id).value=text; }
       for(const [factor,prefix] of [[1/3,'harmThird'],[1/2,'harmHalf'],[1,'harmFundamental'],[2,'harmDouble'],[3,'harmTriple']]){
         const x=toolboxValues(lambda*factor);
-        $(`${prefix}Lambda`).textContent=x.lambda.toFixed(6);
-        $(`${prefix}Energy`).textContent=x.E.toFixed(6);
-        $(`${prefix}K`).textContent=x.k.toFixed(6);
-        $(`${prefix}THz`).textContent=x.thz.toFixed(6);
-        $(`${prefix}Temp`).textContent=x.temp.toFixed(3);
-        $(`${prefix}Cm`).textContent=x.cm.toFixed(3);
-        $(`${prefix}Velocity`).textContent=x.velocity.toFixed(1);
-        $(`${prefix}Mass`).textContent=x.mass.toExponential(6);
-        $(`${prefix}Field`).textContent=x.field.toExponential(6);
-        $(`${prefix}J`).textContent=x.joule.toExponential(6);
-        $(`${prefix}Cal`).textContent=x.cal.toExponential(6);
+        for(const [suffix,value] of [['Lambda',x.lambda],['Energy',x.E],['K',x.k],['THz',x.thz],['Temp',x.temp],['Cm',x.cm],
+          ['Velocity',x.velocity],['Mass',x.mass],['Field',x.field],['J',x.joule],['Cal',x.cal]]){
+          const cell=$(`${prefix}${suffix}`); if(cell) cell.textContent=sig5(value);
+        }
       }
     }finally{ toolboxUpdating=false; }
   }
@@ -203,12 +205,8 @@ export function createToolbox({
   const XRAY_THz_ANGSTROM=2997924.58;         // f[THz] = c/lambda
   const XRAY_CM1_ANGSTROM=1e8;                // wavenumber[cm^-1] = 1/lambda[cm]
 
-  function formatS2BeamNumber(value,digits=6){
-    const v=Number(value);
-    if(!Number.isFinite(v)) return '';
-    if(v===0) return '0';
-    if(Math.abs(v)>=1e6 || Math.abs(v)<1e-5) return v.toExponential(6);
-    return v.toFixed(digits).replace(/0+$/,'').replace(/\.$/,'');
+  function formatS2BeamNumber(value){
+    return sig5(value);
   }
 
   function neutronLambdaFromS2Value(value,unit){
@@ -368,7 +366,7 @@ export function createToolbox({
       neutronS2Field.value=rows.map(row=>Number.isFinite(row.neutronS2)?row.neutronS2.toFixed(3):'—').join(' ');
     }
     if(dField){
-      dField.value=rows.map(row=>Number.isFinite(row.d)?row.d.toFixed(6):'—').join(' ');
+      dField.value=rows.map(row=>Number.isFinite(row.d)?sig5(row.d):'—').join(' ');
     }
   }
 
@@ -550,9 +548,9 @@ export function createToolbox({
     absorptionBeamUpdating=true;
     try{
       const lambda=Math.sqrt(NEUTRON_E_LAMBDA/energy);
-      if($('absorptionEnergy')) $('absorptionEnergy').value=formatAbsorptionNumber(energy,6);
-      if($('absorptionLambda')) $('absorptionLambda').value=formatAbsorptionNumber(lambda,6);
-      if($('absorptionK')) $('absorptionK').value=formatAbsorptionNumber(2*Math.PI/lambda,6);
+      if($('absorptionEnergy')) $('absorptionEnergy').value=formatAbsorptionNumber(energy,4);
+      if($('absorptionLambda')) $('absorptionLambda').value=formatAbsorptionNumber(lambda,4);
+      if($('absorptionK')) $('absorptionK').value=formatAbsorptionNumber(2*Math.PI/lambda,4);
     }finally{ absorptionBeamUpdating=false; }
   }
 
@@ -575,9 +573,9 @@ export function createToolbox({
     }
     absorptionBeamUpdating=true;
     try{
-      if(kind!=='energy')energyField.value=formatAbsorptionNumber(NEUTRON_E_LAMBDA/(lambda*lambda),6);
-      if(kind!=='lambda')lambdaField.value=formatAbsorptionNumber(lambda,6);
-      if(kField && kind!=='wavevector')kField.value=formatAbsorptionNumber(2*Math.PI/lambda,6);
+      if(kind!=='energy')energyField.value=formatAbsorptionNumber(NEUTRON_E_LAMBDA/(lambda*lambda),4);
+      if(kind!=='lambda')lambdaField.value=formatAbsorptionNumber(lambda,4);
+      if(kField && kind!=='wavevector')kField.value=formatAbsorptionNumber(2*Math.PI/lambda,4);
     }finally{absorptionBeamUpdating=false;}
     // Attenuation and Reflections are two editors of the Instrument's fixed
     // Ei/Ef energy. Propagate only a valid completed numerical value; never

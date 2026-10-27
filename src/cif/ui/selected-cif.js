@@ -117,7 +117,7 @@ function updateImportedUnitCellPanels(parsed,text){
   // The mCIF has its own time-reversed magnetic symmetry operations. Do not
   // reinterpret its parent IT number as a magnetic space-group selector.
   for(const [key,id] of Object.entries(cifState.CIF_MAG_LATTICE_FIELDS)){
-    if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(parsed.lattice[key]):'';
+    if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(Number(Number(parsed.lattice[key]).toPrecision(10))):'';
   }
   const crystallographic=fn.crystallographicStructureFromMcif(parsed,text);
   if(notice){
@@ -208,7 +208,8 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   // commensurate mCIF can be unambiguously mapped back to that cell.
   for(const id of ["a","b","c","alpha","beta","gamma"]){
     const value=Number(lattice[id]);
-    if(Number.isFinite(value) && $(id)) $(id).value=String(value);
+    // toPrecision(10) drops floating-point noise such as 7.617999999999999.
+    if(Number.isFinite(value) && $(id)) $(id).value=String(Number(value.toPrecision(10)));
   }
 
   // Keep CIF Generator synchronized with the currently selected sample CIF.

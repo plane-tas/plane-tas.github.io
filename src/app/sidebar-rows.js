@@ -56,6 +56,21 @@ function currentDarkRangeCount(slot){
   return document.querySelectorAll(`.dark-asset[data-dark-slot="${slot}"] .dark-range-number`).length || 1;
 }
 
+// Numbers that come from a file (e.g. 0.3333333333333333) are shown as an
+// exact fraction with a small denominator, otherwise with 4 decimals.
+// Text the user typed (including fractions such as 1/3) is kept as is.
+function formatPropagationComponent(raw){
+  const text=String(raw).trim();
+  if(typeof raw!=='number' && !/^[+-]?\d*\.\d{5,}(?:e[+-]?\d+)?$/i.test(text)) return text;
+  const value=Number(raw);
+  if(!Number.isFinite(value)) return text;
+  if(Math.abs(value-Math.round(value))<1e-6) return String(Math.round(value));
+  for(let d=2;d<=24;d++){
+    const n=Math.round(value*d);
+    if(Math.abs(value-n/d)<1e-6) return `${n}/${d}`;
+  }
+  return String(Number(value.toFixed(4)));
+}
 function createPropagationVectorRow(index,values={}){
   const row=document.createElement("div");
   row.className="propagation-row";
@@ -69,7 +84,7 @@ function createPropagationVectorRow(index,values={}){
   for(const c of ["h","k","l"]){
     const raw=values[c] ?? 0;
     const value=parseNumericValue(raw);
-    row.querySelector(`#q${index}_${c}`).value=Number.isFinite(value)?String(raw):"0";
+    row.querySelector(`#q${index}_${c}`).value=Number.isFinite(value)?formatPropagationComponent(raw):"0";
   }
   return row;
 }

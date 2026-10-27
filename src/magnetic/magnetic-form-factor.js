@@ -103,7 +103,7 @@ export function initializeMagneticFormFactorUI(){
   for(const label of ionNames)ion.add(new Option(displayIon(label),label));
   ion.value='Fe3';
   let exportRows=[];
-  const fmt=n=>Number(n).toFixed(6).replace(/0+$/,'').replace(/\.$/,'');
+  const fmt=n=>Number(n).toFixed(5).replace(/0+$/,'').replace(/\.$/,'');
   const curvePoints=301;
   const grid=Array.from({length:curvePoints},(_,i)=>GRAPH_Q_MAX*i/(curvePoints-1));
 

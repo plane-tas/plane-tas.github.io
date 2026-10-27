@@ -158,7 +158,7 @@ function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{me
   if(!$("cifSpaceGroup") || !$("cifAtomRows")) return false;
   if(message){ cifState.cifStructureSourcePreference="loaded"; fn.saveStructureViewerState(); }
   fn.selectCifSpaceGroup(sg.number,{syncSystem:true});
-  for(const [key,id] of Object.entries(cifState.CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(lattice[key]);
+  for(const [key,id] of Object.entries(cifState.CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(Number(Number(lattice[key]).toPrecision(10)));
   cifState.structurePositionEditingMode='sites';
   cifState.structurePositionTableElement='*';
   cifState.positionModeDrafts.sites=null;cifState.positionModeDrafts.individual=null;
@@ -168,7 +168,7 @@ function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{me
   fn.refreshPositionTableToolbar();
   if($("cifGeneratedName")) $("cifGeneratedName").value=fn.cleanCifBaseName(fileName);
   fn.updateCifSpaceGroupInfo();
-  if(parsed.magnetic) for(const [key,id] of Object.entries(cifState.CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(lattice[key]);
+  if(parsed.magnetic) for(const [key,id] of Object.entries(cifState.CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(Number(Number(lattice[key]).toPrecision(10)));
   fn.invalidateGeneratedCif("");
   if(message) fn.setCifGeneratorMessage(`Loaded ${fileName} for editing: #${sg.number} ${sg.hm}, ${parsed.asymmetricSites.length} asymmetric site(s). Open Structure to view it immediately, or press Generate to review the regenerated CIF and reflection table.`);
   fn.renderCifStructureIfVisible();
