@@ -188,7 +188,7 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
         if(mode==='collinear' && collinearSignAmbiguous(kr)) ambiguousSites++;
         moment=modulatedMoment(moment,kr,{mode,axis:u,chirality});
       }
-      sites.push({pos,element:atom.element,occupancy:atom.occupancy,moment:toCrystal(moment,lattice),sourceLabel:atom.sourceLabel});
+      sites.push({pos,element:atom.element,occupancy:atom.occupancy,Biso:Number(atom.Biso)||0,Uaniso:atom.Uaniso||null,moment:toCrystal(moment,lattice),sourceLabel:atom.sourceLabel});
     }
   }
   // Merge duplicate crystallographic atoms; reject incompatible spin assignments.
@@ -233,7 +233,7 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     // Unquoted operators and an explicit centering loop, as in MAGNDATA files.
     'loop_','_space_group_symop_magn_operation.id','_space_group_symop_magn_operation.xyz',...ops.map((o,i)=>`${i+1} ${opText(o)}`),'',
     'loop_','_space_group_symop_magn_centering.id','_space_group_symop_magn_centering.xyz','1 x,y,z,+1','',
-    'loop_','_atom_site_label','_atom_site_type_symbol','_atom_site_fract_x','_atom_site_fract_y','_atom_site_fract_z','_atom_site_occupancy'];
+    'loop_','_atom_site_label','_atom_site_type_symbol','_atom_site_fract_x','_atom_site_fract_y','_atom_site_fract_z','_atom_site_occupancy','_atom_site_B_iso_or_equiv'];
   // Labels must identify the element, and the moment loop must reference
   // exactly the same labels.  Symmetry splitting may turn one parent O1
   // orbit into several inequivalent O sites in the magnetic cell.
@@ -244,7 +244,15 @@ export function exportCommensurateMcif({source,structure,settings,individualSett
     labelCounts.set(element,next);
     return `${element}${next}`;
   });
-  reps.forEach((s,i)=>lines.push(`${repLabels[i]} ${s.element} ${s.pos.map(dec).join(' ')} ${dec(s.occupancy)}`));
+  // Biso (and U^ij) travel with each site: the supercell keeps the parent
+  // thermal parameters (U^ij are given along the normalized a*, b*, c*, whose
+  // directions a diagonal supercell does not change).
+  reps.forEach((s,i)=>lines.push(`${repLabels[i]} ${s.element} ${s.pos.map(dec).join(' ')} ${dec(s.occupancy)} ${dec(s.Biso||0)}`));
+  const aniso=reps.map((s,i)=>({label:repLabels[i],U:s.Uaniso})).filter(r=>Array.isArray(r.U));
+  if(aniso.length){
+    lines.push('','loop_','_atom_site_aniso_label','_atom_site_aniso_U_11','_atom_site_aniso_U_22','_atom_site_aniso_U_33','_atom_site_aniso_U_12','_atom_site_aniso_U_13','_atom_site_aniso_U_23');
+    for(const {label,U} of aniso) lines.push(`${label} ${[U[0][0],U[1][1],U[2][2],U[0][1],U[0][2],U[1][2]].map(dec).join(' ')}`);
+  }
   lines.push('','loop_','_atom_site_moment.label','_atom_site_moment.crystalaxis_x','_atom_site_moment.crystalaxis_y','_atom_site_moment.crystalaxis_z');
   reps.forEach((s,i)=>{if(s.moment.some(x=>Math.abs(x)>1e-8))lines.push(`${repLabels[i]} ${s.moment.map(dec).join(' ')}`);});
   const text=lines.join('\n')+'\n';

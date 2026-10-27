@@ -8,7 +8,7 @@ export function installReflectionTable(ctx){
   const {deps:{$, RL_calc, canonicalReflectionHkl, clamp, compareHkl, getSelectedCifFileName, hklKey, hklToQ, norm, rad2deg},
     state:cifState, fn}=ctx;
   Object.assign(fn,{
-    clearCifReflectionRowSelection, downloadCifReflectionTable, initializeReflectionTable,
+    clearCifReflectionRowSelection, downloadCifReflectionTable, downloadPowderPattern, initializeReflectionTable,
     renderCifReflectionTable, renderReflectionPowderPlot, setCifReflectionSort, setReflectionData,
     updateCifReflectionSortHeaders
   });
@@ -71,6 +71,14 @@ const codeFilter=()=>{
   const v=$('reflectionCodeFilter')?.value; return v==='N'||v==='M'?v:'all';
 };
 const sin=deg=>Math.sin(deg*Math.PI/180);
+// Powder peak width parameters (deg²), FullProf convention.  Default values
+// are FullProf-like U, V, W of a high-resolution powder diffractometer.
+const POWDER_UVW_DEFAULT={U:0.44,V:-0.33,W:0.17};
+const POWDER_UVW_DEFAULT_IDS={reflectionPlotU:POWDER_UVW_DEFAULT.U,reflectionPlotV:POWDER_UVW_DEFAULT.V,reflectionPlotW:POWDER_UVW_DEFAULT.W};
+function powderUVW(){
+  const read=(id,fallback)=>{ const v=Number($(id)?.value); return $(id)?.value!=='' && Number.isFinite(v) ? v : fallback; };
+  return {U:read('reflectionPlotU',POWDER_UVW_DEFAULT.U),V:read('reflectionPlotV',POWDER_UVW_DEFAULT.V),W:read('reflectionPlotW',POWDER_UVW_DEFAULT.W)};
+}
 function lorentzFactor(twoTheta){
   if(mode()==='graph') return 1/Math.max(1e-9,sin(twoTheta/2)*sin(twoTheta));
   return lorentzOn() ? 1/Math.max(1e-9,sin(twoTheta)) : 1;
@@ -218,6 +226,7 @@ function updateOptionLabels(){
   // along U / V and Download table belong to the single-crystal table only.
   for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('hidden',graph); }
   $('cifDownloadTable')?.classList.toggle('hidden',graph);
+  $('cifDownloadPattern')?.classList.toggle('hidden',!graph);
   // Incommensurate mCIF: only nuclear reflections can be calculated.
   const filter=$('reflectionCodeFilter'),inc=!!cifState.reflectionData?.incommensurate;
   if(filter){
@@ -254,7 +263,14 @@ function renderCifReflectionTable(){
   if(!rows.length){
     const tr=document.createElement('tr'),td=document.createElement('td');
     td.colSpan=cols.length; td.className='cif-reflection-empty';
-    td.textContent=data?'No reflections in the selected range.':'No reflections available.';
+    // Say when only the along U / along V filter removed the reflections
+    // (e.g. magnetic peaks whose k points out of the U–V plane).
+    const f=fn.currentCifReflectionFilters(), want=codeFilter(), tthMax=displayTwoThetaMax();
+    const planeOnly=data && mode()==='table' && (f.alongU||f.alongV) &&
+      data.rows.some(r=>(want==='all'||r.code.includes(want)) && !(r.twoTheta>tthMax+1e-9));
+    td.textContent=!data ? 'No reflections available.'
+      : planeOnly ? `No reflections ${f.alongU&&f.alongV?'in the U–V scattering plane':`along ${f.alongU?'U':'V'}`}. Uncheck along U / along V to list all.`
+      : 'No reflections in the selected range.';
     tr.appendChild(td); body.appendChild(tr);
     return;
   }
@@ -308,10 +324,14 @@ function renderReflectionPowderPlot(){
     const In=g.mult*g.fn2*L, Im=incommensurate?0:g.mult*g.fm2*L;
     return {...g,In,Im,area:In+Im};
   }).filter(g=>g.area>0);
-  if(!peaks.length){ window.Plotly.purge(plot); plot.textContent='No powder reflections to plot.'; return; }
+  if(!peaks.length){ setPowderPattern(null); window.Plotly.purge(plot); plot.textContent='No powder reflections to plot.'; return; }
   if(plot.textContent && !plot._fullLayout) plot.textContent='';
-  let H=Number($('reflectionPlotFwhm')?.value);
-  if(!(H>0)) H=0.3;
+  // Gaussian peaks with the FullProf (Caglioti) width:
+  //   FWHM² = U tan²θ + V tanθ + W   (deg², θ = half the scattering angle).
+  const uvw=powderUVW();
+  const widthAt=t=>{ const x=Math.tan(t*Math.PI/360); return Math.sqrt(Math.max(1e-4,uvw.U*x*x+uvw.V*x+uvw.W)); };
+  for(const p of peaks) p.fwhm=widthAt(p.twoTheta);
+  const H=Math.max(...peaks.map(p=>p.fwhm)), Hmin=Math.min(...peaks.map(p=>p.fwhm));
   // Display range: instrument S2 min to effective S2 max when "within
   // instrument 2θ max" is ticked, otherwise up to 180°.
   const range=data.plotRange, within=fn.currentCifReflectionFilters().withinS2Max;
@@ -319,14 +339,18 @@ function renderReflectionPowderPlot(){
   const t0=within && Number.isFinite(range?.min)&&range.min>0 ? range.min : Math.max(0.2,Math.min(...peaks.map(p=>p.twoTheta))-5*H);
   const t1=within && Number.isFinite(range?.max)&&range.max>t0 ? Math.min(179.9,range.max) : Math.min(179.9,tMaxPeaks+5*H);
   const inRange=p=>p.twoTheta>=t0-1e-9&&p.twoTheta<=t1+1e-9;
-  const step=Math.max(H/12,(t1-t0)/20000);
-  const tth=[];for(let t=t0;t<=t1+1e-9;t+=step) tth.push(t);
-  const c=4*Math.LN2/(H*H),norm=2*Math.sqrt(Math.LN2/Math.PI)/H;
+  // Round 2θ step (1, 2, 2.5 or 5 × 10ⁿ) on a grid of its multiples, so the
+  // downloaded pattern has regular, FullProf-like 2θ values.
+  const rawStep=Math.max(Hmin/12,(t1-t0)/20000), dec=Math.pow(10,Math.floor(Math.log10(rawStep)));
+  const step=[5,2.5,2,1].map(m=>m*dec).find(v=>v<=rawStep*(1+1e-9))||dec;
+  const n0=Math.ceil(t0/step-1e-9), n1=Math.floor(t1/step+1e-9);
+  const tth=[];for(let n=n0;n<=n1;n++) tth.push(Number((n*step).toPrecision(12)));
   const pattern=key=>{
     const y=new Array(tth.length).fill(0);
     for(const p of peaks){
       const area=p[key]; if(!(area>0)) continue;
-      const i0=Math.max(0,Math.floor((p.twoTheta-5*H-t0)/step)),i1=Math.min(tth.length-1,Math.ceil((p.twoTheta+5*H-t0)/step));
+      const h=p.fwhm, c=4*Math.LN2/(h*h), norm=2*Math.sqrt(Math.LN2/Math.PI)/h;
+      const i0=Math.max(0,Math.floor((p.twoTheta-5*h-n0*step)/step)),i1=Math.min(tth.length-1,Math.ceil((p.twoTheta+5*h-n0*step)/step));
       for(let i=i0;i<=i1;i++){ const dx=tth[i]-p.twoTheta; y[i]+=area*norm*Math.exp(-c*dx*dx); }
     }
     return y;
@@ -357,6 +381,9 @@ function renderReflectionPowderPlot(){
     customdata:list.map(p=>[hkl(p.hkl),p.mult]),
     hovertemplate:`${name.split(' ')[0]} %{customdata[0]}<br>Mult %{customdata[1]}<br>${xLabel} = %{x:.4f}${xUnit}<extra></extra>`});
   const tickN=peaks.filter(p=>p.In>0&&inRange(p)), tickM=peaks.filter(p=>p.Im>0&&inRange(p));
+  setPowderPattern({tth,yN,yM,yT,lambda,uvw,
+    peaksN:[...tickN].sort((a,b)=>a.twoTheta-b.twoTheta),
+    peaksM:[...tickM].sort((a,b)=>a.twoTheta-b.twoTheta)});
   if(tickN.length) traces.push(tick(tickN,tickM.length?0.7:0.5,'Nuclear peaks','#2e7d32'));
   if(tickM.length) traces.push(tick(tickM,tickN.length?0.3:0.5,'Magnetic peaks','#c62828'));
   // View restored by a double-click (the current calculation's range).
@@ -375,7 +402,7 @@ function renderReflectionPowderPlot(){
     yaxis:{domain:[0.13,1],tickfont:{size:FONT},title:{text:'Intensity (arb. units)',font:{size:FONT},standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
       type:log?'log':'linear',range:yView.slice(),...(log?{exponentformat:'power'}:{})},
     yaxis2:{domain:[0,0.1],range:[0,1],showticklabels:false,showgrid:false,zeroline:false,fixedrange:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
-    // Legend above the frame (top right); FWHM and Log sit at the same height, top left.
+    // Legend above the frame (top right); peak width and Log sit at the same height, top left.
     // Legend below the plot (under the x-axis selector), never over peaks.
     showlegend:true,legend:{orientation:'h',xref:'paper',x:0.5,xanchor:'center',yref:'container',y:0,yanchor:'bottom',
       bgcolor:'rgba(0,0,0,0)',font:{size:FONT}},uirevision:`powder-${axis}-${log}`
@@ -394,21 +421,70 @@ function renderReflectionPowderPlot(){
 }
 
 // ---- CSV ----
+// Calculated powder pattern (as drawn in Graph) for Download pattern.
+function setPowderPattern(pattern){
+  cifState.powderPattern=pattern;
+  const button=$('cifDownloadPattern'); if(button) button.disabled=!pattern;
+}
+// FullProf-like profile file (2θ, intensity columns) as CSV, one row per
+// point of the drawn pattern.
+// Reflection CSV columns, shared by Download table (single crystal / powder)
+// and the peak lists of Download pattern, so every file has the same layout:
+//   h, k, l, code, multiplicity, FN2, FM2, form_factor, I, L, 2θ, Q, d,
+//   equivalent_hkl
+// prefix: column-name prefix ('N_' / 'M_' for the pattern peak lists).
+// part: 'all' (FN2 + FM2), 'N' or 'M' for the intensity column.
+const csvQuote=v=>`"${String(v).replace(/"/g,'""')}"`;
+// CSV number formats: positions (hkl, 2θ, Q, d) to 4 decimals, other values
+// to 5 significant figures; trailing zeros dropped.
+const csvFixed4=v=>Number.isFinite(Number(v))?String(Number(Number(v).toFixed(4))+0):'';
+const csvSig5=v=>Number.isFinite(Number(v))?String(Number(Number(v).toPrecision(5))+0):'';
+// Equivalent hkl as "(h k l); (h k l)": the brackets keep spreadsheets from
+// reading a leading minus sign as a formula.
+const csvHklList=list=>csvQuote(list.map(h=>`(${h.map(csvFixed4).join(' ')})`).join('; '));
+function reflectionCsvColumns({powder,prefix='',part='all'}){
+  const cell=cifState.reflectionData?.parentKnown===false?'magnetic':'parent';
+  const lorentz=lorentzOn()?(powder?'1/(2*sin(theta)^2*cos(theta))':'1/sin(2theta)'):'1';
+  const iName=part==='N'?(powder?'I=Mult*FN2*L':'I=FN2*L'):part==='M'?(powder?'I=Mult*FM2*L':'I=FM2*L'):(powder?'I=Mult*(FN2+FM2)*L':'I=(FN2+FM2)*L');
+  const header=['h','k','l','code','multiplicity',`FN2_barn_per_${cell}_cell`,`FM2_barn_per_${cell}_cell`,'form_factor',
+    iName,`L=${lorentz}`,'two_theta_deg','Q_inv_A','d_A','equivalent_hkl']
+    .map(h=>prefix+h).map(h=>/[,=*/()]/.test(h)?csvQuote(h):h);
+  const intensity=r=>{
+    if(part==='all') return r.intensity;
+    const m=powder?r.mult:1;
+    return m*(part==='N'?r.fn2:r.fm2)*r.lorentz;
+  };
+  const cells=r=>r ? [...r.hkl.map(csvFixed4),r.code,r.mult,csvSig5(r.fn2),csvSig5(r.fm2),csvQuote(r.formFactor||''),
+    csvSig5(intensity(r)),csvSig5(r.lorentz),csvFixed4(r.twoTheta),csvFixed4(r.q),csvFixed4(r.d),csvHklList(r.members||[r.hkl])]
+    : header.map(()=>'');
+  return {header,cells};
+}
+// Calculated powder pattern (as drawn in Graph): the profile (2θ, Q, d and
+// total / nuclear / magnetic intensity) followed by the nuclear and magnetic
+// peak lists in the Download table layout (N_..., M_...), one peak per row.
+function downloadPowderPattern(){
+  const p=cifState.powderPattern;
+  if(!p || !p.tth?.length) throw new Error('No powder pattern is available to download.');
+  const s=t=>Math.sin(t*Math.PI/360);
+  const colN=reflectionCsvColumns({powder:true,prefix:'N_',part:'N'}), colM=reflectionCsvColumns({powder:true,prefix:'M_',part:'M'});
+  const header=['two_theta_deg','Q_inv_A','d_A','I_total','I_nuclear','I_magnetic',...colN.header,...colM.header];
+  const rows=Math.max(p.tth.length,p.peaksN?.length||0,p.peaksM?.length||0);
+  const lines=[header.join(',')];
+  for(let i=0;i<rows;i++){
+    const t=p.tth[i];
+    const profile=t===undefined ? ['','','','','',''] : [csvFixed4(t),csvFixed4(4*Math.PI*s(t)/p.lambda),csvFixed4(p.lambda/(2*s(t))),csvSig5(p.yT[i]),csvSig5(p.yN[i]),csvSig5(p.yM[i])];
+    lines.push([...profile,...colN.cells(p.peaksN?.[i]),...colM.cells(p.peaksM?.[i])].join(','));
+  }
+  const source=fn.nuclearReflectionSource?.();
+  const base=fn.cleanCifBaseName(source?.fileName||getSelectedCifFileName?.()||'selected_structure.cif');
+  fn.downloadGeneratedCif(lines.join('\n'),`${base}_powder_pattern.csv`);
+}
 function downloadCifReflectionTable(){
   const rows=sortedRows(displayRows());
   if(!rows.length) throw new Error('No reflections are available to download.');
   const powder=mode()==='graph';
-  const cell=cifState.reflectionData?.parentKnown===false?'magnetic':'parent';
-  const lorentz=lorentzOn()?(powder?'1/(2*sin(theta)^2*cos(theta))':'1/sin(2theta)'):'1';
-  const header=['h','k','l','code',...(powder?['multiplicity']:[]),
-    `FN2_barn_per_${cell}_cell`,`FM2_barn_per_${cell}_cell`,'form_factor',
-    powder?'I=Mult*(FN2+FM2)*L':'I=(FN2+FM2)*L',`L=${lorentz}`,'two_theta_deg','Q_inv_A','d_A',
-    ...(powder?['equivalent_hkl']:[])];
-  const quote=v=>`"${String(v).replace(/"/g,'""')}"`;
-  const lines=[header.map(h=>/[,=*/()]/.test(h)?quote(h):h).join(','),
-    ...rows.map(r=>[...r.hkl,r.code,...(powder?[r.mult]:[]),r.fn2,r.fm2,quote(r.formFactor||''),
-      r.intensity,r.lorentz,r.twoTheta,r.q,r.d,
-      ...(powder?[quote(r.members.map(h=>h.join(' ')).join('; '))]:[])].join(','))];
+  const col=reflectionCsvColumns({powder});
+  const lines=[col.header.join(','),...rows.map(r=>col.cells(r).join(','))];
   const source=fn.nuclearReflectionSource?.();
   const base=fn.cleanCifBaseName(source?.fileName||getSelectedCifFileName?.()||'selected_structure.cif');
   fn.downloadGeneratedCif(lines.join('\n'),`${base}_reflections_${powder?'powder':'single_crystal'}.csv`);
@@ -446,7 +522,15 @@ function initializeReflectionTable(){
       sel.dispatchEvent(new Event('change',{bubbles:true}));
     });
   }
-  $('reflectionPlotFwhm')?.addEventListener('input',renderReflectionPowderPlot);
+  for(const id of ['reflectionPlotU','reflectionPlotV','reflectionPlotW']) $(id)?.addEventListener('input',renderReflectionPowderPlot);
+  const setUVW=values=>{
+    for(const [id,v] of Object.entries(values)){
+      const el=$(id); if(!el) continue;
+      el.value=String(v); el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    renderReflectionPowderPlot();
+  };
+  $('reflectionPlotUVWDefault')?.addEventListener('click',()=>setUVW(POWDER_UVW_DEFAULT_IDS));
   if(!window.Plotly) window.addEventListener('load',()=>renderReflectionPowderPlot(),{once:true});
   renderCifReflectionTable();
 }

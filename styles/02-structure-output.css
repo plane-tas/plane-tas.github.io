@@ -259,7 +259,7 @@
   gap:calc(8px * var(--tas-density)) calc(14px * var(--tas-density));
   min-width:0;
 }
-#structurePanel #cifReflectionsPanel .cif-reflection-toolbar > #cifDownloadTable{
+#structurePanel #cifReflectionsPanel .cif-reflection-toolbar > :is(#cifDownloadTable,#cifDownloadPattern){
   box-sizing:border-box;
   flex:0 0 auto;
   margin-left:auto;
@@ -466,6 +466,8 @@
 #structurePanel .reflection-radio-group > span{font-weight:600;font-size:max(12px,calc(17px * var(--tas-density)))!important}
 #structurePanel .reflection-radio-group label,#structurePanel .reflection-plot-fwhm{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap}
 #structurePanel .reflection-plot-fwhm input{width:calc(70px * var(--tas-density))}
+#structurePanel .reflection-plot-uvw input{width:calc(62px * var(--tas-density))}
+#structurePanel .reflection-plot-uvw button{padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density))}
 #structurePanel .reflection-powder-plot{width:100%;height:calc(280px * var(--tas-density));min-width:0}
 #structurePanel #cifReflectionTableWrap.hidden{display:none!important}
 #structurePanel .reflection-powder-section:not([hidden]){flex:1 1 auto;display:flex;flex-direction:column;min-height:calc(320px * var(--tas-density))}

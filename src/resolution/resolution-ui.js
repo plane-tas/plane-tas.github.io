@@ -187,6 +187,54 @@ function calcOne(calc){
   }
   return {calc,...b,result,angles};
 }
+// Powder peak width of the current instrument as FullProf U, V, W (deg²):
+//   FWHM²(2θ) = U tan²θ + V tanθ + W.
+// For a set of 2θ, the resolution matrix is calculated at ħω = 0 with
+// Ei = Ef = energy (dummy cubic lattice, Q along a*).  An elastic powder line
+// is δ(ΔE)·δ(|Q|-G): take the ΔE = 0 slice, integrate over Q⊥ and the
+// out-of-plane direction, and convert the remaining Q∥ width to 2θ.  U, V, W
+// are then fitted to FWHM² by linear least squares.
+function powderUVWFromInstrument(energy){
+  const b=collectResolutionBase();
+  if(currentInstrument()?.instrument_type==='diffractometer' &&
+     (!$('monoCrystal')?.value || !(b.mos.d_mono>0))) {
+    throw new Error('This diffractometer has no configured monochromator crystal/d-spacing.');
+  }
+  const E=Number(energy)>0 ? Number(energy) : Number(b.config.Ei ?? b.config.Ef);
+  if(!(E>0)) throw new Error('Energy must be positive.');
+  const a=2*PI;
+  const lc={...b.lc,a,b:a,c:a,alpha:90,beta:90,gamma:90,sv1:[1,0,0],sv2:[0,1,0]};
+  const rl=RLRes(lc); lc.sv3=inferOutOfPlaneHKL(rl,lc.sv1,lc.sv2);
+  const {s1sign:_s1,...base}=b.config;
+  const config={...base,energy_mode:'Ei fixed',Ei:E,Ef:null,sense:selectedTasSense(),sign_config:selectedTasSense()};
+  const k=Math.sqrt(E/2.072), c8=2*Math.sqrt(2*Math.LN2);
+  const pts=[]; let lastError=null;
+  for(let tt=10;tt<=170+1e-9;tt+=2.5){
+    const th=tt/2*PI/180, q=2*k*Math.sin(th);
+    try{
+      const M=calcResolution(lc,rl,b.col,b.mos,config,b.approximation,b.focusing,b.geom,{h:q,k:0,l:0,hw:0},'ainv').RM;
+      // Precision matrix of (Q∥, Q⊥, Qout) at ΔE = 0; the Q∥ variance of the
+      // marginal is the [0][0] element of its inverse.
+      const S=[[M[0][0],M[0][1],M[0][3]],[M[1][0],M[1][1],M[1][3]],[M[3][0],M[3][1],M[3][3]]];
+      const det=S[0][0]*(S[1][1]*S[2][2]-S[1][2]*S[2][1])-S[0][1]*(S[1][0]*S[2][2]-S[1][2]*S[2][0])+S[0][2]*(S[1][0]*S[2][1]-S[1][1]*S[2][0]);
+      const var0=(S[1][1]*S[2][2]-S[1][2]*S[2][1])/det;
+      if(!(det>0) || !(var0>0)) continue;
+      const fwhmQ=c8*Math.sqrt(var0), fwhm2th=fwhmQ/(k*Math.cos(th))*180/PI;
+      if(Number.isFinite(fwhm2th)) pts.push([Math.tan(th),fwhm2th]);
+    }catch(err){ lastError=err; }
+  }
+  if(pts.length<3) throw new Error(lastError?.message || 'Resolution could not be calculated for this instrument.');
+  // Normal equations for y = U t² + V t + W with y = FWHM².
+  const A=[[0,0,0],[0,0,0],[0,0,0]], r=[0,0,0];
+  for(const [t,f] of pts){ const row=[t*t,t,1], y=f*f; for(let i=0;i<3;i++){ r[i]+=row[i]*y; for(let j=0;j<3;j++) A[i][j]+=row[i]*row[j]; } }
+  const det3x3=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  const D=det3x3(A);
+  const solveCol=i=>det3x3(A.map((row,n)=>row.map((v,j)=>j===i?r[n]:v)))/D;
+  const fit={U:solveCol(0),V:solveCol(1),W:solveCol(2)};
+  const rms=Math.sqrt(pts.reduce((s,[t,f])=>s+(Math.sqrt(Math.max(0,fit.U*t*t+fit.V*t+fit.W))-f)**2,0)/pts.length);
+  return {...fit,rms,points:pts.length,twoThetaRange:[2*Math.atan(pts[0][0])*180/PI,2*Math.atan(pts[pts.length-1][0])*180/PI]};
+}
+if(typeof window!=='undefined') window.tasPowderUVWFromInstrument=powderUVWFromInstrument;
 function matrixText(M){return M.map(r=>'[ '+r.map(x=>Number(x).toExponential(6).padStart(14)).join('  ')+' ]').join('\n');}
 function formatResolutionCoordinate(v){
   if(!Number.isFinite(v)) return '';

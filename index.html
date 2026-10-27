@@ -721,6 +721,7 @@
 <label class="cif-reflection-plane-toggle"><input checked="" id="cifReflectionWithinS2Max" type="checkbox"/> within instrument 2θ max</label>
 <label class="cif-reflection-plane-toggle"><input id="cifReflectionLambdaHalf" type="checkbox"/> λ/2</label>
 <button disabled="" id="cifDownloadTable" type="button">Download table</button>
+<button class="hidden" disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Download pattern</button>
 </div>
 <div class="magnetic-options reflection-options">
 <label class="hidden"><span>Mode</span><select id="reflectionMode" title="Table: one row per hkl (single crystal). Graph: powder pattern."><option value="table">Table</option><option value="graph">Graph</option></select></label>
@@ -730,7 +731,7 @@
 </div>
 <section class="reflection-powder-section" id="reflectionPowderSection" hidden>
 <div class="reflection-powder-plot-wrap">
-<div class="reflection-plot-controls"><label class="reflection-plot-log" title="Logarithmic intensity axis"><input id="reflectionPlotLog" type="checkbox"/> Log I</label><label class="reflection-plot-fwhm">FWHM 2θ (°)<input id="reflectionPlotFwhm" type="number" min="0.01" step="0.05" value="0.3"/></label><label class="reflection-plot-xaxis-label">X axis<select class="reflection-plot-xaxis" id="reflectionPlotXAxis" aria-label="Horizontal axis"><option value="twoTheta">2θ (deg)</option><option value="q">Q (Å⁻¹)</option><option value="d">d (Å)</option></select></label></div>
+<div class="reflection-plot-controls"><label class="reflection-plot-log" title="Logarithmic intensity axis"><input id="reflectionPlotLog" type="checkbox"/> Log I</label><span class="reflection-plot-fwhm reflection-plot-uvw" title="Gaussian peak width in 2θ (deg²), as in FullProf: FWHM² = U tan²θ + V tanθ + W">FWHM² =<input id="reflectionPlotU" type="number" step="0.05" value="0.44" aria-label="U (deg²)"/>tan²θ +<input id="reflectionPlotV" type="number" step="0.05" value="-0.33" aria-label="V (deg²)"/>tanθ +<input id="reflectionPlotW" type="number" step="0.05" value="0.17" aria-label="W (deg²)"/><button id="reflectionPlotUVWDefault" type="button" title="U = 0.44, V = −0.33, W = 0.17">Default</button></span><label class="reflection-plot-xaxis-label">X axis<select class="reflection-plot-xaxis" id="reflectionPlotXAxis" aria-label="Horizontal axis"><option value="twoTheta">2θ (deg)</option><option value="q">Q (Å⁻¹)</option><option value="d">d (Å)</option></select></label></div>
 <div class="reflection-powder-plot" id="reflectionPowderPlot"></div>
 </div>
 </section>

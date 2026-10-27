@@ -227,6 +227,10 @@ async function initializeCifGenerator(){
       try{ fn.downloadCifReflectionTable(); }
       catch(err){ fn.setCifGeneratorMessage(err?.message||String(err),true); }
     });
+    $("cifDownloadPattern")?.addEventListener("click",()=>{
+      try{ fn.downloadPowderPattern(); }
+      catch(err){ fn.setCifGeneratorMessage(err?.message||String(err),true); }
+    });
     $("cifOutputSet")?.addEventListener("click",()=>{
       try{
         const mcif=$("cifOutputFormat")?.value==="mcif";
