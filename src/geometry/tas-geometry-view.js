@@ -716,7 +716,9 @@ function renderGeometry(cache,index=0){
   // Outside the outermost Dark-angle arc when the guide is shown, otherwise
   // close to the sample.
   const outerDarkSlot=Math.max(1,...(cache.darkAssets||[]).map(a=>Number(a.slot)||1));
-  const sampleLabelRadius=showDarkGeometry ? 1.06*darkRadius*(1+0.1*(outerDarkSlot-1)) : 0.30*darkRadius;
+  // Single crystal: also beyond the U / V tip labels (uvVectorLen + 0.22).
+  const uvLabelRadius=(!isPowder && uEnd && vEnd) ? uvVectorLen+0.22+0.15 : 0;
+  const sampleLabelRadius=Math.max(showDarkGeometry ? 1.06*darkRadius*(1+0.1*(outerDarkSlot-1)) : 0.30*darkRadius, uvLabelRadius);
   const sampleLabelAnchor=[sample[0]+sampleLabelRadius*sampleDir[0],sample[1]+sampleLabelRadius*sampleDir[1]];
   const annotations=[];
   if(!isPowder && uEnd && vEnd){
