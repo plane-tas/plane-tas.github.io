@@ -16,6 +16,17 @@ export function createQESingleRender(deps){
 // Shared legend UI for Constant E, Q-vector–E and Powder. Keep independent
 // show/hide states for each plot, and group dummy and data traces together.
 const qeLegendVisibilityByPlot=new Map();
+// "labels" checkbox next to the Nuclear Bragg peaks legend entry: hkl labels
+// of the nuclear peaks on/off (kept across reloads).
+const QE_NUCLEAR_LABELS_KEY='tas-qe-nuclear-labels-v1';
+let qeNuclearLabelsOn=(()=>{ try{ return localStorage.getItem(QE_NUCLEAR_LABELS_KEY)!=='off'; }catch(_e){ return true; } })();
+// Plotly visibility of one trace from its legend entry (and, for the nuclear
+// hkl labels, the labels checkbox).
+function qeTraceVisible(trace,visibility){
+  if(visibility.get(qeLegendKey(trace))===false) return 'legendonly';
+  if(trace.meta==='nuclear-labels' && !qeNuclearLabelsOn) return 'legendonly';
+  return true;
+}
 function qeLegendKey(trace){
   if(['nuclear-data','nuclear-labels','nuclear-legend'].includes(trace.meta)) return 'Nuclear Bragg peaks';
   const name=String(trace.name||'');
@@ -90,7 +101,7 @@ function renderLegendInto(hostId,visibilityId,plotTraces){
       const data=Array.isArray(gd?.data) ? gd.data : [];
       const indices=data.map((tr,i)=>keys.includes(qeLegendKey(tr))?i:-1).filter(i=>i>=0);
       if(indices.length){
-        Plotly.restyle(plotId,{visible:indices.map(i=>visibility.get(qeLegendKey(data[i]))===false?'legendonly':true)},indices);
+        Plotly.restyle(plotId,{visible:indices.map(i=>qeTraceVisible(data[i],visibility))},indices);
       }
     }
     host.querySelectorAll('.qe-legend-item').forEach(el=>{
@@ -132,10 +143,32 @@ function renderLegendInto(hostId,visibilityId,plotTraces){
       setVisibility();
     });
     host.appendChild(button);
+    // hkl labels of the nuclear peaks: a checkbox right after their entry.
+    if(key==='Nuclear Bragg peaks' && allTraces.some(tr=>tr.meta==='nuclear-labels')){
+      // A span, not a <label>: generic label styles (column layout, sizes)
+      // must not apply; clicking the text toggles the box.
+      const box=document.createElement('span');
+      box.className='qe-legend-labels';
+      box.title='Show the (h,k,l) labels of the nuclear Bragg peaks';
+      const input=document.createElement('input');
+      input.type='checkbox'; input.checked=qeNuclearLabelsOn;
+      input.dataset.qeNuclearLabels='1';
+      input.addEventListener('change',()=>{
+        qeNuclearLabelsOn=input.checked;
+        try{ localStorage.setItem(QE_NUCLEAR_LABELS_KEY,qeNuclearLabelsOn?'on':'off'); }catch(_e){}
+        setVisibility();
+      });
+      const text=document.createElement('span'); text.textContent='labels';
+      text.addEventListener('click',()=>{ input.checked=!input.checked; input.dispatchEvent(new Event('change')); });
+      box.append(input,text);
+      host.appendChild(box);
+      // Same text size as the legend entries, whatever rule sizes them.
+      try{ box.style.fontSize=getComputedStyle(button).fontSize; }catch(_e){}
+    }
   }
   // Respect the selected legend visibility across recalculations.
   for(const trace of allTraces){
-    if(visibility.get(qeLegendKey(trace))===false) trace.visible='legendonly';
+    if(qeTraceVisible(trace,visibility)!==true) trace.visible='legendonly';
   }
 }
 // Axis titles show the entered scattering-plane vectors, e.g. U (1, 1, 0).

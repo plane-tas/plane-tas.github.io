@@ -668,6 +668,23 @@ $("geomToResolution")?.addEventListener("click",()=>{
   saveGlobalUIState?.();
   scheduleRecalc();
 });
+// The reverse: Resolution point (H, K, L, ħω) → Angle calculation & TAS
+// geometry (Single mode) in the Q-E tab.
+$("resolutionToGeometry")?.addEventListener("click",()=>{
+  for(const [from,to] of [["h","geomH"],["k","geomK"],["l","geomL"],["hw","geomHW"]]){
+    const src=$(from), dst=$(to);
+    if(!src || !dst) continue;
+    dst.value=src.value;
+    dst.dispatchEvent(new Event("input",{bubbles:true}));
+    dst.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  setActiveTab("qe");
+  if(geometryCalculationMode?.()!=="single") setGeometryCalculationMode?.("single");
+  $("geometryTabAngles")?.click();
+  saveRightPanelState?.();
+  saveGlobalUIState?.();
+  scheduleRecalc();
+});
 
 // Either S2 control may be used as the user's entry point.  Effective is an
 // absolute value; convert it to Delta before the normal recalculation handler

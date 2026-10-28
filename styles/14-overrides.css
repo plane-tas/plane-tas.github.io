@@ -679,3 +679,10 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #resolutionPanel.res-fit #result .plots>div{
   height:var(--res-fit-plot)!important;
 }
+/* "labels" checkbox right after the Nuclear Bragg peaks legend entry. */
+.qe-external-legend .qe-legend-labels,#qePlotLegend .qe-legend-labels{
+  display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));
+  margin-left:calc(-8px * var(--tas-density));font-size:calc(13px * var(--tas-density));color:#202a37;
+  white-space:nowrap;cursor:pointer;
+}
+.qe-external-legend .qe-legend-labels input,#qePlotLegend .qe-legend-labels input{margin:0;cursor:pointer}

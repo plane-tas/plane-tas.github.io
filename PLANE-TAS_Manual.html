@@ -73,7 +73,7 @@
 <ul>
 <li><b>ħω</b>: set the energy transfer with the slider or the entry box. The value is shared with the Angle calculation; changing either one moves the other. The map shows the nearest calculated energy slice (0.1 meV steps).</li>
 <li>Axes are in r.l.u. along U and V; the grid is drawn along U and V even when they are not perpendicular. Drag a box to zoom; double-click to return to the full view.</li>
-<li><b>Accessible Q</b> (yellow) is the reachable region within the S2 limits given in the legend. <b>Nuclear Bragg peaks</b> are black (labelled), magnetic peaks are red with one marker shape per propagation vector.</li>
+<li><b>Accessible Q</b> (yellow) is the reachable region within the S2 limits given in the legend. <b>Nuclear Bragg peaks</b> are black and labelled with (h,k,l); the <b>labels</b> checkbox next to their legend entry turns the labels on and off. Magnetic peaks are red with one marker shape per propagation vector.</li>
 <li>When a CIF/mCIF is loaded, nuclear peaks are shaded by |F<sub>N</sub>|²/max with a colorbar. Click the numbers at the ends of the colorbar to change its range.</li>
 <li>Hover over a peak to see (h, k, l), |Q| (Å⁻¹) and the S1 and S2 at the current ħω.</li>
 <li><b>S2 (deg)</b> with <b>Show S2 ring</b> draws the |Q| circle of that S2. <b>λ/2 (only elastic)</b> shows the elastic region for the half-wavelength component.</li>
@@ -103,7 +103,7 @@
 <ol>
 <li>Enter <b>h, k, l</b> and <b>ħω</b>. The result shows Ei, Ef, |Q| and the motor angles M1, M2, S1, S2, A1 and A2.</li>
 <li>Quick buttons set common targets: <b>Set U</b> / <b>Set V</b> put U or V into h, k, l; <b>Set ki ⟂ U</b> (or the button matching the chosen orientation reference) gives the reference position where S1 = 0. <b>Set Bragg peak</b> appears for the Bragg-peak orientation reference.</li>
-<li><b>→ Resolution</b> (right end of the same row) copies the Angle calculation point (h, k, l, ħω) to the Resolution tab as a single point, opens that tab and calculates the resolution there, where the instrument details can be changed.</li>
+<li><b>→ Resolution</b> (right end of the same row) copies the Angle calculation point (h, k, l, ħω) to the Resolution tab as a single point, opens that tab and calculates the resolution there, where the instrument details can be changed. In the Resolution tab, <b>→ Angle calc</b> (right of ℏω) does the reverse: it copies H, K, L and ℏω to the Angle calculation and opens it.</li>
 <li>Sliders move the target: <b>ħω</b>, the coefficient of <b>U</b> and of <b>V</b> (labelled with the U and V you entered), and a line <b>c1·U + c2·V</b>. Enter c1 and c2, then move the last slider; <b>Set origin</b> makes the current target the zero of that slider.</li>
 <li>The drawing shows the monochromator, sample, analyzer, detector and the vectors ki, kf, Q, U and V at the calculated angles.</li>
 </ol>
