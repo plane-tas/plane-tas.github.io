@@ -2829,14 +2829,14 @@ export function createScriptWorkspace(deps){
 
   function timeReachabilityFromQ(q,hw){
     const energy=timeEnergyForTransfer(hw);
-    if(!energy) return {ok:false,reason:'the selected energy transfer makes Ei or Ef non-positive'};
+    if(!energy) return {ok:false,reason:'the selected ħω makes Ei or Ef non-positive'};
     const Q=Number(q);
     if(!(Q>=0)) return {ok:false,reason:'Q is not a valid non-negative value'};
     const ki=Math.sqrt(energy.Ei/2.072), kf=Math.sqrt(energy.Ef/2.072);
     const denom=2*ki*kf;
     const cosS2=(ki*ki+kf*kf-Q*Q)/denom;
     if(cosS2<-1-1e-10 || cosS2>1+1e-10){
-      return {ok:false,reason:'the scattering triangle cannot be formed at this Q and energy',Ei:energy.Ei,Ef:energy.Ef};
+      return {ok:false,reason:'the scattering triangle cannot be formed at this Q and ħω',Ei:energy.Ei,Ef:energy.Ef};
     }
     const s2=Math.abs(rad2deg(Math.acos(clamp(cosS2,-1,1))));
     return {ok:true,s2,Ei:energy.Ei,Ef:energy.Ef};

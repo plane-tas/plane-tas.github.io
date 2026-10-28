@@ -138,7 +138,7 @@ function tasMotorAngles(calc,b){
 
   const cosS2=(ki*ki+kf*kf-QtNorm*QtNorm)/(2*ki*kf);
   if(cosS2<-1-1e-10 || cosS2>1+1e-10){
-    throw new Error('The requested Q and energy transfer are kinematically inaccessible.');
+    throw new Error('The requested Q and ħω are kinematically inaccessible.');
   }
   const s2abs=rad2deg(Math.acos(clamp(cosS2,-1,1)));
   // S2 encoder polarity is derived from physical Sense and S1 encoder polarity.

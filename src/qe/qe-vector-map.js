@@ -384,7 +384,7 @@ function renderQEVectorMap(cache){
           if(inFixed) labels.push('dark angle: fixed');
           status=`<br>${labels.join(', ')}`;
         }
-        hrow.push(`HKL = (${hkl.map(v=>v.toFixed(3)).join(', ')})<br>ℏω = ${cache.hwList[i].toFixed(2)} meV${status}`);
+        hrow.push(`HKL = (${hkl.map(v=>v.toFixed(3)).join(', ')})<br>ħω = ${cache.hwList[i].toFixed(2)} meV${status}`);
       }
       z.push(row); darkKiZ.push(kiRow); darkKfZ.push(kfRow); darkFixedZ.push(fixedRow); hover.push(hrow);
     }
@@ -506,7 +506,7 @@ function renderQEVectorMap(cache){
         ticktext:multiple?tickVals.map(()=>''):tickText,
         range:[hMin,hMax],tickangle:0,automargin:false,zeroline:false,
         ticks:multiple?'outside':'',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
-      yaxis:{title:{text:'ℏω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      yaxis:{title:{text:'ħω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
         ...knots.map(x=>({type:'line',x0:x,x1:x,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}}))

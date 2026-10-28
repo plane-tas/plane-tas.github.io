@@ -200,7 +200,7 @@ export function createQESingleCrystal(deps){
       darkKF.push(hwKF); darkKI.push(hwKI); darkFixed.push(hwFixed);
     }
 
-    if(regions.length===0) throw new Error("No accessible energy-transfer points were generated.");
+    if(regions.length===0) throw new Error("No accessible ħω points were generated.");
 
     // Generate Bragg peaks over the same radial range shown by the Single Crystal plot.
     // Using QmaxList[0] here made the index search depend on the first energy point

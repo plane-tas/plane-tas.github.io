@@ -288,7 +288,7 @@ function resolutionWidthsHtml(r,unitMode,lc){
   return `<b>Resolution</b> δQ//${fmtAxis(ax.U)}=${d.U.toFixed(4)} (${d.Ucoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.V)}=${d.V.toFixed(4)} (${d.Vcoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.W)}=${d.W.toFixed(4)} (${d.Wcoh.toFixed(4)}) ${qUnit}, `+
-    `δℏω=${d.E.toFixed(4)} (${d.Ecoh.toFixed(4)}) meV`;
+    `δħω=${d.E.toFixed(4)} (${d.Ecoh.toFixed(4)}) meV`;
 }
 // Plotly's built-in double-click "reset" returns to the axis ranges of the
 // plot's first draw (an earlier point), which looks like a random scale.
@@ -319,23 +319,23 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=RESOLUTION_PLOT_IDS,font
   const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
   const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
   const frame=resolutionFrame(r), el=frame.ellipses;
-  const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δℏω`;
+  const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δħω`;
   reactResolutionPlot(
     ids.UE,
     [traceEllipse(el.projUE,'projection'),traceEllipse(el.sliceUE,'slice','dash')],
-    baseLayout(qeTitle(ax.U),`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δℏω (meV)',limits.U,limits.E,false,ids.UE,fonts),
+    baseLayout(qeTitle(ax.U),`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δħω (meV)',limits.U,limits.E,false,ids.UE,fonts),
   );
 
   reactResolutionPlot(
     ids.VE,
     [traceEllipse(el.projVE,'projection'),traceEllipse(el.sliceVE,'slice','dash')],
-    baseLayout(qeTitle(ax.V),`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δℏω (meV)',limits.V,limits.E,false,ids.VE,fonts),
+    baseLayout(qeTitle(ax.V),`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δħω (meV)',limits.V,limits.E,false,ids.VE,fonts),
   );
 
   reactResolutionPlot(
     ids.WE,
     [traceEllipse(el.projWE,'projection'),traceEllipse(el.sliceWE,'slice','dash')],
-    baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δℏω (meV)',limits.W,limits.E,false,ids.WE,fonts),
+    baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,false,ids.WE,fonts),
   );
 
   const lattice=resolutionCoordinates()==='lattice' && r.lattice;
@@ -512,7 +512,7 @@ function rerenderResolution(){
   if(!lastResolutionRender) return;
   const {entry,indexInfo,scan}=lastResolutionRender;
   if(scan && scanResults.length){
-    scanResolutionPlotLimits=resolutionFrameLimits(scanResults);
+    scanResolutionPlotLimits=resolutionFrameLimits(scanResults.filter(e=>!e.failed));
     renderResolutionScan(Number($('scanSlider')?.value)||1);
   }else renderResolution(entry,indexInfo,resolutionFrame(entry.result).lim);
 }
@@ -538,7 +538,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   const {Ei,Ef}=r.energies;
   $('summary').innerHTML=
     `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
-    `ℏω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
+    `ħω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
     `<div>${resolutionWidthsHtml(r,unitMode,lc)}</div>`+
     `<div><b>Resolution axes</b> ${axisNames[0]}=${fmtAxis(ax.U)}, ${axisNames[1]}=${fmtAxis(ax.V)}, ${axisNames[2]}=${fmtAxis(ax.W)}</div>`+
     `<div><b>Angles (deg)</b> M1=${formatAngle(shown.m1)}, M2=${formatAngle(shown.m2)}, `+
@@ -598,6 +598,19 @@ function showResolutionCalculationWarning(error){
   clearResolutionResults();
 }
 
+// Results box for a point (or a whole scan) that cannot be calculated: the
+// reason replaces the widths, plots and matrices.
+function showResolutionNotCalculable(text,calc=null,indexInfo=''){
+  $('result')?.classList.remove('hidden');
+  const f=v=>Number.isFinite(Number(v))?Number(v).toFixed(3):'';
+  const point=calc ? `<div><b>Calculation point</b> ħω=${f(calc.hw)} meV, (h,k,l)=(${f(calc.h)}, ${f(calc.k)}, ${f(calc.l)}) ${indexInfo}</div>` : '';
+  const div=document.createElement('div'); div.className='resolution-not-calculable'; div.textContent=text;
+  if($('summary')){ $('summary').innerHTML=point; $('summary').appendChild(div); }
+  if($('matrix')) $('matrix').textContent='';
+  for(const id of Object.values(RESOLUTION_PLOT_IDS)){
+    const gd=$(id); if(gd && window.Plotly){ try{ Plotly.purge(gd); }catch(_e){} }
+  }
+}
 function doSingleResolution(){
   if(resolutionIsUnavailable()){
     clearResolutionResults();
@@ -623,17 +636,31 @@ function doScanResolution(){
   updateResolutionPlaneWarning();
   try{
     const n=Math.max(2,Math.round(num('npts'))),xs=(a,b)=>linspace(a,b,n),hs=xs(num('h0'),num('h1')),ks=xs(num('k0'),num('k1')),ls=xs(num('l0'),num('l1')),ws=xs(num('hw0'),num('hw1'));
-    scanResults=Array.from({length:n},(_,i)=>calcOne({hw:ws[i],h:hs[i],k:ks[i],l:ls[i]}));
+    // Every point is calculated on its own: a point outside the accessible
+    // range (e.g. kinematically inaccessible) is kept as "not calculable"
+    // and does not stop the others.
+    scanResults=Array.from({length:n},(_,i)=>{
+      const calc={hw:ws[i],h:hs[i],k:ks[i],l:ls[i]};
+      try{ return calcOne(calc); }
+      catch(err){ return {calc,failed:true,message:userFacingTasMessage(err instanceof Error ? err.message : String(err))}; }
+    });
+    const valid=scanResults.filter(e=>!e.failed);
+    $('calcScanResolution')?.classList.remove('needs-calc');
+    if(!valid.length){
+      $('scanNav')?.classList.add('hidden');
+      scanResolutionPlotLimits=null;
+      showResolutionNotCalculable(`No point of this scan can be calculated: ${scanResults[0].message}`);
+      return;
+    }
     // Use the largest required extent across the complete scan.  This is
     // especially important for constant-E Q scans, where the ellipse shape can
     // change strongly with Q; the slider must not rescale the plot underneath it.
-    scanResolutionPlotLimits=resolutionFrameLimits(scanResults);
+    scanResolutionPlotLimits=resolutionFrameLimits(valid);
     $('scanSlider').min=1;
     $('scanSlider').max=n;
-    $('scanSlider').value=1;
     $('scanNav').classList.remove('hidden');
-    $('calcScanResolution')?.classList.remove('needs-calc');
-    renderResolutionScan(1);
+    // Open on the first point that could be calculated.
+    renderResolutionScan(scanResults.indexOf(valid[0])+1);
   }catch(e){
     scanResolutionPlotLimits=null;
     showResolutionCalculationWarning(e);
@@ -648,7 +675,15 @@ function renderResolutionScan(i){
   i=Math.max(1,Math.min(scanResults.length,Number(i)));
   $('scanSlider').value=i;
   $('scanIndex').textContent=`${i} / ${scanResults.length}`;
-  renderResolution(scanResults[i-1],`| scan ${i}/${scanResults.length}`,scanResolutionPlotLimits || resolutionFrame(scanResults[i-1].result).lim);
+  const failedCount=scanResults.filter(e=>e.failed).length;
+  const info=`| scan ${i}/${scanResults.length}${failedCount?` (${failedCount} point${failedCount>1?'s':''} not calculable)`:''}`;
+  const entry=scanResults[i-1];
+  if(entry.failed){
+    lastResolutionRender={entry,indexInfo:info,scan:true};
+    showResolutionNotCalculable(`Not calculable: ${entry.message}`,entry.calc,info);
+    return;
+  }
+  renderResolution(entry,info,scanResolutionPlotLimits || resolutionFrame(entry.result).lim);
 }
 
 function bindResolutionManualCalculation(){

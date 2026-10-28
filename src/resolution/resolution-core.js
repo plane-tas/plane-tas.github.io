@@ -225,7 +225,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   if(qnorm<1e-12) throw new Error('Q = 0 cannot define the local TAS resolution coordinate system.');
   const kiCal=Math.sqrt(Ei/E2K2), kfCal=Math.sqrt(Ef/E2K2);
   let cosPhi=(kiCal*kiCal+kfCal*kfCal-qnorm*qnorm)/(2*kiCal*kfCal);
-  if(cosPhi < -1-1e-10 || cosPhi > 1+1e-10) throw new Error('The requested Q and energy transfer are kinematically inaccessible.');
+  if(cosPhi < -1-1e-10 || cosPhi > 1+1e-10) throw new Error('The requested Q and ħω are kinematically inaccessible.');
   cosPhi=Math.max(-1,Math.min(1,cosPhi));
   const phiCal=acosd(cosPhi);
   const monoArg=(2*PI/d_mono)/(2*kiCal), anaArg=(2*PI/d_ana)/(2*kfCal);

@@ -271,3 +271,5 @@
 
 /* → Angle calc: same height as the entry boxes, on their baseline. */
 #resolutionCalculation #singleInputs .resolution-to-geometry{align-self:end;white-space:nowrap}
+/* A scan point (or a whole scan) that cannot be calculated. */
+#result .resolution-not-calculable{color:#b42318;font-weight:600;margin-top:calc(4px * var(--tas-density))}

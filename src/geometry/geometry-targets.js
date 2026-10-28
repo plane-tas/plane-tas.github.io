@@ -60,7 +60,7 @@ function setGeometryKiOrientationCondition(mode){
     $("geomHW").value=0;
     const qCurrent=hklToQ(b.rl,currentHKL), qNorm=norm(qCurrent);
     const cosS2=(ki*ki+kf*kf-qNorm*qNorm)/(2*ki*kf);
-    if(cosS2<-1-1e-10||cosS2>1+1e-10) throw new Error("Current |Q| is not accessible at this energy transfer.");
+    if(cosS2<-1-1e-10||cosS2>1+1e-10) throw new Error("Current |Q| is not accessible at this ħω.");
     const s2Geom=rad2deg(Math.acos(clamp(cosS2,-1,1))), t=deg2rad(s2Geom);
     const phiQlab=rad2deg(Math.atan2(-kf*Math.sin(t),ki-kf*Math.cos(t)));
     const orient=canonicalOrientationMode(

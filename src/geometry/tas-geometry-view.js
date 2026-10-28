@@ -106,7 +106,7 @@ function geometryPointWarnings(cache,calc){
 }
 function geometryScanErrorStatus(err){
   const raw=String(err?.message || err || '');
-  if(/kinematically inaccessible|requested Q and energy transfer/i.test(raw)) return 'No scattering triangle';
+  if(/kinematically inaccessible|requested Q and (?:energy transfer|ħω)/i.test(raw)) return 'No scattering triangle';
   return userFacingTasMessage(raw);
 }
 
