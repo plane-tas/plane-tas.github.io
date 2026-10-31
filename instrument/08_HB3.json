@@ -10,11 +10,11 @@
   "collimator": {
     "1st_h": 40,
     "1st_v": 150,
-    "2nd_h": 40,
+    "2nd_h": 999,
     "2nd_v": 270,
     "3rd_h": 40,
     "3rd_v": 300,
-    "4th_h": 120,
+    "4th_h": 999,
     "4th_v": 600
   },
   "monochromator": {
