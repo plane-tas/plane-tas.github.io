@@ -264,7 +264,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(4)).join(', ')})</div>`
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
-  const diffractometer=currentInstrument()?.instrument_type==='diffractometer';
+  const diffractometer=['diffractometer','four-circle'].includes(currentInstrument()?.instrument_type);   // 4-circle: no analyzer
   const fourCircle=Number.isFinite(shown.chi);
   const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${fourCircle?`, χ=${geometryResultMotorAngle(shown.chi)}°, φ=${geometryResultMotorAngle(shown.phi)}°`:''}${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
     (!isPowder && a.warning?` &nbsp; | &nbsp; ${a.warning}`:'');
@@ -293,7 +293,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
 
 function renderGeometry(cache,index=0){
   const isPowder=checkedValue("sampleMode")==="powder" || !!cache?.powder;
-  const isDiffractometer=currentInstrument()?.instrument_type==='diffractometer';
+  const isDiffractometer=['diffractometer','four-circle'].includes(currentInstrument()?.instrument_type);   // 4-circle: no analyzer
   const i=Math.max(0,Math.min(index,Math.max(0,(cache.hwList?.length||1)-1)));
   // Powder has no crystallographic sample orientation, but the TAS scattering
   // sign still determines the displayed motor-angle branch exactly as it does
@@ -501,7 +501,10 @@ function renderGeometry(cache,index=0){
   // Fixed, compact display radius: independent of instrument/angle auto-scaling.
   // The guide circle belongs to the dark-angle overlay, so hide it together
   // with the dark-angle sectors when the left-panel "show" checkbox is off.
-  const showDarkGeometry=!isPowder && Boolean($("addDark")?.checked);
+  // 4-circle: dark angles are not available yet (the TAS sectors do not apply).
+  let fourCircleInstrument=false;
+  try{ fourCircleInstrument=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
+  const showDarkGeometry=!isPowder && !fourCircleInstrument && Boolean($("addDark")?.checked);
   const darkRadius=1.0*SAMPLE_REGION_SCALE;
   if(showDarkGeometry){
     const circle=linspace(0,2*Math.PI,181);

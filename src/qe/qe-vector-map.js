@@ -377,7 +377,7 @@ function renderQEVectorMap(cache){
       const qAt=s2=>Math.sqrt(Math.max(0,ki*ki+kf*kf-2*ki*kf*Math.cos(s2*Math.PI/180)));
       const r=Math.hypot(p[0],p[1]), q=Math.hypot(r,z);
       if(q<qAt(s2MinDeg)-1e-9 || q>qAt(Number(cache.S2list[i]))+1e-9) return false;
-      const chi=-Math.atan2(z,r)*180/Math.PI;   // motor chi = -elevation towards W
+      const chi=(cache.chiFactor??-1)*Math.atan2(z,r)*180/Math.PI;   // motor chi = chiFactor * elevation towards W
       return chi>=cache.chiMin-1e-9 && chi<=cache.chiMax+1e-9;
     };
     for(let i=0;i<cache.hwList.length;i++){

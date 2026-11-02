@@ -72,7 +72,8 @@ function resolutionIsUnavailable(){
   // Avoid aborting initialize() while still disabling TAS resolution once a
   // diffractometer has actually been selected.
   try{
-    return currentInstrument()?.instrument_type==='diffractometer';
+    const type=currentInstrument()?.instrument_type;
+    return type==='diffractometer' || type==='four-circle';
   }catch(_err){
     return false;
   }

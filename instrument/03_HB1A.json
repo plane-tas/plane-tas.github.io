@@ -94,6 +94,8 @@
         "Ei": 0.1
       }
     ],
+    "phi_sign": "ccw",
+    "chi_sign": "ccw",
     "S1_min": -46,
     "S1_max": 0,
     "chi_min": -50,

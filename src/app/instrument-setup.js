@@ -68,6 +68,9 @@ function applyInstrumentTypeDefaults(inst=currentInstrument()){
   // reference is read on phi instead of S1.
   const refS1Text=$("refs1")?.closest("label")?.firstChild;
   if(refS1Text?.nodeType===3) refS1Text.nodeValue=inst.instrument_type==="four-circle" ? "φ (deg)" : "S1 (deg)";
+  // Four-circle motor signs (CCW unless the instrument file says otherwise).
+  setSelect("phiSign",String(inst.phi_sign||"ccw").toLowerCase());
+  setSelect("chiSign",String(inst.chi_sign||"ccw").toLowerCase());
   initializeS2MaxControl(inst);
 }
 function rangeTable(inst){
@@ -275,8 +278,11 @@ function syncSidebarCrystalSelectors(){
 }
 // Restrict both linked crystal selectors to the installed crystals listed in
 // each instrument JSON. Unknown/missing crystal data is NOT inferred.
+// Analyzer-free diffraction: diffractometers and the 4-circle mode (a
+// diffractometer with an Eulerian cradle).  No analyzer selector, no TAS
+// resolution, no analyzer in the TAS geometry drawing.
 function instrumentIsDiffractometer(inst=currentInstrument()){
-  return inst?.instrument_type==='diffractometer';
+  return inst?.instrument_type==='diffractometer' || inst?.instrument_type==='four-circle';
 }
 function installedCrystalNames(inst,part){
   const raw=inst?.available_crystals?.[part] ?? inst?.[part]?.available_crystals ??

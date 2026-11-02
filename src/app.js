@@ -13,7 +13,7 @@ import {
   wrap180, angleDiffDeg,
   tasPhiLabDegForConvention,
   tasCrystalPhiDegForConvention, tasPlotPhiFromCrystalPhiForConvention,
-  calcQ0
+  calcQ0, fourCircleSignFactors
 } from "./core/tas-conventions.js";
 import {
   isGitHubPages, isLocalDirectoryListingHost,
@@ -268,6 +268,26 @@ function setupTasConventionUI(){
     s1Row.appendChild(s1Select);
   }
 
+  // Four-circle motor signs (shown instead of Geometry / Sense for 4-circle).
+  const signRow=(id,label,title)=>{
+    let wrap=$(`${id}Row`);
+    if(!wrap){
+      wrap=document.createElement("label");
+      wrap.id=`${id}Row`; wrap.className="hidden"; wrap.title=title;
+      wrap.append(label);
+      const select=document.createElement("select");
+      select.id=id;
+      for(const [value,text] of [["ccw","CCW"],["cw","CW"]]){
+        const option=document.createElement("option");
+        option.value=value; option.textContent=text; select.appendChild(option);
+      }
+      wrap.appendChild(select);
+    }
+    return wrap;
+  };
+  const phiRow=signRow("phiSign","φ sign","Positive φ: CCW or CW seen from above at χ = 0");
+  const chiRow=signRow("chiSign","χ sign","Positive χ: CCW or CW seen from upstream along the bisector of ki and kf");
+
   // Put Geometry / Sense / S1 sign on one dedicated three-column row.
   let row=$("tasConventionRow");
   if(!row){
@@ -278,7 +298,45 @@ function setupTasConventionUI(){
   }
   row.appendChild(geometryRow);
   row.appendChild(senseRow);
+  row.appendChild(phiRow);
+  row.appendChild(chiRow);
   row.appendChild(s1Row);
+}
+// Geometry / Sense apply to TAS only; 4-circle shows the phi / chi signs in
+// their place, Diffractometer neither.  Their values are kept (and still used
+// for the scattering direction) while hidden.
+function updateInstrumentTypeRows(){
+  let type='tas';
+  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
+  const tas=type==='tas', fourCircle=type==='four-circle';
+  $("geometryRow")?.classList.toggle("hidden",!tas);
+  $("senseRow")?.classList.toggle("hidden",!tas);
+  $("phiSignRow")?.classList.toggle("hidden",!fourCircle);
+  $("chiSignRow")?.classList.toggle("hidden",!fourCircle);
+  // Dark angles are not available for 4-circle yet: keep the section visible
+  // (greyed out, not editable) with its values unchanged for a later update.
+  const dark=$("darkSection");
+  if(dark){
+    dark.classList.toggle("dark-unavailable",fourCircle);
+    let content=dark.querySelector(".dark-section-content");
+    if(!content){
+      content=document.createElement("div");
+      content.className="dark-section-content";
+      const heading=dark.querySelector("h2");
+      for(const node of [...dark.childNodes]) if(node!==heading) content.appendChild(node);
+      dark.appendChild(content);
+    }
+    content.inert=fourCircle;
+    let note=$("darkUnavailableNote");
+    if(!note){
+      note=document.createElement("p");
+      note.id="darkUnavailableNote"; note.className="dark-unavailable-note";
+      note.textContent="Not yet available for 4-circle.";
+      dark.querySelector("h2")?.after(note);
+    }
+    note.classList.toggle("hidden",!fourCircle);
+  }
+  updateGeometryQuickTargetButtons?.();
 }
 setupTasConventionUI();
 
@@ -388,7 +446,9 @@ function updateGeometryQuickTargetButtons(){
     if(!slots.includes(slot)) button.remove();
   }
 
-  const showDark=!!$('addDark')?.checked;
+  let fourCircle=false;
+  try{ fourCircle=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
+  const showDark=!!$('addDark')?.checked && !fourCircle;
   for(const slot of slots){
     let button=$(`geomSetRefQ${slot}`);
     if(!button){
@@ -489,8 +549,7 @@ function updateModeVisibility(){
 
   // Instrument configuration is intentionally identical for Single crystal and
   // Powder. Only sample-specific controls and the left Q-E plot switch modes.
-  $("geometryRow")?.classList.remove("hidden");
-  $("senseRow")?.classList.remove("hidden");
+  updateInstrumentTypeRows();
   $("s1minWrap")?.classList.remove("hidden");
   $("s1maxWrap")?.classList.remove("hidden");
   // Powder has no sample-orientation degree of freedom. Keep the common
@@ -572,12 +631,15 @@ $("instrument").addEventListener("change",()=>{
   // Do not carry resolution plots or scan points across instruments.
   clearResolutionResults?.();
   applyInstrumentDefaults();
+  updateInstrumentTypeRows();
   scheduleRecalc();
 });
 // TAS / 4-circle / Diffractometer: only the type-dependent settings change.
+for(const id of ['phiSign','chiSign']) $(id)?.addEventListener('change',()=>scheduleRecalc());
 $("instrumentType")?.addEventListener("change",()=>{
   clearResolutionResults?.();
   applyInstrumentTypeDefaults();
+  updateInstrumentTypeRows();
   applyInstrumentCrystalAvailability({preserveCurrent:true});
   scheduleRecalc();
 });
@@ -980,7 +1042,8 @@ async function initialize(){
   $, PI, angleDiffDeg, clamp, dot, hklToQ, makeSpiceScatteringPlaneBasis, norm, normalize, num, rad2deg,
   scale, selectedS1Sign, selectedTasSense, sub, tasConvention, tasConventionFromLegacyUiSense,
   tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180,
-  isFourCircle:()=>{ try{ return currentInstrument()?.instrument_type==='four-circle'; }catch(_e){ return false; } }
+  isFourCircle:()=>{ try{ return currentInstrument()?.instrument_type==='four-circle'; }catch(_e){ return false; } },
+  fourCircleSignFactors
 }));
 
 // Dark-angle physics and Q-E single-crystal range are isolated first because
@@ -1010,7 +1073,7 @@ async function initialize(){
   nuclearStructureFactorSquared, num, rad2deg, rangeTable, rebuildGeometryMatchedDarkPolygons,
   representativePowderHklText, scale, selectedBackgrounds, selectedS1Sign,
   selectedSampleSpaceGroup:(...args)=>selectedSampleSpaceGroup(...args), selectedTasSense, tasConvention,
-  tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention, validateEffectiveS2Max, wrap180
+  tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention, validateEffectiveS2Max, wrap180, fourCircleSignFactors
 }));
 
 ({

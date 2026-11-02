@@ -687,9 +687,9 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 }
 .qe-external-legend .qe-legend-labels input,#qePlotLegend .qe-legend-labels input{margin:0;cursor:pointer}
 
-/* Instrument | Type on the first row; Fixed | value | Mono | Ana on the second. */
+/* Instrument | Type (equal widths) on the first row; Fixed | value | Monochromator | Analyzer on the second. */
 .instrument-select-row{
-  display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:calc(4px * var(--tas-density)); align-items:end; min-width:0;
 }
 .instrument-select-row>label,.instrument-select-row select{min-width:0;width:100%;max-width:100%}
@@ -703,3 +703,8 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 @media(max-width:760px){
   .sidebar .instrument-primary-row{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* 4-circle: Dark angle is not available yet; shown greyed out, not editable. */
+#darkSection.dark-unavailable .dark-section-content{opacity:.45;filter:grayscale(1);pointer-events:none;user-select:none}
+#darkSection.dark-unavailable > h2{color:#9aa0a6}
+.dark-unavailable-note{margin:0 0 calc(6px * var(--tas-density));font-size:calc(13px * var(--tas-density));color:#6b7280;font-style:italic}

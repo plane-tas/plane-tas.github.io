@@ -15,7 +15,7 @@ export function createQESingleCrystal(deps){
     rad2deg, rangeTable, rebuildGeometryMatchedDarkPolygons, representativePowderHklText,
     scale, selectedBackgrounds, selectedS1Sign, selectedSampleSpaceGroup, selectedTasSense,
     tasConvention, tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention,
-    validateEffectiveS2Max, wrap180
+    validateEffectiveS2Max, wrap180, fourCircleSignFactors
   }=deps;
 
   function calculateSingleCrystal(){
@@ -60,6 +60,8 @@ export function createQESingleCrystal(deps){
         wZ=layerW*wzPerRlu;
       }
     }
+    // chi = chiFactor * (elevation of Q towards W); see fourCircleSignFactors.
+    const chiFactor=fourCircle ? fourCircleSignFactors(convention,$("phiSign")?.value||"ccw",$("chiSign")?.value||"ccw").chiFactor : 1;
     const chiMin=Number.isFinite(Number(inst?.chi_min))?Number(inst.chi_min):-90;
     const chiMax=Number.isFinite(Number(inst?.chi_max))?Number(inst.chi_max):90;
 
@@ -160,10 +162,12 @@ export function createQESingleCrystal(deps){
         const qLo=qAt(S2min), qHi=qAt(S2max);
         let rIn=Math.sqrt(Math.max(0,qLo*qLo-wZ*wZ));
         const rOut=qHi*qHi>wZ*wZ ? Math.sqrt(qHi*qHi-wZ*wZ) : 0;
-        // chi = -(elevation of Q towards W), so a layer above the U-V plane
-        // (wZ > 0) is limited by chi_min and one below it by chi_max.
+        // chi = chiFactor * elevation: the largest reachable elevation on
+        // the side of the layer (wZ > 0 above the U-V plane) follows from the
+        // chi limit of the same sign.
         if(Math.abs(wZ)>1e-12){
-          const lim=wZ>0?-chiMin:chiMax;   // largest reachable elevation
+          const chiSide=chiFactor*Math.sign(wZ);
+          const lim=chiSide>0?chiMax:-chiMin;   // largest reachable elevation
           if(lim<=0) rIn=Infinity;
           else if(lim<90-1e-9) rIn=Math.max(rIn,Math.abs(wZ)/Math.tan(deg2rad(lim)));
         }else if(chiMin>0 || chiMax<0) rIn=Infinity;
@@ -399,7 +403,7 @@ export function createQESingleCrystal(deps){
       energyMode,Ei,Ef,lambdaHalf,hwList,
       regions,S2list,QmaxList,darkKF,darkKI,darkFixed,addDark,
       Gpoints,magPoints,ringData,darkAssets,QrefXY,sense,
-      fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,
+      fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,chiFactor,
       cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };
   }

@@ -68,6 +68,21 @@ export function wrap180(x){
   return y-180;
 }
 
+// Four-circle motor-sign factors (bisecting mode).
+//   phi: positive = CCW seen from above at chi = 0 ("ccw") or CW ("cw").
+//        phi_out = phiFactor * (S1_TAS - S1) in S1 encoder units.
+//   chi: positive = CCW seen from upstream, looking downstream along the
+//        bisector of ki and kf (the chi axis in bisecting mode) ("ccw"),
+//        or CW ("cw").  chi_out = chiFactor * e, where e is the elevation
+//        of Q towards W = U x V (up at chi = 0).  Scattering to the right
+//        (+-+) needs chi = -e for CCW, to the left (-+-) chi = +e.
+//   The "ccw"/"ccw" setting reproduces VERITAS (HB-1A, +-+) data.
+export function fourCircleSignFactors(convention,phiSign="ccw",chiSign="ccw"){
+  const p=String(phiSign).toLowerCase()==="cw" ? -1 : 1;
+  const c=String(chiSign).toLowerCase()==="cw" ? -1 : 1;
+  return {phiFactor:p*convention.s1EncoderSign, chiFactor:c*convention.sampleScatteringSign};
+}
+
 export function angleDiffDeg(a,b){
   return wrap180(Number(a)-Number(b));
 }

@@ -5,7 +5,7 @@ export function createTasAngleCalculation(deps){
   const {
     $, PI, angleDiffDeg, clamp, dot, hklToQ, makeSpiceScatteringPlaneBasis, norm, normalize, num, rad2deg,
     scale, selectedS1Sign, selectedTasSense, sub, tasConvention, tasConventionFromLegacyUiSense,
-    tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180, isFourCircle
+    tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180, isFourCircle, fourCircleSignFactors
   }=deps;
 
 function canonicalOrientationMode(rl, rawMode=null){
@@ -51,7 +51,7 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
     // Four-circle (bisecting): the reference Bragg peak is read on phi with
     // S1 = S2/2.  Convert it to the equivalent TAS S1 (chi = phi = 0) that
     // drives the calibration, using the inverse of fourCircleAnglesInPlane():
-    //   phi = S1_TAS - S2_ref/2  ->  S1_TAS = S2_ref/2 + phi.
+    //   phi = phiFactor*(S1_TAS - S2_ref/2)  ->  S1_TAS = S2_ref/2 + phiFactor*phi.
     if(isFourCircle?.()){
       const E=Number(fixedEnergyMeV), qNorm=norm(hklToQ(rl,hkl));
       if(E>0 && qNorm>1e-12 && Number.isFinite(entered)){
@@ -59,7 +59,7 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
         if(arg<=1+1e-10){
           const convention=orientationConvention(conventionOverride);
           const s2Ref=convention.s2EncoderSign*2*rad2deg(Math.asin(clamp(arg,-1,1)));
-          const s1=wrap180(s2Ref/2+entered);
+          const s1=wrap180(s2Ref/2+currentFourCircleFactors(convention).phiFactor*entered);
           return {mode,hkl,s1,phiRef:entered};
         }
       }
@@ -109,24 +109,26 @@ function orientationConvention(conventionOverride){
 }
 // Four-circle (Eulerian cradle) angles in bisecting mode.
 //   S1 (omega) = S2/2.
-//   chi and phi are MOTOR angles: the right-handed rotations that bring Q
-//   into the bisecting position, not the direction angles of Q itself.
-//   chi: tilt about the horizontal chi axis.  A Q that rises towards W
-//        (U x V, up at chi = 0) by an elevation e needs chi = -e.
-//   phi: rotation about the sample (phi) axis.  At chi = 0 the phi axis is
-//        vertical like S1 and turns in the same sense as the S1 encoder, so
-//        phi = s1Tas - S1, where s1Tas is the sample rotation that the TAS
-//        (chi = phi = 0) calculation needs; Q further CCW in the U-V plane
-//        therefore needs a smaller phi.
-//   Checked against VERITAS (HB-1A) data with a SPICE UB matrix:
-//   phi = atan2(y,-x), chi = atan2(-z, sqrt(x^2+y^2)) with (x,y,z) = UB.hkl.
+//   chi and phi are MOTOR angles: the rotations that bring Q into the
+//   bisecting position, not the direction angles of Q itself.
+//   phi: rotation about the sample (phi) axis, vertical at chi = 0 like S1:
+//        phi = phiFactor * (s1Tas - S1), where s1Tas is the sample rotation
+//        that the TAS (chi = phi = 0) calculation needs.
+//   chi: tilt about the horizontal chi axis: chi = chiFactor * e, e being
+//        the elevation of Q towards W (U x V).
+//   The sign factors follow the phi / chi sign selectors (see
+//   fourCircleSignFactors).  Checked against VERITAS (HB-1A) data with a
+//   SPICE UB matrix: phi = atan2(y,-x), chi = atan2(-z, sqrt(x^2+y^2)).
 // s1Tas carries the S1 calibration (Reference Q / orientation reference).
-function fourCircleAnglesInPlane(rl,Qt,s1Tas,s2,U,V){
+function currentFourCircleFactors(convention){
+  return fourCircleSignFactors(convention,$('phiSign')?.value||'ccw',$('chiSign')?.value||'ccw');
+}
+function fourCircleAnglesInPlane(rl,Qt,s1Tas,s2,U,V,factors){
   const {ex,ey,ez}=makeSpiceScatteringPlaneBasis(rl,U,V);
   const qIn=Math.hypot(dot(Qt,ex),dot(Qt,ey)), qOut=dot(Qt,ez);
-  const chi=-rad2deg(Math.atan2(qOut,qIn));
+  const chi=factors.chiFactor*rad2deg(Math.atan2(qOut,qIn));
   const s1=Number(s2)/2;
-  const phi=wrap180(angleDiffDeg(s1Tas,s1));
+  const phi=wrap180(factors.phiFactor*angleDiffDeg(s1Tas,s1));
   return {s1,chi,phi};
 }
 // Smallest n >= 1 such that |Q|/n <= 2k (the reference is reachable).
@@ -256,7 +258,7 @@ function tasMotorAngles(calc,b){
   const s1=orientationRef.s1 + angleDiffDeg(omegaTarget,omegaRef)/c2Sign;
 
   if(b.fourCircle){
-    return {Ei,Ef,m1,m2,s1,s2,a1,a2,warning:'',fourCircle:fourCircleAnglesInPlane(b.rl,Qt,s1,s2,U,V)};
+    return {Ei,Ef,m1,m2,s1,s2,a1,a2,warning:'',fourCircle:fourCircleAnglesInPlane(b.rl,Qt,s1,s2,U,V,currentFourCircleFactors(convention))};
   }
   return {Ei,Ef,m1,m2,s1,s2,a1,a2,warning:''};
 }
