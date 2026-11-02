@@ -726,3 +726,18 @@
   font-weight: 400;
   line-height: 1.25;
 }
+
+/* Four-circle W layer card: entry at the right edge, like ħω and S2. */
+#qeConstantMapPane .qe-range-control .qe-s2-control-entry > #qeWEntry {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  width: calc(82px * var(--tas-density));
+  min-width: 0;
+  box-sizing: border-box;
+}
+@media (max-width: 460px) {
+  #qeConstantMapPane .qe-range-control .qe-s2-control-entry > #qeWEntry {
+    width: calc(73px * var(--tas-density));
+  }
+}

@@ -4,14 +4,14 @@
 // Q-E cache; releasing a slider commits through the normal input path.
 export function createGeometrySliders(deps){
   const {$, checkedValue, collectResolutionBase, getSingleCache, hklToQ, makeSpiceScatteringPlaneBasis,
-    norm, dot, num, renderGeometryNow, geometryCalculationMode, syncMapHWFromTarget}=deps;
+    norm, dot, num, renderGeometryNow, geometryCalculationMode, syncMapHWFromTarget, syncMapWFromTarget}=deps;
 
-  const ids={u:'geomSliderU',v:'geomSliderV',hw:'geomSliderHW',combo:'geomSliderCombo'};
+  const ids={u:'geomSliderU',v:'geomSliderV',w:'geomSliderW',hw:'geomSliderHW',combo:'geomSliderCombo'};
   let syncing=false;
   // Exact target in slider coordinates.  A range input snaps its value to its
   // step, so the unmoved sliders must not be read back (that rounded the other
   // H/K/L and hbar-omega entries to the slider steps).
-  const exact={a:NaN,b:NaN,hw:NaN};
+  const exact={a:NaN,b:NaN,c:NaN,hw:NaN};
   const fmt=(x,d)=>{const v=Number(x);return Math.abs(v)<0.5*Math.pow(10,-d)?'0':String(Number(v.toFixed(d)));};
 
   // Plane basis and the decomposition hkl = a*U + b*V + rest.
@@ -23,13 +23,20 @@ export function createGeometrySliders(deps){
     const ux=dot(qU,ex), uy=dot(qU,ey), vx=dot(qV,ex), vy=dot(qV,ey);
     const det=ux*vy-uy*vx;
     if(!(Math.abs(det)>1e-12)) throw new Error('U and V do not span a plane.');
-    return {b,U,V,ex,ey,ux,uy,vx,vy,det,qU:norm(qU),qV:norm(qV)};
+    // Four-circle: W (the out-of-plane direction, normal to U and V) is a
+    // third slider; chi brings that component into the scattering plane.
+    const fourCircle=!!b.fourCircle;
+    const W=(b.lc.sv3||[0,0,1]).map(Number), qW=hklToQ(b.rl,W);
+    const {ez}=makeSpiceScatteringPlaneBasis(b.rl,U,V);
+    return {b,U,V,W,ex,ey,ez,ux,uy,vx,vy,det,qU:norm(qU),qV:norm(qV),qW:norm(qW),wz:dot(qW,ez),fourCircle};
   }
   function decompose(p,hkl){
-    const q=hklToQ(p.b.rl,hkl), qx=dot(q,p.ex), qy=dot(q,p.ey);
+    const q=hklToQ(p.b.rl,hkl), qx=dot(q,p.ex), qy=dot(q,p.ey), qz=dot(q,p.ez);
+    // W is normal to the U-V plane, so its coefficient is the out-of-plane part.
+    const w=p.fourCircle && Math.abs(p.wz)>1e-12 ? qz/p.wz : 0;
     const a=(qx*p.vy-qy*p.vx)/p.det, c=(p.ux*qy-p.uy*qx)/p.det;
-    const rest=hkl.map((x,i)=>x-a*p.U[i]-c*p.V[i]);
-    return {a,b:c,rest};
+    const rest=hkl.map((x,i)=>x-a*p.U[i]-c*p.V[i]-w*p.W[i]);
+    return {a,b:c,w,rest};
   }
   // Slider limits: |Q| up to ki+kf over the hbar-omega range of the Q-E map.
   function limits(p){
@@ -45,7 +52,7 @@ export function createGeometrySliders(deps){
     }
     const step=list.length>1 ? r4(Math.abs(list[1]-list[0])) : 0.1;
     const rlu=q=>Math.max(0.5,Math.ceil(qMax/Math.max(q,1e-9)*20)/20);
-    return {aMax:rlu(p.qU),bMax:rlu(p.qV),hwMin,hwMax,hwStep:step>0?step:0.1,qMax};
+    return {aMax:rlu(p.qU),bMax:rlu(p.qV),cMax:rlu(p.qW),hwMin,hwMax,hwStep:step>0?step:0.1,qMax};
   }
   function setRange(el,min,max,step,value){
     if(!el) return;
@@ -83,6 +90,14 @@ export function createGeometrySliders(deps){
       if(![d.a,d.b,hw].every(Number.isFinite)) return;
       setRange($(ids.u),-lim.aMax,lim.aMax,0.01,d.a);
       setRange($(ids.v),-lim.bMax,lim.bMax,0.01,d.b);
+      $('geomSliderWRow')?.classList.toggle('hidden',!p.fourCircle);
+      if(p.fourCircle){
+        setRange($(ids.w),-lim.cMax,lim.cMax,0.01,d.w);
+        show(ids.w,fmt(d.w,3));
+        if($('geomSliderWLabel')) $('geomSliderWLabel').textContent=`W (${p.W.map(x=>fmt(x,4)).join(', ')})`;
+        // The Constant E map shows the W layer of the target.
+        syncMapWFromTarget?.(d.w);
+      }
       setRange($(ids.hw),Math.min(lim.hwMin,hw),Math.max(lim.hwMax,hw),lim.hwStep,hw);
       show(ids.u,fmt(d.a,3)); show(ids.v,fmt(d.b,3)); show(ids.hw,fmt(hw,2));
       // Label each slider with the U / V vectors actually entered.
@@ -90,7 +105,7 @@ export function createGeometrySliders(deps){
       if($('geomSliderULabel')) $('geomSliderULabel').textContent=`U ${vec(p.U)}`;
       if($('geomSliderVLabel')) $('geomSliderVLabel').textContent=`V ${vec(p.V)}`;
       box.dataset.rest=JSON.stringify(d.rest);
-      exact.a=d.a; exact.b=d.b; exact.hw=hw;
+      exact.a=d.a; exact.b=d.b; exact.c=d.w; exact.hw=hw;
       // Keep t; the origin follows the target.
       const [c1,c2]=comboDirection();
       combo.a0=d.a-combo.t*c1; combo.b0=d.b-combo.t*c2;
@@ -99,10 +114,10 @@ export function createGeometrySliders(deps){
       show(ids.combo,fmt(combo.t,3));
     }catch(_e){ /* the Angle output already reports invalid lattice/plane input */ }
   }
-  function writeTarget(p,a,c,hw){
+  function writeTarget(p,a,c,hw,w=0){
     let rest=[0,0,0];
     try{ rest=JSON.parse($('geometrySliders').dataset.rest||'[0,0,0]'); }catch(_e){}
-    const hkl=p.U.map((x,i)=>a*x+c*p.V[i]+(Number(rest[i])||0));
+    const hkl=p.U.map((x,i)=>a*x+c*p.V[i]+(p.fourCircle?w*p.W[i]:0)+(Number(rest[i])||0));
     const clean=v=>Math.abs(v)<1e-9?0:Number(v.toFixed(4));
     $('geomH').value=String(clean(hkl[0]));
     $('geomK').value=String(clean(hkl[1]));
@@ -116,6 +131,8 @@ export function createGeometrySliders(deps){
     let a=source==='u'?Number($(ids.u).value):pick(exact.a,ids.u);
     let c=source==='v'?Number($(ids.v).value):pick(exact.b,ids.v);
     const hw=source==='hw'?Number($(ids.hw).value):pick(exact.hw,ids.hw);
+    const w=source==='w'?Number($(ids.w).value):pick(exact.c,ids.w);
+    if(source==='w') show(ids.w,fmt(w,3));
     const [c1,c2]=comboDirection();
     if(source==='combo'){
       combo.t=Number($(ids.combo).value);
@@ -132,8 +149,26 @@ export function createGeometrySliders(deps){
     }else{
       combo.a0=a-combo.t*c1; combo.b0=c-combo.t*c2;
     }
-    exact.a=a; exact.b=c; exact.hw=hw;
-    writeTarget(p,a,c,hw);
+    exact.a=a; exact.b=c; exact.c=w; exact.hw=hw;
+    writeTarget(p,a,c,hw,w);
+  }
+  // Constant E map W slider -> target: keep the U, V parts and hbar-omega,
+  // replace the W part, then commit like a typed H, K, L.
+  function setTargetW(w){
+    if(!Number.isFinite(w)) return;
+    try{
+      const p=plane(); if(!p.fourCircle) return;
+      const d=decompose(p,[num('geomH'),num('geomK'),num('geomL')]);
+      const hw=num('geomHW');
+      if(![d.a,d.b,hw].every(Number.isFinite)) return;
+      $('geometrySliders').dataset.rest=JSON.stringify(d.rest);
+      exact.a=d.a; exact.b=d.b; exact.c=w; exact.hw=hw;
+      writeTarget(p,d.a,d.b,hw,w);
+      const el=$(ids.w); if(el) el.value=String(w);
+      show(ids.w,fmt(w,3));
+      for(const f of ['geomH','geomK','geomL'])
+        $(f)?.dispatchEvent(new Event('change',{bubbles:true}));
+    }catch(_e){}
   }
   function setComboOrigin(){
     combo.t=0;
@@ -148,7 +183,10 @@ export function createGeometrySliders(deps){
         syncing=true;
         // hbar-omega also moves the Constant E map slice (which redraws the
         // TAS geometry too); otherwise redraw only the geometry.
-        try{ if(!(key==='hw' && syncMapHWFromTarget?.())) renderGeometryNow(); }finally{ syncing=false; }
+        try{
+          if(key==='w') syncMapWFromTarget?.(Number($(ids.w).value));
+          if(!(key==='hw' && syncMapHWFromTarget?.())) renderGeometryNow();
+        }finally{ syncing=false; }
       });
       // On release, commit like a typed value (recalculation, persistence).
       el.addEventListener('change',()=>{
@@ -164,5 +202,5 @@ export function createGeometrySliders(deps){
     }
     syncGeometrySliders();
   }
-  return {bindGeometrySliders, syncGeometrySliders};
+  return {bindGeometrySliders, syncGeometrySliders, setTargetW};
 }

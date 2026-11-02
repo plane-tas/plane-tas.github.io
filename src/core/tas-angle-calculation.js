@@ -5,7 +5,7 @@ export function createTasAngleCalculation(deps){
   const {
     $, PI, angleDiffDeg, clamp, dot, hklToQ, makeSpiceScatteringPlaneBasis, norm, normalize, num, rad2deg,
     scale, selectedS1Sign, selectedTasSense, sub, tasConvention, tasConventionFromLegacyUiSense,
-    tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180
+    tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180, isFourCircle
   }=deps;
 
 function canonicalOrientationMode(rl, rawMode=null){
@@ -46,7 +46,25 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
   const rawMode=$('orientationReference')?.value || 'bragg';
   const mode=canonicalOrientationMode(rl,rawMode);
   if(mode==='bragg'){
-    return {mode,hkl:[num('refh'),num('refk'),num('refl')],s1:num('refs1')};
+    const hkl=[num('refh'),num('refk'),num('refl')];
+    const entered=num('refs1');
+    // Four-circle (bisecting): the reference Bragg peak is read on phi with
+    // S1 = S2/2.  Convert it to the equivalent TAS S1 (chi = phi = 0) that
+    // drives the calibration, using the inverse of fourCircleAnglesInPlane():
+    //   phi = S1_TAS - S2_ref/2  ->  S1_TAS = S2_ref/2 + phi.
+    if(isFourCircle?.()){
+      const E=Number(fixedEnergyMeV), qNorm=norm(hklToQ(rl,hkl));
+      if(E>0 && qNorm>1e-12 && Number.isFinite(entered)){
+        const k=Math.sqrt(E/2.072), arg=qNorm/(2*k);
+        if(arg<=1+1e-10){
+          const convention=orientationConvention(conventionOverride);
+          const s2Ref=convention.s2EncoderSign*2*rad2deg(Math.asin(clamp(arg,-1,1)));
+          const s1=wrap180(s2Ref/2+entered);
+          return {mode,hkl,s1,phiRef:entered};
+        }
+      }
+    }
+    return {mode,hkl,s1:entered};
   }
   const usesV=mode==='perpV' || mode==='parallelV';
   const isParallel=mode==='parallelU' || mode==='parallelV';
@@ -68,15 +86,7 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
   const s2Ref=2*rad2deg(Math.asin(clamp(arg,-1,1)));
 
   // The virtual Bragg reference follows the selected physical Sense and encoder polarity.
-  let convention;
-  if(conventionOverride && typeof conventionOverride==="object" && "sense" in conventionOverride){
-    convention=tasConvention(conventionOverride.sense,conventionOverride.s1sign);
-  }else if(typeof conventionOverride==="string"){
-    const legacy=tasConventionFromLegacyUiSense(conventionOverride);
-    convention=tasConvention(legacy.sense,legacy.s1sign);
-  }else{
-    convention=tasConvention(selectedTasSense(),selectedS1Sign());
-  }
+  const convention=orientationConvention(conventionOverride);
   // The virtual Bragg reference follows the same S2 motor polarity as the
   // selected instrument convention.  Keep the reference zero and motor sign
   // separate instead of routing through the historical four-state labels.
@@ -86,6 +96,38 @@ function effectiveOrientationReference(rl, fixedEnergyMeV=null, conventionOverri
   // but moves the S1=0 sample orientation by +90 degrees about the plane normal.
   if(isParallel) s1Ref+=c2Sign*90;
   return {mode,hkl,s1:wrap180(s1Ref),s2Ref,divisor};
+}
+function orientationConvention(conventionOverride){
+  if(conventionOverride && typeof conventionOverride==="object" && "sense" in conventionOverride){
+    return tasConvention(conventionOverride.sense,conventionOverride.s1sign);
+  }
+  if(typeof conventionOverride==="string"){
+    const legacy=tasConventionFromLegacyUiSense(conventionOverride);
+    return tasConvention(legacy.sense,legacy.s1sign);
+  }
+  return tasConvention(selectedTasSense(),selectedS1Sign());
+}
+// Four-circle (Eulerian cradle) angles in bisecting mode.
+//   S1 (omega) = S2/2.
+//   chi and phi are MOTOR angles: the right-handed rotations that bring Q
+//   into the bisecting position, not the direction angles of Q itself.
+//   chi: tilt about the horizontal chi axis.  A Q that rises towards W
+//        (U x V, up at chi = 0) by an elevation e needs chi = -e.
+//   phi: rotation about the sample (phi) axis.  At chi = 0 the phi axis is
+//        vertical like S1 and turns in the same sense as the S1 encoder, so
+//        phi = s1Tas - S1, where s1Tas is the sample rotation that the TAS
+//        (chi = phi = 0) calculation needs; Q further CCW in the U-V plane
+//        therefore needs a smaller phi.
+//   Checked against VERITAS (HB-1A) data with a SPICE UB matrix:
+//   phi = atan2(y,-x), chi = atan2(-z, sqrt(x^2+y^2)) with (x,y,z) = UB.hkl.
+// s1Tas carries the S1 calibration (Reference Q / orientation reference).
+function fourCircleAnglesInPlane(rl,Qt,s1Tas,s2,U,V){
+  const {ex,ey,ez}=makeSpiceScatteringPlaneBasis(rl,U,V);
+  const qIn=Math.hypot(dot(Qt,ex),dot(Qt,ey)), qOut=dot(Qt,ez);
+  const chi=-rad2deg(Math.atan2(qOut,qIn));
+  const s1=Number(s2)/2;
+  const phi=wrap180(angleDiffDeg(s1Tas,s1));
+  return {s1,chi,phi};
 }
 // Smallest n >= 1 such that |Q|/n <= 2k (the reference is reachable).
 function virtualReferenceDivisor(qNorm,k){
@@ -193,7 +235,9 @@ function tasMotorAngles(calc,b){
   // makeSpiceScatteringPlaneBasis gives ex along entered U and ey along the
   // entered-V side of the in-plane transverse direction.  These correspond to PDF z and
   // PDF x respectively, so atan2(ey,ex) is atan2(Q0_x,Q0_z).
-  const phiTarget=qAngle(Qt);
+  // Four-circle: the sample azimuth is that of the in-plane projection of Q
+  // (the out-of-plane part is brought into the scattering plane by chi).
+  const phiTarget=qAngle(Qt,{allowZeroProjection:!!b.fourCircle});
   const phiRef=qAngle(Qr,{allowZeroProjection:true});
   const omegaTarget=wrap180(tasPhiLabDegForConvention(ki,kf,s2ForS1,convention.sense,convention.s1sign)-phiTarget);
   const omegaRef=wrap180(tasPhiLabDegForConvention(k0,k0,s2RefForS1,convention.sense,convention.s1sign)-phiRef);
@@ -211,6 +255,9 @@ function tasMotorAngles(calc,b){
   const c2Sign=convention.c2ToOmegaSign;
   const s1=orientationRef.s1 + angleDiffDeg(omegaTarget,omegaRef)/c2Sign;
 
+  if(b.fourCircle){
+    return {Ei,Ef,m1,m2,s1,s2,a1,a2,warning:'',fourCircle:fourCircleAnglesInPlane(b.rl,Qt,s1,s2,U,V)};
+  }
   return {Ei,Ef,m1,m2,s1,s2,a1,a2,warning:''};
 }
 

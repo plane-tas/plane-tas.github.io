@@ -234,7 +234,27 @@ function qePathAxisCoordinateLabel(index){
 }
 function qePathPointXY(cache,hkl){
   const q=hklToQ(cache.rl,hkl);
+  // Four-circle: a point is drawn at its own U, V part (its W part removed),
+  // the same map position used for the peaks of every W layer.
+  if(cache.fourCircle && cache.Whkl && Math.abs(cache.wzPerRlu)>1e-12){
+    const w=dot(q,cache.ez)/cache.wzPerRlu;
+    return [dot(q,cache.ex)-w*cache.wInPlane[0],dot(q,cache.ey)-w*cache.wInPlane[1]];
+  }
   return [dot(q,cache.ex),dot(q,cache.ey)];
+}
+// Four-circle: W of the displayed layer for a map click.  With Snap on, a
+// value within one W step (0.01) of a simple fraction n/d (d <= 12) is
+// taken as that fraction, so W = 0.33 adds L = 1/3, not 0.33.
+function qeLayerWForPath(cache){
+  if(!(cache?.fourCircle && cache.Whkl)) return 0;
+  const w=Number(cache.layerW)||0;
+  const mode=String($('qePathSnap')?.value??'').trim();
+  if(!mode || !Number.isInteger(Number(mode)) || Number(mode)<1) return w;
+  for(let d=1;d<=12;d++){
+    const n=Math.round(w*d);
+    if(Math.abs(w-n/d)<=0.01+1e-9) return n/d;
+  }
+  return w;
 }
 function updateQEPathControls(){
   const button=$('qePathPickToggle'),overlay=$('qePathHitLayer');
@@ -295,7 +315,10 @@ function addQEPathPointFromPhysical(x,y){
   const mode=$('qePathSnap')?.value||'';
   const us=qeSnapReciprocalCoordinate(u,mode);
   const vs=qeSnapReciprocalCoordinate(v,mode);
-  const hkl=U.map((val,i)=>val*us+V[i]*vs);
+  // Four-circle: the point lies on the displayed W layer.
+  const cache=getSingleCache();
+  const w=qeLayerWForPath(cache);
+  const hkl=U.map((val,i)=>val*us+V[i]*vs+(w&&cache.Whkl?w*cache.Whkl[i]:0));
   // The generated startup path is visible, but is not a user-picked path.
   // Replace it on the first *valid map click*, not when Select Path is toggled.
   if(!qePathWasEdited){
@@ -304,8 +327,8 @@ function addQEPathPointFromPhysical(x,y){
   }
   const previous=qeSelectedPathHKL.at(-1);
   if(previous){
-    const a=qePathPointXY(getSingleCache(),previous),b=qePathPointXY(getSingleCache(),hkl);
-    if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-5) return;
+    const a=hklToQ(getSingleCache().rl,previous),b=hklToQ(getSingleCache().rl,hkl);
+    if(Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])<1e-5) return;
   }
   qeSelectedPathHKL.push(hkl);
   qeSelectedPathLabels.push('');

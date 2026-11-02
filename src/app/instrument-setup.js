@@ -9,10 +9,66 @@ export function createInstrumentSetup(deps){
     updateAutoW, updateEnergyLabel, getFixedBeamControls, getSingleCache
   }=deps;
 
+// Instrument type (mode).  An instrument file lists the types it supports in
+// "instrument_types" (default: its "instrument_type" only); the Type selector
+// next to Instrument picks one.  Settings that differ by type live in a
+// section named after it ("four_circle", "tas", "diffractometer") and
+// override the top-level values.  currentInstrument() returns that merged
+// view, with instrument_type set to the selected type.
+const INSTRUMENT_TYPE_LABELS={tas:'TAS','four-circle':'4-circle',diffractometer:'Diffractometer'};
+function instrumentTypes(inst){
+  const raw=Array.isArray(inst?.instrument_types) && inst.instrument_types.length
+    ? inst.instrument_types : [inst?.instrument_type || 'tas'];
+  return [...new Set(raw.map(String))];
+}
+function defaultInstrumentType(inst){
+  const list=instrumentTypes(inst);
+  return list.includes(inst?.instrument_type) ? inst.instrument_type : list[0];
+}
+function selectedInstrumentType(inst){
+  const list=instrumentTypes(inst);
+  const v=$("instrumentType")?.value;
+  return list.includes(v) ? v : defaultInstrumentType(inst);
+}
+const effectiveInstrumentCache=new WeakMap();
+function instrumentForType(base,type){
+  let byType=effectiveInstrumentCache.get(base);
+  if(!byType){ byType=new Map(); effectiveInstrumentCache.set(base,byType); }
+  if(!byType.has(type)){
+    const section=base[String(type).replace(/-/g,'_')];
+    byType.set(type,{...base,...(section && typeof section==='object' && !Array.isArray(section) ? section : {}),instrument_type:type});
+  }
+  return byType.get(type);
+}
 function currentInstrument(){
   const key=$("instrument").value;
   if(!key || !instruments.has(key)) throw new Error("Instrument を選択してください。");
-  return instruments.get(key);
+  const base=instruments.get(key);
+  return instrumentForType(base,selectedInstrumentType(base));
+}
+// Fill the Type selector for the selected instrument (its default selected).
+function populateInstrumentTypeSelect(){
+  const select=$("instrumentType"), key=$("instrument")?.value;
+  if(!select || !key || !instruments.has(key)) return;
+  const base=instruments.get(key), list=instrumentTypes(base);
+  select.replaceChildren(...list.map(t=>{
+    const o=document.createElement('option'); o.value=t; o.textContent=INSTRUMENT_TYPE_LABELS[t]||t; return o;
+  }));
+  select.value=defaultInstrumentType(base);
+  select.disabled=list.length<2;
+}
+// Settings that depend on the instrument type (limits, labels).
+function applyInstrumentTypeDefaults(inst=currentInstrument()){
+  const qr=inst.qe_range||{};
+  setIf("S2min",qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
+  // Sample-rotation (S1) limits; instruments without them keep the full turn.
+  setIf("S1min",inst.S1_min ?? -180);
+  setIf("S1max",inst.S1_max ?? 180);
+  // Four-circle (bisecting): S1 = S2/2 is fixed, so a Bragg-peak orientation
+  // reference is read on phi instead of S1.
+  const refS1Text=$("refs1")?.closest("label")?.firstChild;
+  if(refS1Text?.nodeType===3) refS1Text.nodeValue=inst.instrument_type==="four-circle" ? "φ (deg)" : "S1 (deg)";
+  initializeS2MaxControl(inst);
 }
 function rangeTable(inst){
   if(Array.isArray(inst.S2_limits)) return inst.S2_limits;
@@ -301,6 +357,7 @@ function updateSupermirrorUI(){ const on=$("gm1").checked; $("div1m").disabled=!
 
 function applyInstrumentDefaults(){
   if(!$("instrument").value) return;
+  populateInstrumentTypeSelect();
   const inst=currentInstrument();
   const cfg=(!Array.isArray(inst.configuration) && inst.configuration) ? inst.configuration : {};
   const qr=inst.qe_range||{};
@@ -308,8 +365,7 @@ function applyInstrumentDefaults(){
   setSelect("energyMode",energyMode);
   const defaultEnergy=energyMode==="Ei fixed" ? (cfg.Ei ?? cfg.Ef ?? qr.default_energy ?? inst.default_energy ?? 14.7) : (cfg.Ef ?? cfg.Ei ?? qr.default_energy ?? inst.default_energy ?? 14.7);
   setIf("energy",defaultEnergy);
-  setIf("S2min",qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
-  initializeS2MaxControl(inst);
+  applyInstrumentTypeDefaults(inst);
   const hasNewSense=cfg.sense!==undefined || (cfg.sign===undefined && (qr.sense!==undefined || inst.sense!==undefined));
   const rawSense=cfg.sense ?? cfg.sign ?? qr.sense ?? inst.sense ?? "-+-";
   const rawS1Sign=cfg.s1sign ?? qr.s1sign ?? inst.s1sign;
@@ -392,7 +448,7 @@ function applyInstrumentDefaults(){
 }
 
   return {
-    applyInstrumentCrystalAvailability, applyInstrumentDefaults, currentInstrument, effectiveS2MaxAtEi,
+    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
     updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max

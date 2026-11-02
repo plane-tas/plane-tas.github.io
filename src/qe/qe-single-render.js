@@ -1,6 +1,6 @@
 // Constant-E map rendering (renderSingle), external legends, hw slider and navigation controls.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {PI, deg2rad, linspace} from '../core/tas-core.js';
+import {PI, deg2rad, dot, linspace} from '../core/tas-core.js';
 import {tasConvention} from '../core/tas-conventions.js';
 
 export function createQESingleRender(deps){
@@ -182,7 +182,19 @@ function geometryTargetHKL(){ return [num('geomH'),num('geomK'),num('geomL')]; }
 function geometryTargetMarkerXY(cache){
   const hkl=geometryTargetHKL();
   if(!cache || !hkl.every(Number.isFinite)) return null;
-  try{ const p=qePathPointXY(cache,hkl); return p.every(Number.isFinite)?p:null; }catch(_e){ return null; }
+  try{
+    if(cache.fourCircle && cache.Whkl){
+      // Four-circle: show the target only when it lies on the displayed W layer.
+      // Same W tolerance as the peaks (one W slider step).
+      const q=hklToQ(cache.rl,hkl);
+      if(!(Math.abs(cache.wzPerRlu)>1e-12)) return null;
+      const wT=dot(q,cache.ez)/cache.wzPerRlu;
+      if(Math.abs(wT-cache.layerW)>0.01+1e-9) return null;
+      const p=[dot(q,cache.ex)-wT*cache.wInPlane[0],dot(q,cache.ey)-wT*cache.wInPlane[1]];
+      return p.every(Number.isFinite)?p:null;
+    }
+    const p=qePathPointXY(cache,hkl); return p.every(Number.isFinite)?p:null;
+  }catch(_e){ return null; }
 }
 // Same label style as the nuclear/magnetic peaks: "(h,k,l)".
 function qeHKLLabel(hkl){
@@ -247,7 +259,10 @@ function singleMapBraggHoverAngles(cache,hw){
         const qn=q ? Math.hypot(...q) : NaN;
         if(Number.isFinite(qn)) qText=`|Q| = ${qn.toFixed(3)} Å⁻¹<br>`;
       }catch(_err){}
-      angleResult=`${qText}S1=${showAngle(angles?.s1)}, S2=${showAngle(angles?.s2)}`;
+      const fc=angles?.fourCircle;
+      angleResult=fc
+        ? `${qText}S1=${showAngle(fc.s1)}, S2=${showAngle(angles?.s2)}<br>χ=${showAngle(fc.chi)}, φ=${showAngle(fc.phi)}`
+        : `${qText}S1=${showAngle(angles?.s1)}, S2=${showAngle(angles?.s2)}`;
       resultCache.set(key,angleResult);
     }
     return angleResult;
@@ -282,6 +297,10 @@ function renderSingle(cache,index=0){
 
   // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
   const visibleGpoints=transformedG;
+  // Keep the |F_N|² colorbar (and its min/max entries) even when the current
+  // slice has no nuclear peak, e.g. a four-circle W layer between lattice planes.
+  // Plotly drops the colorbar of an empty trace, so carry one unplotted point.
+  const colorbarOnly=!!cache.cifStructure && visibleGpoints.length===0;
   const peakHoverAngles=singleMapBraggHoverAngles(cache,cache.hwList[i]);
 
   const traces=[
@@ -289,7 +308,9 @@ function renderSingle(cache,index=0){
       x:boundary.map(p=>p[0]),
       y:boundary.map(p=>p[1]),
       fill:"toself",
-      name:`Accessible Q (${s2Min.toFixed(0)}° ≤ S2 ≤ ${s2Max.toFixed(0)}°)`,
+      name:cache.fourCircle
+        ? `Accessible Q (${s2Min.toFixed(0)}° ≤ |S2| ≤ ${s2Max.toFixed(0)}°, ${cache.chiMin.toFixed(0)}° ≤ χ ≤ ${cache.chiMax.toFixed(0)}°)`
+        : `Accessible Q (${s2Min.toFixed(0)}° ≤ S2 ≤ ${s2Max.toFixed(0)}°)`,
       mode:"lines",
       line:{width:0},
       fillcolor:"rgba(255,215,0,0.20)",
@@ -308,15 +329,15 @@ function renderSingle(cache,index=0){
       zorder:0
     },
     {
-      x:visibleGpoints.map(p=>p.x),
-      y:visibleGpoints.map(p=>p.y),
+      x:colorbarOnly?[null]:visibleGpoints.map(p=>p.x),
+      y:colorbarOnly?[null]:visibleGpoints.map(p=>p.y),
       mode:"markers",
       name:"Nuclear Bragg peaks",
       showlegend:false,
       meta:"nuclear-data",
       zorder:0,
       marker:cache.cifStructure ? {
-        color:visibleGpoints.map(p=>Number.isFinite(p.sfNorm)?p.sfNorm:0),
+        color:colorbarOnly?[0]:visibleGpoints.map(p=>Number.isFinite(p.sfNorm)?p.sfNorm:0),
         colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
@@ -327,7 +348,7 @@ function renderSingle(cache,index=0){
         // while the fill still encodes |F_N|².
         line:{color:"rgb(25,25,25)",width:1.3}
       } : {color:"black",size:initialMarkerSizes.nuclear},
-      hovertext:visibleGpoints.map(p=>{
+      hovertext:colorbarOnly?['']:visibleGpoints.map(p=>{
         if(!p.label) return p.label;
         const lines=[p.label,peakHoverAngles(p)];
         if(cache.cifStructure){
@@ -375,7 +396,8 @@ function renderSingle(cache,index=0){
   }
   const selectedS2=syncSingleNavigation(cache,i);
   const selectedQ=selectedQAtS2(cache,i,selectedS2);
-  if($('displayS2Ring')?.checked && Number.isFinite(selectedQ)){
+  syncQEWControl(cache);
+  if(!cache.fourCircle && $('displayS2Ring')?.checked && Number.isFinite(selectedQ)){
     const phi=linspace(0,2*PI,361);
     const ringPts=phi.map(t=>T([selectedQ*Math.cos(t),selectedQ*Math.sin(t)]));
     traces.push({x:ringPts.map(p=>p[0]),y:ringPts.map(p=>p[1]),mode:"lines",name:`S2 = ${selectedS2.toFixed(1)}°`,showlegend:false,line:{color:"black",width:1.2,dash:"solid"},hovertemplate:`S2 = ${selectedS2.toFixed(1)}°<br>Q = ${selectedQ.toFixed(3)} Å⁻¹<extra></extra>`});
@@ -514,7 +536,14 @@ function ensureQESliderControls(){
       s2Card.className='qe-range-control';
       s2Card.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span>S2 (deg)</span><label class="checkbox-label qe-s2-ring-toggle" title="Show S2 ring on Constant E map"><input id="displayS2Ring" type="checkbox"><span>Show S2 ring</span></label><input id="s2Entry" aria-label="S2 (deg)" type="number" step="0.1" value="0.0"></div><input id="s2Slider" type="range" min="0" max="180" step="0.1" value="0">';
 
-      grid.append(hwCard,s2Card);
+      s2Card.id='qeS2Card';
+      // Four-circle instruments: the S2 card is replaced by the W layer card.
+      const wCard=document.createElement('div');
+      wCard.className='qe-range-control hidden';
+      wCard.id='qeWCard';
+      wCard.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0">';
+
+      grid.append(hwCard,s2Card,wCard);
       parent.insertBefore(grid,row);
       row.remove();
     }
@@ -551,6 +580,23 @@ function syncSingleNavigation(cache,index){
   let v=Number(entry?.value); if(!Number.isFinite(v)) v=Math.max(0,num('S2min')); v=Math.max(lo,Math.min(hi,v));
   if(slider) slider.value=v; if(entry) entry.value=v.toFixed(1); if($('s2Value')) $('s2Value').textContent=`${v.toFixed(1)}°`;
   return v;
+}
+function qeWVectorText(v){
+  return v.map(x=>{const n=Number(x);return Math.abs(n-Math.round(n))<1e-9?String(Math.round(n)):String(Number(n.toFixed(3)));}).join(', ');
+}
+function syncQEWControl(cache){
+  const fc=!!(cache.fourCircle && cache.Whkl);
+  $('qeS2Card')?.classList.toggle('hidden',fc);
+  $('qeWCard')?.classList.toggle('hidden',!fc);
+  if(!fc) return;
+  const label=$('qeWLabel');
+  if(label) label.textContent=`W (${qeWVectorText(cache.Whkl)}) (r.l.u.)`;
+  const qMax=Math.max(0,...cache.QmaxList.filter(Number.isFinite));
+  const wz=Math.abs(cache.wzPerRlu);
+  const hi=wz>1e-12 ? Math.max(0.01,Math.floor(100*qMax/wz)/100) : 0;
+  const slider=$('qeWSlider'), entry=$('qeWEntry');
+  if(slider){ slider.min=-hi; slider.max=hi; slider.step=0.01; slider.value=cache.layerW; }
+  if(entry && document.activeElement!==entry) entry.value=String(Number(Number(cache.layerW).toFixed(4)));
 }
 function selectedQAtS2(cache,index,s2){
   const hw=cache.hwList[index]; let Ei,Ef;

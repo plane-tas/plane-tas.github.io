@@ -686,3 +686,20 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   white-space:nowrap;cursor:pointer;
 }
 .qe-external-legend .qe-legend-labels input,#qePlotLegend .qe-legend-labels input{margin:0;cursor:pointer}
+
+/* Instrument | Type on the first row; Fixed | value | Mono | Ana on the second. */
+.instrument-select-row{
+  display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);
+  gap:calc(4px * var(--tas-density)); align-items:end; min-width:0;
+}
+.instrument-select-row>label,.instrument-select-row select{min-width:0;width:100%;max-width:100%}
+.sidebar .instrument-primary-row{
+  /* Narrower Fixed/value, wider crystal selectors so "PG(002)" fits. */
+  grid-template-columns:minmax(0,.78fr) minmax(0,.92fr) minmax(0,1.15fr) minmax(0,1.15fr);
+  margin-top:calc(7px * var(--tas-density));
+  margin-bottom:calc(7px * var(--tas-density));
+}
+.sidebar .instrument-primary-row>label:first-child{grid-column:auto}
+@media(max-width:760px){
+  .sidebar .instrument-primary-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

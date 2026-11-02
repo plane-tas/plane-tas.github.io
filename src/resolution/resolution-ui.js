@@ -147,7 +147,11 @@ function collectResolutionBase(){
     geom.ana_height=geom.mono_height;
     geom.ana_thickness=geom.mono_thickness;
   }
-  return {lc,rl,col,mos,config,approximation,focusing,geom,unitMode:$('unit').value};
+  // Four-circle (Eulerian cradle) instruments: the angle calculation adds
+  // chi / phi (bisecting mode) and accepts out-of-plane Q.
+  let fourCircle=false;
+  try{ fourCircle=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
+  return {lc,rl,col,mos,config,approximation,focusing,geom,unitMode:$('unit').value,fourCircle};
 }
 // wrap180() / angleDiffDeg() are provided by tas-conventions.js.
 

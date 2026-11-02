@@ -7,7 +7,7 @@ export function createUIShell(deps){
     GEOMETRY_CALC_MODE_STORAGE_KEY,
     GEOMETRY_SCAN_OUTPUT_STORAGE_KEY,
     add,
-    applyInstrumentDefaults,
+    applyInstrumentDefaults, applyInstrumentTypeDefaults,
     applySampleEnvironmentDefaults,
     backgroundRowValues,
     buildResolutionLattice,
@@ -627,7 +627,12 @@ function restoreLeftPanelState(){
   restoringLeftPanel=true;
   try{
     // 1) The instrument must exist before its dependent defaults can be applied.
-    if(setSavedControl('instrument',v.instrument)) applyInstrumentDefaults();
+    if(setSavedControl('instrument',v.instrument)){
+      applyInstrumentDefaults();
+      // The type selects the type-dependent limits; the saved values of
+      // those fields are restored below with the other controls.
+      if(setSavedControl('instrumentType',v.instrumentType)) applyInstrumentTypeDefaults?.();
+    }
 
     // Recreate the dynamic Propagation/Dark UI before restoring individual
     // controls.  For legacy fixed-3/fixed-4 saves, only actually used extra
@@ -731,7 +736,7 @@ function restoreLeftPanelState(){
     // localStorage values; subsequent edits are persisted by resolutionPanel.
     const legacyRestoreControls=[...leftPanelControls(),...resolutionInstrumentDetailControls()];
     for(const el of legacyRestoreControls){
-      if(el.id==='instrument'||darkSeIds.has(el.id)) continue;
+      if(el.id==='instrument'||el.id==='instrumentType'||darkSeIds.has(el.id)) continue;
       if(explicitBackgroundRows && /^backgroundSelect\d+$/.test(el.id)) continue;
       setSavedControl(el.id,v[el.id],{dispatchChange:el.id==='monoCrystal'||el.id==='anaCrystal'});
     }

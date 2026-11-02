@@ -37,6 +37,7 @@
     }
   ],
   "instrument_type": "diffractometer",
+  "instrument_types": ["diffractometer"],
   "available_crystals": {
     "monochromator": [
       "Si(111)",

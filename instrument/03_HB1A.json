@@ -77,7 +77,30 @@
       "Ei": 0.1
     }
   ],
-  "instrument_type": "tas",
+  "instrument_type": "four-circle",
+  "instrument_types": [
+    "tas",
+    "four-circle"
+  ],
+  "four_circle": {
+    "S2_min": 2,
+    "S2_limits": [
+      {
+        "S2limit": 92,
+        "Ei": 14.5
+      },
+      {
+        "S2limit": 92,
+        "Ei": 0.1
+      }
+    ],
+    "S1_min": -46,
+    "S1_max": 0,
+    "chi_min": -50,
+    "chi_max": 60,
+    "phi_min": -180,
+    "phi_max": 180
+  },
   "available_crystals": {
     "monochromator": [
       "PG002"

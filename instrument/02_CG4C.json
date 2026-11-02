@@ -338,6 +338,7 @@
     }
   ],
   "instrument_type": "tas",
+  "instrument_types": ["tas"],
   "available_crystals": {
     "monochromator": [
       "PG002"

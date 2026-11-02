@@ -6,7 +6,7 @@ export function createQEVectorMap(deps){
     powderS2ForQAtHW, qeFormatPathNumber, qePathAxisCoordinateLabel, qePathPointXY,
     qePhysicalRluCoordinates, qePlaneRluBasis, qeSelectedPathHKL, renderQEExternalLegend, renderSingle,
     representativePowderHklText, safeResizePlot, scatteringPlaneWarningMessage, selectedBackgrounds,
-    setScatteringPlaneWarning, getPowderCache, getSingleCache
+    setScatteringPlaneWarning, getPowderCache, getSingleCache, hklToQ
   }=deps;
 
 let qeVectorMeasureCanvas=null;
@@ -206,12 +206,21 @@ function renderQEVectorMap(cache){
     setScatteringPlaneWarning('qeVectorPlaneWarning',planeWarnings.length?`Warning: ${planeWarnings.join(' / ')}`:'');
     // Piecewise-linear path in physical scattering-plane coordinates.
     const paths=[]; let totalDistance=0;
+    // Four-circle: the path runs in 3D (W included) in the frame
+    // (ex, ey, ez); otherwise in the scattering plane (z = 0).
+    const fourCircle=!!(cache.fourCircle && cache.Whkl);
+    const pathCoord=hkl=>{
+      if(!fourCircle){ const p=qePathPointXY(cache,hkl); return [p[0],p[1],0]; }
+      const q=hklToQ(cache.rl,hkl);
+      const d=v=>v[0]*q[0]+v[1]*q[1]+v[2]*q[2];
+      return [d(cache.ex),d(cache.ey),d(cache.ez)];
+    };
     for(let j=0;j<pathPoints.length-1;j++){
       const startHKL=pathPoints[j],endHKL=pathPoints[j+1];
-      const startXY=qePathPointXY(cache,startHKL),endXY=qePathPointXY(cache,endHKL);
-      const dx=endXY[0]-startXY[0],dy=endXY[1]-startXY[1],length=Math.hypot(dx,dy);
-      if(!(length>1e-10)) throw new Error(`P${j+1} and P${j+2} must be distinct in the scattering plane.`);
-      paths.push({a:startHKL,b:endHKL,p0:startXY,p1:endXY,ux:dx/length,uy:dy/length,length,start:totalDistance});
+      const startXY=pathCoord(startHKL),endXY=pathCoord(endHKL);
+      const dx=endXY[0]-startXY[0],dy=endXY[1]-startXY[1],dz=endXY[2]-startXY[2],length=Math.hypot(dx,dy,dz);
+      if(!(length>1e-10)) throw new Error(fourCircle?`P${j+1} and P${j+2} must be distinct.`:`P${j+1} and P${j+2} must be distinct in the scattering plane.`);
+      paths.push({a:startHKL,b:endHKL,p0:startXY,p1:endXY,ux:dx/length,uy:dy/length,uz:dz/length,length,start:totalDistance});
       totalDistance+=length;
     }
     const currentPathKey=pathPoints.map(p=>p.join(',')).join(';');
@@ -261,6 +270,7 @@ function renderQEVectorMap(cache){
         const t=n/steps;
         samples.push({x:(path.start+t*path.length)*xScale,
           xy:[path.p0[0]+t*path.length*path.ux,path.p0[1]+t*path.length*path.uy],
+          z:path.p0[2]+t*path.length*path.uz,
           hkl:path.a.map((v,k)=>v+t*(path.b[k]-v))});
       }
     }
@@ -355,13 +365,28 @@ function renderQEVectorMap(cache){
     };
     const pathLabelLayout=staggeredPathLabels();
     const z=[], darkKiZ=[], darkKfZ=[], darkFixedZ=[], hover=[];
+    // Four-circle accessibility of a 3D point at hwList[i]: S2 limits on |Q|
+    // and chi limits on the out-of-plane angle (phi rotates freely).
+    const s2MinDeg=Number($('S2min')?.value);
+    const fourCircleAccessible=(i,p,z)=>{
+      const hw=cache.hwList[i];
+      const Ei=cache.energyMode==='Ef fixed'?cache.Ef+hw:cache.Ei;
+      const Ef=cache.energyMode==='Ef fixed'?cache.Ef:cache.Ei-hw;
+      if(!(Ei>0&&Ef>0)) return false;
+      const ki=0.6947*Math.sqrt(Ei), kf=0.6947*Math.sqrt(Ef);
+      const qAt=s2=>Math.sqrt(Math.max(0,ki*ki+kf*kf-2*ki*kf*Math.cos(s2*Math.PI/180)));
+      const r=Math.hypot(p[0],p[1]), q=Math.hypot(r,z);
+      if(q<qAt(s2MinDeg)-1e-9 || q>qAt(Number(cache.S2list[i]))+1e-9) return false;
+      const chi=-Math.atan2(z,r)*180/Math.PI;   // motor chi = -elevation towards W
+      return chi>=cache.chiMin-1e-9 && chi<=cache.chiMax+1e-9;
+    };
     for(let i=0;i<cache.hwList.length;i++){
       const row=[], kiRow=[], kfRow=[], fixedRow=[], hrow=[];
       const region=cache.regions[i];
       const darkKi=cache.darkKI[i]||[], darkKf=cache.darkKF[i]||[], darkFixed=cache.darkFixed[i]||[];
       for(const sample of samples){
         const pt=sample.xy;
-        const geometric=qePointInPolygon(pt,region);
+        const geometric=fourCircle ? fourCircleAccessible(i,pt,sample.z) : qePointInPolygon(pt,region);
         // Dark-angle geometry is an independent display layer.  Do not clip it
         // to the Accessible-Q polygon: a blocked motor geometry can lie outside
         // the currently reachable S1 envelope and should still be visible on
@@ -410,13 +435,14 @@ function renderQEVectorMap(cache){
     // Overlay background-powder |Q| spheres intersecting EVERY path leg.
     // Each intersection is a vertical line at its cumulative path distance.
     const qVectorLimit=Math.max(...paths.flatMap(p=>[Math.hypot(...p.p0),Math.hypot(...p.p1)]));
+    // (p0/p1 carry z = 0 in the scattering plane, so these are 3D |Q|.)
     for(const bg of selectedBackgrounds()){
       const material=backgroundMaterials.get(bg.key);
       const visiblePeaks=backgroundPowderPeaks(material,qVectorLimit);
       let bgLegendShown=false;
       for(const peak of visiblePeaks){
         for(const path of paths){
-          const proj=path.p0[0]*path.ux+path.p0[1]*path.uy;
+          const proj=path.p0[0]*path.ux+path.p0[1]*path.uy+path.p0[2]*path.uz;
           const perp2=Math.max(0,Math.hypot(...path.p0)**2-proj*proj);
           const discriminant=peak.q*peak.q-perp2;
           if(discriminant<-1e-10) continue;

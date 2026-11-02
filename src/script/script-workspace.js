@@ -153,6 +153,10 @@ export function createScriptWorkspace(deps){
   }
 
   function hklInCurrentScatteringPlane(hkl){
+    // Four-circle instruments reach out-of-plane Q by tilting chi.
+    let fourCircle=false;
+    try{ fourCircle=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
+    if(fourCircle) return {ok:true,fourCircle:true};
     try{
       const {rl}=buildResolutionLattice();
       const U=[num('Uh'),num('Uk'),num('Ul')], V=[num('Vh'),num('Vk'),num('Vl')];

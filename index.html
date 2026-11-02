@@ -86,8 +86,11 @@
 <aside class="sidebar">
 <section>
 <h2>Instrument configuration</h2>
-<div class="instrument-primary-row">
+<div class="instrument-select-row">
 <label>Instrument<select id="instrument"><option>Loading...</option></select></label>
+<label>Type<select id="instrumentType" aria-label="Instrument type"><option value="tas">TAS</option></select></label>
+</div>
+<div class="instrument-primary-row">
 <label>Fixed<select id="fixedBeamQuantity" aria-label="Fixed beam quantity">
 <option value="Ei">Ei</option><option value="Ef" selected>Ef</option>
 <option value="lambda_i">λi</option><option value="lambda_f">λf</option>
@@ -97,10 +100,8 @@
 <!-- Canonical energy state, retained for every TAS/QE/Resolution/Script calculation. -->
 <label id="canonicalFixedModeLabel" class="fixed-beam-internal" aria-hidden="true">Mode<select id="energyMode" tabindex="-1"><option value="Ei fixed">Ei</option><option selected value="Ef fixed">Ef</option></select></label>
 <label id="energyLabel" class="fixed-beam-internal" aria-hidden="true">Ef (meV)<input id="energy" step="any" type="number" value="14.7" tabindex="-1"/></label>
-</div>
-<div class="instrument-crystal-row" id="instrumentCrystalRow">
-<label>Monochromator<select id="sidebarMonoCrystal" aria-label="Monochromator crystal (linked to Resolution)"></select></label>
-<label id="sidebarAnalyzerCrystalWrap">Analyzer<select id="sidebarAnaCrystal" aria-label="Analyzer crystal (linked to Resolution)"></select></label>
+<label>Mono<select id="sidebarMonoCrystal" aria-label="Monochromator crystal (linked to Resolution)"></select></label>
+<label id="sidebarAnalyzerCrystalWrap">Ana<select id="sidebarAnaCrystal" aria-label="Analyzer crystal (linked to Resolution)"></select></label>
 </div>
 <div class="grid3" id="tasConventionRow">
 <label id="geometryRow">Geometry<select id="geometry"><option>W</option><option>anti-W</option></select></label>
@@ -275,6 +276,7 @@
 <label class="geometry-slider-row"><span>ħω (meV)</span><input id="geomSliderHW" data-no-persist="" type="range" min="-10" max="10" step="0.1" value="0"/><output id="geomSliderHWValue">0</output><span></span></label>
 <label class="geometry-slider-row"><span id="geomSliderULabel">U (1, 0, 0)</span><input id="geomSliderU" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="1"/><output id="geomSliderUValue">1</output><span></span></label>
 <label class="geometry-slider-row"><span id="geomSliderVLabel">V (0, 1, 0)</span><input id="geomSliderV" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0"/><output id="geomSliderVValue">0</output><span></span></label>
+<label class="geometry-slider-row hidden" id="geomSliderWRow"><span id="geomSliderWLabel">W (0, 0, 1)</span><input id="geomSliderW" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0"/><output id="geomSliderWValue">0</output><span></span></label>
 <div class="geometry-slider-row geometry-slider-combo"><span class="geometry-combo-label"><input id="geomComboU" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of U"/>·U + <input id="geomComboV" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of V"/>·V</span><input id="geomSliderCombo" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0" aria-label="Move the target along the linear combination of U and V"/><output id="geomSliderComboValue">0</output><button id="geomComboSetOrigin" type="button" title="Use the current target as the origin (slider = 0)">Set origin</button></div>
 </div>
 <div id="geometryDefaultPlotMount"><div class="qe-plot geometry" id="geometryPlot"></div></div>

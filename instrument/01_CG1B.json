@@ -28,6 +28,7 @@
     }
   ],
   "instrument_type": "diffractometer",
+  "instrument_types": ["diffractometer"],
   "available_crystals": {
     "monochromator": [
       "PG002"

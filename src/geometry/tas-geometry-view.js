@@ -74,6 +74,10 @@ function geometryDisplayedMotorAngles(target,isPowder,sense,displaySense){
   void sense; void displaySense;
   const a=target.angles;
   const shown=displayedMotorAngles({m1:Number(a.m1),m2:Number(a.m2),s1:Number(a.s1),s2:Number(a.s2),a1:Number(a.a1),a2:Number(a.a2)},isPowder);
+  // Four-circle: S1 is the bisecting omega; chi and phi are added.
+  if(!isPowder && a.fourCircle){
+    shown.s1=Number(a.fourCircle.s1); shown.chi=Number(a.fourCircle.chi); shown.phi=Number(a.fourCircle.phi);
+  }
   return shown;
 }
 
@@ -92,6 +96,13 @@ function geometryScanStatusWarnings(target,displayedAngles){
   try{ s2max=effectiveS2MaxAtEi(currentInstrument(),target?.Ei,false); }catch(_e){}
   if(Number.isFinite(s2) && Number.isFinite(s2min) && s2<s2min-1e-8) warnings.push('S2 out of range');
   if(Number.isFinite(s2) && Number.isFinite(s2max) && s2>s2max+1e-8 && !warnings.includes('S2 out of range')) warnings.push('S2 out of range');
+  // Four-circle: chi / phi limits from the instrument file.
+  let inst=null;
+  try{ inst=currentInstrument?.(); }catch(_e){}
+  for(const key of ['chi','phi']){
+    const v=Number(displayedAngles?.[key]), lo=Number(inst?.[`${key}_min`]), hi=Number(inst?.[`${key}_max`]);
+    if(Number.isFinite(v) && ((Number.isFinite(lo) && v<lo-1e-8) || (Number.isFinite(hi) && v>hi+1e-8))) warnings.push(`${key==='chi'?'χ':'φ'} out of range`);
+  }
   return warnings;
 }
 
@@ -143,6 +154,8 @@ function renderGeometryScanTable(cache,points,sense,displaySense,selectedIndex){
     return;
   }
   box.classList.remove('error-text');
+  let fourCircle=false;
+  try{ fourCircle=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
   const rows=points.map((calc,i)=>{
     try{
       const target=qeGeometryAngles(cache,null,null,calc);
@@ -159,16 +172,16 @@ function renderGeometryScanTable(cache,points,sense,displaySense,selectedIndex){
       if(i===selectedIndex) rowClasses.push('geometry-scan-selected-row');
       if(status) rowClasses.push('geometry-scan-warning-row');
       const rowClass=rowClasses.length?` class="${rowClasses.join(' ')}"`:'';
-      return `<tr data-geometry-scan-row="${i}"${rowClass}><td class="geometry-scan-point-cell">${i+1}</td><td class="geometry-scan-hkl-cell">${calc.h.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.k.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.l.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.hw.toFixed(3)}</td><td>${f(a.m1)}</td><td>${f(a.m2)}</td><td>${f(a.s1)}</td><td>${f(a.s2)}</td><td>${f(a.a1)}</td><td>${f(a.a2)}</td><td>${status}</td></tr>`;
+      return `<tr data-geometry-scan-row="${i}"${rowClass}><td class="geometry-scan-point-cell">${i+1}</td><td class="geometry-scan-hkl-cell">${calc.h.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.k.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.l.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.hw.toFixed(3)}</td><td>${f(a.m1)}</td><td>${f(a.m2)}</td><td>${f(a.s1)}</td><td>${f(a.s2)}</td>${fourCircle?`<td>${f(a.chi)}</td><td>${f(a.phi)}</td>`:''}<td>${f(a.a1)}</td><td>${f(a.a2)}</td><td>${status}</td></tr>`;
     }catch(err){
       const status=geometryScanErrorStatus(err);
       const rowClasses=['geometry-scan-warning-row'];
       if(i===selectedIndex) rowClasses.push('geometry-scan-selected-row');
       const rowClass=` class="${rowClasses.join(' ')}"`;
-      return `<tr data-geometry-scan-row="${i}"${rowClass}><td class="geometry-scan-point-cell">${i+1}</td><td class="geometry-scan-hkl-cell">${calc.h.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.k.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.l.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.hw.toFixed(3)}</td><td colspan="6">—</td><td>${status}</td></tr>`;
+      return `<tr data-geometry-scan-row="${i}"${rowClass}><td class="geometry-scan-point-cell">${i+1}</td><td class="geometry-scan-hkl-cell">${calc.h.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.k.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.l.toFixed(3)}</td><td class="geometry-scan-hkl-cell">${calc.hw.toFixed(3)}</td><td colspan="${fourCircle?8:6}">—</td><td>${status}</td></tr>`;
     }
   }).join('');
-  box.innerHTML=`<div class="geometry-scan-table-wrap"><table class="geometry-scan-table"><thead><tr><th>No.</th><th class="geometry-scan-hkl-head">H</th><th class="geometry-scan-hkl-head">K</th><th class="geometry-scan-hkl-head">L</th><th class="geometry-scan-hkl-head">ħω</th><th>M1</th><th>M2</th><th>S1</th><th>S2</th><th>A1</th><th>A2</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  box.innerHTML=`<div class="geometry-scan-table-wrap"><table class="geometry-scan-table"><thead><tr><th>No.</th><th class="geometry-scan-hkl-head">H</th><th class="geometry-scan-hkl-head">K</th><th class="geometry-scan-hkl-head">L</th><th class="geometry-scan-hkl-head">ħω</th><th>M1</th><th>M2</th><th>S1</th><th>S2</th>${fourCircle?'<th>χ</th><th>φ</th>':''}<th>A1</th><th>A2</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   box.querySelectorAll('tbody tr[data-geometry-scan-row]').forEach(row=>{
     row.addEventListener('click',()=>{
       const i=Number(row.dataset.geometryScanRow);
@@ -252,7 +265,8 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
   const diffractometer=currentInstrument()?.instrument_type==='diffractometer';
-  const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
+  const fourCircle=Number.isFinite(shown.chi);
+  const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${fourCircle?`, χ=${geometryResultMotorAngle(shown.chi)}°, φ=${geometryResultMotorAngle(shown.phi)}°`:''}${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
     (!isPowder && a.warning?` &nbsp; | &nbsp; ${a.warning}`:'');
   const darkWarnings=!isPowder
     ? qeDarkBlockWarningsForHKLE(cache,[target.calc.h,target.calc.k,target.calc.l],target.calc.hw)
@@ -263,7 +277,11 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
   const spurionWarnings=!isPowder
     ? qeSpurionWarnings(cache,Number(target.calc.hw)).map(hit=>`Spurion ${hit.label}`)
     : [];
-  const combinedWarnings=[...spurionWarnings,...darkWarnings];
+  // Four-circle: chi / phi beyond the cradle limits.
+  const cradleWarnings=!isPowder && fourCircle
+    ? geometryScanStatusWarnings(target,shown).filter(w=>/^[χφ]/.test(w))
+    : [];
+  const combinedWarnings=[...cradleWarnings,...spurionWarnings,...darkWarnings];
   const darkWarningText=combinedWarnings.length
     ? `Warning: ${combinedWarnings.join(' / ')}`
     : '&nbsp;';

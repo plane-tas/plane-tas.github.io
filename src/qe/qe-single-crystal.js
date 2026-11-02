@@ -1,4 +1,8 @@
 import {nuclearExtinctionThreshold} from '../cif/cif-structure.js';
+import {inferOutOfPlaneHKL} from '../resolution/resolution-core.js';
+
+// Four-circle W layer: a peak within this |W - w| (r.l.u.) is shown on the map.
+export const W_LAYER_TOLERANCE=0.01+1e-9;
 
 export function createQESingleCrystal(deps){
   const {
@@ -37,6 +41,27 @@ export function createQESingleCrystal(deps){
     // plotting below uses the explicit scattering-plane basis.
     UB_calc({...lc,sv1:U,sv2:V},rl);
     const {ex,ey,ez}=makeSpiceScatteringPlaneBasis(rl,U,V);
+
+    // Four-circle instruments: the Constant E map shows the layer
+    // Q = a U + b V + w W.  The map coordinates stay the in-plane (U, V)
+    // coordinates of a U + b V, so peak labels and the r.l.u. grid are exact;
+    // the true |Q| and chi of a point include the W offset.
+    const fourCircle=inst?.instrument_type==="four-circle";
+    let Whkl=null, layerW=0, wShift=[0,0], wInPlane=[0,0], wZ=0, wzPerRlu=0;
+    if(fourCircle){
+      try{ Whkl=inferOutOfPlaneHKL(rl,U,V).map(Number); }catch(_e){ Whkl=null; }
+      if(Whkl){
+        const qW=hklToQ(rl,Whkl);
+        wzPerRlu=dot(qW,ez);
+        const wEntry=Number($("qeWEntry")?.value);
+        layerW=Number.isFinite(wEntry)?wEntry:0;
+        wInPlane=[dot(qW,ex),dot(qW,ey)];
+        wShift=[layerW*wInPlane[0],layerW*wInPlane[1]];
+        wZ=layerW*wzPerRlu;
+      }
+    }
+    const chiMin=Number.isFinite(Number(inst?.chi_min))?Number(inst.chi_min):-90;
+    const chiMax=Number.isFinite(Number(inst?.chi_max))?Number(inst.chi_max):90;
 
     const energyMode=checkedValue("energyMode");
     const lambdaHalf=$("lambdaHalf").checked;
@@ -80,7 +105,9 @@ export function createQESingleCrystal(deps){
 
     const regions=[], S2list=[], QmaxList=[];
     const darkKF=[],darkKI=[],darkFixed=[];
-    const addDark=$("addDark").checked && darkAssets.length>0;
+    // Dark angles follow the TAS S1 wedge; they are not mapped for the
+    // four-circle (free phi) geometry.
+    const addDark=$("addDark").checked && darkAssets.length>0 && !fourCircle;
     const sense=convention.sense;
 
     // One physical convention drives the S1/Q mapping for both scattering senses.
@@ -126,6 +153,31 @@ export function createQESingleCrystal(deps){
 
       // S1min/S1max are physical motor limits. The Q-E boundary is generated
       // from the exact inverse of the same S1 calibration used by Angle calculation.
+      if(fourCircle){
+        // phi rotates freely and S1 follows S2/2 (bisecting), so the reachable
+        // in-plane region is an annulus limited by |Q(S2)| and by chi.
+        const qAt=s2=>Math.sqrt(Math.max(0,ki*ki+kf*kf-2*ki*kf*Math.cos(deg2rad(s2))));
+        const qLo=qAt(S2min), qHi=qAt(S2max);
+        let rIn=Math.sqrt(Math.max(0,qLo*qLo-wZ*wZ));
+        const rOut=qHi*qHi>wZ*wZ ? Math.sqrt(qHi*qHi-wZ*wZ) : 0;
+        // chi = -(elevation of Q towards W), so a layer above the U-V plane
+        // (wZ > 0) is limited by chi_min and one below it by chi_max.
+        if(Math.abs(wZ)>1e-12){
+          const lim=wZ>0?-chiMin:chiMax;   // largest reachable elevation
+          if(lim<=0) rIn=Infinity;
+          else if(lim<90-1e-9) rIn=Math.max(rIn,Math.abs(wZ)/Math.tan(deg2rad(lim)));
+        }else if(chiMin>0 || chiMax<0) rIn=Infinity;
+        let boundary=[];
+        if(rOut>rIn+1e-9){
+          const t=linspace(0,2*PI,361);
+          const cx=-wShift[0], cy=-wShift[1];
+          boundary=t.map(a=>[cx+rOut*Math.cos(a),cy+rOut*Math.sin(a)]);
+          if(rIn>1e-9) boundary=boundary.concat([...t].reverse().map(a=>[cx+rIn*Math.cos(a),cy+rIn*Math.sin(a)]));
+        }
+        regions.push(boundary); S2list.push(S2max);
+        QmaxList.push(qHi);
+        continue;
+      }
       const s1range=linspace(S1min,S1max,200);
       const s2range=linspace(S2min,S2max,200);
 
@@ -214,13 +266,49 @@ export function createQESingleCrystal(deps){
     const Gpoints=[], magPoints=[];
     // Magnetic satellites are observable in this 2D TAS view only when their
     // propagation vector itself lies in the selected scattering plane.
+    // A four-circle instrument reaches out-of-plane satellites too.
     const propagationVectors=enabledPropagationVectors().filter(q=>{
+      if(fourCircle && Whkl) return true;
       const qCart=hklToQ(rl,q.hkl);
       const scaleQ=Math.max(norm(qCart),1);
       return Math.abs(dot(qCart,ez)) <= 1e-8*scaleQ;
     });
+    // Four-circle: in-plane map coordinates of a vector on the layer W = w,
+    // or null if it is not on that layer.  Like the spurion warning (nearest
+    // two hbar-omega points), a peak is shown within one W slider step
+    // (0.01 r.l.u.), so W = 1/3 appears at both W = 0.33 and 0.34.  Its map
+    // position is that of its own U, V part (its own W part is removed).
+    const layerXY=G=>{
+      if(!(Math.abs(wzPerRlu)>1e-12)) return null;
+      const wG=dot(G,ez)/wzPerRlu;
+      if(Math.abs(wG-layerW)>W_LAYER_TOLERANCE) return null;
+      return [dot(G,ex)-wG*wInPlane[0],dot(G,ey)-wG*wInPlane[1]];
+    };
+    const allParents=[];
+    if(fourCircle && Whkl){
+      const hMax=Math.ceil(QplotLattice*Number(lc.a)/(2*PI))+1;
+      const kMax=Math.ceil(QplotLattice*Number(lc.b)/(2*PI))+1;
+      const lMax=Math.ceil(QplotLattice*Number(lc.c)/(2*PI))+1;
+      for(let h=-hMax;h<=hMax;h++) for(let k=-kMax;k<=kMax;k++) for(let l=-lMax;l<=lMax;l++){
+        const hkl=[h,k,l];
+        const G=hklToQ(rl,hkl);
+        if(norm(G)>QplotLattice) continue;
+        if(!isAllowedByCentering(hkl,latticeCentering)) continue;
+        allParents.push({hkl});
+        const xy=layerXY(G);
+        if(!xy) continue;
+        const isOrigin=h===0&&k===0&&l===0;
+        const sf2=nuclearCifStructure && !isOrigin
+          ? nuclearStructureFactorSquared(nuclearCifStructure,hkl,norm(G))
+          : null;
+        Gpoints.push({
+          x:xy[0],y:xy[1],hkl,label:isOrigin?"":`(${formatHKL(hkl)})`,
+          sf2:Number.isFinite(sf2)?sf2:null,sfNorm:null
+        });
+      }
+    }
 
-    for(let m=-Mmax;m<=Mmax;m++){
+    if(!(fourCircle && Whkl)) for(let m=-Mmax;m<=Mmax;m++){
       for(let n=-Nmax;n<=Nmax;n++){
         const hkl=add(scale(U,m),scale(V,n));
         const G=hklToQ(rl,hkl);
@@ -247,7 +335,7 @@ export function createQESingleCrystal(deps){
     // (applied above). Screw/glide/atom-position extinctions of the NUCLEAR
     // structure factor do not extinguish magnetic scattering (MnF2 (100) at
     // k = 0), so keep every centering-allowed parent for the satellites.
-    const magneticParents=Gpoints.slice();
+    const magneticParents=(fourCircle && Whkl) ? allParents : Gpoints.slice();
     if(nuclearCifStructure){
       // Remove systematic extinctions first.  The threshold uses the absolute
       // |F|^2 scale of the structure (not the strongest DISPLAYED reflection),
@@ -272,10 +360,11 @@ export function createQESingleCrystal(deps){
           const hm=add(hkl,scale(kvec,s));
           const Gm=hklToQ(rl,hm);
 
-          if(norm(Gm)<=QplotLattice){
+          const xyM=(fourCircle && Whkl) ? layerXY(Gm) : [dot(Gm,ex),dot(Gm,ey)];
+          if(xyM && norm(Gm)<=QplotLattice){
             magPoints.push({
-              x:dot(Gm,ex),
-              y:dot(Gm,ey),
+              x:xyM[0],
+              y:xyM[1],
               qIndex:q.index,
               hkl:hm,
               label:`k${q.index}: (${hm.map(x=>x.toFixed(2)).join(",")})`
@@ -293,8 +382,12 @@ export function createQESingleCrystal(deps){
       for(const p of peaks){
         const phi=linspace(0,2*PI,361);
         const ratio=p.relativeIntensity;
+        // Four-circle layer W = w: the powder ring |Q| = q cuts it in a circle.
+        if(fourCircle && Math.abs(wZ)>=p.q) continue;
+        const rr=fourCircle ? Math.sqrt(p.q*p.q-wZ*wZ) : p.q;
+        const cx=fourCircle ? -wShift[0] : 0, cy=fourCircle ? -wShift[1] : 0;
         ringData.push({
-          x:phi.map(t=>p.q*Math.cos(t)), y:phi.map(t=>p.q*Math.sin(t)),
+          x:phi.map(t=>cx+rr*Math.cos(t)), y:phi.map(t=>cy+rr*Math.sin(t)),
           color:backgroundColor(bg.slot,0.20+0.75*ratio),
           hover:`BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>Q = ${p.q.toFixed(3)} Å⁻¹<br>S2(elastic) = ${p.elasticS2.toFixed(3)}°<br>I/Imax = ${ratio.toFixed(3)}`
         });
@@ -306,6 +399,7 @@ export function createQESingleCrystal(deps){
       energyMode,Ei,Ef,lambdaHalf,hwList,
       regions,S2list,QmaxList,darkKF,darkKI,darkFixed,addDark,
       Gpoints,magPoints,ringData,darkAssets,QrefXY,sense,
+      fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,
       cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };
   }

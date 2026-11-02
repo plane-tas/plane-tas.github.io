@@ -77,7 +77,7 @@ const {
 });
 
 const {
-  applyInstrumentCrystalAvailability, applyInstrumentDefaults, currentInstrument, effectiveS2MaxAtEi,
+  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
@@ -155,7 +155,8 @@ const {
   representativePowderHklText, safeResizePlot:(...args)=>safeResizePlot(...args),
   scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args), selectedBackgrounds,
   setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
-  getSingleCache:()=>singleCache, getPowderCache:()=>powderCache
+  getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
+  hklToQ:(...args)=>hklToQ(...args)
 });
 
 const {
@@ -573,6 +574,13 @@ $("instrument").addEventListener("change",()=>{
   applyInstrumentDefaults();
   scheduleRecalc();
 });
+// TAS / 4-circle / Diffractometer: only the type-dependent settings change.
+$("instrumentType")?.addEventListener("change",()=>{
+  clearResolutionResults?.();
+  applyInstrumentTypeDefaults();
+  applyInstrumentCrystalAvailability({preserveCurrent:true});
+  scheduleRecalc();
+});
 
 bindDynamicSidebarUI();
 installGeometryNumericInputs($,parseNumericValue);
@@ -596,6 +604,21 @@ function syncMapHWFromTarget(){
   const i=targetHWMapIndex(singleCache);
   if(i===null || i===Number($('hwSlider')?.value)) return false;
   renderSingle(singleCache,i);
+  return true;
+}
+// Four-circle: the Constant E map follows the W layer of the Angle
+// calculation target (deferred: this may be called while the map draws).
+let mapWTimer=null;
+function syncMapWFromTarget(w){
+  if(!singleCache?.fourCircle || checkedValue('sampleMode')!=='single' || !Number.isFinite(w)) return false;
+  // While W is being typed on the map, the map is the driver (its change
+  // event then moves the target).
+  if(document.activeElement===$('qeWEntry')) return false;
+  const v=Number(w.toFixed(4));
+  if(Math.abs((Number(singleCache.layerW)||0)-v)<1e-9) return false;
+  if($('qeWEntry')) $('qeWEntry').value=String(v);
+  clearTimeout(mapWTimer);
+  mapWTimer=setTimeout(()=>{ mapWTimer=null; recalculate(); },0);
   return true;
 }
 $("hwSlider").addEventListener("input",()=>{
@@ -847,6 +870,11 @@ async function initialize(){
   $('hwEntry').addEventListener('change',()=>{if(singleCache){const i=nearestHWIndex(singleCache,Number($('hwEntry').value));setTargetHWFromMap(i);renderSingle(singleCache,i);saveRightPanelState();}});
   $('s2Slider').addEventListener('input',()=>{$('s2Entry').value=Number($('s2Slider').value).toFixed(1);if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
   $('s2Entry').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));});
+  // Four-circle: W layer of the Constant E map (recalculates the map).
+  // The Angle calculation target follows the map's W layer (and vice versa).
+  const applyMapW=w=>{ geometrySliders?.setTargetW(w); recalculate(); };
+  $('qeWSlider')?.addEventListener('input',()=>{const w=Number($('qeWSlider').value);$('qeWEntry').value=String(Number(w.toFixed(4)));applyMapW(w);});
+  $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
   $('displayS2Ring').addEventListener('change',()=>{if(singleCache)renderSingle(singleCache,Number($('hwSlider').value));saveRightPanelState();});
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);
@@ -951,7 +979,8 @@ async function initialize(){
 }=createTasAngleCalculation({
   $, PI, angleDiffDeg, clamp, dot, hklToQ, makeSpiceScatteringPlaneBasis, norm, normalize, num, rad2deg,
   scale, selectedS1Sign, selectedTasSense, sub, tasConvention, tasConventionFromLegacyUiSense,
-  tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180
+  tasCrystalPhiDegForConvention, tasPhiLabDegForConvention, wrap180,
+  isFourCircle:()=>{ try{ return currentInstrument()?.instrument_type==='four-circle'; }catch(_e){ return false; } }
 }));
 
 // Dark-angle physics and Q-E single-crystal range are isolated first because
@@ -1057,7 +1086,8 @@ geometrySliders=createGeometrySliders({
   hklToQ, makeSpiceScatteringPlaneBasis, norm, dot, num,
   geometryCalculationMode:(...args)=>geometryCalculationMode(...args),
   renderGeometryNow:()=>{ if(singleCache && checkedValue('sampleMode')==='single') renderGeometry(singleCache,Number($('hwSlider')?.value)||0); },
-  syncMapHWFromTarget:()=>syncMapHWFromTarget()
+  syncMapHWFromTarget:()=>syncMapHWFromTarget(),
+  syncMapWFromTarget:(w)=>syncMapWFromTarget(w)
 });
 geometrySliders.bindGeometrySliders();
 
@@ -1133,7 +1163,7 @@ geometrySliders.bindGeometrySliders();
   restoreLeftPanelState
 }=createUIShell({
   $, BACKGROUND_SLOTS, GEOMETRY_CALC_MODE_STORAGE_KEY,
-  GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, add, applyInstrumentDefaults,
+  GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, add, applyInstrumentDefaults, applyInstrumentTypeDefaults,
   applySampleEnvironmentDefaults, backgroundRowValues, buildResolutionLattice, checkedValue, currentGeometryCardTab,
   currentGeometryScanOutputTab, darkAssetIds, darkAssetSlots, darkAssetValues, geometryCalculationMode, markResolutionScanDirty,
   mountTimeEstimateForScript, propagationVectorValues, refreshDarkEnvironmentSelect, renderGeometry, renderQEVectorMap,
