@@ -20,10 +20,10 @@
     "LSD": null
   },
   "s2_dep_ei": "no",
-  "S2_min": 5.0,
+  "S2_min": -5.0,
   "S2_limits": [
     {
-      "S2limit": 150.0,
+      "S2limit": -150.0,
       "Ei": 14.0
     }
   ],

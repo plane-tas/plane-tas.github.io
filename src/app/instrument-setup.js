@@ -1,7 +1,7 @@
 // Instrument configuration: Q-E range tables, S2 limits, analyzer/monochromator crystals and defaults.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {interpExtrap} from '../core/tas-core.js';
-import {normalizeS1Sign, normalizeTasSense} from '../core/tas-conventions.js';
+import {normalizeS1Sign, normalizeTasSense, tasConvention} from '../core/tas-conventions.js';
 
 export function createInstrumentSetup(deps){
   const {
@@ -104,9 +104,24 @@ function applyInstrumentTypeChange(){
   }
 }
 // Settings that depend on the instrument type (limits, labels).
+// S2 min / max fields show SIGNED values (the sign of the S2 motor for the
+// selected Sense and S1 sign); every calculation uses their magnitudes.
+function s2DisplaySign(){
+  try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).s2EncoderSign<0 ? -1 : 1; }catch(_e){ return 1; }
+}
+function s2MinAbs(){ return Math.abs(num('S2min')); }
+// Flip the shown S2 min / max to the sign of the current Sense / S1 sign.
+function syncS2FieldSigns(){
+  const sign=s2DisplaySign();
+  for(const id of ['S2min','S2maxEffective']){
+    const el=$(id), v=Number(el?.value);
+    if(el && String(el.value).trim()!=='' && Number.isFinite(v)) el.value=formatS2ControlValue(sign*Math.abs(v));
+  }
+}
 function applyInstrumentTypeDefaults(inst=currentInstrument()){
   const qr=inst.qe_range||{};
-  setIf("S2min",qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
+  const s2MinJson=Number(qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
+  if($("S2min") && Number.isFinite(s2MinJson)) $("S2min").value=formatS2ControlValue(s2DisplaySign()*Math.abs(s2MinJson));
   // Sample-rotation (S1) limits; instruments without them keep the full turn.
   setIf("S1min",inst.S1_min ?? -180);
   setIf("S1max",inst.S1_max ?? 180);
@@ -114,9 +129,13 @@ function applyInstrumentTypeDefaults(inst=currentInstrument()){
   // reference is read on phi instead of S1.
   const refS1Text=$("refs1")?.closest("label")?.firstChild;
   if(refS1Text?.nodeType===3) refS1Text.nodeValue=inst.instrument_type==="four-circle" ? "φ (deg)" : "S1 (deg)";
-  // Four-circle motor signs (CCW unless the instrument file says otherwise).
+  // Four-circle motor signs (CCW unless the instrument file says otherwise)
+  // and the cradle limits (defaults from the instrument file, editable).
   setSelect("phiSign",String(inst.phi_sign||"ccw").toLowerCase());
   setSelect("chiSign",String(inst.chi_sign||"ccw").toLowerCase());
+  for(const [id,v] of [['phiMin',inst.phi_min],['phiMax',inst.phi_max],['chiMin',inst.chi_min],['chiMax',inst.chi_max]]){
+    if($(id)) $(id).value=Number.isFinite(Number(v)) && v!==null && v!=='' ? String(Number(v)) : '';
+  }
   initializeS2MaxControl(inst);
 }
 function rangeTable(inst){
@@ -128,7 +147,9 @@ function rangeTable(inst){
 }
 function instrumentInterp(inst,lambdaHalf=false){
   const table=rangeTable(inst);
-  const pairs=table.map(x=>[Number(x.Ei)*(lambdaHalf?4:1),Number(x.S2limit)]).sort((a,b)=>a[0]-b[0]);
+  // S2 limits may be written signed (negative for an S2 < 0 instrument);
+  // the calculation uses their magnitudes.
+  const pairs=table.map(x=>[Number(x.Ei)*(lambdaHalf?4:1),Math.abs(Number(x.S2limit))]).sort((a,b)=>a[0]-b[0]);
   const xp=pairs.map(x=>x[0]), yp=pairs.map(x=>x[1]);
   return x=>interpExtrap(xp,yp,x);
 }
@@ -150,11 +171,11 @@ function s2DependsOnEi(inst){
     if(v==='no') return false;
   }
   if(typeof raw==='boolean') return raw;
-  const values=rangeTable(inst).map(x=>Number(x.S2limit)).filter(Number.isFinite);
+  const values=rangeTable(inst).map(x=>Math.abs(Number(x.S2limit))).filter(Number.isFinite);
   return values.some(v=>Math.abs(v-values[0])>1e-10);
 }
 function configuredConstantS2Max(inst){
-  const first=rangeTable(inst).map(x=>Number(x.S2limit)).find(Number.isFinite);
+  const first=rangeTable(inst).map(x=>Math.abs(Number(x.S2limit))).find(Number.isFinite);
   if(!Number.isFinite(first)) throw new Error('Selected instrument has no valid S2 maximum.');
   return first;
 }
@@ -166,21 +187,20 @@ function s2ElasticIncidentEnergy(){
 function baseS2MaxAtEi(inst,Ei,lambdaHalf=false){
   return s2DependsOnEi(inst) ? Number(instrumentInterp(inst,lambdaHalf)(Ei)) : configuredConstantS2Max(inst);
 }
+// S2 max: the instrument file gives the default.  It is editable, except
+// for s2_dep_ei = "yes" instruments (CTAX, HODACA), whose Ei-dependent
+// maximum is always taken from the file.
 function effectiveS2MaxAtEi(inst,Ei,lambdaHalf=false){
   const base=baseS2MaxAtEi(inst,Ei,lambdaHalf);
-  const raw=$('S2maxUser')?.value;
-  const delta=(raw===undefined||raw===null||String(raw).trim()==='') ? 0 : Number(raw);
-  return base+(Number.isFinite(delta)?delta:0);
+  if(s2DependsOnEi(inst)) return base;
+  const entered=Math.abs(Number($('S2maxEffective')?.value));
+  return String($('S2maxEffective')?.value??'').trim()!=='' && Number.isFinite(entered) ? entered : base;
 }
 function formatS2ControlValue(x){
   return Number.isFinite(Number(x)) ? String(Number(Number(x).toFixed(3))) : '';
 }
 function initializeS2MaxControl(inst=currentInstrument()){
-  if(!$('S2maxUser')) return;
-  // Start from the instrument JSON value for every instrument.  Users can then
-  // modify either Delta S2 or Effective S2 max without changing the JSON model.
-  $('S2maxUser').value='0';
-  updateS2MaxDisplay(inst);
+  updateS2MaxDisplay(inst,NaN,null,{reset:true});
 }
 function currentS2DisplayContext(inst=null,EiOverride=NaN,lambdaHalfOverride=null){
   inst=inst||currentInstrument();
@@ -191,52 +211,25 @@ function currentS2DisplayContext(inst=null,EiOverride=NaN,lambdaHalfOverride=nul
   const base=Number.isFinite(Ei0) ? baseS2MaxAtEi(inst,Ei0,lambdaHalf) : configuredConstantS2Max(inst);
   return {inst,lambdaHalf,Ei0,base};
 }
-function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null){
-  if(!$('S2maxUser') || !$('S2maxBase') || !$('S2maxEffective')) return;
+// Ei-dependent instruments: always show the file value at the displayed Ei
+// (read only).  Others: write the file value only on reset (instrument /
+// type defaults) or when the field is empty, so a user edit is kept.
+function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null,{reset=false}={}){
+  const out=$('S2maxEffective'); if(!out) return;
   try{
     const ctx=currentS2DisplayContext(inst,EiOverride,lambdaHalfOverride);
-    const deltaRaw=$('S2maxUser').value;
-    const delta=(deltaRaw===undefined||deltaRaw===null||String(deltaRaw).trim()==='') ? 0 : Number(deltaRaw);
-    const effective=ctx.base+(Number.isFinite(delta)?delta:0);
-    $('S2maxBase').value=formatS2ControlValue(ctx.base);
-    $('S2maxEffective').value=formatS2ControlValue(effective);
-
-    // JSON S2 max is metadata and stays read-only.  Delta and Effective are
-    // deliberately both editable; they are synchronized bidirectionally.
-    $('S2maxBase').readOnly=true;
-    $('S2maxUser').readOnly=false;
-    $('S2maxEffective').readOnly=false;
-
-    if($('s2MaxBaseLabel')?.firstChild) $('s2MaxBaseLabel').firstChild.nodeValue='JSON S2 max (deg)';
-    if($('s2MaxControlLabel')?.firstChild) $('s2MaxControlLabel').firstChild.nodeValue='ΔS2 max (deg)';
-    if($('s2MaxEffectiveLabel')?.firstChild) $('s2MaxEffectiveLabel').firstChild.nodeValue='Effective S2 max (deg)';
-    $('s2MaxEffectiveLabel')?.classList.remove('hidden');
-
-    $('S2maxUser').title='Relative offset added to the JSON S2 maximum.';
-    $('S2maxEffective').title=s2DependsOnEi(ctx.inst)
-      ? 'Absolute S2 maximum at the currently displayed Ei. Editing this converts the value to ΔS2 and applies that Δ across the Ei-dependent curve.'
-      : 'Absolute S2 maximum. Editing this automatically updates ΔS2.';
+    const dep=s2DependsOnEi(ctx.inst);
+    if(dep || reset || String(out.value).trim()==='') out.value=formatS2ControlValue(s2DisplaySign()*ctx.base);
+    out.readOnly=dep;
+    out.title=dep
+      ? 'S2 maximum from the instrument file at the displayed Ei (read only: s2_dep_ei = "yes").'
+      : 'S2 maximum (default from the instrument file).';
   }catch(_err){
-    $('S2maxBase').value=''; $('S2maxEffective').value='';
+    out.value='';
   }
 }
-function syncS2DeltaFromEffective(){
-  if(!$('S2maxUser') || !$('S2maxEffective')) return;
-  try{
-    let inst=currentInstrument(), EiOverride=NaN, lambdaHalfOverride=null;
-    if(getSingleCache()?.hwList?.length && $('hwSlider')){
-      const i=Math.max(0,Math.min(Number($('hwSlider').value)||0,getSingleCache().hwList.length-1));
-      const hw=Number(getSingleCache().hwList[i])||0;
-      EiOverride=getSingleCache().energyMode==='Ef fixed' ? getSingleCache().Ef+hw : getSingleCache().Ei;
-      inst=getSingleCache().inst||inst;
-      lambdaHalfOverride=getSingleCache().lambdaHalf;
-    }
-    const ctx=currentS2DisplayContext(inst,EiOverride,lambdaHalfOverride);
-    const effective=Number($('S2maxEffective').value);
-    if(!Number.isFinite(effective)) return;
-    $('S2maxUser').value=formatS2ControlValue(effective-ctx.base);
-  }catch(_err){}
-}
+// Kept for callers of the former editable S2 max; nothing to synchronise now.
+function syncS2DeltaFromEffective(){}
 function updateS2MaxDisplayForQERange(cache,index){
   if(!cache?.hwList?.length) return;
   const i=Math.max(0,Math.min(Number(index)||0,cache.hwList.length-1));
@@ -434,6 +427,7 @@ function applyInstrumentDefaults(){
   }
   setSelect("sense",tasConvention.sense);
   setSelect("s1sign",tasConvention.s1sign);
+  syncS2FieldSigns();
   setSelect("geometry",cfg.geometry || "W");
   setSelect("method",(inst.approximation||{}).method);
 
@@ -500,6 +494,7 @@ function applyInstrumentDefaults(){
 }
 
   return {
+    s2MinAbs, syncS2FieldSigns,
     applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,

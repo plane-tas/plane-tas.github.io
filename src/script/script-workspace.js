@@ -1851,7 +1851,7 @@ export function createScriptWorkspace(deps){
       if(event.target.closest?.('.time-scan-table-wrap')) return;
       clearTimeScanSelection();
     });
-    for(const id of ['a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','instrument','energy','energyMode','S2maxUser','S2maxEffective']){
+    for(const id of ['a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','instrument','energy','energyMode','S2min']){
       $(id)?.addEventListener('change',()=>{
         const scriptActive=$('tabScript')?.classList.contains('active');
         if(currentGeometryCardTab()==='time' || scriptActive) validateAllTimeScanRows({showMessage:true});

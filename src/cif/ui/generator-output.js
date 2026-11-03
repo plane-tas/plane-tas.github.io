@@ -30,7 +30,7 @@ function recalculateGeneratedReflections(){
   let plotRange=null;
   try{
     const inst=currentInstrument();
-    plotRange={min:Number($('S2min')?.value),max:Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf))};
+    plotRange={min:Math.abs(Number($('S2min')?.value)),max:Math.min(180,effectiveS2MaxAtEi(inst,beam.effectiveEnergy,beam.lambdaHalf))};
   }catch(_e){ plotRange=null; }
   // Nuclear: all reflection families (direction filters are applied at display time).
   let nuclear=null;

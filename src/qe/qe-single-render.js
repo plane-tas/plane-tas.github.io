@@ -285,8 +285,6 @@ function renderSingle(cache,index=0){
   const allViewPoints=[...boundary,...transformedG.map(p=>[p.x,p.y]),...transformedMag.map(p=>[p.x,p.y])];
   const qMax = Math.max(0, ...allViewPoints.map(p => Math.hypot(p[0], p[1])));
 
-  const s2Min = num("S2min");
-  const s2Max = cache.S2list[i];
   const Qplot=Math.max(1e-6,1.15*Math.max(...allViewPoints.map(p=>Math.max(Math.abs(p[0]),Math.abs(p[1]))),1));
   // Identical physical ranges preserve circular Q contours and oblique U/V angles.
   const QplotX=Qplot, QplotY=Qplot;
@@ -308,9 +306,8 @@ function renderSingle(cache,index=0){
       x:boundary.map(p=>p[0]),
       y:boundary.map(p=>p[1]),
       fill:"toself",
-      name:cache.fourCircle
-        ? `Accessible Q (${s2Min.toFixed(0)}° ≤ |S2| ≤ ${s2Max.toFixed(0)}°, ${cache.chiMin.toFixed(0)}° ≤ χ ≤ ${cache.chiMax.toFixed(0)}°)`
-        : `Accessible Q (${s2Min.toFixed(0)}° ≤ S2 ≤ ${s2Max.toFixed(0)}°)`,
+      // The S2 / chi limits are shown in the Motor table of the sidebar.
+      name:"Accessible Q",
       mode:"lines",
       line:{width:0},
       fillcolor:"rgba(255,215,0,0.20)",
@@ -577,7 +574,7 @@ function syncSingleNavigation(cache,index){
   const lo=0, hi=180;
   const slider=$('s2Slider'), entry=$('s2Entry');
   if(slider){ slider.min=lo; slider.max=hi; slider.step=0.1; }
-  let v=Number(entry?.value); if(!Number.isFinite(v)) v=Math.max(0,num('S2min')); v=Math.max(lo,Math.min(hi,v));
+  let v=Number(entry?.value); if(!Number.isFinite(v)) v=Math.max(0,Math.abs(num('S2min'))); v=Math.max(lo,Math.min(hi,v));
   if(slider) slider.value=v; if(entry) entry.value=v.toFixed(1); if($('s2Value')) $('s2Value').textContent=`${v.toFixed(1)}°`;
   return v;
 }

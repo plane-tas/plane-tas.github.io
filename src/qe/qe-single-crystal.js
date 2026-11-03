@@ -62,8 +62,14 @@ export function createQESingleCrystal(deps){
     }
     // chi = chiFactor * (elevation of Q towards W); see fourCircleSignFactors.
     const chiFactor=fourCircle ? fourCircleSignFactors(convention,$("phiSign")?.value||"ccw",$("chiSign")?.value||"ccw").chiFactor : 1;
-    const chiMin=Number.isFinite(Number(inst?.chi_min))?Number(inst.chi_min):-90;
-    const chiMax=Number.isFinite(Number(inst?.chi_max))?Number(inst.chi_max):90;
+    // chi limits of the Motor table (defaults from the instrument file).
+    const chiLimit=(id,key,fallback)=>{
+      const raw=$(id)?.value;
+      const v=raw!==undefined && String(raw).trim()!=='' ? Number(raw) : Number(inst?.[key]);
+      return Number.isFinite(v) ? v : fallback;
+    };
+    const chiMin=chiLimit("chiMin","chi_min",-90);
+    const chiMax=chiLimit("chiMax","chi_max",90);
 
     const energyMode=checkedValue("energyMode");
     const lambdaHalf=$("lambdaHalf").checked;
@@ -94,7 +100,7 @@ export function createQESingleCrystal(deps){
     // formulas are reused independently, then their blocked regions are overlaid.
     const s1Offset=-thetaRef+180-phiRefPlot;
 
-    const S2min=num("S2min"), S1min=num("S1min"), S1max=num("S1max");
+    const S2min=Math.abs(num("S2min")), S1min=num("S1min"), S1max=num("S1max");
     let hwList;
     if(lambdaHalf) hwList=[0];
     else if(energyMode==="Ef fixed"){

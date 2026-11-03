@@ -66,14 +66,14 @@
     "shape": "rectangle"
   },
   "s2_dep_ei": "no",
-  "S2_min": 5,
+  "S2_min": -5,
   "S2_limits": [
     {
-      "S2limit": 100,
+      "S2limit": -100,
       "Ei": 45
     },
     {
-      "S2limit": 100,
+      "S2limit": -100,
       "Ei": 10
     }
   ],

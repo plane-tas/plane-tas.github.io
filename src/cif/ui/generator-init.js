@@ -365,7 +365,6 @@ async function initializeCifGenerator(){
     $("energy")?.addEventListener("change",syncGeneratorBeam);
     $("energyMode")?.addEventListener("change",syncGeneratorBeam);
     $("instrument")?.addEventListener("change",syncGeneratorBeam);
-    $("S2maxUser")?.addEventListener("change",fn.recalculateGeneratedReflections);
     $("S2maxEffective")?.addEventListener("change",fn.recalculateGeneratedReflections);
     // Synchronize both crystallographic panels, then recompute nuclear peaks.
     const onSampleLatticeInput=ev=>fn.syncCrystallographicCell("sample",{changedId:ev.target?.id||"",commit:ev.type==="change"});

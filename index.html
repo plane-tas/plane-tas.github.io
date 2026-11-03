@@ -103,23 +103,33 @@
 <label>Monochromator<select id="sidebarMonoCrystal" aria-label="Monochromator crystal (linked to Resolution)"></select></label>
 <label id="sidebarAnalyzerCrystalWrap">Analyzer<select id="sidebarAnaCrystal" aria-label="Analyzer crystal (linked to Resolution)"></select></label>
 </div>
-<div class="grid3" id="tasConventionRow">
-<label id="geometryRow">Geometry<select id="geometry"><option>W</option><option>anti-W</option></select></label>
+<div class="grid2" id="tasConventionRow">
 <label id="senseRow">Sense<select id="sense"><option>+++</option><option>+-+</option><option selected="">-+-</option><option>---</option></select></label>
+<label id="geometryRow">Geometry<select id="geometry"><option>W</option><option>anti-W</option></select></label>
 </div>
 <div class="grid2">
 <label class="checkbox-label"><input id="lambdaHalf" type="checkbox"/><span>λ/2 (only elastic)</span></label>
 <span></span>
 </div>
-<div class="grid3">
-<label id="s1minWrap">S1 min (deg)<input id="S1min" step="0.1" type="number" value="-180"/></label>
-<label id="s1maxWrap">S1 max (deg)<input id="S1max" step="0.1" type="number" value="180"/></label>
-<label id="s2Label">S2 min (deg)<input id="S2min" step="0.1" type="number" value="8"/></label>
-</div>
-<div class="grid3" id="s2MaxControlRow">
-<label id="s2MaxBaseLabel">JSON S2 max (deg)<input id="S2maxBase" readonly="" step="0.1" type="number"/></label>
-<label id="s2MaxControlLabel">ΔS2 max (deg)<input id="S2maxUser" step="0.1" type="number" value="0"/></label>
-<label id="s2MaxEffectiveLabel">Effective S2 max (deg)<input id="S2maxEffective" step="0.1" type="number"/></label>
+<!-- Motor sign and limits: one row per motor (φ / χ rows for 4-circle only). -->
+<div class="motor-limit-table" id="motorLimitTable">
+<span class="motor-limit-head"></span><span class="motor-limit-head">sign</span><span class="motor-limit-head">min (deg)</span><span class="motor-limit-head">max (deg)</span>
+<span class="motor-limit-name" id="s1LimitName">S1</span>
+<select id="s1sign" aria-label="S1 sign"><option value="ccw">CCW</option><option value="cw">CW</option></select>
+<input id="S1min" step="0.1" type="number" value="-180" aria-label="S1 min (deg)"/>
+<input id="S1max" step="0.1" type="number" value="180" aria-label="S1 max (deg)"/>
+<span class="motor-limit-name">S2</span>
+<output id="s2SignDisplay" class="motor-sign-display" title="Same as S1 sign">CCW</output>
+<input id="S2min" step="0.1" type="number" value="8" aria-label="S2 min (deg)"/>
+<input id="S2maxEffective" step="0.1" type="number" aria-label="S2 max (deg)"/>
+<span class="motor-limit-name four-circle-limit hidden">φ</span>
+<select id="phiSign" class="four-circle-limit hidden" aria-label="φ sign" title="Positive φ: CCW or CW seen from above at χ = 0"><option value="ccw">CCW</option><option value="cw">CW</option></select>
+<input id="phiMin" class="four-circle-limit hidden" step="0.1" type="number" aria-label="φ min (deg)"/>
+<input id="phiMax" class="four-circle-limit hidden" step="0.1" type="number" aria-label="φ max (deg)"/>
+<span class="motor-limit-name four-circle-limit hidden">χ</span>
+<select id="chiSign" class="four-circle-limit hidden" aria-label="χ sign" title="Positive χ: CCW or CW seen from upstream along the bisector of ki and kf"><option value="ccw">CCW</option><option value="cw">CW</option></select>
+<input id="chiMin" class="four-circle-limit hidden" step="0.1" type="number" aria-label="χ min (deg)"/>
+<input id="chiMax" class="four-circle-limit hidden" step="0.1" type="number" aria-label="χ max (deg)"/>
 </div>
 </section>
 <section>

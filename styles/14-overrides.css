@@ -710,3 +710,16 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .dark-unavailable-note{margin:0 0 calc(6px * var(--tas-density));font-size:calc(13px * var(--tas-density));color:#6b7280;font-style:italic}
 /* Long type names ("Larmor diffractometer") fit the half-width Type selector. */
 .sidebar select#instrumentType{padding-left:3px!important;padding-right:1px!important;letter-spacing:-0.45px}
+
+/* Motor table: one row per motor (name | sign | min | max). */
+.motor-limit-table{
+  display:grid; grid-template-columns:max-content repeat(3,minmax(0,1fr));
+  gap:calc(4px * var(--tas-density)) calc(5px * var(--tas-density)); align-items:center;
+  margin-top:calc(6px * var(--tas-density)); min-width:0;
+}
+.motor-limit-table .hidden{display:none!important}
+.motor-limit-table>select,.motor-limit-table>input,.motor-limit-table>output{min-width:0;width:100%;max-width:100%;box-sizing:border-box}
+.motor-limit-head{padding-left:2px}   /* same size and colour as the other labels (Fixed, ...) */
+.motor-limit-name{font-weight:600;padding-right:calc(4px * var(--tas-density));min-width:calc(22px * var(--tas-density))}
+.motor-sign-display{display:block;padding-left:calc(6px * var(--tas-density));color:#555}
+.motor-limit-table input[readonly]{background:#f1f3f5;color:#555}

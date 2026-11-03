@@ -63,7 +63,7 @@ export function createDarkAngle(deps){
     const {rl,ex,ey,energyMode,Ei,Ef,hwList,S2list,darkAssets}=cache;
     if(!rl || !ex || !ey || !Array.isArray(hwList) || !Array.isArray(S2list)) return cache;
 
-    const S2min=num("S2min");
+    const S2min=Math.abs(num("S2min"));
     const fixedEnergy=energyMode==="Ei fixed" ? Ei : Ef;
     const armSign=convention.sampleScatteringSign;
     const darkCrystalSign=convention.s1EncoderSign;

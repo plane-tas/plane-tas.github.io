@@ -748,6 +748,8 @@ function restoreLeftPanelState(){
     const legacyRestoreControls=[...leftPanelControls(),...resolutionInstrumentDetailControls()];
     for(const el of legacyRestoreControls){
       if(el.id==='instrument'||el.id==='instrumentType'||darkSeIds.has(el.id)) continue;
+      // Read-only fields (S2 max, cradle limits) always show the instrument file.
+      if(el.readOnly) continue;
       if(explicitBackgroundRows && /^backgroundSelect\d+$/.test(el.id)) continue;
       setSavedControl(el.id,v[el.id],{dispatchChange:el.id==='monoCrystal'||el.id==='anaCrystal'});
     }

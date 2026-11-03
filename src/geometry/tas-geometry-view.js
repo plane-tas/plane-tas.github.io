@@ -90,17 +90,19 @@ function geometryResultMotorAngle(value){
 function geometryScanStatusWarnings(target,displayedAngles){
   const warnings=[];
   const s1=Number(displayedAngles?.s1), s2=Math.abs(Number(displayedAngles?.s2));
-  const s1min=num("S1min"), s1max=num("S1max"), s2min=num("S2min");
+  const s1min=num("S1min"), s1max=num("S1max"), s2min=Math.abs(num("S2min"));
   if(Number.isFinite(s1) && Number.isFinite(s1min) && Number.isFinite(s1max) && (s1<s1min-1e-8 || s1>s1max+1e-8)) warnings.push('S1 out of range');
   let s2max=NaN;
   try{ s2max=effectiveS2MaxAtEi(currentInstrument(),target?.Ei,false); }catch(_e){}
   if(Number.isFinite(s2) && Number.isFinite(s2min) && s2<s2min-1e-8) warnings.push('S2 out of range');
   if(Number.isFinite(s2) && Number.isFinite(s2max) && s2>s2max+1e-8 && !warnings.includes('S2 out of range')) warnings.push('S2 out of range');
-  // Four-circle: chi / phi limits from the instrument file.
+  // Four-circle: chi / phi limits of the Motor table (defaults from the
+  // instrument file).
   let inst=null;
   try{ inst=currentInstrument?.(); }catch(_e){}
+  const limit=(id,key)=>{ const raw=$(id)?.value; return raw!==undefined && String(raw).trim()!=='' ? Number(raw) : Number(inst?.[key]); };
   for(const key of ['chi','phi']){
-    const v=Number(displayedAngles?.[key]), lo=Number(inst?.[`${key}_min`]), hi=Number(inst?.[`${key}_max`]);
+    const v=Number(displayedAngles?.[key]), lo=limit(`${key}Min`,`${key}_min`), hi=limit(`${key}Max`,`${key}_max`);
     if(Number.isFinite(v) && ((Number.isFinite(lo) && v<lo-1e-8) || (Number.isFinite(hi) && v>hi+1e-8))) warnings.push(`${key==='chi'?'χ':'φ'} out of range`);
   }
   return warnings;

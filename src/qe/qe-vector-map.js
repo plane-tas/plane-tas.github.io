@@ -250,7 +250,7 @@ function renderQEVectorMap(cache){
       const i0=varyingIndices[0];
       const ok=varyingIndices.every(j=>{
         const r=dh[j]/dh[i0];
-        if(!(Math.abs(Math.abs(r)-1)<1e-9)) return false;
+        if(!(Math.abs((r)-1)<1e-9)) return false;
         ratios[j]=Math.sign(r);
         return Math.abs(first[j]-ratios[j]*first[i0])<1e-9;
       });
@@ -367,7 +367,7 @@ function renderQEVectorMap(cache){
     const z=[], darkKiZ=[], darkKfZ=[], darkFixedZ=[], hover=[];
     // Four-circle accessibility of a 3D point at hwList[i]: S2 limits on |Q|
     // and chi limits on the out-of-plane angle (phi rotates freely).
-    const s2MinDeg=Number($('S2min')?.value);
+    const s2MinDeg=Math.abs(Number($('S2min')?.value));
     const fourCircleAccessible=(i,p,z)=>{
       const hw=cache.hwList[i];
       const Ei=cache.energyMode==='Ef fixed'?cache.Ef+hw:cache.Ei;

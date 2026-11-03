@@ -8,10 +8,10 @@
   "instrument_setting": ["diffractometer", "larmor-diffractometer"],
   "diffractometer": {
     "default_energy": 27.6,
-    "S2_min": 10.0,
+    "S2_min": -10.0,
     "S2_limits": [
       {
-        "S2limit": 120.0,
+        "S2limit": -120.0,
         "Ei": 27.6
       }
     ],
@@ -28,10 +28,10 @@
   },
   "larmor_diffractometer": {
     "default_energy": 13.9,
-    "S2_min": 30.0,
+    "S2_min": -30.0,
     "S2_limits": [
       {
-        "S2limit": 60.0,
+        "S2limit": -60.0,
         "Ei": 13.9
       }
     ],

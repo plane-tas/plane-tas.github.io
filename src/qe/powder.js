@@ -195,7 +195,7 @@ function calculatePowder(){
   const lc=latticeParams();
   const rv=reciprocalVectors(lc.a,lc.b,lc.c,lc.alpha,lc.beta,lc.gamma);
   const energyMode=checkedValue("energyMode");
-  const E=num("energy"), S2min=num("S2min");
+  const E=num("energy"), S2min=Math.abs(num("S2min"));
 
   const qmin=[],qmax=[],hw=[],s2minList=[],s2maxList=[];
 

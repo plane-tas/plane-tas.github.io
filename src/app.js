@@ -77,6 +77,7 @@ const {
 });
 
 const {
+  s2MinAbs, syncS2FieldSigns,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
@@ -252,67 +253,26 @@ function setupTasConventionUI(){
     if(node.nodeType===Node.TEXT_NODE && node.nodeValue.trim()){ node.nodeValue="Sense"; break; }
   }
 
-  let s1Select=$("s1sign");
-  let s1Row=$("s1SignRow");
-  if(!s1Select){
-    s1Row=document.createElement("label");
-    s1Row.id="s1SignRow";
-    s1Row.append("S1 sign");
-    s1Select=document.createElement("select");
-    s1Select.id="s1sign";
-    for(const [value,label] of [["ccw","CCW"],["cw","CW"]]){
-      const option=document.createElement("option");
-      option.value=value; option.textContent=label; s1Select.appendChild(option);
-    }
-    s1Select.value=initial.s1sign;
-    s1Row.appendChild(s1Select);
-  }
-
-  // Four-circle motor signs (shown instead of Geometry / Sense for 4-circle).
-  const signRow=(id,label,title)=>{
-    let wrap=$(`${id}Row`);
-    if(!wrap){
-      wrap=document.createElement("label");
-      wrap.id=`${id}Row`; wrap.className="hidden"; wrap.title=title;
-      wrap.append(label);
-      const select=document.createElement("select");
-      select.id=id;
-      for(const [value,text] of [["ccw","CCW"],["cw","CW"]]){
-        const option=document.createElement("option");
-        option.value=value; option.textContent=text; select.appendChild(option);
-      }
-      wrap.appendChild(select);
-    }
-    return wrap;
-  };
-  const phiRow=signRow("phiSign","φ sign","Positive φ: CCW or CW seen from above at χ = 0");
-  const chiRow=signRow("chiSign","χ sign","Positive χ: CCW or CW seen from upstream along the bisector of ki and kf");
-
-  // Put Geometry / Sense / S1 sign on one dedicated three-column row.
-  let row=$("tasConventionRow");
-  if(!row){
-    row=document.createElement("div");
-    row.id="tasConventionRow"; row.className="grid3";
-    const oldParent=senseRow.parentElement;
-    oldParent?.after(row);
-  }
-  row.appendChild(geometryRow);
-  row.appendChild(senseRow);
-  row.appendChild(phiRow);
-  row.appendChild(chiRow);
-  row.appendChild(s1Row);
+  // S1 / phi / chi signs live in the Motor table (index.html).
+  const s1Select=$("s1sign");
+  if(s1Select) s1Select.value=initial.s1sign;
 }
-// Geometry / Sense apply to TAS only; 4-circle shows the phi / chi signs in
-// their place, Diffractometer neither.  Their values are kept (and still used
-// for the scattering direction) while hidden.
+// Geometry applies to TAS only (analyzer side); Sense (scattering side at
+// the sample) to every type.  The phi / chi rows of the Motor table are for
+// 4-circle only.  Hidden values are kept.
+function updateS2SignDisplay(){
+  const out=$("s2SignDisplay"); if(!out) return;
+  // S2 turns in the same sense as S1 (the scattering side is set by Sense).
+  out.textContent=selectedS1Sign()==="cw" ? "CW" : "CCW";
+}
 function updateInstrumentTypeRows(){
   let type='tas';
   try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
   const tas=type==='tas', fourCircle=type==='four-circle';
   $("geometryRow")?.classList.toggle("hidden",!tas);
-  $("senseRow")?.classList.toggle("hidden",!tas);
-  $("phiSignRow")?.classList.toggle("hidden",!fourCircle);
-  $("chiSignRow")?.classList.toggle("hidden",!fourCircle);
+  $("tasConventionRow")?.classList.remove("hidden");
+  for(const el of document.querySelectorAll("#motorLimitTable .four-circle-limit")) el.classList.toggle("hidden",!fourCircle);
+  updateS2SignDisplay();
   // Dark angles are not available for 4-circle yet: keep the section visible
   // (greyed out, not editable) with its values unchanged for a later update.
   const dark=$("darkSection");
@@ -635,7 +595,9 @@ $("instrument").addEventListener("change",()=>{
   scheduleRecalc();
 });
 // TAS / 4-circle / Diffractometer: only the type-dependent settings change.
-for(const id of ['phiSign','chiSign']) $(id)?.addEventListener('change',()=>scheduleRecalc());
+for(const id of ['phiSign','chiSign','phiMin','phiMax','chiMin','chiMax','S2maxEffective']) $(id)?.addEventListener('change',()=>scheduleRecalc());
+$('s1sign')?.addEventListener('change',updateS2SignDisplay);
+for(const id of ['sense','s1sign']) $(id)?.addEventListener('change',()=>syncS2FieldSigns());
 $("instrumentType")?.addEventListener("change",()=>{
   clearResolutionResults?.();
   applyInstrumentTypeChange();

@@ -66,14 +66,14 @@
     "shape": "rectangle"
   },
   "s2_dep_ei": "no",
-  "S2_min": 5,
+  "S2_min": -5,
   "S2_limits": [
     {
-      "S2limit": 130,
+      "S2limit": -130,
       "Ei": 14.5
     },
     {
-      "S2limit": 130,
+      "S2limit": -130,
       "Ei": 0.1
     }
   ],
@@ -86,14 +86,14 @@
     "configuration": {
       "Ei": 14.45
     },
-    "S2_min": 2,
+    "S2_min": -2,
     "S2_limits": [
       {
-        "S2limit": 92,
+        "S2limit": -92,
         "Ei": 14.5
       },
       {
-        "S2limit": 92,
+        "S2limit": -92,
         "Ei": 0.1
       }
     ],
