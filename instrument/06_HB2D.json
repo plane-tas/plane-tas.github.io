@@ -1,0 +1,58 @@
+{
+  "name": "Poplar@HFIR",
+  "energy_mode": "Ei fixed",
+  "sense": "+-+",
+  "s1sign": "ccw",
+  "s2_dep_ei": "no",
+  "instrument_type": "diffractometer",
+  "instrument_setting": ["diffractometer", "larmor-diffractometer"],
+  "diffractometer": {
+    "default_energy": 27.6,
+    "S2_min": 10.0,
+    "S2_limits": [
+      {
+        "S2limit": 120.0,
+        "Ei": 27.6
+      }
+    ],
+    "available_crystals": {
+      "monochromator": [
+        "Si(400)"
+      ]
+    },
+    "monochromator": {
+      "crystal": "Si(400)",
+      "hfocus": true,
+      "vfocus": true
+    }
+  },
+  "larmor_diffractometer": {
+    "default_energy": 13.9,
+    "S2_min": 30.0,
+    "S2_limits": [
+      {
+        "S2limit": 60.0,
+        "Ei": 13.9
+      }
+    ],
+    "available_crystals": {
+      "monochromator": [
+        "Si(220)"
+      ]
+    },
+    "monochromator": {
+      "crystal": "Si(220)",
+      "hfocus": true,
+      "vfocus": true
+    }
+  },
+  "detector": {
+    "type": "single"
+  },
+  "distance": {
+    "L0": 10.9,
+    "L1": 3.36,
+    "LSD": null
+  },
+  "_unverified_resolution_fields_note": "Collimations, supermirror m-value, monochromator blade counts/mosaic/component dimensions, beam and detector dimensions, L0, L2, L3, and sample-detector distance (LSD) are not verified and are intentionally unspecified. L1=3.36 m is the documented monochromator-to-sample nominal separation; horizontal/vertical monochromator focusing is documented."
+}

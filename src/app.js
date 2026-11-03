@@ -77,7 +77,7 @@ const {
 });
 
 const {
-  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
+  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
@@ -638,9 +638,8 @@ $("instrument").addEventListener("change",()=>{
 for(const id of ['phiSign','chiSign']) $(id)?.addEventListener('change',()=>scheduleRecalc());
 $("instrumentType")?.addEventListener("change",()=>{
   clearResolutionResults?.();
-  applyInstrumentTypeDefaults();
+  applyInstrumentTypeChange();
   updateInstrumentTypeRows();
-  applyInstrumentCrystalAvailability({preserveCurrent:true});
   scheduleRecalc();
 });
 
@@ -1226,7 +1225,7 @@ geometrySliders.bindGeometrySliders();
   restoreLeftPanelState
 }=createUIShell({
   $, BACKGROUND_SLOTS, GEOMETRY_CALC_MODE_STORAGE_KEY,
-  GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, add, applyInstrumentDefaults, applyInstrumentTypeDefaults,
+  GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, add, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
   applySampleEnvironmentDefaults, backgroundRowValues, buildResolutionLattice, checkedValue, currentGeometryCardTab,
   currentGeometryScanOutputTab, darkAssetIds, darkAssetSlots, darkAssetValues, geometryCalculationMode, markResolutionScanDirty,
   mountTimeEstimateForScript, propagationVectorValues, refreshDarkEnvironmentSelect, renderGeometry, renderQEVectorMap,

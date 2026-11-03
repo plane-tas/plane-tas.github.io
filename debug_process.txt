@@ -3,3 +3,24 @@ python -m http.server 8888
 http://localhost:8888/
 
 コードを変更したらブラウザで Ctrl + Shift + R を押して強制リロード。
+
+# mainにpush
+git checkout main                    # main にいることを確認（すでに main なら不要）
+git pull                             # 先に GitHub の main を取り込む
+git add -A                           # 変更をすべてステージ
+git commit -m "変更内容のメッセージ"    # コミット
+git push origin main                 # GitHub の main に push
+
+# branchにpush
+git checkout four-circle
+git pull
+unzip -o four-circle-diffr.zip
+git add -A
+git commit -m "4-circle: phi/chi sign, dark angle off, treated as diffractometer"
+git push origin four-circle
+
+# mainにmarge
+git checkout main
+git pull
+git merge four-circle
+git push origin main

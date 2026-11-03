@@ -1,7 +1,7 @@
 {
   "name": "WAND2@HFIR",
   "instrument_type": "diffractometer",
-  "instrument_types": ["diffractometer"],
+  "instrument_setting": ["diffractometer"],
   "approximation": {
     "method": "Cooper-Nathans"
   },

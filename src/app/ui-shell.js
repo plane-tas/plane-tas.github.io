@@ -7,7 +7,7 @@ export function createUIShell(deps){
     GEOMETRY_CALC_MODE_STORAGE_KEY,
     GEOMETRY_SCAN_OUTPUT_STORAGE_KEY,
     add,
-    applyInstrumentDefaults, applyInstrumentTypeDefaults,
+    applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
     applySampleEnvironmentDefaults,
     backgroundRowValues,
     buildResolutionLattice,
@@ -459,6 +459,9 @@ function globalUIPersistentControls(){
     if(['button','submit','file'].includes(type)) return false;
     if(el.readOnly) return false; // derived outputs are recomputed, not restored
     if(el.dataset.noPersist!==undefined) return false; // per-file choices (magnetic ion)
+    // Instrument and its Type are restored by restoreLeftPanelState together
+    // with their defaults; setting them here again would bypass those.
+    if(el.id==='instrument' || el.id==='instrumentType') return false;
     // Spins and Structure-view controls belong to the per-structure viewer
     // state (tas-simulator-structure-viewer-v2). Restoring an older global
     // snapshot here, without change events, made them disagree with it.
@@ -624,6 +627,14 @@ function restoreLeftPanelState(){
      [...($('instrument')?.options||[])].some(option=>option.value==='08_HB3A.json')){
     v.instrument='08_HB3A.json';
   }
+  // Poplar's former two files are now one instrument with Diffractometer /
+  // Larmor diffractometer types.
+  const poplarType={'06_HB2D_S':'diffractometer','07_HB2D_L':'larmor-diffractometer'}[String(v.instrument||'').replace(/\.json$/i,'')];
+  const poplarKey=[...($('instrument')?.options||[])].map(option=>option.value).find(value=>/^06_HB2D(\.json)?$/i.test(value));
+  if(poplarType && poplarKey){
+    v.instrument=poplarKey;
+    v.instrumentType=poplarType;
+  }
   restoringLeftPanel=true;
   try{
     // 1) The instrument must exist before its dependent defaults can be applied.
@@ -631,7 +642,7 @@ function restoreLeftPanelState(){
       applyInstrumentDefaults();
       // The type selects the type-dependent limits; the saved values of
       // those fields are restored below with the other controls.
-      if(setSavedControl('instrumentType',v.instrumentType)) applyInstrumentTypeDefaults?.();
+      if(setSavedControl('instrumentType',v.instrumentType)) applyInstrumentTypeChange?.();
     }
 
     // Recreate the dynamic Propagation/Dark UI before restoring individual

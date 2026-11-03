@@ -49,7 +49,7 @@
   },
   "configuration": {
     "energy_mode": "Ei fixed",
-    "Ef": 14.7,
+    "Ei": 14.7,
     "geometry": "W",
     "sense": "+-+",
     "s1sign": "ccw"
@@ -78,11 +78,14 @@
     }
   ],
   "instrument_type": "four-circle",
-  "instrument_types": [
+  "instrument_setting": [
     "tas",
     "four-circle"
   ],
   "four_circle": {
+    "configuration": {
+      "Ei": 14.45
+    },
     "S2_min": 2,
     "S2_limits": [
       {

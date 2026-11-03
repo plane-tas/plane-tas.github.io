@@ -10,15 +10,21 @@ export function createInstrumentSetup(deps){
   }=deps;
 
 // Instrument type (mode).  An instrument file lists the types it supports in
-// "instrument_types" (default: its "instrument_type" only); the Type selector
+// "instrument_setting" (default: its "instrument_type" only); the Type selector
 // next to Instrument picks one.  Settings that differ by type live in a
-// section named after it ("four_circle", "tas", "diffractometer") and
-// override the top-level values.  currentInstrument() returns that merged
-// view, with instrument_type set to the selected type.
-const INSTRUMENT_TYPE_LABELS={tas:'TAS','four-circle':'4-circle',diffractometer:'Diffractometer'};
+// section named after it ("four_circle", "tas", "standard", "larmor", ...)
+// and override the top-level values.  currentInstrument() returns that
+// merged view.  Types: "tas", "four-circle", "diffractometer" and
+// "larmor-diffractometer" (calculated as a diffractometer; the type is kept
+// in instrument_mode).  A section may also set "instrument_type" (the
+// calculation type) and "label" for a custom named configuration.
+const INSTRUMENT_TYPE_LABELS={tas:'TAS','four-circle':'4-circle',diffractometer:'Diffractometer',
+  'larmor-diffractometer':'Larmor diffractometer'};
+const INSTRUMENT_CALCULATION_TYPES={'larmor-diffractometer':'diffractometer'};
 function instrumentTypes(inst){
-  const raw=Array.isArray(inst?.instrument_types) && inst.instrument_types.length
-    ? inst.instrument_types : [inst?.instrument_type || 'tas'];
+  // "instrument_setting" (older files: "instrument_types").
+  const listed=Array.isArray(inst?.instrument_setting) ? inst.instrument_setting : inst?.instrument_types;
+  const raw=Array.isArray(listed) && listed.length ? listed : [inst?.instrument_type || 'tas'];
   return [...new Set(raw.map(String))];
 }
 function defaultInstrumentType(inst){
@@ -30,13 +36,30 @@ function selectedInstrumentType(inst){
   const v=$("instrumentType")?.value;
   return list.includes(v) ? v : defaultInstrumentType(inst);
 }
+function instrumentTypeSection(base,type){
+  const section=base?.[String(type).replace(/-/g,'_')];
+  return section && typeof section==='object' && !Array.isArray(section) ? section : {};
+}
+function instrumentTypeLabel(base,type){
+  return instrumentTypeSection(base,type).label || INSTRUMENT_TYPE_LABELS[type] ||
+    String(type).replace(/^./,c=>c.toUpperCase());
+}
 const effectiveInstrumentCache=new WeakMap();
 function instrumentForType(base,type){
   let byType=effectiveInstrumentCache.get(base);
   if(!byType){ byType=new Map(); effectiveInstrumentCache.set(base,byType); }
   if(!byType.has(type)){
-    const section=base[String(type).replace(/-/g,'_')];
-    byType.set(type,{...base,...(section && typeof section==='object' && !Array.isArray(section) ? section : {}),instrument_type:type});
+    const section=instrumentTypeSection(base,type);
+    // A section overrides values; an object value is merged one level deep,
+    // so "four_circle": {"configuration": {"Ei": 14.45}} changes only Ei.
+    const merged={...base};
+    for(const [k,v] of Object.entries(section)){
+      const old=base[k];
+      merged[k]=(v && typeof v==='object' && !Array.isArray(v) && old && typeof old==='object' && !Array.isArray(old))
+        ? {...old,...v} : v;
+    }
+    byType.set(type,{...merged,instrument_mode:type,
+      instrument_type:section.instrument_type||INSTRUMENT_CALCULATION_TYPES[type]||type});
   }
   return byType.get(type);
 }
@@ -46,16 +69,39 @@ function currentInstrument(){
   const base=instruments.get(key);
   return instrumentForType(base,selectedInstrumentType(base));
 }
-// Fill the Type selector for the selected instrument (its default selected).
+// Fill the Type selector for the selected instrument.  The current choice is
+// kept while the instrument stays the same; a new instrument starts from its
+// default type.
 function populateInstrumentTypeSelect(){
   const select=$("instrumentType"), key=$("instrument")?.value;
   if(!select || !key || !instruments.has(key)) return;
   const base=instruments.get(key), list=instrumentTypes(base);
+  const keep=select.dataset.instrument===key && list.includes(select.value) ? select.value : null;
   select.replaceChildren(...list.map(t=>{
-    const o=document.createElement('option'); o.value=t; o.textContent=INSTRUMENT_TYPE_LABELS[t]||t; return o;
+    const o=document.createElement('option'); o.value=t; o.textContent=instrumentTypeLabel(base,t); return o;
   }));
-  select.value=defaultInstrumentType(base);
+  select.value=keep || defaultInstrumentType(base);
+  select.dataset.instrument=key;
   select.disabled=list.length<2;
+}
+// When the types of an instrument differ in beam or crystals (Poplar,
+// VERITAS energies), a type change re-applies all instrument defaults;
+// otherwise only the type-dependent limits and labels change.
+const FULL_DEFAULT_KEYS=['default_energy','energy_mode','configuration','qe_range',
+  'available_crystals','monochromator','analyzer','sense','s1sign','geometry'];
+function applyInstrumentTypeChange(){
+  const key=$("instrument")?.value;
+  if(!key || !instruments.has(key)) return;
+  const base=instruments.get(key);
+  // Re-apply everything when ANY type of this instrument sets its own beam or
+  // crystals: switching back to a type without such a section must also
+  // restore the top-level values (VERITAS TAS Ei = 14.7 after 4-circle 14.45).
+  const anyFull=instrumentTypes(base).some(t=>FULL_DEFAULT_KEYS.some(k=>k in instrumentTypeSection(base,t)));
+  if(anyFull) applyInstrumentDefaults();
+  else{
+    applyInstrumentTypeDefaults();
+    applyInstrumentCrystalAvailability({preserveCurrent:true});
+  }
 }
 // Settings that depend on the instrument type (limits, labels).
 function applyInstrumentTypeDefaults(inst=currentInstrument()){
@@ -454,7 +500,7 @@ function applyInstrumentDefaults(){
 }
 
   return {
-    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
+    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
     updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max

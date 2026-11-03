@@ -708,3 +708,5 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #darkSection.dark-unavailable .dark-section-content{opacity:.45;filter:grayscale(1);pointer-events:none;user-select:none}
 #darkSection.dark-unavailable > h2{color:#9aa0a6}
 .dark-unavailable-note{margin:0 0 calc(6px * var(--tas-density));font-size:calc(13px * var(--tas-density));color:#6b7280;font-style:italic}
+/* Long type names ("Larmor diffractometer") fit the half-width Type selector. */
+.sidebar select#instrumentType{padding-left:3px!important;padding-right:1px!important;letter-spacing:-0.45px}
