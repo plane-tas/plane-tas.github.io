@@ -9,7 +9,9 @@
    The finer resolution-model settings appear only inside the Resolution tab. */
 #resolutionPanel .resolution-workspace{
   display:grid;
-  grid-template-columns:minmax(calc(300px * var(--tas-density)),calc(360px * var(--tas-density))) minmax(0,1fr);
+  /* Instrument details as wide as the Instrument configuration card of the
+     left sidebar (measured in app.js); fallback before it is measured. */
+  grid-template-columns:var(--resolution-details-width,minmax(calc(300px * var(--tas-density)),calc(360px * var(--tas-density)))) minmax(0,1fr);
   gap:calc(12px * var(--tas-density));
   align-items:start;
 }

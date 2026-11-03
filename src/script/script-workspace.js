@@ -1,3 +1,4 @@
+import {OUT_OF_PLANE_TOLERANCE_DEG} from '../core/tas-core.js';
 // Time-estimate / SPICE / ASET workspace extracted from app.js.
 // The feature code is intentionally kept structurally identical. App-owned
 // geometry/data helpers are injected at startup to avoid duplicating state.
@@ -164,8 +165,11 @@ export function createScriptWorkspace(deps){
       const normal=cross(qU,qV), nn=norm(normal), qn=norm(q);
       if(!(nn>1e-12)) return {ok:false,error:'Current U and V do not define a valid scattering plane.'};
       if(qn<=1e-12) return {ok:true};
+      // Up to OUT_OF_PLANE_TOLERANCE_DEG out of the plane counts as in-plane
+      // (reached by tilting the sample).
       const relative=Math.abs(dot(normal,q))/(nn*qn);
-      return {ok:relative<=1e-8,relative};
+      const tiltDeg=Math.asin(Math.min(1,relative))*180/Math.PI;
+      return {ok:tiltDeg<=OUT_OF_PLANE_TOLERANCE_DEG+1e-9,relative,tiltDeg};
     }catch(err){
       return {ok:false,error:userFacingTasMessage(err?.message||String(err))};
     }

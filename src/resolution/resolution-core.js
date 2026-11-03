@@ -3,6 +3,7 @@ import {
   solve, submatrix, swapRowsCols, symmetrize, choleskyPositiveDefinite,
   det3, dot, norm, cross, normalize, eigSym2
 } from '../core/matrix.js';
+import {OUT_OF_PLANE_TOLERANCE_DEG} from '../core/tas-core.js';
 
 const PI=Math.PI;
 const D2R=PI/180;
@@ -221,8 +222,14 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
 
   const ub=UB_calc(lc,rl), UB=ub.UB;
   if(det3(ub.U)<=0) throw new Error('Orientation matrix U is not right handed.');
-  const hkl=[calc.h,calc.k,calc.l], Qsample=qFromUB(UB,hkl), qnorm=norm(Qsample);
+  const hkl=[calc.h,calc.k,calc.l], qRaw=qFromUB(UB,hkl), qnorm=norm(qRaw);
   if(qnorm<1e-12) throw new Error('Q = 0 cannot define the local TAS resolution coordinate system.');
+  // A Q slightly out of the U-V plane (within OUT_OF_PLANE_TOLERANCE_DEG) is
+  // reached by tilting the sample: rotate it into the plane, keeping |Q|.
+  const qInPlane=Math.hypot(qRaw[0],qRaw[1]);
+  const tiltDeg=Math.atan2(Math.abs(qRaw[2]),qInPlane)/D2R;
+  if(tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Calculation Q is out of plane: the requested resolution point lies ${tiltDeg.toFixed(2)}° outside the scattering plane defined by U and V (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
+  const Qsample=tiltDeg>0 ? [qRaw[0]*qnorm/qInPlane,qRaw[1]*qnorm/qInPlane,0] : qRaw;
   const kiCal=Math.sqrt(Ei/E2K2), kfCal=Math.sqrt(Ef/E2K2);
   let cosPhi=(kiCal*kiCal+kfCal*kfCal-qnorm*qnorm)/(2*kiCal*kfCal);
   if(cosPhi < -1-1e-10 || cosPhi > 1+1e-10) throw new Error('The requested Q and ħω are kinematically inaccessible.');

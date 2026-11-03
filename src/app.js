@@ -605,6 +605,19 @@ $("instrumentType")?.addEventListener("change",()=>{
   scheduleRecalc();
 });
 
+// Resolution: Instrument details column as wide as the sidebar cards.
+function syncResolutionDetailsWidth(){
+  const card=document.querySelector('.sidebar section');
+  const w=card?.getBoundingClientRect().width;
+  if(w>0) $('resolutionPanel')?.style.setProperty('--resolution-details-width',`${Math.round(w)}px`);
+}
+try{
+  const sidebar=document.querySelector('.sidebar');
+  if(sidebar && typeof ResizeObserver==='function') new ResizeObserver(syncResolutionDetailsWidth).observe(sidebar);
+  window.addEventListener('resize',syncResolutionDetailsWidth);
+  syncResolutionDetailsWidth();
+}catch(_e){}
+
 bindDynamicSidebarUI();
 installGeometryNumericInputs($,parseNumericValue);
 

@@ -3,6 +3,9 @@
 
 export const PI = Math.PI;
 export const EPS = 1e-12;
+// A Q up to this angle out of the U-V plane is accepted as in-plane: it is
+// reached by tilting the sample (goniometer tilts of about +-5 deg on a TAS).
+export const OUT_OF_PLANE_TOLERANCE_DEG = 5;
 
 export function deg2rad(x) { return x * PI / 180; }
 export function rad2deg(x) { return x * 180 / PI; }
