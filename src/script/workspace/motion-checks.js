@@ -25,8 +25,32 @@ export function installMotionChecks(ctx){
     return Math.max(0,count-1);
   }
 
+  // Each lookup only walks to earlier rows, so the result for a (row, loop
+  // context) pair is fixed within one lookup.  Without this memo, relative
+  // commands (th2th, scanrel/driverel S2) inside a loop with no absolute S2
+  // before them re-searched every earlier row for every loop context,
+  // which grows exponentially with the number of such rows and froze the page.
+  const timeS2PassMemo=new WeakMap();
+  function timeS2Memo(visiting){
+    if(!visiting.memo) visiting.memo=new Map();
+    return visiting.memo;
+  }
+  function timeS2ContextKey(context){
+    try{ return JSON.stringify(context??null); }catch(_e){ return null; }
+  }
+
   function timeResolveCandidateS2State(candidate,rowIndex,context,structure,visiting=new Set()){
     if(!candidate || visiting.has(rowIndex)) return null;
+    const ctxKey=timeS2ContextKey(context);
+    const memo=timeS2Memo(visiting);
+    const memoKey=ctxKey===null ? null : `${rowIndex}|${ctxKey}`;
+    if(memoKey!==null && memo.has(memoKey)) return memo.get(memoKey);
+    const result=timeResolveCandidateS2StateUncached(candidate,rowIndex,context,structure,visiting);
+    if(memoKey!==null) memo.set(memoKey,result);
+    return result;
+  }
+
+  function timeResolveCandidateS2StateUncached(candidate,rowIndex,context,structure,visiting){
     visiting.add(rowIndex);
     try{
       const command=candidate.querySelector('[data-time-variable]')?.value||'';
@@ -104,7 +128,15 @@ export function installMotionChecks(ctx){
   }
 
   function timePreviousS2Position(row,index,context,structure){
-    return timeS2StateBeforeIndex(Math.max(0,Number(index)-1),context,structure,new Set());
+    const visiting=new Set();
+    // Share the memo across every point and row of one validation pass
+    // (the loop structure object is rebuilt for each pass).
+    if(structure && typeof structure==='object'){
+      let memo=timeS2PassMemo.get(structure);
+      if(!memo){ memo=new Map(); timeS2PassMemo.set(structure,memo); }
+      visiting.memo=memo;
+    }
+    return timeS2StateBeforeIndex(Math.max(0,Number(index)-1),context,structure,visiting);
   }
 
 

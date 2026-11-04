@@ -156,7 +156,10 @@ export function installSpiceScript(ctx){
   function parseSpiceMacroToRows(text){
     const rows=[],loopStack=[];
     const lines=String(text??'').split(/\r?\n/);
-    let pendingMcu=null;
+    // SPICE keeps the counting preset until it is changed: a "preset mcu N"
+    // line (or the preset given at the end of a scan) applies to every later
+    // scan / scanrel / th2th / count that does not give its own preset.
+    let currentMcu=null;
     for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
       const raw=lines[lineIndex].trim();
       if(!raw || raw.startsWith('#') || raw.startsWith(';')) continue;
@@ -188,8 +191,12 @@ export function installSpiceScript(ctx){
       }
       if((match=/^wait\s+(\d+)\s*$/i.exec(raw))){ rows.push({command:'wait',ranges:{},mcu:match[1],fixed:true}); continue; }
       if((match=/^count(?:\s+preset\s+mcu)?\s+(\d+)\s*$/i.exec(raw))){ rows.push({command:'count',ranges:{},mcu:match[1],fixed:true}); continue; }
+      if(/^count\s*$/i.test(raw)){
+        if(currentMcu===null) throw new Error(`Line ${lineIndex+1}: count has no preset; add "preset mcu <seconds>" before it.`);
+        rows.push({command:'count',ranges:{},mcu:currentMcu,fixed:true}); continue;
+      }
       if((match=/^br\s+(\S+)\s+(\S+)\s+(\S+)\s*$/i.exec(raw))){ rows.push({command:'drive:br',ranges:{hkl:[match[1],match[2],match[3]].map(v=>spiceTokenToTime(v,loopStack)).join(' ')},mcu:'0',fixed:true}); continue; }
-      if((match=/^preset\s+mcu\s+(\d+)\s*$/i.exec(raw))){ pendingMcu=match[1]; continue; }
+      if((match=/^preset\s+mcu\s+(\d+)\s*$/i.exec(raw))){ currentMcu=match[1]; continue; }
       if((match=/^(ei|ef)\s+(\S+)\s*$/i.exec(raw))){
         const target=match[1].toLowerCase(); rows.push({command:`drive:${target}`,ranges:{[target]:spiceTokenToTime(match[2],loopStack)},mcu:'0',fixed:true}); continue;
       }
@@ -211,21 +218,33 @@ export function installSpiceScript(ctx){
       }
       if(op==='scan'){
         const presetIndex=parts.findIndex((token,index)=>index>0&&token.toLowerCase()==='preset');
-        if(presetIndex<0 || String(parts[presetIndex+1]||'').toLowerCase()!=='mcu' || !/^\d+$/.test(String(parts[presetIndex+2]||'')) || presetIndex+3!==parts.length) throw new Error(`Line ${lineIndex+1}: scan must end with preset mcu <seconds>.`);
-        const groups=parseSpiceVariableGroups(parts.slice(1,presetIndex),loopStack);
-        rows.push(fn.rowsFromGroups('scan',groups,parts[presetIndex+2])); continue;
+        let end=parts.length;
+        if(presetIndex>=0){
+          if(String(parts[presetIndex+1]||'').toLowerCase()!=='mcu' || !/^\d+$/.test(String(parts[presetIndex+2]||'')) || presetIndex+3!==parts.length) throw new Error(`Line ${lineIndex+1}: scan must end with preset mcu <seconds>.`);
+          currentMcu=parts[presetIndex+2]; end=presetIndex;
+        }else if(currentMcu===null){
+          throw new Error(`Line ${lineIndex+1}: scan has no preset; end it with preset mcu <seconds> or add "preset mcu <seconds>" before it.`);
+        }
+        const groups=parseSpiceVariableGroups(parts.slice(1,end),loopStack);
+        rows.push(fn.rowsFromGroups('scan',groups,currentMcu)); continue;
       }
       if(op==='th2th'){
-        if(parts.length!==4) throw new Error(`Line ${lineIndex+1}: th2th requires initial final step.`);
-        const value=parts.slice(1).map(x=>spiceTokenToTime(x,loopStack)).join(' ');
-        rows.push({command:'scan:th2th',ranges:{th2th:value},mcu:'1',fixed:false}); continue;
+        let rest=parts.slice(1);
+        const presetIndex=rest.findIndex(token=>token.toLowerCase()==='preset');
+        if(presetIndex>=0){
+          if(String(rest[presetIndex+1]||'').toLowerCase()!=='mcu'||!/^\d+$/.test(String(rest[presetIndex+2]||''))||presetIndex+3!==rest.length) throw new Error(`Line ${lineIndex+1}: invalid th2th preset.`);
+          currentMcu=rest[presetIndex+2]; rest=rest.slice(0,presetIndex);
+        }
+        if(rest.length!==3) throw new Error(`Line ${lineIndex+1}: th2th requires initial final step.`);
+        const value=rest.map(x=>spiceTokenToTime(x,loopStack)).join(' ');
+        rows.push({command:'scan:th2th',ranges:{th2th:value},mcu:currentMcu||'1',fixed:false}); continue;
       }
       if(op==='scanrel'){
-        let rest=parts.slice(1),mcu=pendingMcu||'1'; pendingMcu=null;
+        let rest=parts.slice(1),mcu=currentMcu||'1';
         const presetIndex=rest.findIndex(token=>token.toLowerCase()==='preset');
         if(presetIndex>=0){
           if(String(rest[presetIndex+1]||'').toLowerCase()!=='mcu'||!/^\d+$/.test(String(rest[presetIndex+2]||''))) throw new Error(`Line ${lineIndex+1}: invalid scanrel preset.`);
-          mcu=rest[presetIndex+2]; rest=rest.slice(0,presetIndex);
+          mcu=rest[presetIndex+2]; currentMcu=mcu; rest=rest.slice(0,presetIndex);
         }
         if(rest.length!==4) throw new Error(`Line ${lineIndex+1}: scanrel requires target initial final step.`);
         const target=rest[0].toLowerCase(),value=rest.slice(1).map(x=>spiceTokenToTime(x,loopStack)).join(' ');

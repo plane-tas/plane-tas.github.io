@@ -74,7 +74,7 @@ export function installSpiceValidation(ctx){
       return [`driverel ${target} ${token}`];
     }
     if(op==='scan'){
-      if(target==='th2th') return [`th2th ${details[0].tokens.join(' ')}`];
+      if(target==='th2th') return [`preset mcu ${t}`,`th2th ${details[0].tokens.join(' ')}`];
       const pieces=['scan'];
       if(target==='hkle'){
         for(const [key,name] of [['h','h'],['k','k'],['l','l'],['hw','e']]) pieces.push(name,...byKey[key]);
