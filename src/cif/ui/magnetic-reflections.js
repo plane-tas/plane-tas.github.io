@@ -6,7 +6,7 @@ import {availableMagneticIons} from '../../magnetic/magnetic-form-factor.js';
 import {chargeBalancedOxidationStates, compositionOfSites, preferredOxidationState} from '../../magnetic/oxidation-states.js';
 
 export function installMagneticReflections(ctx){
-  const {deps:{$, getSelectedCifStructure, getSelectedCifText}, state:cifState, fn}=ctx;
+  const {deps:{$, getSelectedCifText}, fn}=ctx;
   Object.assign(fn,{
     computeMagneticReflections, initializeGeneratorTableOutsideClick, refreshMagneticIonSelectors
   });

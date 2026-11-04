@@ -33,7 +33,6 @@ function setGeometryKiOrientationCondition(mode){
     const ux=dot(qU,ex), uy=dot(qU,ey), vx=dot(qV,ex), vy=dot(qV,ey);
     const phiU=rad2deg(Math.atan2(uy,ux)), phiV=rad2deg(Math.atan2(vy,vx));
     const usesV=mode==="perpV" || mode==="parallelV";
-    const isParallel=mode==="parallelU" || mode==="parallelV";
     const phiAxis=usesV?phiV:phiU;
 
     // Perpendicular-condition buttons are absolute quick targets, not operations

@@ -3,7 +3,7 @@
 import {atomSiteKey} from '../mcif-export.js';
 export function installMagneticEdit(ctx){
   const {deps:{
-    $, getPropagationVectors, getSelectedCifStructure, setPropagationVectorsFromFile
+    $, getPropagationVectors, getSelectedCifStructure
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     activateImportedMagneticEditing, clearSpinRowSelection, propagationSignature,
@@ -48,77 +48,6 @@ function rememberModifiedMagneticDraft(){
   if(!fn.sourceIsMagneticCif()||cifState.structureModifyLocked||!cifState.importedMagneticEditMode) return;
   cifState.modifiedMagneticDraft=snapshotMagneticDraft();
   persistMagneticDraft();
-}
-// Moment colors are visual preferences, not part of the protected mCIF spin model.
-function captureMomentColors(){
-  const colors=new Map();
-  for(const [key,value] of fn.currentMomentSettings()){
-    if(value?.color) colors.set(key,{color:value.color,colorCustomized:!!value.colorCustomized});
-  }
-  return colors;
-}
-function reapplyMomentColors(colors){
-  for(const [key,visual] of colors){
-    const setting=cifState.structureMomentSettings.get(key);
-    if(setting) cifState.structureMomentSettings.set(key,{...setting,...visual});
-  }
-}
-function applyModifiedMagneticDraft(draft){
-  if(!draft) return;
-  const visualColors=captureMomentColors();
-  if(Array.isArray(draft.propagationVectors)) setPropagationVectorsFromFile?.(draft.propagationVectors.map(q=>({...q})));
-  cifState.structureMomentSettings.clear();
-  for(const [key,value] of (draft.moments||[])) cifState.structureMomentSettings.set(key,{...value});
-  reapplyMomentColors(visualColors);
-  cifState.structureMomentStructureType=["collinear","helical","sinusoidal"].includes(draft.structureType)?draft.structureType:"collinear";
-  cifState.structureMomentRotationAxis=draft.rotationAxis||"c";
-  cifState.structureMomentChirality=draft.chirality||"CCW";
-  cifState.structureMomentPropagationIndex=Number(draft.propagationIndex)||1;
-  cifState.structureSpinEditingMode=draft.spinEditingMode==="individual"?"individual":"sites";
-  cifState.structureMomentDirectionMode=draft.directionMode==="polar"?"polar":"cartesian";
-  cifState.importedMagneticEditMode=true;
-  fn.invalidateGeneratedMcif();
-  $("cifMagMomentRows")?.replaceChildren();
-  cifState.structureControlSignature="";
-}
-function restoreOriginalImportedMagnetism(){
-  const visualColors=captureMomentColors();
-  if(cifState.importedOriginalQ.length) setPropagationVectorsFromFile?.(cifState.importedOriginalQ.map(q=>({...q})));
-  const parsed=getSelectedCifStructure();
-  cifState.structureMomentSettings.clear();
-  for(const [siteIndex,site] of (parsed?.asymmetricSites||[]).entries()){
-    const key=fn.momentKey({...site,siteIndex});
-    cifState.structureMomentSettings.set(key,fn.defaultMomentSetting(site,parsed));
-  }
-  reapplyMomentColors(visualColors);
-  cifState.importedMagneticEditMode=false;
-  cifState.structureMomentPropagationIndex=cifState.importedOriginalQ.length?1:0;
-  $("cifMagMomentRows")?.replaceChildren();
-  cifState.structureControlSignature="";
-  cifState.importedMagneticQSignature=propagationSignature();
-}
-function setImportedMagneticMode(next){
-  if(!fn.sourceIsMagneticCif()) return;
-  if(next==="mcif"){
-    rememberModifiedMagneticDraft();
-    cifState.structureModifyLocked=true;
-    restoreOriginalImportedMagnetism();
-  }else{
-    cifState.structureModifyLocked=false;
-    if(cifState.modifiedMagneticDraft) applyModifiedMagneticDraft(cifState.modifiedMagneticDraft);
-    else{
-      cifState.importedMagneticEditMode=true;
-      cifState.modifiedMagneticDraft=snapshotMagneticDraft();
-      persistMagneticDraft();
-    }
-  }
-  fn.prepareStructureViewerControls();
-  fn.refreshMomentPropagationVectorSelect();
-  fn.renderCifStructureIfVisible();
-}
-function importedKDescription(){
-  const q=fn.effectivePropagationVectorForStructure();
-  return `(${[q.h,q.k,q.l].map(v=>Number.isFinite(Number(v))?Number(v):0).join(", ")})`;
 }
 function syncSpinModifyLock(){
   // Spins are always editable. mCIF is an initial-display state, not a lock.

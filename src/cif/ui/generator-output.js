@@ -96,17 +96,6 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
 function setCifOutputTab(tab){
   setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
 }
-function setGeneratorMode(name){
-  if(name!=='magnetic') name='nuclear';
-  for(const [mode,tabId,paneId] of [['nuclear','generatorModeNuclear','generatorNuclearPane'],['magnetic','generatorModeMagnetic','generatorMagneticPane']]){
-    const on=mode===name;
-    $(tabId)?.classList.toggle('active',on);
-    $(tabId)?.setAttribute('aria-selected',String(on));
-    $(tabId)?.setAttribute('tabindex',on?'0':'-1');
-    $(paneId)?.classList.toggle('hidden',!on);
-  }
-  try{localStorage.setItem('tas-simulator-generator-mode-v1',name);}catch(_e){}
-}
 function generateCifForReview(){
   const generated=fn.buildGeneratedCif();
   cifState.lastGeneratedCifText=generated.text;

@@ -216,7 +216,6 @@ function tasMotorAngles(calc,b){
     return {Ei,Ef,m1,m2,s1:null,s2,a1,a2,
       warning:'Reference Q is outside the measurable range at the selected reference energy; S1 is unavailable.'};
   }
-  const s2Ref=convention.s2EncoderSign*rad2deg(Math.acos(clamp(cosRef,-1,1)));
 
   // S1 is a physical sample-axis encoder calibration and must not change when
   // the TAS sign configuration is switched.  The validated -+- convention

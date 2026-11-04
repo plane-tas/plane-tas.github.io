@@ -81,9 +81,6 @@ export function magneticFormFactorRoots(label,target,opts={},maxQ=GRAPH_Q_MAX,wh
   }
   return roots.filter((v,i)=>roots.findIndex(r=>Math.abs(v-r)<1e-5)===i);
 }
-export function magneticFormFactorIntensityRoots(label,target,opts={},maxQ=GRAPH_Q_MAX){
-  return magneticFormFactorRoots(label,target,opts,maxQ,'fSquared');
-}
 
 function displayIon(label){
   const m=label.match(/^([A-Za-z]+)(\d+)$/);

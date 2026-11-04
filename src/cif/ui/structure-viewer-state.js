@@ -117,17 +117,6 @@ cifState.structureUnitCellMode="one";
 // The chosen frame affects ONLY the Structure outline, not atomic coordinates or reflections.
 cifState.structureUnitCellReference="crystallographic";
 cifState.structureShowXYZ=true;
-// Every CIF asymmetric site is available in the Spins tab.
-// Only transition-metal and rare-earth sites start enabled by default;
-// all other elements (for example O) remain available but start disabled.
-const DEFAULT_SPIN_ELEMENTS=new Set([
-  // 3d / 4d / 5d transition metals
-  "SC","TI","V","CR","MN","FE","CO","NI","CU","ZN",
-  "Y","ZR","NB","MO","TC","RU","RH","PD","AG","CD",
-  "HF","TA","W","RE","OS","IR","PT","AU","HG",
-  // Rare-earth elements (lanthanides; Sc/Y are already included above)
-  "LA","CE","PR","ND","PM","SM","EU","GD","TB","DY","HO","ER","TM","YB","LU"
-]);
 cifState.structureAtomColorOverrides=new Map();
 cifState.structureAtomSizeOverrides=new Map();
 cifState.structureAtomSizeCleared=new Set();

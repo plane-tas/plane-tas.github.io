@@ -38,25 +38,6 @@ function structureElements(structure){
 function naturalStructureLabelCompare(a,b){
   return String(a||"").localeCompare(String(b||""),undefined,{numeric:true,sensitivity:"base"});
 }
-function makePaletteButtons(current,onPick){
-  const host=document.createElement("div");
-  host.className="structure-color-palette";
-  for(const color of cifState.STRUCTURE_PALETTE){
-    const button=document.createElement("button");
-    button.type="button";
-    button.className="structure-color-chip";
-    button.style.background=color;
-    button.title=color;
-    button.setAttribute("aria-label",`Set color ${color}`);
-    if(color.toLowerCase()===String(current||"").toLowerCase()) button.classList.add("selected");
-    button.addEventListener("click",()=>{
-      host.querySelectorAll(".structure-color-chip").forEach(b=>b.classList.toggle("selected",b===button));
-      onPick(color);
-    });
-    host.appendChild(button);
-  }
-  return host;
-}
 function makeMomentColorPicker(current,onPick){
   const custom=document.createElement("input");
   custom.type="color";
@@ -78,26 +59,6 @@ function syncDefaultMomentColorsForElement(element,color){
     const input=row.querySelector('[data-moment-field="color"]');
     if(input) input.value=color;
   }
-}
-function compressStructureSiteLabels(labels,element=""){
-  const cleaned=[...new Set((labels||[]).map(x=>String(x||"").trim()).filter(Boolean))];
-  if(cleaned.length<=1) return cleaned.join("");
-  const parsed=cleaned.map(label=>{
-    const m=label.match(/^(.*?)(\d+)$/);
-    return m ? {label,prefix:m[1],n:Number(m[2])} : null;
-  });
-  if(parsed.every(Boolean)){
-    const prefix=parsed[0].prefix;
-    const nums=parsed.map(x=>x.n).sort((a,b)=>a-b);
-    const samePrefix=parsed.every(x=>x.prefix===prefix);
-    const consecutive=nums.every((n,i)=>i===0 || n===nums[i-1]+1);
-    if(samePrefix && consecutive && nums.length>2) return `${prefix}${nums[0]}–${nums[nums.length-1]}`;
-  }
-  if(cleaned.length>5){
-    const first=cleaned[0], last=cleaned[cleaned.length-1];
-    return `${first}…${last}`;
-  }
-  return cleaned.join(", ");
 }
 
 // The table header is the single bulk Use control. Its scope follows Display:

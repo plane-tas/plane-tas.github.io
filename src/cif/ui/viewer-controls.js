@@ -65,86 +65,6 @@ function hideLegacyStructureColumnHeaders(hostId,requiredWords){
     }
   }
 }
-function findStructureSectionHeading(host,titleWords){
-  if(!host) return null;
-  const words=titleWords.map(x=>String(x).toLowerCase());
-  const matches=el=>{
-    const text=String(el?.textContent||"").replace(/\s+/g," ").trim().toLowerCase();
-    return text && words.every(word=>text.includes(word));
-  };
-  let node=host.previousElementSibling;
-  for(let i=0;node && i<8;i++,node=node.previousElementSibling){
-    if(matches(node) && !node.querySelector?.("input,select,textarea")) return node;
-  }
-  const parent=host.parentElement;
-  if(parent){
-    const selectors="h1,h2,h3,h4,h5,h6,.section-title,.panel-title,.card-title,.structure-section-title,strong";
-    const list=[...parent.querySelectorAll(selectors)];
-    const before=list.filter(el=>matches(el) && (el.compareDocumentPosition(host)&Node.DOCUMENT_POSITION_FOLLOWING));
-    if(before.length) return before[before.length-1];
-  }
-  return null;
-}
-function resetMomentDisplayDefaults(){
-  cifState.structureMomentStructureType="collinear";
-  cifState.structureMomentRotationAxis="c";
-  cifState.structureMomentChirality="CCW";
-  if($("cifMomentStructureType")) $("cifMomentStructureType").value="collinear";
-  if($("cifMomentRotationAxis")) $("cifMomentRotationAxis").value="c";
-  if($("cifMomentChirality")) $("cifMomentChirality").value="CCW";
-  const info=fn.currentStructureForViewer();
-  const sites=fn.magneticCandidateSites(info?.structure||null);
-  const live=fn.currentMomentSettings();
-  for(const site of sites){
-    const key=fn.momentKey(site);
-    const current=live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(site,info?.structure);
-    cifState.structureMomentSettings.set(key,{...current,size:1,width:10,headSize:0.51,color:fn.elementColor(site.element),colorCustomized:false});
-  }
-  $("cifMagMomentRows")?.replaceChildren();
-  cifState.structureControlSignature="";
-  fn.saveStructureViewerState();
-  fn.renderCifStructureIfVisible();
-}
-function resetAtomDisplayDefaults(){
-  cifState.structureAtomColorOverrides.clear();
-  cifState.structureAtomSizeOverrides.clear();
-  cifState.structureControlSignature="";
-  fn.saveStructureViewerState();
-  fn.renderCifStructureIfVisible();
-}
-function resetBondDisplayDefaults(){
-  for(const row of document.querySelectorAll("#cifBondRows .structure-bond-row")){
-    const min=row.querySelector('[data-bond-field="minDistance"]'); if(min) min.value="0";
-    const max=row.querySelector('[data-bond-field="maxDistance"]'); if(max) max.value="3";
-    const legacy=row.querySelector('[data-bond-field="distanceRange"]'); if(legacy) legacy.value="0 3";
-    const width=row.querySelector('[data-bond-field="width"]'); if(width) width.value="5";
-    const color=row.querySelector('[data-bond-field="color"]'); if(color) color.value=fn.defaultBondColor(row.querySelector('[data-bond-field="a"]')?.value,row.querySelector('[data-bond-field="b"]')?.value);
-  }
-  fn.saveStructureViewerState();
-  fn.renderCifStructureIfVisible();
-}
-function ensureSectionDefaultButton(hostId,buttonId,handler,titleWords,existingButton=null){
-  const host=$(hostId); if(!host) return null;
-  document.getElementById(buttonId+"Row")?.remove();
-  let button=existingButton || document.getElementById(buttonId);
-  if(!button){ button=document.createElement("button"); button.type="button"; button.id=buttonId; button.textContent="Default"; }
-  button.textContent="Default";
-  if(button._structureDefaultHandler) button.removeEventListener("click",button._structureDefaultHandler);
-  button._structureDefaultHandler=handler;
-  button.addEventListener("click",handler);
-  // The updated HTML already places each Default button next to its section title.
-  // Keep that exact placement instead of moving the button into the <h3> element.
-  if(button.parentElement?.classList.contains("structure-section-heading")) return button;
-  const title=findStructureSectionHeading(host,titleWords);
-  const headingRow=title?.closest?.(".structure-section-heading");
-  if(headingRow){ headingRow.appendChild(button); return button; }
-  if(title){
-    const row=document.createElement("div"); row.className="structure-section-heading";
-    title.parentElement?.insertBefore(row,title); row.append(title,button); return button;
-  }
-  host.parentElement?.insertBefore(button,host);
-  return button;
-}
 // mCIF determines the magnetic arrangement itself, independent of the manual
 // Collinear/Helical/Sinusoidal generator mode. Keep the latter preference.
 function syncImportedMomentStructureType(){
@@ -445,7 +365,6 @@ function prepareStructureViewerControls(){
   bindGlobalArrowInput(widthInput,"width");
   bindGlobalArrowInput(headInput,"head");
   const syncMomentStructureModeControls=()=>{
-    const helical=cifState.structureMomentStructureType==="helical";
     if(axisSelect) axisSelect.disabled=false;
     if(chiralitySelect) chiralitySelect.disabled=false;
   };

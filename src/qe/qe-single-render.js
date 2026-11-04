@@ -283,7 +283,6 @@ function renderSingle(cache,index=0){
   const transformedG=cache.Gpoints.map(p=>({...p,...(()=>{const q=T([p.x,p.y]);return {x:q[0],y:q[1]};})()}));
   const transformedMag=cache.magPoints.map(p=>({...p,...(()=>{const q=T([p.x,p.y]);return {x:q[0],y:q[1]};})()}));
   const allViewPoints=[...boundary,...transformedG.map(p=>[p.x,p.y]),...transformedMag.map(p=>[p.x,p.y])];
-  const qMax = Math.max(0, ...allViewPoints.map(p => Math.hypot(p[0], p[1])));
 
   const Qplot=Math.max(1e-6,1.15*Math.max(...allViewPoints.map(p=>Math.max(Math.abs(p[0]),Math.abs(p[1]))),1));
   // Identical physical ranges preserve circular Q contours and oblique U/V angles.

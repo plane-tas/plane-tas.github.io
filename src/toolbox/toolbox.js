@@ -499,7 +499,6 @@ export function createToolbox({
     const sigmaCohPerAtom=4*Math.PI*(meanBRe*meanBRe+meanBIm*meanBIm)/100;
     const sigmaCohFU=atomCount*sigmaCohPerAtom;
     const sigmaIncohFU=Math.max(0,sigmaScatFU-sigmaCohFU);
-    const sigmaAttFU=sigmaAbsFU+sigmaIncohFU;
     const numberDensityFU=density/molarMass*AVOGADRO;
     const barnToCm2=1e-24;
     const muAbsCmInv=numberDensityFU*sigmaAbsFU*barnToCm2;
@@ -595,12 +594,6 @@ export function createToolbox({
     return v>0 ? v : fixedInstrumentWavelengthA();
   }
 
-  function attenuationEnergyMeV(){
-    const v=Number($('absorptionEnergy')?.value);
-    if(v>0) return v;
-    const lambda=attenuationWavelengthA();
-    return lambda>0 ? NEUTRON_E_LAMBDA/(lambda*lambda) : NaN;
-  }
 
   function formatAbsorptionNumber(value,digits=5){
     const v=Number(value);
@@ -656,7 +649,6 @@ export function createToolbox({
     if(!host || !status || !energyField || !lambdaField || !thicknessEntry || !thicknessSlider || !transmissionOut) return;
 
     const lambda=attenuationWavelengthA();
-    const energyMeV=attenuationEnergyMeV();
     status.value=selectedCifFileName || selectedCifStructure?.name || 'No CIF/mCIF selected';
 
     if(inputMode==='cif' && !selectedCifStructure){

@@ -23,12 +23,6 @@ export function createDarkAngle(deps){
     return assets;
   }
 
-  function darkSampleRangeForConvention(rawRange,convention){
-    const [from,to,offset]=rawRange.map(Number);
-    const crystalSign=convention.s1EncoderSign;
-    if(crystalSign<0) return [-to,-from,-offset];
-    return [from,to,offset];
-  }
 
   function directBeamOrientationCorrection(rl,energyMode,Ei,Ef,sense){
     const orientationMode=canonicalOrientationMode(
@@ -193,7 +187,6 @@ export function createDarkAngle(deps){
 
   return {
     getDarkAssets,
-    darkSampleRangeForConvention,
     directBeamOrientationCorrection,
     rebuildGeometryMatchedDarkPolygons,
     qeDarkBlockWarningsForHKLE

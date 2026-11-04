@@ -151,7 +151,6 @@ function qeParsePathDetails(value){
   });
   return {points,labels};
 }
-function qeParsePathText(value){return qeParsePathDetails(value).points;}
 function qePathInput(){return $('qeVectorHKLPath');}
 // Only an empty (including restored empty) HKL field gets a default path.
 // Build it from the CURRENT U/V rather than assuming a fixed (100)/(010) plane.
@@ -184,43 +183,6 @@ function qeWritePathInput(){
   if(field) field.value=qeSelectedPathHKL.map((p,i)=>(qeSelectedPathLabels[i]?`${qeSelectedPathLabels[i]}: `:'')+p.map(qeFormatPathNumber).join(' ')).join(', ');
   field?.removeAttribute('aria-invalid');
   qeSyncPathMirror();
-}
-// Names on the upper edge are reciprocal-space point names, not arbitrary P1/P2.
-// On a triangular (60°/120°) primitive U-V plane, recognize Γ/M/K modulo
-// reciprocal-lattice translations. In all other cases only explicit names
-// are displayed, because M/K cannot safely be inferred from HKL alone.
-function qePathSymmetryLabel(index,cache){
-  const explicit=qeSelectedPathLabels[index];
-  if(explicit) return /^(gamma|γ|Γ)$/iu.test(explicit.trim()) ? 'Γ' : explicit;
-  const p=qeSelectedPathHKL[index];
-  if(!p || !cache) return '';
-  // All reciprocal-lattice translations of Γ fold back to the zone centre.
-  const mod1=x=>((x%1)+1)%1;
-  const near=(x,y)=>Math.abs(x-y)<0.012 || Math.abs(x-y-1)<0.012 || Math.abs(x-y+1)<0.012;
-  const [h,k,l]=p.map(mod1);
-  if(near(h,0)&&near(k,0)&&near(l,0)) return 'Γ';
-  // Conventional hexagonal cell (a=b, alpha=beta=90°, gamma=120°).
-  // Only assign hexagonal BZ symbols when the metric AND the reciprocal
-  // setting are unambiguous. Other crystal systems need a full standardized
-  // symmetry analysis, so they remain unlabeled unless explicitly named.
-  const cell=cache.lc;
-  const hexMetric=cell && Number.isFinite(cell.a) && Number.isFinite(cell.b)
-    && Math.abs(cell.a-cell.b)/Math.max(cell.a,cell.b)<0.002
-    && Math.abs(cell.alpha-90)<0.2 && Math.abs(cell.beta-90)<0.2
-    && Math.abs(cell.gamma-120)<0.2;
-  if(!hexMetric) return '';
-  const isG=near(h,0)&&near(k,0);
-  const isM=[[0.5,0],[0,0.5],[0.5,0.5]].some(([a,b])=>near(h,a)&&near(k,b));
-  // Standard hexagonal reciprocal basis (direct gamma = 120°): K and K'
-  // reduce to (1/3,1/3) and (2/3,2/3) modulo reciprocal translations.
-  const isK=[[1/3,1/3],[2/3,2/3]].some(([a,b])=>near(h,a)&&near(k,b));
-  if(near(l,0)) return isM?'M':isK?'K':'';
-  if(near(l,0.5)) return isG?'A':isM?'L':isK?'H':'';
-  return '';
-}
-function qePathCoordinateLabel(index){
-  const p=qeSelectedPathHKL[index];
-  return p ? `(${p.map(qeFormatPathNumber).join(', ')})` : '';
 }
 function qePathMapLabel(index,cache){
   // Vertices are user-defined Q points; do not guess high-symmetry names.

@@ -12,7 +12,6 @@ const SIXTEEN_PI2=16*Math.PI*Math.PI;
 // maintain and keeps the CIF parser/calculator on one shared data source.
 export const NEUTRON_B_FM=Object.create(null);
 const NEUTRON_DATA=Object.create(null);
-let NEUTRON_DATA_META=null;
 
 export function setNeutronData(payload){
   const src=payload?.elements || payload || {};
@@ -25,11 +24,9 @@ export function setNeutronData(payload){
     const re=Number(b?.real), im=Number(b?.imag||0);
     if(Number.isFinite(re) && Number.isFinite(im)) NEUTRON_B_FM[key]=[re,im];
   }
-  NEUTRON_DATA_META=payload?.source || null;
 }
 
 export function neutronDataRecord(key){ return NEUTRON_DATA[String(key||"")] || null; }
-export function neutronDataSource(){ return NEUTRON_DATA_META; }
 
 function tokenizeCifLine(line){
   const out=[];
@@ -353,7 +350,6 @@ function magneticFourierMoments(doc,warnings){
   return {supported:byLabel.size>0,q,byLabel};
 }
 function applyMagneticOperatorRaw(op,p){return op.origin.map((v,i)=>v+op.R[i].reduce((sum,x,j)=>sum+x*p[j],0));}
-function applyMagneticOperator(op,p){return applyMagneticOperatorRaw(op,p).map(wrap01);}
 function transformAxialMoment(op,m){
   const factor=op.parity*determinant3(op.R);
   return op.R.map(row=>factor*row.reduce((sum,x,j)=>sum+x*m[j],0));

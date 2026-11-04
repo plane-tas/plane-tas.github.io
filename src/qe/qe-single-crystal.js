@@ -326,9 +326,6 @@ export function createQESingleCrystal(deps){
         if(norm(G)>QplotLattice) continue;
         if(!isAllowedByCentering(hkl,latticeCentering)) continue;
 
-        const h = Math.round(hkl[0]);
-        const k = Math.round(hkl[1]);
-        const l = Math.round(hkl[2]);
 
         const isOrigin=hkl.every(v=>Math.abs(v)<1e-10);
         const sf2=nuclearCifStructure && !isOrigin
@@ -414,5 +411,5 @@ export function createQESingleCrystal(deps){
     };
   }
 
-  return {calculateSingleCrystal,calculateSingleCrystalCore};
+  return {calculateSingleCrystal};
 }

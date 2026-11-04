@@ -235,21 +235,6 @@ function bindMagneticCellEditor(){
   }
 }
 
-function copyCurrentLatticeToGenerator(){
-  // Copy the Sample's space group as well as its metric.  Updating the space
-  // group before applying constraints ensures the two sections use the same
-  // standard crystal-system setting (a=b, gamma=120, etc.).
-  const sg=fn.selectedSampleSpaceGroup();
-  if(sg) selectCifSpaceGroup(sg.number);
-  const map={cifA:"a",cifB:"b",cifC:"c",cifAlpha:"alpha",cifBeta:"beta",cifGamma:"gamma"};
-  for(const [dst,src] of Object.entries(map)){
-    const source=$(src);
-    if(!source || !String(source.value).trim()) continue;
-    const v=Number(source.value);
-    if(Number.isFinite(v) && $(dst)) $(dst).value=String(v);
-  }
-  updateCifSpaceGroupInfo();
-}
 
 function updateCifSpaceGroupInfo(){
   // The redundant text description was removed from the UI. Keep the number

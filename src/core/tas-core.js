@@ -47,25 +47,7 @@ export function cleanArray(a, tol=EPS) {
 export function cleanMatrix(A, tol=EPS) {
   return A.map(row=>cleanArray(row,tol));
 }
-export function lexCompare(a,b) {
-  for (let i=0;i<Math.min(a.length,b.length);i++) {
-    if (a[i] < b[i]) return -1;
-    if (a[i] > b[i]) return 1;
-  }
-  return a.length-b.length;
-}
-export function round12(x) { return Math.round(x*1e12)/1e12; }
 
-export function canonicalDirection(vec) {
-  const w = vec.map(Number);
-  for (const x of w) {
-    if (Math.abs(x) > EPS) {
-      if (x < 0) return w.map(v=>-v);
-      break;
-    }
-  }
-  return w;
-}
 
 export function RL_calc(lc) {
   const a=+lc.a, b=+lc.b, c=+lc.c;

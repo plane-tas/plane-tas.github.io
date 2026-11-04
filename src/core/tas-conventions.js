@@ -153,37 +153,6 @@ export function calcQ0(s1,s2,ki,kf,s1Offset,refS1,QrefXY,sense,s1Calibration=nul
   return q;
 }
 
-export function calcQDark(s1,s2,ki,kf,s1Offset,QrefXY,sense,energyMode=null){
-  const kiAngle=deg2rad(-s1+s1Offset);
-  const kfAngle=deg2rad(s2-s1+s1Offset);
-  let q=[ki*Math.sin(kiAngle)-kf*Math.sin(kfAngle),
-         ki*Math.cos(kiAngle)-kf*Math.cos(kfAngle)];
-
-  // Keep the already-validated elastic handedness mapping first.  For +-+ this
-  // is the existing reflection about Reference Q; -+- uses the raw geometry.
-  // Apply exactly the same mapping to the corresponding elastic-Q vector so it
-  // can serve as the local angular reference for the inelastic correction.
-  const kElastic=energyMode ? ((energyMode==="Ef fixed") ? kf : ki) : null;
-  let qElastic=energyMode ? [kElastic*(Math.sin(kiAngle)-Math.sin(kfAngle)),
-                             kElastic*(Math.cos(kiAngle)-Math.cos(kfAngle))] : null;
-
-  if(sense==="+-+" && norm(QrefXY)>1e-10){
-    const eQ=normalize(QrefXY);
-    q=sub(scale(eQ,2*dot(q,eQ)),q);
-    if(qElastic) qElastic=sub(scale(eQ,2*dot(qElastic,eQ)),qElastic);
-  }
-
-  // The elastic dark regions are correct for both senses.  Away from hw=0 the
-  // ki-kf triangle's azimuthal displacement has the opposite sign to the TAS
-  // geometry in BOTH senses.  Reflect only that inelastic displacement about
-  // the sense-correct elastic-Q direction.  At hw=0 q==qElastic, so this is an
-  // exact identity and cannot move the validated elastic boundaries.
-  if(qElastic && norm(qElastic)>1e-10){
-    const e0=normalize(qElastic);
-    q=sub(scale(e0,2*dot(q,e0)),q);
-  }
-  return q;
-}
 
 // User-facing motor angles (Angle calculation, Script/Time-estimate checks and
 // the Resolution tab).  M1/M2 and A1/A2 are shown with the signs of

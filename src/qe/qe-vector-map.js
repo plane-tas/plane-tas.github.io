@@ -151,16 +151,6 @@ function qePointInPolygon(point,polygon){
   return inside;
 }
 
-function qeMapHeaderTitle(cache){
-  const energyText=cache.energyMode==="Ef fixed"?`Ef=${cache.Ef.toFixed(2)} meV`:`Ei=${cache.Ei.toFixed(2)} meV`;
-  const lam=cache.lambdaHalf?" | λ/2":"";
-  const plane=`(${cache.U.join(",")})-(${cache.V.join(",")})`;
-  const spaceGroup=`#${cache.sampleSpaceGroup?.number ?? 1} ${cache.sampleSpaceGroup?.hm ?? "P1"}`;
-  const lattice=`a=${cache.lc.a.toFixed(3)}, b=${cache.lc.b.toFixed(3)}, c=${cache.lc.c.toFixed(3)} Å, `+
-    `α=${cache.lc.alpha.toFixed(1)}, β=${cache.lc.beta.toFixed(1)}, γ=${cache.lc.gamma.toFixed(1)}°`;
-  return `${cache.inst.name||"Instrument"} | ${energyText}${lam} | Scattering plane: ${plane}<br>`+
-    `${spaceGroup} | ${lattice}`;
-}
 
 // Plotly's native double-click reset can restore a stale viewport after a
 // Q-path edit. Disable that built-in reset on this plot and always return to
@@ -413,7 +403,6 @@ function renderQEVectorMap(cache){
       }
       z.push(row); darkKiZ.push(kiRow); darkKfZ.push(kfRow); darkFixedZ.push(fixedRow); hover.push(hrow);
     }
-    const endX=hMax;
     const traces=[{
       type:'heatmap',x:xVals,y:cache.hwList,z,
       zmin:0,zmax:1,showscale:false,hoverinfo:'text',text:hover,

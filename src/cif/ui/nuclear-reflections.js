@@ -4,7 +4,7 @@
 import {operationsPreserveStructure} from '../cif-symmetry.js';
 export function installNuclearReflections(ctx){
   const {deps:{
-    $, RL_calc, canonicalReflectionHkl, checkedValue, clamp, compareHkl, cross, dot,
+    $, RL_calc, canonicalReflectionHkl, checkedValue, clamp, cross, dot,
     getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText, hklKey, hklToQ,
     makeSpiceScatteringPlaneBasis, norm, nuclearStructureFactorSquared, num, rad2deg,
     reciprocalSymmetryMatrices, reflectionStar

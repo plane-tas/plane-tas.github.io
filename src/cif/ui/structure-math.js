@@ -31,10 +31,6 @@ function directionFromPolar(thetaDeg,phiDeg){
   return [Math.sin(theta)*Math.cos(phi),Math.sin(theta)*Math.sin(phi),Math.cos(theta)];
 }
 function fracWrap01(x){ return ((x%1)+1)%1; }
-function clampInt(value,min,max,fallback=1){
-  const n=Math.round(Number(value));
-  return Number.isFinite(n) ? Math.max(min,Math.min(max,n)) : fallback;
-}
 function directLatticeBasis(lattice){
   const a=Number(lattice?.a), b=Number(lattice?.b), c=Number(lattice?.c);
   const al=Number(lattice?.alpha||90)*PI/180;
@@ -58,9 +54,6 @@ function directLatticeBasis(lattice){
 }
 function fractionalToCartesian(basis,frac){
   return vecAdd(vecAdd(vecScale(basis.a,frac[0]),vecScale(basis.b,frac[1])),vecScale(basis.c,frac[2]));
-}
-function supercellCenter(basis,repeats){
-  return vecScale(vecAdd(vecAdd(vecScale(basis.a,repeats.x),vecScale(basis.b,repeats.y)),vecScale(basis.c,repeats.z)),0.5);
 }
 function hashString(str){
   let h=0;

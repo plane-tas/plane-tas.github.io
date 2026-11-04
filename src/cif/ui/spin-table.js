@@ -143,7 +143,6 @@ function atomCrystalMoment(atom,frac){
   return base;
 }
 function defaultMomentSetting(site,structure=null){
-  const element=String(site.element||"").toUpperCase();
   const hasMoment=Array.isArray(site.magneticMoment);
   const hasFourier=!!site?.magneticFourier;
   // Sunny uses the mCIF cell matrix to turn crystalaxis components into

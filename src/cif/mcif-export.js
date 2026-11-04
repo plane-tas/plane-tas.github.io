@@ -14,8 +14,6 @@ const near=(a,b,tol=2e-5)=>Math.abs(a-b)<=tol;
 const nearFrac=(a,b,tol=2e-5)=>Math.abs(wrap(a-b+0.5)-0.5)<=tol;
 const det=R=>R[0][0]*(R[1][1]*R[2][2]-R[1][2]*R[2][1])-R[0][1]*(R[1][0]*R[2][2]-R[1][2]*R[2][0])+R[0][2]*(R[1][0]*R[2][1]-R[1][1]*R[2][0]);
 const matVec=(R,v)=>R.map(r=>r.reduce((s,a,j)=>s+a*v[j],0));
-const matMult=(A,B)=>A.map(r=>B[0].map((_,j)=>r.reduce((s,x,k)=>s+x*B[k][j],0)));
-const fracKey=p=>p.map(v=>Math.round(wrap(v)*1e6)%1000000).join(',');
 const clean=n=>Math.abs(n)<1e-10?0:Number(n.toFixed(9));
 function parseNumber(raw){
   const str=String(raw??'').trim();
@@ -109,15 +107,12 @@ function toCrystal(cart,l){
   if(Math.abs(volume)<1e-10)throw new Error('Invalid cell metric.');
   return [dot(cart,cross(B,C)),dot(cart,cross(C,A)),dot(cart,cross(A,B))].map(x=>x/volume);
 }
-function fromCrystal(crystal,l){const v=basis(l).map(b=>{const n=Math.hypot(...b);return b.map(x=>x/n);});return [0,1,2].map(i=>v.reduce((s,col,j)=>s+col[i]*crystal[j],0));}
-function latticeText(l){return ['a','b','c','alpha','beta','gamma'].map(k=>`_cell_${k.startsWith('angle')?'':'length_'}${k} ${dec(l[k])}`);}
 function catalogOps(sites,parentOps,N){
   const candidates=[];
   const unique=new Set();
   for(const parent of parentOps){
     const R=parent.R.map((row,i)=>row.map((x,j)=>x*N[j]/N[i]));
     if(R.some(row=>row.some(x=>!near(x,Math.round(x),1e-8))))continue;
-    const t0=parent.t.map((v,i)=>v/N[i]);
     const seed=sites[0];
     for(const match of sites){
       if(match.element!==seed.element || !near(match.occupancy,seed.occupancy,1e-5))continue;

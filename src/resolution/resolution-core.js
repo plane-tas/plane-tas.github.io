@@ -1,5 +1,5 @@
 import {
-  zeros, eye, transpose, add, sub, matmul, matvec, diag, blockDiag, inverse,
+  zeros, transpose, add, sub, matmul, matvec, diag, blockDiag, inverse,
   solve, submatrix, swapRowsCols, symmetrize, choleskyPositiveDefinite,
   det3, dot, norm, cross, normalize, eigSym2
 } from '../core/matrix.js';

@@ -192,7 +192,6 @@ function renderCifStructureView(){
   // Draw the crystal structure but omit the magnetic moments in that case.
   const spinsSkipped=displayedAtoms.length>cifState.STRUCTURE_MAX_SPIN_ATOMS;
   const magneticOverlays=spinsSkipped?[]:fn.magneticStructureTraces(displayedAtoms,basis,source.structure); traces.push(...magneticOverlays);
-  const magneticSummary=fn.enabledPropagationVectorsForStructure();
   const effectiveK=fn.effectivePropagationVectorForStructure();
   const enabledMoments=[...fn.currentMomentSettings().values()].filter(x=>x.enabled).length;
   const uiRange=fn.structureRange();

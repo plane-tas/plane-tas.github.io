@@ -6,7 +6,7 @@ import {normalizeS1Sign, normalizeTasSense, tasConvention} from '../core/tas-con
 export function createInstrumentSetup(deps){
   const {
     $, checkedValue, clearResolutionResults, instruments, num, setStatus, tasConventionFromLegacyUiSense,
-    updateAutoW, updateEnergyLabel, getFixedBeamControls, getSingleCache
+    updateAutoW, updateEnergyLabel, getFixedBeamControls
   }=deps;
 
 // Instrument type (mode).  An instrument file lists the types it supports in
@@ -109,7 +109,6 @@ function applyInstrumentTypeChange(){
 function s2DisplaySign(){
   try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).s2EncoderSign<0 ? -1 : 1; }catch(_e){ return 1; }
 }
-function s2MinAbs(){ return Math.abs(num('S2min')); }
 // Flip the shown S2 min / max to the sign of the current Sense / S1 sign.
 function syncS2FieldSigns(){
   const sign=s2DisplaySign();
@@ -494,7 +493,7 @@ function applyInstrumentDefaults(){
 }
 
   return {
-    s2MinAbs, syncS2FieldSigns,
+    syncS2FieldSigns,
     applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,

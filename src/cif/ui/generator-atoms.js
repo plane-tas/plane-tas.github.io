@@ -547,15 +547,6 @@ function cifAtomRowValues(row){
   };
 }
 
-function copyLastCifAtomRow(){
-  const rows=[...document.querySelectorAll("#cifAtomRows .cif-atom-row")];
-  if(!rows.length){
-    addCifAtomRow();
-    return;
-  }
-  const values=cifAtomRowValues(rows[rows.length-1]);
-  addCifAtomRow(values||{});
-}
 
 function replaceCifAtomRows(atoms){
   const host=$("cifAtomRows");

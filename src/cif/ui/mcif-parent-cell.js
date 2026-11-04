@@ -136,7 +136,7 @@ function parentNuclearStructureFromMcif(parsed,text){
     if(!hit){
       // Magnetism does not alter nuclear scattering lengths, occupancies or Biso.
       // Never attach magnetic moments to a nuclear reflection model.
-      const {magneticMoment,magneticFourier,...nuclearAtom}=atom;
+      const {...nuclearAtom}=atom;
       merged.push({element:atom.element,occupancy,position,
         atom:{...nuclearAtom,x:position[0],y:position[1],z:position[2]}});
     }

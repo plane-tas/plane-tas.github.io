@@ -13,21 +13,11 @@ function resolutionPanelIsVisible(){
   const panel=$("resolutionPanel");
   return !!panel && !panel.classList.contains("hidden");
 }
-function markResolutionSingleDirty(){
-  if(!resolutionPanelIsVisible() || $("calcMode")?.value!=="single") return;
-  $("result")?.classList.add("hidden");
-  const btn=$("calcSingleResolution");
-  if(btn) btn.classList.add("needs-calc");
-}
 function markResolutionScanDirty(){
   if(!resolutionPanelIsVisible() || $("calcMode")?.value!=="scan") return;
   $("result")?.classList.add("hidden");
   const btn=$("calcScanResolution");
   if(btn) btn.classList.add("needs-calc");
-}
-function markCurrentResolutionDirty(){
-  if($("calcMode")?.value==="scan") markResolutionScanDirty();
-  else markResolutionSingleDirty();
 }
 function runScheduledRecalc(){
   timer=null;

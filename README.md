@@ -75,16 +75,16 @@ The browser application uses plain ES modules (no build step). All code lives in
 | Path | Responsibility |
 | --- | --- |
 | `index.html`, `styles/*.css` | Application interface and responsive layout. Stylesheets are linked in numeric order; the order is significant. |
-| `src/app.js` | Entry point: creates the feature modules, wires their dependencies, restores saved settings and runs the first calculation |
-| `src/app/` | Shared application UI: tabs and saved settings (`ui-shell.js`), data loading, fixed-beam units, sidebar rows, instrument setup, recalculation scheduling |
-| `src/core/` | Reciprocal-space/TAS geometry, instrument conventions, angle calculation and matrix helpers |
+| `src/app.js` | Entry point: creates the feature modules and wires their dependencies; the start-up sequence (data loading, restoring saved settings, first calculation) is in `src/app/bootstrap.js` |
+| `src/app/` | Shared application UI: tabs and saved settings (`ui-shell.js`), DOM/form helpers (`dom-utils.js`), data loading, fixed-beam units, sidebar rows, instrument setup, recalculation scheduling |
+| `src/core/` | Reciprocal-space/TAS geometry, HKL helpers, instrument conventions, angle calculation and matrix helpers |
 | `src/qe/` | Q–E Range: single-crystal and powder maps, Q-vector map and path, dark-angle overlays |
-| `src/geometry/` | TAS geometry view, quick geometry targets and target sliders |
-| `src/resolution/` | Resolution calculations and display |
+| `src/geometry/` | TAS geometry view (`tas-geometry-view.js` wires the parts in `src/geometry/view/`), quick geometry targets and target sliders |
+| `src/resolution/` | Resolution calculations and display (`resolution-ui.js` wires the parts in `src/resolution/ui/`) |
 | `src/cif/` | CIF/mCIF parsing, symmetry, nuclear structure factors and mCIF export; `cif-ui.js` installs the Structure editor parts in `src/cif/ui/` |
 | `src/magnetic/` | Magnetic reflections and magnetic form factors |
 | `src/toolbox/` | Unit conversion, S2 conversion, attenuation and form-factor toolbox |
-| `src/script/` | Measurement scripts, SPICE and time estimates |
+| `src/script/` | Measurement scripts, SPICE and time estimates (`script-workspace.js` wires the parts in `src/script/workspace/`) |
 
 Static data stays at the project root because it is loaded by path: `instrument/`, `BG_material/`, `sample_environments/`, `neutron-data.json` and `space-groups.json`.
 

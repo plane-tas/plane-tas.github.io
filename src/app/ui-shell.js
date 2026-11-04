@@ -6,9 +6,7 @@ export function createUIShell(deps){
     BACKGROUND_SLOTS,
     GEOMETRY_CALC_MODE_STORAGE_KEY,
     GEOMETRY_SCAN_OUTPUT_STORAGE_KEY,
-    add,
-    applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
-    applySampleEnvironmentDefaults,
+    applyInstrumentDefaults, applyInstrumentTypeChange, applySampleEnvironmentDefaults,
     backgroundRowValues,
     buildResolutionLattice,
     checkedValue,
@@ -33,7 +31,6 @@ export function createUIShell(deps){
     scheduleRecalc,
     selectedS1Sign,
     setBackgroundCount,
-    setCifOutputTab,
     setDarkAssetCount,
     setDarkRangeCount,
     setGeometryCalculationMode,
@@ -41,8 +38,6 @@ export function createUIShell(deps){
     setGeometryScanOutputTab,
     setPropagationVectorCount,
     setQEMapTab,
-    setupTasConventionUI,
-    sub,
     updateAutoW,
     updateBackgroundSelectAvailability,
     updateDarkReferenceUI,
@@ -225,7 +220,6 @@ function syncScriptViewportHeight(){
   const panel=$('scriptPanel'), ws=panel?.querySelector('.script-workspace'), card=panel?.querySelector('.script-card');
   const main=panel?.closest('main');
   if(!panel || !ws || !card || !main) return;
-  const prev=panel.style.getPropertyValue('--script-fit-height');
   panel.classList.remove('script-height-limited');
   panel.style.removeProperty('--script-fit-height');
   const columns=getComputedStyle(ws).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
@@ -762,30 +756,20 @@ function restoreLeftPanelState(){
 
   return {
     safeResizePlot,
-    plotHasLayout,
-    ensureVisiblePrimaryPlots,
-    scheduleVisiblePrimaryPlotRecovery,
     resizeVisiblePlots,
     scheduleVisiblePlotResize,
     initializeResponsivePlotResize,
     setActiveTab,
     updateCalcMode,
-    setupAppHeader,
-    rightPanelControls,
     saveRightPanelState,
     restoreRightPanelState,
     savedActiveTab,
     restoreGeometrySubTabsFromStorage,
     enableRightPanelPersistence,
-    globalUIPersistentControls,
-    currentCifOutputTab,
     saveGlobalUIState,
     restoreGlobalUIState,
     enableGlobalUIPersistence,
-    leftPanelControls,
-    resolutionInstrumentDetailControls,
     saveLeftPanelState,
-    setSavedControl,
     restoreLeftPanelState
   };
 }
