@@ -64,6 +64,10 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 - If the application cannot recover after an interrupted rendering session, reopen the application URL with `?tas-safe-reset=1` appended (or `&tas-safe-reset=1` if the URL already contains a query). This clears the application's saved `tas-` settings and can discard unsaved edits. Then reopen the normal URL and reload the CIF/mCIF as needed.
 - If that does not help, open your browser's Developer Tools → **Application/Storage** → **Local Storage** and **Session Storage** for the PLANE-TAS page, remove keys beginning with `tas-`, then reload. Do **not** clear unrelated sites' storage.
 
+## Access statistics
+
+The public site counts page views anonymously with [GoatCounter](https://www.goatcounter.com/) (no cookies, no personal data). Calculations run entirely in the browser; your settings and files are not sent anywhere.
+
 ## TAS geometry and sign conventions
 
 Geometry calculations use the selected instrument configuration and the sign/geometry conventions defined in the numerical modules. **Instrument-specific configurations should be verified against the actual spectrometer before measurement.** This README deliberately does not document legacy sign-code mappings that no longer describe the intended user workflow.
