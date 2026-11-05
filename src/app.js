@@ -355,8 +355,12 @@ function updateGeometryQuickTargetButtons(){
       button.dataset.darkSlot=String(slot);
       button.textContent=`Set Ref Q${slot}`;
       button.addEventListener("click",()=>setGeometryTargetFromDarkRef(slot));
-      container.appendChild(button);
     }
+    // Keep → Resolution at the right end: Ref Q buttons follow the other
+    // target buttons (after Set Bragg peak), in slot order.
+    const resolutionButton=$('geomToResolution');
+    if(resolutionButton?.parentElement===container) container.insertBefore(button,resolutionButton);
+    else container.appendChild(button);
     const ids=darkAssetIds(slot);
     const visible=showDark && !!$(ids.enable)?.checked && checkedValue(ids.ref)==='Reference Q';
     button.classList.toggle('hidden',!visible);

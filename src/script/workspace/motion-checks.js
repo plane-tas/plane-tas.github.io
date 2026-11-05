@@ -105,26 +105,37 @@ export function installMotionChecks(ctx){
 
       const direct=resolveWithContext(context);
       if(direct) return direct;
+      // The fallback does not depend on the caller's context: compute it once
+      // per row and pass (it scans every loop context of this row).
+      const memo=timeS2Memo(visiting), fallbackKey=`${rowIndex}|fallback`;
+      if(memo.has(fallbackKey)) return memo.get(fallbackKey);
+      let found=null;
       const contexts=fn.timeLoopContextsForRow(candidate,structure);
       if(contexts.ok){
         for(let j=contexts.contexts.length-1;j>=0;j--){
           const fallback=resolveWithContext(contexts.contexts[j]);
-          if(fallback) return fallback;
+          if(fallback){ found=fallback; break; }
         }
       }
-      return null;
+      memo.set(fallbackKey,found);
+      return found;
     }finally{
       visiting.delete(rowIndex);
     }
   }
 
   function timeS2StateBeforeIndex(currentIndex,context,structure,visiting=new Set()){
+    const memo=timeS2Memo(visiting), ctxKey=timeS2ContextKey(context);
+    const key=ctxKey===null ? null : `before|${currentIndex}|${ctxKey}`;
+    if(key!==null && memo.has(key)) return memo.get(key);
     const rows=fn.timeScanRows();
+    let found=null;
     for(let i=Math.max(0,Number(currentIndex))-1;i>=0;i--){
       const state=timeResolveCandidateS2State(rows[i],i,context,structure,visiting);
-      if(state) return state;
+      if(state){ found=state; break; }
     }
-    return null;
+    if(key!==null) memo.set(key,found);
+    return found;
   }
 
   function timePreviousS2Position(row,index,context,structure){
