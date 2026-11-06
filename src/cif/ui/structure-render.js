@@ -193,6 +193,7 @@ function renderCifStructureView(){
   const spinsSkipped=displayedAtoms.length>cifState.STRUCTURE_MAX_SPIN_ATOMS;
   const magneticOverlays=spinsSkipped?[]:fn.magneticStructureTraces(displayedAtoms,basis,source.structure); traces.push(...magneticOverlays);
   const effectiveK=fn.effectivePropagationVectorForStructure();
+  fn.updateStructureEditorKNote();
   const enabledMoments=[...fn.currentMomentSettings().values()].filter(x=>x.enabled).length;
   const uiRange=fn.structureRange();
   status.textContent=`${source.label}: x ${uiRange.x.min}–${uiRange.x.max}, y ${uiRange.y.min}–${uiRange.y.max}, z ${uiRange.z.min}–${uiRange.z.max} (${cifState.structureUnitCellReference} fractions); ${displayedAtoms.length} displayed atoms.`+
@@ -201,7 +202,7 @@ function renderCifStructureView(){
       cellFrame.parent && cifState.structureUnitCellMode!=='none' ? ' Crystallographic unit cell shown.':
       source.structure.magnetic && cifState.structureUnitCellMode!=='none' ? ' Magnetic unit cell shown.':'')+
     (bondRules.length?` ${bondRules.length} bond rule${bondRules.length===1?"":"s"}.`:"")+
-    (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${cifState.structureMomentStructureType}${cifState.structureMomentStructureType==="helical"?` about ${cifState.structureMomentRotationAxis} (${cifState.structureMomentChirality})`:""}, k${effectiveK.index||1}=(${effectiveK.h}, ${effectiveK.k}, ${effectiveK.l})${effectiveK.count>1?" (selected propagation vector)":""}.`:"")+ (polyhedralWarning ? ` ${polyhedralWarning}` : "")+
+    (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${cifState.structureMomentStructureType}${cifState.structureMomentStructureType==="helical"?` about ${cifState.structureMomentRotationAxis} (${cifState.structureMomentChirality})`:""}, k${effectiveK.index||1}=(${[effectiveK.h,effectiveK.k,effectiveK.l].map(fn.formatStructureKComponent).join(', ')})${effectiveK.snapped?' (nearest fraction of the entered decimal)':''}${effectiveK.count>1?" (selected propagation vector)":""}.`:"")+ (polyhedralWarning ? ` ${polyhedralWarning}` : "")+
     (bondWarning ? ` ${bondWarning}` : "")+(cellTraces.warning||'')+styleCutoffWarning+
     (spinsSkipped?` Spins not drawn: more than ${cifState.STRUCTURE_MAX_SPIN_ATOMS} displayed atoms (reduce X/Y/Z repeat ranges).`:'')+
     (!spinsSkipped && cifState.collinearAmbiguousDisplayed?` Warning: ${cifState.collinearAmbiguousDisplayed} displayed spin(s) lie on a node of cos(2πk·r); their collinear sign is arbitrary for this k.`:'');

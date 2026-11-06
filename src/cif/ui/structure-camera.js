@@ -11,15 +11,36 @@ export function installStructureCamera(ctx){
     startStructureCameraWatch, stopStructureCameraWatch, structureCameraForView, structureRange,
     structureRenderRange, updateStructureOrientationTriads
   });
+// The structure, spins, magnetic reflections and mCIF need a commensurate k
+// (a fraction with denominator <= 24).  A decimal such as 0.333 is taken as
+// the simplest such fraction within its rounding (half a unit of its last
+// digit: 0.333 -> 1/3, 0.167 -> 1/6); a value that is already an exact
+// fraction (0.25, 0.3 = 3/10) is kept.  Fractions and integers are never
+// changed.  The snapped component is reported in `snapped`.
+const K_MAX_DENOMINATOR=24;
+function snapPropagationComponent(raw){
+  const value=parseNumericValue(raw);
+  if(!Number.isFinite(value)) return {value};
+  for(let d=1;d<=K_MAX_DENOMINATOR;d++) if(Math.abs(value*d-Math.round(value*d))<=1e-8*d) return {value};
+  const text=String(raw??'').trim();
+  const decimal=/^[+-]?\d*\.(\d+)$/.exec(text);
+  if(!decimal) return {value};
+  const tol=0.5*10**-decimal[1].length+1e-12;
+  for(let d=1;d<=K_MAX_DENOMINATOR;d++){
+    const n=Math.round(value*d);
+    if(Math.abs(value-n/d)<=tol) return {value:n/d,snapped:{n,d,raw:text}};
+  }
+  return {value};
+}
 function enabledPropagationVectorsForStructure(){
   const rows=(typeof getPropagationVectors==="function" ? getPropagationVectors() : []) || [];
-  return rows.map((row,index)=>({
-    index:index+1,
-    h:parseNumericValue(row?.h),
-    k:parseNumericValue(row?.k),
-    l:parseNumericValue(row?.l),
-    enabled:!!row?.enabled
-  })).filter(q=>q.enabled && [q.h,q.k,q.l].every(Number.isFinite));
+  return rows.map((row,index)=>{
+    const h=snapPropagationComponent(row?.h),k=snapPropagationComponent(row?.k),l=snapPropagationComponent(row?.l);
+    const snapped=(h.snapped||k.snapped||l.snapped) ? {h:h.snapped||null,k:k.snapped||null,l:l.snapped||null} : null;
+    return {index:index+1,h:h.value,k:k.value,l:l.value,snapped,
+      raw:{h:String(row?.h??'').trim(),k:String(row?.k??'').trim(),l:String(row?.l??'').trim()},
+      enabled:!!row?.enabled};
+  }).filter(q=>q.enabled && [q.h,q.k,q.l].every(Number.isFinite));
 }
 function parseStructureRangeEntry(value){
   const parts=String(value??"").trim().split(/[\s,]+/).filter(Boolean);

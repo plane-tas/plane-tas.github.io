@@ -1,12 +1,14 @@
 // Magnetic moment arrows and propagation-vector selection for the viewer.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 
+import {rationalDenominator} from '../../magnetic/magnetic-reflections.js';
+
 export function installMomentTraces(ctx){
   const {deps:{
     $, PI
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    bindStructureK1Inputs, effectivePropagationVectorForStructure, magneticStructureTraces,
+    bindStructureK1Inputs, effectivePropagationVectorForStructure, magneticStructureTraces, updateStructureEditorKNote, formatStructureKComponent,
     refreshMomentPropagationVectorSelect, rotateVectorAroundAxis, structureMomentRotationAxisVector
   });
 function atomMomentSetting(atom,settings,structure){
@@ -64,7 +66,45 @@ function effectivePropagationVectorForStructure(){
     q=qs[0];
     cifState.structureMomentPropagationIndex=q.index;
   }
-  return {h:q.h,k:q.k,l:q.l,index:q.index,count:qs.length};
+  return {h:q.h,k:q.k,l:q.l,index:q.index,count:qs.length,snapped:q.snapped||null,raw:q.raw||null};
+}
+// k as used for the structure: fractions for snapped/commensurate components.
+function formatStructureKComponent(v){
+  for(let d=1;d<=24;d++){ const n=Math.round(v*d); if(Math.abs(v*d-n)<=1e-8*d) return d===1?String(n):`${n}/${d}`; }
+  return String(Number(v.toPrecision(6)));
+}
+// Note shown under the Structure editor: which k is actually used when a
+// decimal was replaced by a fraction, and why spins cannot be drawn when k is
+// incommensurate (the same message is shown with the reflections).
+function updateStructureEditorKNote(){
+  const section=document.querySelector('#structurePanel .structure-config-section');
+  if(!section) return;
+  let note=$('cifStructureEditorNote');
+  if(!note){
+    note=document.createElement('div');
+    note.id='cifStructureEditorNote';
+    note.className='cif-structure-editor-note';
+    note.setAttribute('aria-live','polite');
+    section.appendChild(note);
+  }
+  const lines=[];
+  const q=effectivePropagationVectorForStructure();
+  const momentsOn=[...(fn.currentMomentSettings?.().values?.()||[])].some(x=>x?.enabled);
+  if(q.count && !fn.sourceIsMagneticCif?.()){
+    const idx=q.index||1, comps=[q.h,q.k,q.l];
+    if(q.snapped){
+      const entered=['h','k','l'].map(a=>q.raw?.[a]||'').join(', ');
+      lines.push({text:`k${idx} = (${entered}) is calculated as (${comps.map(formatStructureKComponent).join(', ')}): the nearest fraction with denominator ≤ 24.`,cls:'info'});
+    }
+    let commensurate=true;
+    try{ comps.forEach(v=>rationalDenominator(v)); }catch(_e){ commensurate=false; }
+    if(!commensurate && momentsOn)
+      lines.push({text:`Incommensurate k is not supported in the finite-cell Bragg calculator: spins, magnetic reflections and mCIF export are not available for k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}). Enter k as a fraction with denominator ≤ 24 (e.g. 1/3).`,cls:'warn'});
+  }
+  if(cifState.magneticModelError && !lines.some(l=>l.cls==='warn'))
+    lines.push({text:`Spins not drawn: ${cifState.magneticModelError}`,cls:'warn'});
+  note.replaceChildren(...lines.map(l=>{ const p=document.createElement('p'); p.className=l.cls; p.textContent=l.text; return p; }));
+  note.hidden=!lines.length;
 }
 // Sidebar k1 is the single source of truth. Structure input fields mirror it
 // in both directions; the sidebar's existing listeners handle calculations and
@@ -76,6 +116,7 @@ function syncStructureK1FromSidebar(){
     if(target && sidebar && target!==document.activeElement && target.value!==sidebar.value)
       target.value=sidebar.value;
   }
+  try{ updateStructureEditorKNote(); }catch(_e){}
 }
 function bindStructureK1Inputs(){
   for(const [axis,id] of Object.entries(STRUCTURE_K1_SIDES)){
