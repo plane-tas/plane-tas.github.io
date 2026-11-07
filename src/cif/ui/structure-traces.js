@@ -59,7 +59,7 @@ function bondTraces(atoms,basis,rules){
   // not freeze the UI even when each distance is crystallographically valid.
   const pairTests=atoms.length*(atoms.length-1)/2*activeRules.length;
   if(pairTests>2400000){
-    traces.warning='Bonds skipped: too many atom-pair tests. Reduce repeat ranges or Style rules.';
+    traces.warning='Bonds skipped: too many atom-pair tests. Reduce repeat ranges or bond rules.';
     return traces;
   }
   const limit=fn.styleCellDiagonalLimit(basis);
@@ -67,7 +67,7 @@ function bondTraces(atoms,basis,rules){
   let allSegments=0;
   for(const rule of activeRules){
     if(!Number.isFinite(limit) || !fn.safeStyleDistances(Number(rule.minDistance),Number(rule.maxDistance),limit)) {
-      warnings.push(`Style ${rule.a}-${rule.b} skipped: Max exceeds the unit-cell diagonal.`);
+      warnings.push(`Bond rule ${rule.a}-${rule.b} skipped: Max exceeds the unit-cell diagonal.`);
       continue;
     }
     const x=[],y=[],z=[];
@@ -192,7 +192,7 @@ function nearestPeriodicPolyhedralLigands(centre,ligandSites,basis,minDistance,m
       // Prevent an accidental Cartesian-product explosion BEFORE the loops.
       const possible=shift.reduce((n,[lo,hi])=>n*Math.max(0,hi-lo+1),1);
       if(!Number.isFinite(possible)||budget.tests+possible>POLY_MAX_PAIR_TESTS)
-        return {points:[],warning:'Polyhedra not drawn: local neighbor-search safety budget exceeded. Reduce Max, the Style rules, or the number of centres.'};
+        return {points:[],warning:'Polyhedra not drawn: local neighbor-search safety budget exceeded. Reduce Max, the bond rules, or the number of centres.'};
       if(!possible)continue;
       const siteCart=fn.fractionalToCartesian(basis,[site.x,site.y,site.z]);
       for(let nx=shift[0][0];nx<=shift[0][1];nx++){
@@ -223,7 +223,7 @@ function coordinationPolyhedralTraces(centres,structure,basis,rules){
   const traces=[];
   const activeRules=rules.filter(rule=>rule.enabled!==false);
   if(activeRules.length>POLY_MAX_RULES)
-    return {traces,warning:`Polyhedra not drawn: more than ${POLY_MAX_RULES} active Style rules.`};
+    return {traces,warning:`Polyhedra not drawn: more than ${POLY_MAX_RULES} active bond rules.`};
   const maxCutoff=fn.styleCellDiagonalLimit(basis);
   if(!Number.isFinite(maxCutoff) || activeRules.some(r=>
       !fn.safeStyleDistances(Number(r.minDistance),Number(r.maxDistance),maxCutoff)))

@@ -140,7 +140,7 @@ function renderCifStructureView(){
   const oversizedRules=bondRules.filter(rule=>!validRule(rule));
   const drawableBondRules=bondRules.filter(validRule);
   const styleCutoffWarning=oversizedRules.length
-    ?` ${oversizedRules.length} Style rule(s) not drawn: Max must not exceed the unit-cell diagonal (${maxCellDistance.toFixed(3)} Å). Edit Max; values are saved.`
+    ?` ${oversizedRules.length} bond rule(s) not drawn: Max must not exceed the unit-cell diagonal (${maxCellDistance.toFixed(3)} Å). Edit Max; values are saved.`
     :'';
   const cellFrame=fn.structureUnitCellFrame(source,basis,range,parentFrame);
   const cellTraces=fn.unitCellTraces(cellFrame.basis,cellFrame.range);

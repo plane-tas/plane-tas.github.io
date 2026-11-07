@@ -73,20 +73,23 @@ function formatStructureKComponent(v){
   for(let d=1;d<=24;d++){ const n=Math.round(v*d); if(Math.abs(v*d-n)<=1e-8*d) return d===1?String(n):`${n}/${d}`; }
   return String(Number(v.toPrecision(6)));
 }
-// Note shown under the Structure editor: which k is actually used when a
+// Note shown above the spin table: which k is actually used when a
 // decimal was replaced by a fraction, and why spins cannot be drawn when k is
 // incommensurate (the same message is shown with the reflections).
 function updateStructureEditorKNote(){
+  // Shown in the Spins panel, between the k / mode controls and the spin table.
+  const table=document.querySelector('#structurePanel [data-structure-config-panel="spins"] .structure-spin-table-wrap');
   const section=document.querySelector('#structurePanel .structure-config-section');
-  if(!section) return;
+  if(!table && !section) return;
   let note=$('cifStructureEditorNote');
   if(!note){
     note=document.createElement('div');
     note.id='cifStructureEditorNote';
     note.className='cif-structure-editor-note';
     note.setAttribute('aria-live','polite');
-    section.appendChild(note);
   }
+  if(table){ if(note.nextElementSibling!==table) table.parentElement.insertBefore(note,table); }
+  else if(note.parentElement!==section) section.appendChild(note);
   const lines=[];
   const q=effectivePropagationVectorForStructure();
   const momentsOn=[...(fn.currentMomentSettings?.().values?.()||[])].some(x=>x?.enabled);

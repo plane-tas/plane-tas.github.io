@@ -775,8 +775,8 @@
 #structurePanel .cif-cell-box .cif-lattice-grid{margin-top:10px;}
 #structurePanel .structure-plot-toolbar .structure-cell-reference-row{flex:0 0 100%;width:100%;min-width:0;}
 
-/* k note under the Structure editor (snapped decimal k / incommensurate k). */
-#structurePanel .cif-structure-editor-note{margin:10px 0 4px;font-size:13px;line-height:1.5}
+/* k note above the spin table (snapped decimal k / incommensurate k). */
+#structurePanel .cif-structure-editor-note{margin:6px 0 8px;font-size:13px;line-height:1.5}
 #structurePanel .cif-structure-editor-note[hidden]{display:none}
 #structurePanel .cif-structure-editor-note p{margin:4px 0;padding:6px 10px;border-radius:6px}
 #structurePanel .cif-structure-editor-note p.info{background:#eef6fb;border:1px solid #b9d8ea;color:#1d4f6e}

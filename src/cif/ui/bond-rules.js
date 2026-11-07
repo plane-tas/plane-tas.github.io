@@ -1,4 +1,4 @@
-// Style tab: bond/polyhedron rules table (selection, drag, copy, remove).
+// Bonds tab: bond/polyhedron rules table (selection, drag, copy, remove).
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 export function installBondRules(ctx){
   const {deps:{
@@ -68,18 +68,18 @@ function defaultBondColor(a,b){
   }).join("");
 }
 // Synchronize radio buttons after loading/restoring a structure. These modes
-// control geometry only; the Style rules remain unchanged.
+// control geometry only; the bond rules remain unchanged.
 function syncStructureBondDisplayModeControls(){
   for(const input of document.querySelectorAll('input[name="cifStructureStyle"]')){
     input.checked=input.value===cifState.structureBondDisplayMode;
   }
 }
-// Style uses the same select/copy/add/remove/drag semantics as Positions.
+// The Bonds tab uses the same select/copy/add/remove/drag semantics as Positions.
 let structureBondSelectionAnchor=null;
 let structureBondRowSerial=0;
 let structureBondDraggedRows=null;
 const selectedStructureBondRows=()=>[...document.querySelectorAll('#cifBondRows .structure-bond-row.style-row-selected')];
-// Style's All header follows the same checked / mixed / unchecked rules as
+// The Bonds tab's All header follows the same checked / mixed / unchecked rules as
 // Spins, without affecting the selected rows or deleting hidden rules.
 function syncStructureBondBulkCheckbox(){
   const checkbox=$("cifStyleBulkCheckbox");
@@ -213,8 +213,8 @@ function createBondRuleRow(rule={},elements=[]){
     });
     return input;
   };
-  const bondsToggle=styleModeCheckbox('bonds',rule.bonds!==false,'Draw bonds for this Style row');
-  const polyhedralToggle=styleModeCheckbox('polyhedral',rule.polyhedral===true,'Draw coordination polyhedra for this Style row');
+  const bondsToggle=styleModeCheckbox('bonds',rule.bonds!==false,'Draw bonds for this rule');
+  const polyhedralToggle=styleModeCheckbox('polyhedral',rule.polyhedral===true,'Draw coordination polyhedra for this rule');
   const legacyMax=Number.isFinite(Number(rule.maxDistance))?Number(rule.maxDistance):Number(rule.distance);
   const minValue=Number.isFinite(Number(rule.minDistance))?Number(rule.minDistance):0;
   const maxValue=Number.isFinite(legacyMax)?legacyMax:3;
@@ -234,7 +234,7 @@ function createBondRuleRow(rule={},elements=[]){
     const limitText=Number.isFinite(limit)?`${limit.toFixed(3)} Å (unit-cell diagonal)`:'a valid unit cell';
     maxDistance.title=valid
       ?`Maximum distance (Å); lattice-dependent ceiling ${limitText}`
-      :`This Style is not drawn: set 0 ≤ Min ≤ Max ≤ ${limitText}. Values are retained.`;
+      :`This rule is not drawn: set 0 ≤ Min ≤ Max ≤ ${limitText}. Values are retained.`;
     return valid;
   };
   updateStyleDistanceValidity();
@@ -242,14 +242,14 @@ function createBondRuleRow(rule={},elements=[]){
   width.max='30';width.placeholder='5';if(rule.widthBlank===true)width.value='';
   const color=document.createElement('input');color.type='color';color.dataset.bondField='color';
   color.value=rule.color||defaultBondColor(a.value,b.value);color.title='Bond color';
-  const index=cell('index','');index.setAttribute('aria-label','Style rule index');
+  const index=cell('index','');index.setAttribute('aria-label','Bond rule index');
   // Explicit on/off flag; unrelated to row selection and never removes a rule.
-  // Legacy saved Style rules have no `enabled` field and remain visible.
+  // Legacy saved bond rules have no `enabled` field and remain visible.
   const enabled=document.createElement('input');
   enabled.type='checkbox';enabled.dataset.bondField='enabled';
   enabled.checked=rule.enabled!==false;
-  enabled.title='Show or hide this Style rule';
-  enabled.setAttribute('aria-label','Show Style rule');
+  enabled.title='Show or hide this bond rule';
+  enabled.setAttribute('aria-label','Show bond rule');
   enabled.addEventListener('click',event=>event.stopPropagation());
   enabled.addEventListener('change',()=>{
     row.classList.toggle('style-rule-hidden',!enabled.checked);
