@@ -723,3 +723,22 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .motor-limit-name{font-weight:600;padding-right:calc(4px * var(--tas-density));min-width:calc(22px * var(--tas-density))}
 .motor-sign-display{display:block;padding-left:calc(6px * var(--tas-density));color:#555}
 .motor-limit-table input[readonly]{background:#f1f3f5;color:#555}
+
+/* Reflections (CIF/mCIF Generator): when the window is too short for the
+   controls plus the minimum graph height (small laptops, 125-150 % display
+   scaling, browser zoom), scroll inside the panel instead of clipping the
+   graph.  Large windows are unchanged: the graph still fills the space. */
+#structurePanel #generatorReflectionsPane .generator-reflection-pane > #cifReflectionsPanel{
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+/* Inside the scrolling panel the controls keep their natural height (they
+   would otherwise shrink and overlap); only the table area shrinks.  The
+   Table / Graph tabs stay at the top while the panel is scrolled. */
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > *{flex-shrink:0}
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{flex-shrink:1}
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > .reflection-view-tabs{position:sticky;top:0;z-index:3;background:var(--card-bg,#fff)}
+/* The table area keeps a readable minimum height; in a short window the panel
+   scrolls to it instead of squeezing the table to nothing. */
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{min-height:calc(220px * var(--tas-density))!important}

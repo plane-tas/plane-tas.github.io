@@ -520,6 +520,16 @@ function initializeReflectionTable(){
       const sel=$('reflectionMode'); if(!sel || sel.value===tab.dataset.reflectionView) return;
       sel.value=tab.dataset.reflectionView;
       sel.dispatchEvent(new Event('change',{bubbles:true}));
+      // In a short window the panel scrolls: bring the graph (or the table)
+      // into view.  Only the panel scrolls, never the page.
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        const panel=$('cifReflectionsPanel');
+        const target=tab.dataset.reflectionView==='graph' ? $('reflectionPowderPlot') : $('cifReflectionTableWrap');
+        if(!panel || !target || panel.scrollHeight<=panel.clientHeight+1) return;
+        const tabsH=tab.closest('.reflection-view-tabs')?.getBoundingClientRect().height||0;
+        const p=target.getBoundingClientRect(),q=panel.getBoundingClientRect();
+        if(p.bottom>q.bottom) panel.scrollTop+=Math.max(0,Math.min(p.bottom-q.bottom,p.top-q.top-tabsH));
+      }));
     });
   }
   for(const id of ['reflectionPlotU','reflectionPlotV','reflectionPlotW']) $(id)?.addEventListener('input',renderReflectionPowderPlot);
