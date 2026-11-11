@@ -220,7 +220,7 @@ function resetStructureViewerStateToDefaults(){
     cifState.structureMomentRotationAxis="c";
     cifState.structureMomentChirality="CCW";
     cifState.structureMomentPropagationIndex=0;
-    cifState.structureMomentDirectionMode="cartesian";
+    // Direction (Polar / Cartesian) is a UI preference, not structure data: keep it.
     cifState.structureSpinEditingMode="sites";
     cifState.structureSpinTableElement="*";
     // Keep the user-selected editor tab when a different structure is loaded.
@@ -361,7 +361,6 @@ function restoreStructureViewerState(){
     if(["a","b","c"].includes(String(saved.momentRotationAxis||""))) cifState.structureMomentRotationAxis=String(saved.momentRotationAxis);
     if(["CW","CCW"].includes(String(saved.momentChirality||""))) cifState.structureMomentChirality=String(saved.momentChirality);
     { const n=Number(saved.momentPropagationIndex); cifState.structureMomentPropagationIndex=Number.isInteger(n)&&n>0?n:0; }
-    if(["cartesian","polar"].includes(String(saved.momentDirectionMode||""))) cifState.structureMomentDirectionMode=String(saved.momentDirectionMode);
     cifState.structureSpinEditingMode=saved.spinEditingMode==="individual"?"individual":"sites";
     cifState.structureSpinTableElement=String(saved.spinTableElement||"*");
     // Editor navigation is a global UI preference, not structure-specific data.

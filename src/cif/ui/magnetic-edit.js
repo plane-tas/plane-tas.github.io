@@ -84,7 +84,10 @@ function activateImportedMagneticEditing(){
 cifState.structureMomentRotationAxis="c";
 cifState.structureMomentChirality="CCW";
 cifState.structureMomentPropagationIndex=0;
-cifState.structureMomentDirectionMode="cartesian";
+// Spin direction entry: Polar unless the user chose Cartesian (a global UI
+// preference, kept across structures and reloads).
+cifState.MOMENT_DIRECTION_STORAGE_KEY='tas-structure-moment-direction-v1';
+cifState.structureMomentDirectionMode=(()=>{try{return localStorage.getItem('tas-structure-moment-direction-v1')==='cartesian'?'cartesian':'polar';}catch(_e){return 'polar';}})();
 cifState.structureSpinEditingMode="sites";
 // Element only filters rows shown in Spins; it never changes moments or mCIF export.
 cifState.structureSpinTableElement="*";

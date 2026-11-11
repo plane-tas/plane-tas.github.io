@@ -327,6 +327,7 @@ function prepareStructureViewerControls(){
         const live=fn.currentMomentSettings();
         for(const [key,value] of live) cifState.structureMomentSettings.set(key,value);
         cifState.structureMomentDirectionMode=directionSelect.value==="polar"?"polar":"cartesian";
+        try{ localStorage.setItem(cifState.MOMENT_DIRECTION_STORAGE_KEY,cifState.structureMomentDirectionMode); }catch(_e){}
         fn.saveStructureViewerState();
         fn.updateMagneticMomentRows(fn.currentStructureForViewer()?.structure||null);
         fn.renderCifStructureIfVisible();

@@ -237,6 +237,9 @@ function updateMagneticMomentRows(structure){
   const live=currentMomentSettings();
   for(const [key,value] of live) cifState.structureMomentSettings.set(key,value);
   host.replaceChildren();
+  // Column headings follow Direction even when no structure is loaded.
+  { const headings=cifState.structureMomentDirectionMode==="polar"?["θ (°)","φ (°)","μ (μB)"]:["X (μB)","Y (μB)","Z (μB)"];
+    for(const [i,name] of ["X","Y","Z"].entries()){ const cell=$("cifSpinHeader"+name); if(cell) cell.textContent=headings[i]; } }
   cifState.visibleSpinSelectionSites.clear();
   const individual=spinEditingIsIndividual(structure);
   let allSites=[];
@@ -246,11 +249,6 @@ function updateMagneticMomentRows(structure){
   if(notice){notice.hidden=true;notice.textContent="";}
   refreshSpinTableToolbar(structure,allSites);
   const polar=cifState.structureMomentDirectionMode==="polar";
-  const headings=polar?["θ (°)","φ (°)","μ (μB)"]:["X (μB)","Y (μB)","Z (μB)"];
-  for(const [i,name] of ["X","Y","Z"].entries()){
-    const cell=$("cifSpinHeader"+name);
-    if(cell) cell.textContent=headings[i];
-  }
   const sites=spinTableFilteredSites(allSites);
   const displayedKeys=new Set(sites.map(site=>site.individualKey||momentKey(site)));
   for(const key of [...cifState.selectedSpinRowKeys]) if(!displayedKeys.has(key))cifState.selectedSpinRowKeys.delete(key);
