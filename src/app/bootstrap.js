@@ -1,6 +1,6 @@
 // Start-up: load the data directories, restore saved state and draw the first view.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory} from './data-loader.js';
+import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 export function createAppBootstrap(deps){
@@ -230,7 +230,7 @@ async function initialize(){
   saveLeftPanelState();
   saveRightPanelState();
   saveGlobalUIState();
-  setStatus(`Configuration loaded${(restoredLocalState||restoredRightState||restoredGlobalState) ? ' · Saved settings restored' : ''}${nNeutron ? '' : ' · Neutron data unavailable'}`);recalculate();
+  setStatus(`Configuration loaded${(restoredLocalState||restoredRightState||restoredGlobalState) ? ' · Saved settings restored' : ''}${nNeutron ? '' : ' · Neutron data unavailable'}${manifestWarnings.length ? ` · ${manifestWarnings.join('; ')} (run tools/update_data_index.py)` : ''}`);recalculate();
 }
 
   return {

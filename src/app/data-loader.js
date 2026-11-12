@@ -69,6 +69,41 @@ export function isLocalDirectoryListingHost(){
   return ["localhost","127.0.0.1","::1"].includes(window.location.hostname);
 }
 
+// File lists ("manifests"): <directory>/index.json lists the data files of
+// that directory, e.g. ["01_CG1B.json", "02_CG4C.json"].  On GitHub Pages it
+// is read first: it is an ordinary file of the site, so it is cached and has
+// no rate limit, unlike the GitHub API (60 requests per hour per IP address
+// without login, shared by everyone behind the same facility or workshop
+// network).  The API is only used when a directory has no index.json.
+// Regenerate the lists with tools/update_data_index.py after adding or
+// removing files; the local server compares them with the folder (below).
+const sortNames=list=>[...new Set(list)].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}));
+async function readManifest(directory,extension){
+  try{
+    const response=await fetch(`${directory}/index.json`,{cache:DATA_CACHE_MODE});
+    if(!response.ok) return null;
+    const value=await response.json();
+    const list=Array.isArray(value) ? value : (value && Array.isArray(value.files) ? value.files : null);
+    if(!list) return null;
+    const files=list.map(String).filter(name=>extension.test(name) && name.toLowerCase()!=="index.json");
+    return files.length ? sortNames(files) : null;
+  }catch(_err){ return null; }
+}
+// Local server only: report an index.json that no longer matches its folder,
+// so an outdated list is noticed before it is pushed.
+export const manifestWarnings=[];
+async function checkManifestAgainstListing(directory,extension,listed){
+  const response=await fetch(`${directory}/index.json`,{cache:DATA_CACHE_MODE}).catch(()=>null);
+  if(!response || !response.ok){ manifestWarnings.push(`${directory}/index.json is missing`); return; }
+  const manifest=await readManifest(directory,extension) || [];
+  const missing=listed.filter(f=>!manifest.includes(f)), extra=manifest.filter(f=>!listed.includes(f));
+  if(missing.length || extra.length){
+    const msg=`${directory}/index.json is out of date`+(missing.length?` (not listed: ${missing.join(", ")})`:"")+(extra.length?` (no such file: ${extra.join(", ")})`:"");
+    manifestWarnings.push(msg);
+    console.warn(msg+". Run tools/update_data_index.py.");
+  }
+}
+
 export async function discoverJsonFilesFromGitHub(directory){
   const owner=window.location.hostname.split('.')[0];
   const parts=window.location.pathname.split('/').filter(Boolean);
@@ -118,14 +153,15 @@ async function discoverJsonFilesNow(directory){
   if(isLocalDirectoryListingHost()){
     const files=await discoverJsonFilesFromDirectoryListing(directory);
     if(files.length===0) throw new Error(`${directory}/ に JSON ファイルを見つけられませんでした。`);
+    await checkManifestAgainstListing(directory,/\.json$/i,files);
     return files;
   }
 
-  // GitHub Pages does not expose directory listings.  Query the repository
-  // that owns the *current* Pages URL directly instead of probing an optional
-  // directory/index.json first.  This both restores optional data directories
-  // (BG material / sample environments) and avoids noisy manifest 404s.
+  // GitHub Pages does not expose directory listings: read index.json, and
+  // ask the GitHub API only when the directory has none.
   if(isGitHubPages()){
+    const listed=await readManifest(directory,/\.json$/i);
+    if(listed) return listed;
     const files=await discoverJsonFilesFromGitHub(directory);
     if(files.length===0) throw new Error(`${directory}/ に JSON ファイルがありません。`);
     return files;
@@ -210,12 +246,18 @@ export async function discoverCifFilesFromDirectoryListing(directory){
 
 async function discoverCifFilesNow(directory){
   // On the local Python server, the directory listing is authoritative.
-  if(isLocalDirectoryListingHost()) return await discoverCifFilesFromDirectoryListing(directory);
+  if(isLocalDirectoryListingHost()){
+    const files=await discoverCifFilesFromDirectoryListing(directory);
+    await checkManifestAgainstListing(directory,/\.cif$/i,files);
+    return files;
+  }
 
-  // On GitHub Pages, use the current repository directly.  Do not probe a
-  // possibly absent BG_material/index.json, because the repository contents
-  // API already gives the authoritative CIF list without a console 404.
-  if(isGitHubPages()) return await discoverCifFilesFromGitHub(directory);
+  // On GitHub Pages read index.json; the GitHub API is only the fallback.
+  if(isGitHubPages()){
+    const listed=await readManifest(directory,/\.cif$/i);
+    if(listed) return listed;
+    return await discoverCifFilesFromGitHub(directory);
+  }
 
   // Optional manifest for other static hosts that do not expose listings.
   try{

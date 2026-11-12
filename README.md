@@ -89,8 +89,17 @@ The browser application uses plain ES modules (no build step). All code lives in
 | `src/magnetic/` | Magnetic reflections and magnetic form factors |
 | `src/toolbox/` | Unit conversion, S2 conversion, attenuation and form-factor toolbox |
 | `src/script/` | Measurement scripts, SPICE and time estimates (`script-workspace.js` wires the parts in `src/script/workspace/`) |
+| `tools/update_data_index.py` | Regenerates the `index.json` file lists of the data folders |
 
 Static data stays at the project root because it is loaded by path: `instrument/`, `BG_material/`, `sample_environments/`, `neutron-data.json` and `space-groups.json`.
+
+Each data folder (`instrument/`, `sample_environments/`, `BG_material/`) has an `index.json` that lists its files. GitHub Pages cannot list a folder, so the application reads this list; it needs no GitHub API request (which is limited to 60 per hour per IP address and would fail when many people open the site from the same network). After adding, renaming or removing a data file, regenerate the lists and commit them:
+
+```
+python tools/update_data_index.py
+```
+
+When the site is opened from a local server, the status line warns if a list does not match its folder.
 
 ## User manual
 
