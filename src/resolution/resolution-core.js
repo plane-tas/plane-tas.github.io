@@ -481,11 +481,15 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const projWE=ellipsePoints(schur2(RM_U,[3,2]),normW,1), sliceWE=ellipsePoints(sliceWEMatrix,normW,1);
   const projUV=ellipsePoints(schur2(RM_U,[0,1]),normU,normV), sliceUV=ellipsePoints(submatrix(RM_U,[0,1],[0,1]),normU,normV);
 
-  // Lattice frame (U, V, E, W) with the entered, possibly non-orthogonal V:
-  // delta_Q = a u + b v + c w (unit vectors), RM_L = C_L^T RM C_L.  Widths,
-  // slices and projections are then taken along these oblique coordinates
-  // (a slice along V keeps a = c = E = 0; a projection integrates along the
-  // other oblique axes).  For orthogonal U and V this equals RM_U.
+  // Lattice frame (U, V, E, W) with the entered, possibly non-orthogonal V.
+  // The width along an axis is a property of that direction alone, so it
+  // must not depend on which other axis is chosen: every width, slice and
+  // U-E / V-E / W-E ellipse is taken in an orthogonal frame whose first axis
+  // is that direction (the projection integrates over the hyperplane normal
+  // to it; the slice keeps the other orthogonal coordinates at zero).  U, E
+  // and W are therefore identical to the U, U⊥in, E, U⊥out frame, and V is
+  // evaluated along the entered V.  Only the U-V panel is drawn in the
+  // oblique (a U + b V) coordinates, from RM_L = C_L^T RM C_L.
   let lattice=null;
   try{
     const QvLat=qFromUB(UB,lc.sv2), qvLatNorm=norm(QvLat);
@@ -498,17 +502,26 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
         [cu[2],cl[2],0,cw[2]],
       ];
       const RM_L=symmetrize(matmul(matmul(transpose(CL),RM),CL));
-      const mU=findMaxAlongAxis(RM_L,0).max, mV=findMaxAlongAxis(RM_L,1).max, mW=findMaxAlongAxis(RM_L,3).max, mE=findMaxAlongAxis(RM_L,2).max;
+      // Orthogonal frame along V: (V, W × V in plane, E, W).
+      const cvp=components(normalize(cross(wHat,vLatHat)));
+      const CVF=[
+        [cl[0],cvp[0],0,cw[0]],
+        [cl[1],cvp[1],0,cw[1]],
+        [0,0,1,0],
+        [cl[2],cvp[2],0,cw[2]],
+      ];
+      const RM_VF=symmetrize(matmul(matmul(transpose(CVF),RM),CVF));
+      const mV=findMaxAlongAxis(RM_VF,0).max;
       const nU=normU, nV=unitMode==='rlu'?qvLatNorm:1, nW=normW;
-      const w={U:2*mU,V:2*mV,W:2*mW,E:2*mE,Ucoh:coherentFwhm(RM_L,0),Vcoh:coherentFwhm(RM_L,1),Wcoh:coherentFwhm(RM_L,3),Ecoh:coherentFwhm(RM_L,2)};
+      const w={U:widths.U,V:2*mV,W:widths.W,E:widths.E,Ucoh:widths.Ucoh,Vcoh:coherentFwhm(RM_VF,0),Wcoh:widths.Wcoh,Ecoh:widths.Ecoh};
       lattice={
         RM:RM_L, widths:w,
         display:{U:w.U/nU,V:w.V/nV,W:w.W/nW,E:w.E,Ucoh:w.Ucoh/nU,Vcoh:w.Vcoh/nV,Wcoh:w.Wcoh/nW,Ecoh:w.Ecoh},
-        lim:{U:mU*scale/nU,V:mV*scale/nV,W:mW*scale/nW,E:mE*scale},
+        lim:{U:maxU*scale/nU,V:mV*scale/nV,W:maxW*scale/nW,E:maxE*scale},
         ellipses:{
-          projUE:ellipsePoints(schur2(RM_L,[0,2]),nU,1), sliceUE:ellipsePoints(submatrix(RM_L,[0,2],[0,2]),nU,1),
-          projVE:ellipsePoints(schur2(RM_L,[1,2]),nV,1), sliceVE:ellipsePoints(submatrix(RM_L,[1,2],[1,2]),nV,1),
-          projWE:ellipsePoints(schur2(RM_L,[3,2]),nW,1), sliceWE:ellipsePoints(submatrix(RM_L,[3,2],[3,2]),nW,1),
+          projUE, sliceUE,
+          projVE:ellipsePoints(schur2(RM_VF,[0,2]),nV,1), sliceVE:ellipsePoints(submatrix(RM_VF,[0,2],[0,2]),nV,1),
+          projWE, sliceWE,
           projUV:ellipsePoints(schur2(RM_L,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(RM_L,[0,1],[0,1]),nU,nV)
         },
         qNorms:{U:qxNorm,V:qvLatNorm,W:qzNorm},
