@@ -95,7 +95,7 @@ function applyInstrumentTypeChange(){
   const base=instruments.get(key);
   // Re-apply everything when ANY type of this instrument sets its own beam or
   // crystals: switching back to a type without such a section must also
-  // restore the top-level values (VERITAS TAS Ei = 14.7 after 4-circle 14.45).
+  // restore the top-level values (VERITAS TAS Ei = 14.5 after 4-circle 14.45).
   const anyFull=instrumentTypes(base).some(t=>FULL_DEFAULT_KEYS.some(k=>k in instrumentTypeSection(base,t)));
   if(anyFull) applyInstrumentDefaults();
   else{
@@ -143,6 +143,83 @@ function rangeTable(inst){
   if(inst.qe_range && Array.isArray(inst.qe_range.configuration)) return inst.qe_range.configuration;
   if(Array.isArray(inst.configuration)) return inst.configuration; // legacy QErange JSON
   throw new Error("Selected instrument has no S2-limit table. Add S2_limits to the unified instrument JSON (or keep the legacy instruments/ directory during migration).");
+}
+// Energy-transfer range of the Q-E maps from the crystal angle ranges in the
+// instrument file:
+//   "M2_min" / "M2_max": monochromator 2θ_M range (deg, magnitudes) -> Ei range
+//   "A2_min" / "A2_max": analyzer 2θ_A motor range (deg, signed as on the
+//                        instrument page; optional, default = M2 range)
+// E = 81.8042 / λ², λ = 2 d sin(2θ/2), with the d of the selected crystal.
+//   Ef fixed: ħω = Ei − Ef over the Ei range of M2 (negative ħω included).
+//   Ei fixed: ħω = Ei − Ef over the Ef range of the analyzer: the largest
+//             |2θ_A| gives the lowest Ef; when the A2 range reaches small
+//             angles (it crosses 0°, or only A2_max is given) the high-Ef
+//             side has no angular limit and is capped at Ef = 2 Ei
+//             (ħω ≥ −Ei).  Without A2, the M2 range is used when it is a range.
+// Without these entries, or for analyzer-free types, the previous range is
+// used: 0 … (largest Ei of the S2 table − Ef) for Ef fixed, 0 … Ei for Ei fixed.
+function angleRange(inst,key){
+  const lo=Math.abs(Number(inst?.[`${key}_min`])), hi=Math.abs(Number(inst?.[`${key}_max`]));
+  if(!Number.isFinite(lo) || !Number.isFinite(hi) || lo<=0 || hi<=0 || lo>=180 || hi>=180) return null;
+  return {min:Math.min(lo,hi),max:Math.max(lo,hi)};
+}
+// Analyzer 2θ_A range -> magnitudes.  maxAbs: largest |2θ_A| (lowest Ef);
+// minAbs: smallest |2θ_A| on a range that does not reach 0° (null when the
+// small-angle side is unlimited).  A2_min = A2_max: fixed analyzer angle.
+function analyzerAngleRange(inst){
+  const lo=Number(inst?.A2_min), hi=Number(inst?.A2_max);
+  const ends=[lo,hi].filter(Number.isFinite);
+  if(!ends.length) return null;
+  const maxAbs=Math.max(...ends.map(Math.abs));
+  if(!(maxAbs>0 && maxAbs<180)) return null;
+  let minAbs=null;
+  if(ends.length===2 && Math.sign(lo)===Math.sign(hi) && lo!==0) minAbs=Math.min(Math.abs(lo),Math.abs(hi));
+  return {maxAbs,minAbs};
+}
+function energyAtTwoTheta(d,twoTheta){
+  const lambda=2*d*Math.sin(twoTheta*Math.PI/360);
+  return lambda>0 ? 81.8042/(lambda*lambda) : NaN;
+}
+function energyRangeFromAngles(range,d){
+  if(!range || !(d>0)) return null;
+  const a=energyAtTwoTheta(d,range.min), b=energyAtTwoTheta(d,range.max);
+  if(!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return {min:Math.min(a,b),max:Math.max(a,b)};
+}
+function energyTransferRange(inst,{energyMode,Ei,Ef}){
+  const analyzerFree=inst?.instrument_type==='diffractometer' || inst?.instrument_type==='four-circle';
+  if(energyMode==='Ef fixed'){
+    const m2=analyzerFree ? null : energyRangeFromAngles(angleRange(inst,'M2'),Number($('dMono')?.value));
+    if(m2 && Ef>0) return {hwMin:m2.min-Ef,hwMax:m2.max-Ef,EiRange:m2,source:'M2'};
+    const EiMax=Math.max(...rangeTable(inst).map(x=>Number(x.Ei)));
+    return {hwMin:0,hwMax:EiMax-Ef,source:'S2 table'};
+  }
+  if(!analyzerFree && Ei>0){
+    const dAna=Number($('dAna')?.value);
+    const a2=analyzerAngleRange(inst);
+    if(a2 && dAna>0){
+      const efMin=energyAtTwoTheta(dAna,a2.maxAbs);
+      const efMax=a2.minAbs ? energyAtTwoTheta(dAna,a2.minAbs) : 2*Ei;
+      if(Number.isFinite(efMin) && Number.isFinite(efMax))
+        return {hwMin:Ei-Math.max(efMin,efMax),hwMax:Ei-Math.min(efMin,efMax),EfRange:{min:Math.min(efMin,efMax),max:Math.max(efMin,efMax)},source:'A2'};
+    }
+    const m2=angleRange(inst,'M2');
+    const ef=m2 && m2.max-m2.min>1e-9 ? energyRangeFromAngles(m2,dAna) : null;
+    if(ef) return {hwMin:Ei-ef.max,hwMax:Ei-ef.min,EfRange:ef,source:'M2'};
+  }
+  return {hwMin:0,hwMax:Ei,source:'Ei'};
+}
+// ħω grid on multiples of `step` (0 included when inside the range); both
+// Ei and Ef stay positive.
+function energyTransferGrid(range,{energyMode,Ei,Ef},step=0.1){
+  const out=[];
+  const n0=Math.ceil(range.hwMin/step-1e-9), n1=Math.floor(range.hwMax/step+1e-9);
+  for(let n=n0;n<=n1;n++){
+    const hw=Number((n*step).toFixed(10));
+    const EiHw=energyMode==='Ef fixed'?Ef+hw:Ei, EfHw=energyMode==='Ef fixed'?Ef:Ei-hw;
+    if(EiHw>1e-6 && EfHw>1e-6) out.push(hw);
+  }
+  return out;
 }
 function instrumentInterp(inst,lambdaHalf=false){
   const table=rangeTable(inst);
@@ -496,6 +573,7 @@ function applyInstrumentDefaults(){
     syncS2FieldSigns,
     applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
+    energyTransferRange, energyTransferGrid,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
     updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
   };

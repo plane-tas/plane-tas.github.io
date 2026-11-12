@@ -66,6 +66,10 @@
     "shape": "rectangle"
   },
   "s2_dep_ei": "yes",
+  "M2_min": 47.96,
+  "M2_max": 116.97,
+  "A2_min": 90,
+  "A2_max": 90,
   "S2_min": 3.0,
   "S2_limits": [
     {

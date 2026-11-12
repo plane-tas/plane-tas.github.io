@@ -79,7 +79,7 @@ const {
 const {
   syncS2FieldSigns,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
-  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
+  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable, energyTransferRange, energyTransferGrid,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
 }=createInstrumentSetup({
@@ -125,7 +125,7 @@ const {
 }=createPowder({
   backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
   effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
-  latticeParams, num, powderWavevectors:(...args)=>powderWavevectors(...args), rangeTable,
+  latticeParams, num, powderWavevectors:(...args)=>powderWavevectors(...args), rangeTable, energyTransferRange, energyTransferGrid,
   renderQEExternalLegend:(...args)=>renderQEExternalLegend(...args), selectedBackgrounds,
   selectedSampleCentering:(...args)=>selectedSampleCentering(...args), validateEffectiveS2Max,
   getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null
@@ -737,7 +737,7 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   getDarkAssets, getSelectedCifFileName:()=>selectedCifFileName,
   getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null,
   hklToQ, isAllowedByCentering, latticeParams, linspace, makeSpiceScatteringPlaneBasis, maxArray, norm,
-  nuclearStructureFactorSquared, num, rad2deg, rangeTable, rebuildGeometryMatchedDarkPolygons,
+  nuclearStructureFactorSquared, num, rad2deg, rangeTable, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons,
   representativePowderHklText, scale, selectedBackgrounds, selectedS1Sign,
   selectedSampleSpaceGroup:(...args)=>selectedSampleSpaceGroup(...args), selectedTasSense, tasConvention,
   tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention, validateEffectiveS2Max, wrap180, fourCircleSignFactors

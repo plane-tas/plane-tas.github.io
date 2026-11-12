@@ -11,7 +11,7 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 
 ### Q–E Range and TAS geometry
 
-- Accessible Q–E maps for single-crystal and powder samples, within the instrument's S1/S2 limits.
+- Accessible Q–E maps for single-crystal and powder samples, within the instrument's S1/S2 limits, including negative energy transfer; the ħω range follows the monochromator/analyzer angle ranges (`M2_min`/`M2_max`, `A2_min`/`A2_max`) in the instrument files.
 - **Constant E map** (reciprocal-space slice in r.l.u. along the entered U and V) and **Q vector–E map** along an HKL path, sharing one clickable legend.
 - Nuclear Bragg peaks (shaded by |F<sub>N</sub>|² when a CIF/mCIF is loaded) and magnetic-peak positions for one or more propagation vectors; hover labels give (h,k,l), |Q|, S1 and S2.
 - Q paths selected by clicking on the Constant E map or typed as HKL points, with Snap 1/n (default 1/4, or 1/6 for lattices with 60° or 120° angles; empty = free).

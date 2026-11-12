@@ -49,7 +49,7 @@
   },
   "configuration": {
     "energy_mode": "Ei fixed",
-    "Ei": 14.7,
+    "Ei": 14.5,
     "geometry": "W",
     "sense": "+-+",
     "s1sign": "ccw"
@@ -66,6 +66,10 @@
     "shape": "rectangle"
   },
   "s2_dep_ei": "no",
+  "M2_min": 41.3,
+  "M2_max": 41.3,
+  "A2_min": -60,
+  "A2_max": 120,
   "S2_min": -5,
   "S2_limits": [
     {
@@ -87,6 +91,8 @@
       "Ei": 14.45
     },
     "S2_min": -2,
+    "M2_min": 41.3,
+    "M2_max": 41.3,
     "S2_limits": [
       {
         "S2limit": -92,

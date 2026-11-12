@@ -66,6 +66,10 @@
     "shape": "rectangle"
   },
   "s2_dep_ei": "no",
+  "M2_min": 14,
+  "M2_max": 45,
+  "A2_min": -10,
+  "A2_max": 90,
   "S2_min": -5,
   "S2_limits": [
     {

@@ -6,13 +6,13 @@ export const W_LAYER_TOLERANCE=0.01+1e-9;
 
 export function createQESingleCrystal(deps){
   const {
-    $, PI, RL_calc, UB_calc, add, arange, backgroundColor, backgroundMaterials,
+    $, PI, RL_calc, UB_calc, add, backgroundColor, backgroundMaterials,
     backgroundPowderPeaks, calcQ0, centeringFromSpaceGroup, checkedValue, clamp,
     currentInstrument, deg2rad, dot, effectiveOrientationReference, effectiveS2MaxAtEi,
     enabledPropagationVectors, formatHKL, getDarkAssets, getSelectedCifFileName,
     getNuclearCifStructure, hklToQ, isAllowedByCentering, latticeParams, linspace,
-    makeSpiceScatteringPlaneBasis, maxArray, norm, nuclearStructureFactorSquared, num,
-    rad2deg, rangeTable, rebuildGeometryMatchedDarkPolygons, representativePowderHklText,
+    makeSpiceScatteringPlaneBasis, norm, nuclearStructureFactorSquared, num,
+    rad2deg, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons, representativePowderHklText,
     scale, selectedBackgrounds, selectedS1Sign, selectedSampleSpaceGroup, selectedTasSense,
     tasConvention, tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention,
     validateEffectiveS2Max, wrap180, fourCircleSignFactors
@@ -101,14 +101,11 @@ export function createQESingleCrystal(deps){
     const s1Offset=-thetaRef+180-phiRefPlot;
 
     const S2min=Math.abs(num("S2min")), S1min=num("S1min"), S1max=num("S1max");
+    // ħω range from the monochromator (M2) / analyzer (A2) angle ranges of the
+    // instrument file; negative energy transfer is included.
     let hwList;
     if(lambdaHalf) hwList=[0];
-    else if(energyMode==="Ef fixed"){
-      const EiMax=maxArray(rangeTable(inst).map(x=>Number(x.Ei)));
-      hwList=arange(0,EiMax-Ef,0.1);
-    } else {
-      hwList=arange(0,Ei,0.1);
-    }
+    else hwList=energyTransferGrid(energyTransferRange(inst,{energyMode,Ei,Ef}),{energyMode,Ei,Ef});
     if(hwList.length===0) hwList=[0];
 
     const regions=[], S2list=[], QmaxList=[];

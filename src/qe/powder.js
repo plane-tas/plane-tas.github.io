@@ -1,13 +1,13 @@
 // Powder Q-E map: background powder peaks/curves and calculatePowder.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {PI, add, arange, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '../core/tas-core.js';
+import {PI, add, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '../core/tas-core.js';
 import {nuclearExtinctionThreshold, nuclearStructureFactorSquared} from '../cif/cif-structure.js';
 
 export function createPowder(deps){
   const {
     backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
     effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
-    latticeParams, num, powderWavevectors, rangeTable, renderQEExternalLegend, selectedBackgrounds,
+    latticeParams, num, powderWavevectors, energyTransferRange, energyTransferGrid, renderQEExternalLegend, selectedBackgrounds,
     selectedSampleCentering, validateEffectiveS2Max, getNuclearCifStructure
   }=deps;
 
@@ -199,10 +199,12 @@ function calculatePowder(){
 
   const qmin=[],qmax=[],hw=[],s2minList=[],s2maxList=[];
 
+  // ħω range from the M2 / A2 angle ranges (negative energy transfer included).
+  const hwGrid=energyTransferGrid(energyTransferRange(inst,energyMode==="Ef fixed"?{energyMode,Ef:E}:{energyMode,Ei:E}),
+    energyMode==="Ef fixed"?{energyMode,Ef:E}:{energyMode,Ei:E});
   if(energyMode==="Ef fixed"){
     const Ef=E;
-    const EiMax=Math.max(...rangeTable(inst).map(x=>Number(x.Ei)));
-    for(const Ei of arange(Ef+0.01,EiMax,0.1)){
+    for(const Ei of hwGrid.map(w=>Ef+w)){
       const s2max=validateEffectiveS2Max(effectiveS2MaxAtEi(inst,Ei,false),S2min,Ei);
       const ki=0.6947*Math.sqrt(Ei), kf=0.6947*Math.sqrt(Ef);
       const tmin=deg2rad(S2min),tmax=deg2rad(s2max);
@@ -216,7 +218,7 @@ function calculatePowder(){
     const Ei=E;
     const s2max=validateEffectiveS2Max(effectiveS2MaxAtEi(inst,Ei,false),S2min,Ei);
     const ki=0.6947*Math.sqrt(Ei);
-    for(const w of arange(0,Ei-0.01,0.1)){
+    for(const w of hwGrid){
       const Ef=Ei-w;
       if(Ef<=0) continue;
       const kf=0.6947*Math.sqrt(Ef),tmin=deg2rad(S2min),tmax=deg2rad(s2max);

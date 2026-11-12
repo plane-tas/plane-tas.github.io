@@ -480,7 +480,7 @@ function renderQEVectorMap(cache){
     // heatmap overlays can obscure it.  Build a matching set of grid lines as
     // top-layer shapes so the grid stays readable over Accessible-Q, BG and
     // dark-angle colors as well as the white background.
-    const hwMax=Math.max(0,...cache.hwList);
+    const hwMax=Math.max(0,...cache.hwList), hwMin=Math.min(0,...cache.hwList);
     const niceGridStep=max=>{
       if(!(max>0)) return 1;
       const raw=max/8, power=Math.pow(10,Math.floor(Math.log10(raw)));
@@ -491,13 +491,15 @@ function renderQEVectorMap(cache){
       ,candidates[0]);
       return nice*power;
     };
-    const yGridStep=niceGridStep(hwMax);
+    // Negative energy transfer: the grid runs from the lowest ħω, through 0.
+    const yGridStep=niceGridStep(hwMax-hwMin);
     const yGridVals=[];
-    for(let y=0;y<=hwMax+1e-9;y+=yGridStep) yGridVals.push(Number(y.toFixed(12)));
+    for(let n=Math.ceil(hwMin/yGridStep-1e-9);n*yGridStep<=hwMax+1e-9;n++) yGridVals.push(Number((n*yGridStep).toFixed(12)));
     if(hwMax>0 && !yGridVals.some(y=>Math.abs(y-hwMax)<1e-9)) yGridVals.push(hwMax);
+    if(hwMin<0 && !yGridVals.some(y=>Math.abs(y-hwMin)<1e-9)) yGridVals.unshift(hwMin);
     const yMinorStep=yGridStep/qeMinorDivisions(yGridStep);
     const yMinorVals=[];
-    for(let n=1;n<200;n++){
+    for(let n=Math.ceil(hwMin/yMinorStep-1e-9);n<Math.ceil(hwMin/yMinorStep)+400;n++){
       const y=n*yMinorStep;
       if(y>hwMax+yMinorStep*1e-9) break;
       if(Math.abs(y/yGridStep-Math.round(y/yGridStep))>1e-6) yMinorVals.push(y);
@@ -511,7 +513,7 @@ function renderQEVectorMap(cache){
     ];
 
     renderQEExternalLegend('qeVectorLegend','qeVectorPlot',traces);
-    const defaultView={x:[hMin,hMax],y:[0,hwMax]};
+    const defaultView={x:[hMin,hMax],y:[hwMin,hwMax]};
     plot.__tasQEVectorDefaultView=defaultView;
     const renderPromise=Plotly.react(plot,traces,{
       uirevision:`qeVector-${currentPathKey}`, 
@@ -521,7 +523,7 @@ function renderQEVectorMap(cache){
         ticktext:multiple?tickVals.map(()=>''):tickText,
         range:[hMin,hMax],tickangle:0,automargin:false,zeroline:false,
         ticks:multiple?'outside':'',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
-      yaxis:{title:{text:'ħω (meV)',font:{size:15}},tickfont:{size:17},range:[0,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      yaxis:{title:{text:'ħω (meV)',font:{size:15}},tickfont:{size:17},range:[hwMin,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
         ...knots.map(x=>({type:'line',x0:x,x1:x,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}}))
