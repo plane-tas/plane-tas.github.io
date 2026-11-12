@@ -49,6 +49,11 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     `U-based matrix order (U, U⊥in, E, U⊥out)\n${fn.matrixText(r.RM_U)}`+
     (r.lattice ? `\n\nLattice matrix order (U, V, E, W), oblique coordinates along unit U, V, W\n${fn.matrixText(r.lattice.RM)}` : '');
 
+  // Radial 3rd collimator: show its equivalent divergence (read-only) in place of the Soller value.
+  { const radial=!!r.collimation3?.radial, shown=$('div3hRadial'), soller=$('div3h');
+    if(soller){ soller.hidden=radial; soller.disabled=radial; }
+    if(shown){ shown.hidden=!radial;
+      shown.value=radial && Number.isFinite(r.collimation3.fwhmArcmin) ? `${Math.round(r.collimation3.fwhmArcmin)}′ (radial)` : 'radial'; } }
   fn.bindResolutionUVView();
   fn.renderResolutionPlots(r,unitMode,lc,limits);
   fn.updateResolutionKeepState?.();

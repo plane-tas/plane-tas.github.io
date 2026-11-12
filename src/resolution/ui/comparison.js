@@ -22,18 +22,37 @@ export function installResolutionComparison(ctx){
   const COORD_NAMES={q:'Q∥, Q⊥, E, W',orthogonal:'U, U⊥in, E, U⊥out',lattice:'U, V, E, W'};
   const unitName=u=>u==='rlu'?'r.l.u.':'Å⁻¹';
   const frameFor=(r,c)=>c==='lattice'&&r?.lattice ? r.lattice : c==='q'&&r?.qframe ? r.qframe : r;
-  const keptSetting=()=>shared.keptResolutions.length ? {unit:shared.keptResolutions[0].unit,coords:shared.keptResolutions[0].coords} : null;
-  // Condition of a result: focusing of each crystal direction ("flat(n)" or
-  // "focus(n)", n = number of blades) and the 1st-4th H / V collimations.
-  const focusText=(check,blades)=>`${$(check)?.checked ? 'focus' : 'flat'}(${String($(blades)?.value??'').trim()||'?'})`;
-  const currentCondition=()=>{
+  const keptSetting=()=>shared.keptResolutions.length ? {unit:shared.keptResolutions[0].unit,coords:shared.keptResolutions[0].coords,instrument:shared.keptResolutions[0].instrument,instrumentName:shared.keptResolutions[0].instrumentName} : null;
+  // Condition of a result, in four compact columns:
+  //   point "(1,0,0) ħω=0 meV"
+  //   mono  "PG(002), Ei=4.8 meV\nH: flat (1 blade)\nV: focusing (7 blades)", ana (same, with Ef)
+  //   col   "H: 40-999-244(R)-999,\nV: 120-120-120-120"
+  // ((R): radial 3rd collimator, the value being its equivalent divergence;
+  // SM(m=…): supermirror guide).
+  const focusText=(check,blades)=>{
+    const n=String($(blades)?.value??'').trim()||'?';
+    return `${$(check)?.checked ? 'focusing' : 'flat'} (${n} ${Number(n)===1 ? 'blade' : 'blades'})`;
+  };
+  const crystalText=id=>{ const el=$(id); return el?.selectedOptions?.[0]?.text || el?.value || '?'; };
+  const energyText=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(3))) : '?'; };
+  const currentCondition=(entry)=>{
     const value=id=>{ const raw=String($(id)?.value??'').trim(); return raw==='' ? '–' : raw; };
-    const sm=$('gm1')?.checked ? `SM m=${value('div1m')}` : null;
+    const sm=$('gm1')?.checked ? `SM(m=${value('div1m')})` : null;
+    const c3=entry?.result?.collimation3?.radial
+      ? `${Number.isFinite(entry.result.collimation3.fwhmArcmin) ? Math.round(entry.result.collimation3.fwhmArcmin) : '?'}(R)` : value('div3h');
+    const en=entry?.result?.energies||{};
+    const f=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(4))) : String(v); };
+    const calc=entry?.calc||{};
     return {
-      focus:[focusText('monoHF','monoHB'),focusText('monoVF','monoVB'),focusText('anaHF','anaHB'),focusText('anaVF','anaVB')],
-      collimation:[sm||value('div1h'),sm||value('div1v'),value('div2h'),value('div2v'),value('div3h'),value('div3v'),value('div4h'),value('div4v')]
+      point:`(${f(calc.h)},${f(calc.k)},${f(calc.l)}) ħω=${f(calc.hw)} meV`,
+      mono:`${crystalText('monoCrystal')}, Ei=${energyText(en.Ei)} meV\nH: ${focusText('monoHF','monoHB')}\nV: ${focusText('monoVF','monoVB')}`,
+      ana:`${crystalText('anaCrystal')}, Ef=${energyText(en.Ef)} meV\nH: ${focusText('anaHF','anaHB')}\nV: ${focusText('anaVF','anaVB')}`,
+      col:`H: ${[sm||value('div1h'),value('div2h'),c3,value('div4h')].join('-')},\nV: ${[sm||value('div1v'),value('div2v'),value('div3v'),value('div4v')].join('-')}`
     };
   };
+  // Instrument (and type) of a result: results of different instruments are not compared.
+  const currentInstrumentKey=()=>`${$('instrument')?.value||''}|${$('instrumentType')?.value||''}`;
+  const currentInstrumentName=()=>{ const sel=$('instrument'); const t=$('instrumentType'); return `${sel?.selectedOptions?.[0]?.text||sel?.value||''}${t && t.options.length>1 ? ` (${t.selectedOptions?.[0]?.text||t.value})` : ''}`; };
   const conditionDetail=entry=>{
     const {result:r,calc}=entry, f=v=>Number(v).toFixed(3);
     return `${$('method')?.value||''}; Ei=${f(r.energies.Ei)} meV, Ef=${f(r.energies.Ef)} meV; `+
@@ -64,6 +83,10 @@ export function installResolutionComparison(ctx){
     const color=COLORS.find(c=>!used.has(c)) || COLORS[0];
     const entry=last.entry, coords=fn.resolutionCoordinates(), setting=keptSetting();
     const note=$('resolutionKeepNote');
+    if(setting && setting.instrument!==currentInstrumentKey()){
+      if(note){ note.textContent=`Not kept: the kept results are for ${setting.instrumentName}. Results of different instruments cannot be compared; clear the Comparison first.`; note.classList.add('warn'); }
+      return;
+    }
     if(setting && (setting.unit!==entry.unitMode || setting.coords!==coords)){
       if(note){
         note.textContent=`Not kept: the kept results use ${unitName(setting.unit)} and Q axes ${COORD_NAMES[setting.coords]}. `+
@@ -72,7 +95,7 @@ export function installResolutionComparison(ctx){
       }
       return;
     }
-    const kept={id:nextId++,color,condition:currentCondition(),entry,detail:'',unit:entry.unitMode,coords};
+    const kept={id:nextId++,color,condition:currentCondition(entry),entry,detail:'',unit:entry.unitMode,coords,instrument:currentInstrumentKey(),instrumentName:currentInstrumentName()};
     kept.detail=conditionDetail(entry);
     shared.keptResolutions.push(kept);
     if(note){ note.textContent=`Kept as #${shared.keptResolutions.length} (see Comparison).`; note.classList.remove('warn'); }
@@ -93,7 +116,7 @@ export function installResolutionComparison(ctx){
   }
 
   // Table: one row per kept result.
-  //   # | mono H, mono V, ana H, ana V, 1st-4th H/V | widths along the axes | clear
+  //   # | point, mono, ana, col | widths along the axes | clear
   function renderTable(){
     const head=$('resolutionCompareHead'), body=$('resolutionCompareRows');
     if(!body || !head) return;
@@ -106,11 +129,11 @@ export function installResolutionComparison(ctx){
       const axis=v=>`δQ//(${v.map(x=>{ const y=Number(x); return Math.abs(y-Math.round(y))<1e-10 ? String(Math.round(y)) : Number(y.toPrecision(4)); }).join(',')})`;
       const cell=(tag,text,attrs={})=>{ const c=document.createElement(tag); c.textContent=text; for(const [k,v] of Object.entries(attrs)) c.setAttribute(k,v); return c; };
       const r1=document.createElement('tr'), r2=document.createElement('tr');
-      r1.append(cell('th','',{rowspan:'2',class:'cmp-index'}),cell('th','condition',{colspan:'12',class:'cmp-group'}),cell('th',`resolution (${qUnit})`,{colspan:'4',class:'cmp-group cmp-res-start'}));
+      r1.append(cell('th','',{rowspan:'2',class:'cmp-index'}),cell('th',`condition — ${setting.instrumentName}`,{colspan:'4',class:'cmp-group'}),cell('th',`resolution (${qUnit})`,{colspan:'4',class:'cmp-group cmp-res-start'}));
       const allTh=document.createElement('th'); allTh.className='cmp-action';
       const all=document.createElement('button'); all.type='button'; all.id='resolutionCompareClear'; all.textContent='clear all'; all.className='resolution-compare-clear';
       allTh.appendChild(all); r1.appendChild(allTh);
-      for(const name of ['mono H','mono V','ana H','ana V','1st H','1st V','2nd H','2nd V','3rd H','3rd V','4th H','4th V']) r2.appendChild(cell('th',name));
+      for(const name of ['point','mono','ana','col']) r2.appendChild(cell('th',name));
       r2.append(cell('th',axis(ax.U),{class:'cmp-res-start'}),cell('th',axis(ax.V)),cell('th',axis(ax.W)),cell('th','δħω (meV)'),cell('th','',{class:'cmp-action'}));
       head.append(r1,r2);
     }
@@ -123,8 +146,7 @@ export function installResolutionComparison(ctx){
       const idx=document.createElement('td'); idx.className='cmp-index';
       idx.innerHTML=`<span class="resolution-compare-chip" style="background:${k.color}"></span>${i+1}`;
       tr.appendChild(idx);
-      for(const f of k.condition.focus) tr.appendChild(td(f));
-      for(const c of k.condition.collimation) tr.appendChild(td(c,'cmp-num'));
+      for(const key of ['point','mono','ana','col']) tr.appendChild(td(k.condition[key],key==='point' ? 'cmp-cond' : 'cmp-cond cmp-col'));
       const d=frameFor(k.entry.result,k.coords).display, w=(a,b)=>`${a.toFixed(4)} (${b.toFixed(4)})`;
       tr.append(td(w(d.U,d.Ucoh),'cmp-num cmp-res cmp-res-start'),td(w(d.V,d.Vcoh),'cmp-num cmp-res'),td(w(d.W,d.Wcoh),'cmp-num cmp-res'),td(w(d.E,d.Ecoh),'cmp-num cmp-res'));
       const act=document.createElement('td'); act.className='cmp-action';

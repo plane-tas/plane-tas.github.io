@@ -77,7 +77,7 @@ const {
 });
 
 const {
-  syncS2FieldSigns,
+  syncS2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable, energyTransferRange, energyTransferGrid,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
@@ -87,6 +87,16 @@ const {
   setStatus, tasConventionFromLegacyUiSense, updateAutoW:(...args)=>updateAutoW(...args),
   updateEnergyLabel, getFixedBeamControls:()=>fixedBeamControls, getSingleCache:()=>singleCache
 });
+// 3rd collimator Soller / radial; the analyzer horizontal focusing selects radial.
+$('anaHF')?.addEventListener('change',syncCollimator3WithAnalyzerFocus);
+$('coll3Type')?.addEventListener('change',updateCollimator3UI);
+// Focusing comboboxes drive the (hidden) focusing checkboxes.
+for(const [sel,box] of [['monoHType','monoHF'],['monoVType','monoVF'],['anaHType','anaHF'],['anaVType','anaVF']]){
+  $(sel)?.addEventListener('change',()=>{ const cb=$(box); if(!cb) return; cb.checked=$(sel).value==='focusing'; cb.dispatchEvent(new Event('change',{bubbles:true})); });
+}
+// 1st collimator combobox drives the (hidden) supermirror checkbox.
+$('coll1Type')?.addEventListener('change',()=>{ const gm=$('gm1'); if(!gm) return; gm.checked=$('coll1Type').value==='supermirror'; gm.dispatchEvent(new Event('change',{bubbles:true})); });
+updateCollimator3UI();
 
 const {
   applySampleEnvironmentDefaults, bindDynamicSidebarUI, currentDarkRangeCount, darkAssetIds,

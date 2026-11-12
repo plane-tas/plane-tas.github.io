@@ -481,7 +481,38 @@ function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
     if($('anaCrystal')) $('anaCrystal').disabled=true;
   }
 }
-function updateSupermirrorUI(){ const on=$("gm1").checked; $("div1m").disabled=!on; $("div1h").disabled=on; $("div1v").disabled=on; }
+// 3rd horizontal collimator: Soller or radial (combobox).  With radial the
+// calculation uses the angular size of the analyzer seen from the sample; the
+// entry box is replaced by that equivalent divergence (read-only, set after each
+// resolution calculation).  The Soller value is kept for switching back.
+function updateCollimator3UI(){
+  const radial=$('coll3Type')?.value==='radial';
+  const soller=$('div3h'), shown=$('div3hRadial');
+  if(soller){ soller.hidden=radial; soller.disabled=radial; }
+  if(shown) shown.hidden=!radial;
+}
+// The analyzer horizontal focusing selects the radial collimator by default.
+function syncCollimator3WithAnalyzerFocus(){
+  const hf=!!$('anaHF')?.checked;
+  if($('coll3Type')) $('coll3Type').value=hf ? 'radial' : 'soller';
+  updateCollimator3UI();
+}
+// 1st collimator: Soller (H / V divergence) or supermirror guide (m-value).
+// The hidden #gm1 checkbox keeps the saved-settings key and the calculation input.
+function updateSupermirrorUI(){
+  const on=$("gm1").checked;
+  if($('coll1Type')) $('coll1Type').value=on?'supermirror':'soller';
+  $("div1m").disabled=!on; $("div1h").disabled=on; $("div1v").disabled=on;
+  for(const el of document.querySelectorAll('.res-coll1-soller')) el.hidden=on;
+  for(const el of document.querySelectorAll('.res-coll1-guide')) el.hidden=!on;
+  updateFocusingTypeUI();
+}
+// Focusing: Flat / Focusing comboboxes mirror the hidden #monoHF, #monoVF,
+// #anaHF and #anaVF checkboxes (saved-settings keys and calculation inputs).
+const FOCUSING_TYPES=[['monoHType','monoHF'],['monoVType','monoVF'],['anaHType','anaHF'],['anaVType','anaVF']];
+function updateFocusingTypeUI(){
+  for(const [sel,box] of FOCUSING_TYPES) if($(sel) && $(box)) $(sel).value=$(box).checked ? 'focusing' : 'flat';
+}
 
 function applyInstrumentDefaults(){
   if(!$("instrument").value) return;
@@ -516,7 +547,11 @@ function applyInstrumentDefaults(){
 
   const mono=inst.monochromator||{}, ana=inst.analyzer||{}, col=inst.collimator||{}, sm=inst.supermirror||{}, dist=inst.distance||{}, beam=inst.beam||{}, det=inst.detector||{};
   setBool("gm1",sm.enabled); setIf("div1m",sm.m_value); setColl("div1h",col,'1st_h');setColl("div1v",col,'1st_v');setColl("div2h",col,'2nd_h');setColl("div2v",col,'2nd_v');setColl("div3h",col,'3rd_h');setColl("div3v",col,'3rd_v');setColl("div4h",col,'4th_h');setColl("div4v",col,'4th_v');
-  setBool("monoHF",mono.hfocus);setBool("monoVF",mono.vfocus);setBool("anaHF",ana.hfocus);setBool("anaVF",ana.vfocus);setIf("monoHB",mono.blade_h);setIf("monoVB",mono.blade_v);setIf("anaHB",ana.blade_h);setIf("anaVB",ana.blade_v);
+  setBool("monoHF",mono.hfocus);setBool("monoVF",mono.vfocus);setBool("anaHF",ana.hfocus);
+  // "3rd_type": "radial" / "soller" in the collimator section; default: radial with a horizontally focusing analyzer.
+  { const t=String(col['3rd_type']||'').toLowerCase(); const radial=t ? t==='radial' : !!ana.hfocus;
+    if($('coll3Type')) $('coll3Type').value=radial?'radial':'soller'; updateCollimator3UI(); }
+  setBool("anaVF",ana.vfocus);setIf("monoHB",mono.blade_h);setIf("monoVB",mono.blade_v);setIf("anaHB",ana.blade_h);setIf("anaVB",ana.blade_v);
   applyInstrumentCrystalAvailability();
   setIf("mosMonoH",mono.mosaic_h);setIf("mosMonoV",mono.mosaic_v);setIf("mosAnaH",ana.mosaic_h);setIf("mosAnaV",ana.mosaic_v);
   setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);
@@ -531,11 +566,9 @@ function applyInstrumentDefaults(){
   // Component sizes in instrument JSON are full dimensions in cm.
   setIf("srcWcm",beam.width);setIf("srcHcm",beam.height);setIf("monoWcm",mono.width);setIf("monoHcm",mono.height);setIf("monoTcm",mono.thickness);setIf("anaWcm",ana.width);setIf("anaHcm",ana.height);setIf("anaTcm",ana.thickness);setIf("detWcm",det.width);setIf("detHcm",det.height);
   const sourceCircle=String(beam.shape||'rectangle').toLowerCase()==='circle';
-  if($('sourceShapeRect')) $('sourceShapeRect').checked=!sourceCircle;
-  if($('sourceShapeCircle')) $('sourceShapeCircle').checked=sourceCircle;
+  if($('sourceShape')) $('sourceShape').value=sourceCircle ? 'circle' : 'rectangle';
   const detectorRect=String(det.shape||'cylinder').toLowerCase()==='rectangle';
-  if($('detectorShapeRect')) $('detectorShapeRect').checked=detectorRect;
-  if($('detectorShapeCylinder')) $('detectorShapeCylinder').checked=!detectorRect;
+  if($('detectorShape')) $('detectorShape').value=detectorRect ? 'rectangle' : 'cylinder';
   if(instrumentIsDiffractometer(inst)){
     // A missing JSON value means "not specified", NOT a value inherited from
     // the previous instrument or from static HTML defaults. This is critical
@@ -577,11 +610,11 @@ function applyInstrumentDefaults(){
 }
 
   return {
-    syncS2FieldSigns,
+    syncS2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
     applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     energyTransferRange, energyTransferGrid,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
-    updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
+    updateS2MaxDisplayForQERange, updateSupermirrorUI, updateFocusingTypeUI, validateEffectiveS2Max
   };
 }

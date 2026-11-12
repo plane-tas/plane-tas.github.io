@@ -263,8 +263,8 @@
 /* Component size: shape choice (Source / Detector). */
 #resolutionInstrumentDetails .resolution-shape-radios{display:flex;flex-wrap:wrap;gap:calc(4px * var(--tas-density)) calc(14px * var(--tas-density));margin:0 0 calc(4px * var(--tas-density))}
 #resolutionInstrumentDetails .resolution-shape-radios .checkbox-label{min-height:0;align-self:auto}
-#resolutionInstrumentDetails:has(#sampleShapeBox:checked) .sample-cylinder-only,
-#resolutionInstrumentDetails:has(#sampleShapeCylinder:checked) .sample-box-only{display:none}
+#resolutionInstrumentDetails:has(#sampleShape option[value="box"]:checked) .sample-cylinder-only,
+#resolutionInstrumentDetails:has(#sampleShape option[value="cylinder"]:checked) .sample-box-only{display:none!important}
 
 /* Approximation / Mode / Unit / Coordinates / U–V plot. */
 #resolutionCalculation .toolbar{grid-template-columns:repeat(5,minmax(0,1fr));}
@@ -293,14 +293,34 @@
 #resolutionPanel .resolution-compare-table thead th{background:#f3f6f9;font-weight:600}
 #resolutionPanel .resolution-compare-table thead th.cmp-group{text-align:center}
 #resolutionPanel .resolution-compare-table .cmp-num{text-align:right}
+#resolutionPanel .resolution-compare-table td.cmp-cond{white-space:nowrap}
+#resolutionPanel .resolution-compare-table td.cmp-col{white-space:pre}
 /* Widths may wrap as "0.0216" / "(0.0176)" when the panel is narrow. */
 #resolutionPanel .resolution-compare-table td.cmp-res{white-space:normal;min-width:5.2em}
-#resolutionPanel .resolution-compare-table .cmp-res-start{border-left:2px solid #8a98a8}
 #resolutionPanel .resolution-compare-table .cmp-index{text-align:right;font-weight:600;width:1%}
-#resolutionPanel .resolution-compare-table .cmp-action{width:1%;text-align:center;border-left:2px solid #8a98a8}
+#resolutionPanel .resolution-compare-table .cmp-action{width:1%;text-align:center}
 #resolutionPanel .resolution-compare-table tbody tr{cursor:pointer}
 #resolutionPanel .resolution-compare-table tbody tr:hover{background:#f6f9fc}
 #resolutionPanel .resolution-compare-table tbody tr.selected{background:#e3eefb}
 #resolutionPanel .resolution-compare-chip{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 #resolutionPanel .resolution-compare-remove,#resolutionPanel .resolution-compare-clear{padding:0 5px;line-height:1.6;font-size:inherit}
 #resolutionPanel .resolution-compare-empty{color:#5b6b7a}
+
+/* Collimators: per position a "name | Horizontal | Vertical" header and a
+   "type | H | V" row, in three equal columns (supermirror: m-value over H and V). */
+#resolutionPanel .coll-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:calc(4px * var(--tas-density));row-gap:calc(2px * var(--tas-density))}
+#resolutionPanel .coll-grid>input,#resolutionPanel .coll-grid>select{width:100%;max-width:none;min-width:0;margin-bottom:calc(4px * var(--tas-density))}
+#resolutionPanel .coll-grid>[hidden]{display:none!important}
+#resolutionPanel .coll-grid>select{padding-left:2px;padding-right:0}
+#resolutionPanel .coll-span2{grid-column:span 2}
+#resolutionPanel .focus-grid{grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr) minmax(0,1.3fr) minmax(0,.7fr)}
+/* Sizes: three equal columns; four for the cuboid sample and the detector. */
+#resolutionPanel .size-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#resolutionInstrumentDetails:has(#sampleShape option[value="box"]:checked) .size-grid-sample{grid-template-columns:repeat(4,minmax(0,1fr))}
+/* Detector: the shape column is wider so that "Rectangle" / "Cylinder" fit. */
+#resolutionPanel .size-grid-4{grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr))}
+#resolutionPanel .size-grid+.size-grid{margin-top:calc(6px * var(--tas-density))}
+#resolutionPanel .crystal-grid{grid-template-columns:minmax(0,1.2fr) repeat(3,minmax(0,1fr))}
+#resolutionPanel .focus-grid+.focus-grid,#resolutionPanel .crystal-grid+.crystal-grid{margin-top:calc(6px * var(--tas-density))}
+#resolutionPanel .focus-name{grid-column:1/-1}
+#resolutionPanel .coll3-radial-value{color:#3d4b59;background:#f1f4f7}

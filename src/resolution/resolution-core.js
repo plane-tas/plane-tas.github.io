@@ -206,6 +206,9 @@ function rot4(theta,tilt=0){
 
 export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,calc,unitMode='rlu'){
   const gm1=!!col.gm_1st;
+  // 3rd horizontal collimator: Soller (entered value) or radial (the angular
+  // size of the analyzer seen from the sample).
+  const radial3=!!col.radial_3rd;
   let div1h=col.div_1st_h, div1v=col.div_1st_v;
   const div1m=col.div_1st_m;
   const {div_2nd_h:div2h,div_2nd_v:div2v,div_3rd_h:div3h,div_3rd_v:div3v,div_4th_h:div4h,div_4th_v:div4v}=col;
@@ -295,10 +298,13 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   }
   const alpha2=collSigma(div2h,'h2');
   let alpha3;
-  // Horizontally focusing analyzer: Soller 3 is replaced by the angular size of
-  // the analyzer seen from the sample.  The beam meets the analyzer face at the
-  // Bragg angle thetaA, so the projected width is W*|sin(thetaA)| (A3 = 2*thetaA).
-  if(AHF){ const W=ana_width*numAh*Math.abs(sind(A3/2)), af=2*atand((W/2)/L2); alpha3=af/180*PI*GAUSS_SIGMA_FROM_FWHM*Math.sqrt(8*Math.log(2)/12); }
+  // Radial 3rd collimator (default with a horizontally focusing analyzer):
+  // the divergence is the angular size of the analyzer seen from the sample.
+  // The beam meets the analyzer face at the Bragg angle thetaA, so the
+  // projected width is W*|sin(thetaA)| (A3 = 2*thetaA).  The uniform angular
+  // profile enters with its variance: equivalent Gaussian FWHM = af*sqrt(8 ln2/12).
+  let radial3FwhmArcmin=null;
+  if(radial3){ const W=ana_width*numAh*Math.abs(sind(A3/2)), af=2*atand((W/2)/L2); alpha3=af/180*PI*GAUSS_SIGMA_FROM_FWHM*Math.sqrt(8*Math.log(2)/12); radial3FwhmArcmin=af*60*Math.sqrt(8*Math.log(2)/12); }
   else alpha3=collSigma(div3h,'h3');
   const alpha4=collSigma(div4h,'h4');
   const beta2=collSigma(div2v,'v2'), beta3=collSigma(div3v,'v3'), beta4=collSigma(div4v,'v4');
@@ -314,7 +320,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const slotKeys=['h1','h2','v1','v2','h3','h4','v3','v4'];
   const Gpop=diag([alpha1,alpha2,beta1,beta2,alpha3,alpha4,beta3,beta4].map((x,i)=>{
     const key=slotKeys[i];
-    const replaced=(gm1&&(key==='h1'||key==='v1'))||(AHF&&key==='h3');
+    const replaced=(gm1&&(key==='h1'||key==='v1'))||(radial3&&key==='h3');
     return (openSlot[key]&&!replaced) ? 0 : 1/(x*x);
   }));
   const F=diag([etaM,etaMp,etaA,etaAp].map(x=>1/(x*x)));
@@ -576,5 +582,6 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     qNorms:{U:qxNorm,V:qyNorm,W:qzNorm},
     displayAxes:{U:lc.sv1.slice(),V:sv2Orth,W:lc.sv3.slice()},
     lattice, qframe,
-    angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB};
+    angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
+    collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}};
 }
