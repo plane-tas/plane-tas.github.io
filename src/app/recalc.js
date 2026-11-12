@@ -55,6 +55,11 @@ function scheduleRecalc(delayOrEvent=50){
   timer=setTimeout(runScheduledRecalc,delay);
 }
 function recalculate(){
+  // A recalculation queued before this one (for example by the input events
+  // of the saved-settings restore at start-up) would only repeat it: drop it.
+  // While the Resolution tab is shown the queued job is the resolution
+  // update, so it is kept.
+  if(timer && !resolutionPanelIsVisible()){ clearTimeout(timer); timer=null; }
   clearError();
   updateEnergyLabel();
   updateS2MaxDisplay();

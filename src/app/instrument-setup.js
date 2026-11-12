@@ -210,8 +210,15 @@ function energyTransferRange(inst,{energyMode,Ei,Ef}){
   return {hwMin:0,hwMax:Ei,source:'Ei'};
 }
 // ħω grid on multiples of `step` (0 included when inside the range); both
-// Ei and Ef stay positive.
-function energyTransferGrid(range,{energyMode,Ei,Ef},step=0.1){
+// Ei and Ef stay positive.  The step is 0.1 meV, coarsened for wide ranges
+// (TAX, PTAX: 0.25-0.5 meV) so that a map has at most ~500 energy slices;
+// every slice costs start-up and recalculation time.
+const HW_GRID_MAX_SLICES=500;
+function energyTransferGrid(range,{energyMode,Ei,Ef},step=null){
+  if(!(step>0)){
+    const span=Math.max(0,range.hwMax-range.hwMin);
+    step=[0.1,0.2,0.25,0.5,1,2,5].find(v=>span/v<=HW_GRID_MAX_SLICES) ?? 5;
+  }
   const out=[];
   const n0=Math.ceil(range.hwMin/step-1e-9), n1=Math.floor(range.hwMax/step+1e-9);
   for(let n=n0;n<=n1;n++){
