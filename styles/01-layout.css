@@ -13,18 +13,19 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
 #tasTopBar > header{
   display:flex;align-items:center;flex-wrap:wrap;
   gap:4px 12px!important;
-  padding:6px 12px;
+  padding:4px 12px;
   min-height:var(--tas-header-height);
 }
 #tasTopBar .tas-brand{
   flex:0 1 auto;min-width:0;
-  display:flex;flex-direction:column;justify-content:center;
+  /* Title and subtitle on one line (wide screens); stacked again on phones. */
+  display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:0 14px;
 }
 #tasTopBar .tas-brand h1{
   margin:0;color:#cf6914;font-size:23px;font-weight:800;letter-spacing:.025em;line-height:1.08;
 }
 #tasTopBar .tas-brand-subtitle{
-  margin-top:3px;font-size:11px;line-height:1.25;color:#495261;
+  margin-top:0;font-size:13px;line-height:1.25;color:#495261;
   letter-spacing:0;white-space:normal;
 }
 #tasTopBar .tas-brand-letter{color:#cf6914;font-weight:800;}
@@ -43,9 +44,9 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
 @media(max-width:760px){
   :root{--tas-header-height:88px;}
   #tasTopBar > header{padding:6px 10px;gap:5px 12px!important;}
-  #tasTopBar .tas-brand{flex:1 1 100%;}
+  #tasTopBar .tas-brand{flex:1 1 100%;flex-direction:column;align-items:flex-start;}
   #tasTopBar .tas-brand h1{font-size:26px;}
-  #tasTopBar .tas-brand-subtitle{font-size:11.5px;}
+  #tasTopBar .tas-brand-subtitle{font-size:11.5px;margin-top:3px;}
   #tasTopBar #manualLink{order:2;font-size:15px;}
   #tasTopBar #githubLink{order:3;font-size:15px;}
   #tasTopBar #status{order:4;flex:1 1 auto;min-width:0;margin-left:auto!important;text-align:right;font-size:11.5px;}

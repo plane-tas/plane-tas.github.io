@@ -739,7 +739,7 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 /* No new global zoom, Plotly hit-test adjustment, or body width changes. */
 
 /* Brand and readiness status. Native CSS sizes, no scale transform. */
-:root{--tas-header-height:56px;}
+:root{--tas-header-height:38px;}
 
 /* Shared output readability: Resolution summary and Angle calculation Single/Scan
    results all use the Single result text size. Keep the Scan point selector
