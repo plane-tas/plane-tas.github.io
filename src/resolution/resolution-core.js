@@ -517,7 +517,10 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
       lattice={
         RM:RM_L, widths:w,
         display:{U:w.U/nU,V:w.V/nV,W:w.W/nW,E:w.E,Ucoh:w.Ucoh/nU,Vcoh:w.Vcoh/nV,Wcoh:w.Wcoh/nW,Ecoh:w.Ecoh},
-        lim:{U:maxU*scale/nU,V:mV*scale/nV,W:maxW*scale/nW,E:maxE*scale},
+        // UVU / UVV: ranges of the U-V panel, whose ellipse is drawn in the
+        // oblique coefficients (a, b) and is wider than the widths along U, V.
+        lim:{U:maxU*scale/nU,V:mV*scale/nV,W:maxW*scale/nW,E:maxE*scale,
+          UVU:findMaxAlongAxis(RM_L,0).max*scale/nU,UVV:findMaxAlongAxis(RM_L,1).max*scale/nV},
         ellipses:{
           projUE, sliceUE,
           projVE:ellipsePoints(schur2(RM_VF,[0,2]),nV,1), sliceVE:ellipsePoints(submatrix(RM_VF,[0,2],[0,2]),nV,1),

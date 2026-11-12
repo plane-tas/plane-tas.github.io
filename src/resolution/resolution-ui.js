@@ -2,6 +2,7 @@ import {installResolutionInputs} from './ui/inputs.js';
 import {installResolutionPlots} from './ui/plots.js';
 import {installResolutionCalculation} from './ui/calculation.js';
 import {installPowderLink} from './ui/powder-link.js';
+import {installResolutionComparison} from './ui/comparison.js';
 
 // Resolution tab UI.  One closure split into parts under ./ui/; dependencies
 // are injected by app.js.
@@ -15,6 +16,7 @@ export function createResolutionUI(deps){
   installResolutionPlots(ctx);
   installResolutionCalculation(ctx);
   installPowderLink(ctx);
+  installResolutionComparison(ctx);
   const fn=ctx.fn;
 
   return {

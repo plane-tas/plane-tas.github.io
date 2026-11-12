@@ -275,3 +275,32 @@
 #resolutionCalculation #singleInputs .resolution-to-geometry{align-self:end;white-space:nowrap}
 /* A scan point (or a whole scan) that cannot be calculated. */
 #result .resolution-not-calculable{color:#b42318;font-weight:600;margin-top:calc(4px * var(--tas-density))}
+
+/* Results: Result / Comparison (Mode = single). */
+#resolutionPanel #result .resolution-result-tabs{margin:0 0 calc(10px * var(--tas-density))}
+#resolutionPanel #result .resolution-result-tabs[hidden]{display:none}
+#resolutionPanel #result .resolution-result-tabs .geometry-card-tab{flex:1 1 0}
+#resolutionPanel .resolution-compare-count{font-weight:400;color:#5b6b7a}
+#resolutionPanel .resolution-keep-row{display:flex;align-items:center;gap:calc(10px * var(--tas-density));margin:calc(6px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
+#resolutionPanel .resolution-keep-row[hidden]{display:none}
+#resolutionPanel .resolution-keep-note{font-size:inherit;color:#2e6b3a}
+#resolutionPanel .resolution-keep-note.warn{color:#9a3b00}
+#resolutionPanel .resolution-compare-table-wrap{overflow-x:auto;margin:0 0 calc(10px * var(--tas-density))}
+#resolutionPanel .resolution-compare-table-wrap[hidden],#resolutionPanel .resolution-compare-plots[hidden],#resolutionPanel .resolution-compare-empty[hidden]{display:none}
+/* Spreadsheet-like table: every cell framed, two header rows. */
+#resolutionPanel .resolution-compare-table{border-collapse:collapse;width:100%;font-size:calc(13px * var(--tas-density));font-variant-numeric:tabular-nums}
+#resolutionPanel .resolution-compare-table th,#resolutionPanel .resolution-compare-table td{border:1px solid #c9d2db;padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));white-space:nowrap;text-align:left;vertical-align:middle}
+#resolutionPanel .resolution-compare-table thead th{background:#f3f6f9;font-weight:600}
+#resolutionPanel .resolution-compare-table thead th.cmp-group{text-align:center}
+#resolutionPanel .resolution-compare-table .cmp-num{text-align:right}
+/* Widths may wrap as "0.0216" / "(0.0176)" when the panel is narrow. */
+#resolutionPanel .resolution-compare-table td.cmp-res{white-space:normal;min-width:5.2em}
+#resolutionPanel .resolution-compare-table .cmp-res-start{border-left:2px solid #8a98a8}
+#resolutionPanel .resolution-compare-table .cmp-index{text-align:right;font-weight:600;width:1%}
+#resolutionPanel .resolution-compare-table .cmp-action{width:1%;text-align:center;border-left:2px solid #8a98a8}
+#resolutionPanel .resolution-compare-table tbody tr{cursor:pointer}
+#resolutionPanel .resolution-compare-table tbody tr:hover{background:#f6f9fc}
+#resolutionPanel .resolution-compare-table tbody tr.selected{background:#e3eefb}
+#resolutionPanel .resolution-compare-chip{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+#resolutionPanel .resolution-compare-remove,#resolutionPanel .resolution-compare-clear{padding:0 5px;line-height:1.6;font-size:inherit}
+#resolutionPanel .resolution-compare-empty{color:#5b6b7a}

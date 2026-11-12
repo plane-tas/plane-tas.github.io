@@ -51,6 +51,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
 
   fn.bindResolutionUVView();
   fn.renderResolutionPlots(r,unitMode,lc,limits);
+  fn.updateResolutionKeepState?.();
 }
 function resolutionScanPoints(){
   const nRaw=Math.round(num('npts'));

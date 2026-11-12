@@ -6,7 +6,9 @@ export function installResolutionPlots(ctx){
   }, state:shared, fn}=ctx;
   Object.assign(fn,{
     bindResolutionUVView, formatAngle, formatResolutionAxis, renderResolutionPlots,
-    rerenderResolution, resolutionDisplayAxes, resolutionFrameLimits, resolutionWidthsHtml
+    rerenderResolution, resolutionDisplayAxes, resolutionFrameLimits, resolutionWidthsHtml,
+    resolutionBaseLayout:(...args)=>baseLayout(...args), reactResolutionPlot:(...args)=>reactResolutionPlot(...args),
+    RESOLUTION_PLOT_FONTS:()=>RESOLUTION_PLOT_FONTS
   });
 
 // Resolution plots use explicit symmetric limits around the calculation point.
@@ -64,7 +66,8 @@ function resolutionPlotLimitsFromEntries(entries){
     return m>0?m:null;
   };
   const U=maxLim('U'), V=maxLim('V'), W=maxLim('W'), E=maxLim('E');
-  return {U,V,W,E};
+  const UVU=maxLim('UVU'), UVV=maxLim('UVV');
+  return {U,V,W,E,...(UVU?{UVU}:{}),...(UVV?{UVV}:{})};
 }
 // Plot limits of the entries in the chosen display frame.
 function resolutionFrameLimits(entries){
@@ -156,7 +159,8 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_I
   // ellipse fills the panel; a forced 1:1 aspect made Plotly widen the U
   // range to fill the wide panel.
   const uvEqual=false;
-  const uLim=limits.U, vLim=limits.V;
+  // U, V, E, W: the U-V ellipse is in the oblique coefficients (UVU/UVV).
+  const uLim=(lattice && limits.UVU) || limits.U, vLim=(lattice && limits.UVV) || limits.V;
   const layout=baseLayout(
     `δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,
     `δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,
@@ -315,6 +319,7 @@ function bindResolutionUVView(){
 }
 // Re-draw the last result in the current display frame (no recalculation).
 function rerenderResolution(){
+  fn.renderResolutionComparison?.();
   if(!shared.lastResolutionRender) return;
   const {entry,indexInfo,scan}=shared.lastResolutionRender;
   if(scan && shared.scanResults.length){
