@@ -36,7 +36,7 @@ export function installResolutionComparison(ctx){
   const crystalText=id=>{ const el=$(id); return el?.selectedOptions?.[0]?.text || el?.value || '?'; };
   const energyText=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(3))) : '?'; };
   const currentCondition=(entry)=>{
-    const value=id=>{ const raw=String($(id)?.value??'').trim(); return raw==='' ? '–' : raw; };
+    const value=id=>{ const raw=String($(id)?.value??'').trim(); return raw==='' ? 'blank' : raw; };
     const sm=$('gm1')?.checked ? `SM(m=${value('div1m')})` : null;
     const c3=entry?.result?.collimation3?.radial
       ? `${Number.isFinite(entry.result.collimation3.fwhmArcmin) ? Math.round(entry.result.collimation3.fwhmArcmin) : '?'}(R)` : value('div3h');
@@ -64,6 +64,9 @@ export function installResolutionComparison(ctx){
     const last=shared.lastResolutionRender;
     const usable=singleMode() && last && !last.scan && last.entry && !last.entry.failed;
     if(row) row.hidden=!singleMode();
+    const n=shared.keptResolutions.length;
+    if($('resolutionRemoveLastKept')) $('resolutionRemoveLastKept').disabled=!n;
+    if($('resolutionClearKept')) $('resolutionClearKept').disabled=!n;
     if(btn){
       btn.disabled=!usable || shared.keptResolutions.length>=MAX_KEPT;
       btn.title=shared.keptResolutions.length>=MAX_KEPT ? `At most ${MAX_KEPT} results can be kept; remove one in the Comparison tab.` : 'Add this result to the Comparison tab';
@@ -84,13 +87,13 @@ export function installResolutionComparison(ctx){
     const entry=last.entry, coords=fn.resolutionCoordinates(), setting=keptSetting();
     const note=$('resolutionKeepNote');
     if(setting && setting.instrument!==currentInstrumentKey()){
-      if(note){ note.textContent=`Not kept: the kept results are for ${setting.instrumentName}. Results of different instruments cannot be compared; clear the Comparison first.`; note.classList.add('warn'); }
+      if(note){ note.textContent=`Not kept: the kept results are for ${setting.instrumentName}. Results of different instruments cannot be compared; press Clear all kept first.`; note.classList.add('warn'); }
       return;
     }
     if(setting && (setting.unit!==entry.unitMode || setting.coords!==coords)){
       if(note){
         note.textContent=`Not kept: the kept results use ${unitName(setting.unit)} and Q axes ${COORD_NAMES[setting.coords]}. `+
-          `A result with a different unit or Q axes cannot be compared; switch back, or clear the Comparison first.`;
+          `A result with a different unit or Q axes cannot be compared; switch back, or press Clear all kept first.`;
         note.classList.add('warn');
       }
       return;
@@ -133,7 +136,7 @@ export function installResolutionComparison(ctx){
       const allTh=document.createElement('th'); allTh.className='cmp-action';
       const all=document.createElement('button'); all.type='button'; all.id='resolutionCompareClear'; all.textContent='clear all'; all.className='resolution-compare-clear';
       allTh.appendChild(all); r1.appendChild(allTh);
-      for(const name of ['point','mono','ana','col']) r2.appendChild(cell('th',name));
+      for(const name of ['point','monochromator','analyzer','collimator']) r2.appendChild(cell('th',name));
       r2.append(cell('th',axis(ax.U),{class:'cmp-res-start'}),cell('th',axis(ax.V)),cell('th',axis(ax.W)),cell('th','δħω (meV)'),cell('th','',{class:'cmp-action'}));
       head.append(r1,r2);
     }
@@ -209,25 +212,37 @@ export function installResolutionComparison(ctx){
     fn.reactResolutionPlot(PLOT_IDS.UV,traces('UV'),layout(`δQ ∥ ${fmtAxis(ax.U)} vs δQ ∥ ${fmtAxis(ax.V)}`,`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,limits.UVU||limits.U,limits.UVV||limits.V,PLOT_IDS.UV,true));
   }
 
+  // Removing kept results (Result tab buttons and the Comparison table).
+  const setKeepNote=(text,warn=false)=>{ const note=$('resolutionKeepNote'); if(note){ note.textContent=text; note.classList.toggle('warn',warn); } };
+  function clearKept(){
+    if(!shared.keptResolutions.length) return;
+    shared.keptResolutions=[]; selectedId=null;
+    setKeepNote('All kept results were removed.');
+    renderResolutionComparison();
+  }
+  function removeKept(id){
+    shared.keptResolutions=shared.keptResolutions.filter(k=>k.id!==id);
+    if(selectedId===id) selectedId=null;
+    setKeepNote('');
+    renderResolutionComparison();
+  }
+  function removeLastKept(){
+    const last=shared.keptResolutions.reduce((a,k)=>!a||k.id>a.id ? k : a,null);
+    if(!last) return;
+    removeKept(last.id);
+    setKeepNote(`Removed the last kept result (${shared.keptResolutions.length} kept).`);
+  }
+
   // Event wiring (the Results section is static HTML).
   $('resolutionKeepResult')?.addEventListener('click',keepCurrent);
+  $('resolutionRemoveLastKept')?.addEventListener('click',removeLastKept);
+  $('resolutionClearKept')?.addEventListener('click',clearKept);
   for(const tab of document.querySelectorAll('#resolutionResultTabs [data-resolution-view]'))
     tab.addEventListener('click',()=>setView(tab.dataset.resolutionView));
   document.querySelector('#resolutionComparisonView .resolution-compare-table')?.addEventListener('click',event=>{
-    if(event.target.closest?.('#resolutionCompareClear')){
-      shared.keptResolutions=[]; selectedId=null;
-      const note=$('resolutionKeepNote'); if(note){ note.textContent=''; note.classList.remove('warn'); }
-      renderResolutionComparison();
-      return;
-    }
+    if(event.target.closest?.('#resolutionCompareClear')){ clearKept(); return; }
     const remove=event.target.closest?.('[data-remove-id]');
-    if(remove){
-      const id=Number(remove.dataset.removeId);
-      shared.keptResolutions=shared.keptResolutions.filter(k=>k.id!==id);
-      if(selectedId===id) selectedId=null;
-      renderResolutionComparison();
-      return;
-    }
+    if(remove){ removeKept(Number(remove.dataset.removeId)); return; }
     const row=event.target.closest?.('tr[data-kept-id]');
     if(!row) return;
     const id=Number(row.dataset.keptId);
