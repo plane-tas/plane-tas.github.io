@@ -289,7 +289,7 @@ function saveStructureViewerState(){
     }));
   }catch(_e){}
 }
-function sourceIsMagneticCif(){return fn.currentStructureForViewer()?.structure?.magnetic===true;}
+function sourceIsMagneticCif(){const s=fn.currentStructureForViewer();return s?.structure?.magnetic===true || !!s?.mcifSource;}
 function restoreStructureViewerState(){
   fn.clearSpinRowSelection({redraw:false});
   cifState.visibleSpinSelectionSites.clear();
@@ -358,6 +358,8 @@ function restoreStructureViewerState(){
     }
     if(["collinear","helical","sinusoidal","incommensurate"].includes(String(saved.momentStructureType||""))) cifState.structureMomentStructureType=String(saved.momentStructureType);
     else if(String(saved.momentStructureType||"")==="canted") cifState.structureMomentStructureType="collinear";
+    // Kept when an incommensurate mCIF is edited again after a reload.
+    cifState.restoredMomentStructureType=cifState.structureMomentStructureType;
     if(["a","b","c"].includes(String(saved.momentRotationAxis||""))) cifState.structureMomentRotationAxis=String(saved.momentRotationAxis);
     if(["CW","CCW"].includes(String(saved.momentChirality||""))) cifState.structureMomentChirality=String(saved.momentChirality);
     { const n=Number(saved.momentPropagationIndex); cifState.structureMomentPropagationIndex=Number.isInteger(n)&&n>0?n:0; }

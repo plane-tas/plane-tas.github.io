@@ -101,7 +101,7 @@ function updateStructureEditorKNote(){
     lines.push({text:`Incommensurate: k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}) is used as entered. M(r) = M1 cos(2πk·r − φ) + M2 sin(2πk·r − φ); M1, M2 are components along a, b, c (μB).`,cls:'info'});
   }else if(icm){
     lines.push({text:'Incommensurate: enter a propagation vector k.',cls:'warn'});
-  }else if(q.count && !fn.sourceIsMagneticCif?.()){
+  }else if(q.count && (!fn.sourceIsMagneticCif?.() || fn.currentStructureForViewer?.()?.mcifSource)){
     const idx=q.index||1, comps=[q.h,q.k,q.l];
     if(q.snapped){
       const entered=['h','k','l'].map(a=>q.raw?.[a]||'').join(', ');

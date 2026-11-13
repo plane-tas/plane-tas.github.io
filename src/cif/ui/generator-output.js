@@ -125,8 +125,15 @@ function findGeneratorSpaceGroup(parsed){
     if(byNumber) return byNumber;
   }
   const sym=normalizedSpaceGroupSymbol(parsed?.spaceGroup);
-  if(!sym) return null;
-  return cifState.cifSpaceGroups.find(x=>normalizedSpaceGroupSymbol(x.hm)===sym || normalizedSpaceGroupSymbol(x.hall)===sym) || null;
+  const found=sym ? cifState.cifSpaceGroups.find(x=>normalizedSpaceGroupSymbol(x.hm)===sym || normalizedSpaceGroupSymbol(x.hall)===sym) || null : null;
+  if(found) return found;
+  // Incommensurate mCIF without symmetry (e.g. superspace group P1.1'(abg)0s
+  // written by PLANE-TAS): every atom of the cell is its own site, so the
+  // crystal structure is edited in P1.
+  const atoms=parsed?.atoms||[], sites=parsed?.asymmetricSites||[];
+  if(parsed?.incommensurateSingleQ && atoms.length && sites.length===atoms.length)
+    return cifState.cifSpaceGroups.find(x=>x.number===1) || null;
+  return null;
 }
 
 function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{message=true}={}){

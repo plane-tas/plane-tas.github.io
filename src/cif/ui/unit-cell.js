@@ -84,13 +84,26 @@ function updateStructureUnitCellReference(source){
   const magnetic=!!source?.structure?.magnetic;
   const parent=magnetic?resolvedViewerParent(source):null;
   if(!select)return parent;
+  // Incommensurate (superspace) mCIF: its cell is the basic, crystallographic
+  // cell; there is no finite magnetic cell.
+  const incommensurate=magnetic&&!!source?.structure?.incommensurateSingleQ;
+  if(incommensurate){
+    const parentOption=select.querySelector('option[value="crystallographic"]');
+    const magneticOption=select.querySelector('option[value="magnetic"]');
+    if(parentOption){parentOption.disabled=false;parentOption.title='';}
+    if(magneticOption){magneticOption.disabled=true;magneticOption.title='An incommensurate structure has no finite magnetic cell.';}
+    cifState.structureUnitCellReference='crystallographic';
+    select.value='crystallographic';
+    select.title='Incommensurate structure: the cell is the crystallographic (basic) cell.';
+    return null;
+  }
   const parentOption=select.querySelector('option[value="crystallographic"]');
   const magneticOption=select.querySelector('option[value="magnetic"]');
   if(parentOption){
     parentOption.disabled=magnetic&&!parent;
     parentOption.title=parentOption.disabled?'Parent-cell transformation is absent or unsupported in this mCIF.':'';
   }
-  if(magneticOption)magneticOption.disabled=!magnetic;
+  if(magneticOption){magneticOption.disabled=!magnetic;magneticOption.title='';}
   // Keep a user-selected reference when possible. Never fabricate a parent.
   if(magnetic&&!parent && cifState.structureUnitCellReference==='crystallographic')
     cifState.structureUnitCellReference='magnetic';

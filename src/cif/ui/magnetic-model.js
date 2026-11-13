@@ -80,7 +80,7 @@ function incommensurateMcifModel(structure){
 function mcifModel(structure,selected){
   if(selected.incommensurateSingleQ || selected.atoms.some(atom=>atom.magneticFourier)){
     // Edited (Incommensurate type): M1, M2, phases of the Spins rows and k of the sidebar.
-    if(fn.spinEditingIsIncommensurate(structure)) return {...incommensurateEditorModel(structure),source:'incommensurate mCIF (edited)'};
+    if(cifState.importedMagneticEditMode && fn.spinEditingIsIncommensurate(structure)) return {...incommensurateEditorModel(structure),source:'incommensurate mCIF (edited)'};
     return {...incommensurateMcifModel(selected),source:'incommensurate mCIF'};
   }
   if(structure.atoms.length>MAX_MODEL_ATOMS) throw new Error(`Magnetic cell contains ${structure.atoms.length} atoms (limit ${MAX_MODEL_ATOMS}).`);
@@ -151,7 +151,7 @@ function nuclearCifModel(structure){
 function currentMagneticModel(){
   const selected=getSelectedCifStructure();
   const viewer=fn.currentStructureForViewer()?.structure||null;
-  if(selected?.magnetic){
+  if(selected?.magnetic && !viewer?.fromMcifParent){
     // The viewer may carry an edited magnetic-cell metric for the same atoms.
     const structure=(viewer?.magnetic && viewer.asymmetricSites===selected.asymmetricSites) ? viewer : selected;
     return mcifModel(structure,selected);

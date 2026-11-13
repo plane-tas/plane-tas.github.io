@@ -138,6 +138,7 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   const importedQ=fn.propagationVectorsFromMcif(cifText,parsed);
   if(importedQ.length) setPropagationVectorsFromFile?.(importedQ);
   cifState.importedMagneticEditMode=false;
+  cifState.restoredMomentStructureType=null;
   cifState.structureModifyLocked=false;
   cifState.importedOriginalQ=importedQ.map(q=>({...q}));
   cifState.modifiedMagneticDraft=null;

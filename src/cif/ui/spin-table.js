@@ -71,12 +71,13 @@ function spinEditingIsIndividual(structure){return cifState.structureSpinEditing
 // Incommensurate structure type (nuclear CIF only): one row per atom of the
 // nuclear cell with M1, M2 (crystal-axis components, mu_B) and a phase (deg),
 // as in Fcal-n: M(r) = M1 cos(2 pi q.r - phi) + M2 sin(2 pi q.r - phi).
-// Also an incommensurate mCIF once its moments are edited (structure type
-// Incommensurate chosen): the rows start from the file's Fourier components.
+// An incommensurate mCIF always uses these rows (its k shows that it is
+// incommensurate): as loaded they show the file's Fourier components as M1,
+// M2, phi; editing one switches to the Incommensurate structure type.
 function spinEditingIsIncommensurate(structure){
-  if(cifState.structureMomentStructureType!=='incommensurate' || !structure) return false;
-  if(!structure.magnetic) return true;
-  return !!structure.incommensurateSingleQ && !!cifState.importedMagneticEditMode;
+  if(!structure) return false;
+  if(structure.magnetic) return !!structure.incommensurateSingleQ;
+  return cifState.structureMomentStructureType==='incommensurate';
 }
 const incommensurateSpinKey=atom=>`icm:${atomSiteKey(atom)}`;
 function incommensurateSpinCandidates(structure){
@@ -119,6 +120,7 @@ function incommensurateSettingForAtom(atom,settings=currentMomentSettings()){
 function fillIncommensurateHelix(){
   const structure=fn.currentStructureForViewer()?.structure||null;
   if(!spinEditingIsIncommensurate(structure)) return;
+  fn.activateImportedMagneticEditing();
   const basis=fn.directLatticeBasis(structure.lattice);
   if(!basis) return;
   const live=currentMomentSettings();

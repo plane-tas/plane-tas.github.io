@@ -8,7 +8,7 @@ export function installAtomAppearance(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     atomDisplayColor, atomDisplaySize, atomIsVisible, atomSiteKey, complementaryAtomOutlineColor,
-    currentStructureForViewer, elementRadius, parentAppearanceOrbits
+    currentStructureForViewer, elementRadius, mcifParentStructure, parentAppearanceOrbits
   });
 // Site-level presentation overrides are separate from crystallographic data.
 // Using sourceSiteIndex keeps symmetry-generated mates together with their site.
@@ -138,7 +138,35 @@ function withEditedMagneticCell(source){
   }
   return {...source,structure:{...source.structure,lattice}};
 }
+// An mCIF edited with a structure type of the other kind (Collinear, Helical,
+// Sinusoidal for an incommensurate mCIF; Incommensurate for a commensurate
+// one) is calculated like a CIF: its crystallographic (parent) structure with
+// the propagation vector of the sidebar.
+function mcifUsesParentStructure(structure){
+  if(!structure?.magnetic || !cifState.importedMagneticEditMode) return false;
+  const type=cifState.structureMomentStructureType;
+  return structure.incommensurateSingleQ ? type!=='incommensurate' : type==='incommensurate';
+}
+// The crystallographic structure of the selected mCIF as held by the CIF
+// generator (the structure written by Generate CIF), or null.
+function mcifParentStructure(structure){
+  const selected=getSelectedCifStructure();
+  // The viewer may carry a copy of the selected mCIF (edited cell metric).
+  if(!selected?.magnetic || (structure!==selected && structure?.asymmetricSites!==selected.asymmetricSites)) return null;
+  let parsed=null;
+  try{ parsed=fn.buildGeneratedCif()?.parsed||null; }catch(_e){ parsed=null; }
+  if(!parsed?.atoms?.length || parsed.magnetic) return null;
+  return {...parsed,fromMcifParent:true};
+}
 function currentStructureForViewer(){
+  const source=viewerSource();
+  if(source?.structure && mcifUsesParentStructure(source.structure)){
+    const parent=mcifParentStructure(source.structure);
+    if(parent) return {...source,structure:parent,mcifSource:source.structure};
+  }
+  return source;
+}
+function viewerSource(){
   // Symmetry/Manual only changes the Atomic Positions editor representation.
   // Preview sources and crystallographic-cell framing must not change on a
   // Mode toggle. An explicitly generated/Set CIF can still become the source.

@@ -231,6 +231,9 @@ function prepareStructureTableHeightSync(){
   if(typeof ResizeObserver==='function'){
     const observer=new ResizeObserver(requestStructureTableHeightSync);
     for(const el of ['mcifStructurePane','cifGeneratorPanel'].map($).filter(Boolean))observer.observe(el);
+    // Content above the tables (output notes, spin controls, Fill helix row)
+    // changes the space left for the table without resizing the panels.
+    for(const el of document.querySelectorAll('#generatorNuclearPane > *, #structurePanel [data-structure-config-panel] > :not(.cif-atom-table-wrap):not(#cifAtomColorRows):not(.structure-spin-table-wrap):not(.structure-style-table-wrap)'))observer.observe(el);
   }
   requestStructureTableHeightSync();
 }
@@ -445,19 +448,29 @@ function syncIncommensurateControls(){
   const icm=fn.spinEditingIsIncommensurate(structure);
   const editing=$("cifSpinEditingMode");
   if(editing){
-    if(icm){ editing.value="incommensurate"; editing.disabled=true; }
-    else{ editing.value=cifState.structureSpinEditingMode; editing.disabled=false; }
+    // Incommensurate: each atom of the cell has its own M1, M2 and phase
+    // (no symmetry is used), shown as Manual.
+    if(icm){ editing.value="individual"; editing.disabled=true; editing.title="Incommensurate: M1, M2 and the phase are entered for each atom (no symmetry)."; }
+    else{ editing.value=cifState.structureSpinEditingMode; editing.disabled=false; editing.title=""; }
   }
   const direction=$("cifMomentDirectionMode");
   if(direction){ direction.disabled=icm; direction.title=icm?"Incommensurate: M1 and M2 are components along a, b and c (μB).":""; }
   const fill=$("cifMomentIcmFillRow"); if(fill) fill.hidden=!icm;
-  // Types offered: a nuclear CIF all but mCIF; a commensurate mCIF all but
-  // Incommensurate; an incommensurate mCIF only mCIF and Incommensurate.
+  // Types offered: every type (an mCIF also "mCIF"). For an mCIF, a type of
+  // the other kind than the file (Collinear, Helical, Sinusoidal for an
+  // incommensurate mCIF; Incommensurate for a commensurate one) uses its
+  // crystallographic structure (see currentStructureForViewer), so it needs
+  // that structure. A k that does not suit the type gives a warning (Spins note).
   const typeSelect=$("cifMomentStructureType");
-  const incMcif=!!structure?.magnetic && !!structure?.incommensurateSingleQ;
+  const viewer=fn.currentStructureForViewer();
+  const mcif=viewer?.mcifSource || (structure?.magnetic ? structure : null);
+  const hasParent=!mcif || !!fn.mcifParentStructure(mcif);
+  const incMcif=!!mcif?.incommensurateSingleQ;
   for(const option of typeSelect?.options||[]){
-    if(option.value==="incommensurate") option.disabled=!!structure?.magnetic && !incMcif;
-    else if(["collinear","helical","sinusoidal"].includes(option.value)) option.disabled=incMcif;
+    if(option.value==="mcif") continue;
+    const foreign=!!mcif && (incMcif ? option.value!=="incommensurate" : option.value==="incommensurate");
+    option.disabled=foreign && !hasParent;
+    option.title=option.disabled ? "The crystal structure of this mCIF could not be loaded into the CIF Generator." : "";
   }
 }
 }

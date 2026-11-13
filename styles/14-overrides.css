@@ -761,3 +761,13 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #structurePanel .structure-icm-fill-note{font-size:var(--tas-table-text-size,12px);color:#4a5560}
 #structurePanel .structure-direction-note{margin:calc(2px * var(--tas-density)) 0 calc(6px * var(--tas-density));font-size:var(--tas-table-text-size,12px);color:#4a5560;line-height:1.35}
 #structurePanel .structure-direction-note[hidden]{display:none}
+
+/* Spins: Mode / Display / Direction / Arrow length / width / head in six equal columns. */
+#structurePanel .structure-spin-controls-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:end;margin:calc(6px * var(--tas-density)) 0 calc(4px * var(--tas-density));min-width:0}
+#structurePanel .structure-spin-controls-row>[hidden]{display:none!important}
+#structurePanel .structure-spin-controls-row>.structure-entry-field{margin:0;width:100%;min-width:0;max-width:none;box-sizing:border-box}
+#structurePanel .structure-spin-controls-row .structure-entry-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#structurePanel .structure-spin-controls-row :is(select,input){width:100%;max-width:100%;min-width:0;box-sizing:border-box;font-size:var(--tas-control-text-size)!important}
+@media (max-width:520px){
+  #structurePanel .structure-spin-controls-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

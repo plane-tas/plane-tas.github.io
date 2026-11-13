@@ -3,7 +3,7 @@
 import {atomSiteKey} from '../mcif-export.js';
 export function installMagneticEdit(ctx){
   const {deps:{
-    $, getPropagationVectors, getSelectedCifStructure
+    $, getPropagationVectors, getSelectedCifStructure, getSelectedCifText, scheduleRecalc, setPropagationVectorsFromFile
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     activateImportedMagneticEditing, revertImportedMagneticEditing, clearSpinRowSelection, propagationSignature,
@@ -75,7 +75,15 @@ function propagationSignature(){
 function activateImportedMagneticEditing(){
   if(!fn.sourceIsMagneticCif() || cifState.importedMagneticEditMode || cifState.structureModifyLocked) return;
   for(const [key,value] of fn.currentMomentSettings()) cifState.structureMomentSettings.set(key,value);
+  const incommensurateSource=!!fn.currentStructureForViewer()?.structure?.incommensurateSingleQ;
   cifState.importedMagneticEditMode=true;
+  // An incommensurate mCIF is edited first with the Incommensurate type
+  // (Collinear, Helical, Sinusoidal use its crystallographic structure).
+  // After a reload the saved type is kept.
+  const restored=cifState.restoredMomentStructureType;
+  cifState.restoredMomentStructureType=null;
+  const keep=["collinear","helical","sinusoidal"].includes(restored) && restored===cifState.structureMomentStructureType;
+  if(incommensurateSource && !keep) cifState.structureMomentStructureType='incommensurate';
   rememberModifiedMagneticDraft();
   fn.invalidateGeneratedMcif();
   fn.syncImportedMomentStructureType();
@@ -85,9 +93,16 @@ function activateImportedMagneticEditing(){
 // edited moments and the saved Modify draft are discarded).
 function revertImportedMagneticEditing(){
   if(!fn.sourceIsMagneticCif()) return;
-  const structure=fn.currentStructureForViewer()?.structure;
+  const viewer=fn.currentStructureForViewer();
+  const structure=viewer?.mcifSource||viewer?.structure;
   const key=magneticDraftIdentity();
+  // Back to the propagation vector of the file (it may have been changed);
+  // set while still editing, so the k change does not start a new edit.
+  const fileQ=fn.propagationVectorsFromMcif(getSelectedCifText?.()||"",getSelectedCifStructure());
+  if(fileQ.length && setPropagationVectorsFromFile){ setPropagationVectorsFromFile(fileQ); scheduleRecalc?.(); }
+  cifState.importedMagneticQSignature=fn.propagationSignature();
   cifState.importedMagneticEditMode=false;
+  cifState.restoredMomentStructureType=null;
   cifState.modifiedMagneticDraft=null;
   try{
     const data=JSON.parse(localStorage.getItem(cifState.MCIF_EDIT_DRAFT_KEY)||"{}");

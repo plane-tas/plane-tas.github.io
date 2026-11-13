@@ -164,6 +164,7 @@ function generateMcifForReview(){
 function importedMagneticModel(){
   const source=getSelectedCifStructure();
   if(!source?.magnetic || !Array.isArray(source.atoms)) return null;
+  if(fn.currentStructureForViewer()?.structure?.fromMcifParent) return null;
   if(source.incommensurateSingleQ || source.atoms.some(atom=>atom.magneticFourier))
     throw new Error("Incommensurate mCIF: mCIF export is not available (magnetic structure is not exported).");
   const live=fn.currentMomentSettings();
@@ -228,7 +229,7 @@ function generateP1McifForReview(){
     fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group P1.1'(abg)0s, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Download or Set.`);
     return result;
   }
-  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
+  if(fn.selectedCifIsIncommensurate() && !fn.currentStructureForViewer()?.structure?.fromMcifParent) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
   const generated=fn.buildGeneratedCif();
   const structure=generated.parsed;
   const displayed=fn.currentStructureForViewer()?.structure;

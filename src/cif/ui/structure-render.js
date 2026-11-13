@@ -197,7 +197,9 @@ function renderCifStructureView(){
   const enabledMoments=[...fn.currentMomentSettings().values()].filter(x=>x.enabled).length;
   const uiRange=fn.structureRange();
   status.textContent=`${source.label}: x ${uiRange.x.min}–${uiRange.x.max}, y ${uiRange.y.min}–${uiRange.y.max}, z ${uiRange.z.min}–${uiRange.z.max} (${cifState.structureUnitCellReference} fractions); ${displayedAtoms.length} displayed atoms.`+
-    (cifState.structureUnitCellMode!=='none' && source.structure.magnetic && !parentFrame ?
+    (cifState.structureUnitCellMode!=='none' && source.structure.incommensurateSingleQ ?
+      ' Crystallographic (basic) unit cell shown.':
+      cifState.structureUnitCellMode!=='none' && source.structure.magnetic && !parentFrame ?
       ' Parent-cell setting unavailable: showing magnetic cell.':
       cellFrame.parent && cifState.structureUnitCellMode!=='none' ? ' Crystallographic unit cell shown.':
       source.structure.magnetic && cifState.structureUnitCellMode!=='none' ? ' Magnetic unit cell shown.':'')+

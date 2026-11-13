@@ -6,7 +6,7 @@ export function installStructureCamera(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     cameraFromRelayoutEvent, copyStructureCamera, currentStructureCamera,
-    currentStructureCameraDistance, enabledPropagationVectorsForStructure,
+    currentStructureCameraDistance, enabledPropagationVectorsForStructure, propagationVectorIsCommensurate,
     normalizeStructureRangeInputs, parseStructureRangeEntry, rangeCellBounds,
     startStructureCameraWatch, stopStructureCameraWatch, structureCameraForView, structureRange,
     structureRenderRange, updateStructureOrientationTriads
@@ -31,6 +31,26 @@ function snapPropagationComponent(raw){
     if(Math.abs(value-n/d)<=tol) return {value:n/d,snapped:{n,d,raw:text}};
   }
   return {value};
+}
+// Commensurate k for choosing the structure type of an mCIF: every component a
+// fraction with denominator <= 24, entered exactly (1/3, 0.25) or as a
+// decimal that differs from it by less than half a unit of its last digit and
+// at most 0.0005 (0.333 -> 1/3, but 0.27 or 0.33 stay incommensurate).
+function propagationComponentIsCommensurate(raw){
+  const value=parseNumericValue(raw);
+  if(!Number.isFinite(value)) return false;
+  const text=String(raw??'').trim();
+  const decimal=/^[+-]?\d*\.(\d+)$/.exec(text);
+  const tol=decimal ? Math.min(0.5*10**-decimal[1].length,0.0005)+1e-12 : 1e-8;
+  for(let d=1;d<=K_MAX_DENOMINATOR;d++) if(Math.abs(value-Math.round(value*d)/d)<=tol) return true;
+  return false;
+}
+function propagationVectorIsCommensurate(index=cifState.structureMomentPropagationIndex){
+  const rows=(typeof getPropagationVectors==="function" ? getPropagationVectors() : []) || [];
+  const enabled=rows.map((row,i)=>({row,index:i+1})).filter(q=>q.row?.enabled);
+  const q=enabled.find(item=>item.index===index)||enabled[0];
+  if(!q) return true;
+  return ['h','k','l'].every(a=>propagationComponentIsCommensurate(q.row?.[a]));
 }
 function enabledPropagationVectorsForStructure(){
   const rows=(typeof getPropagationVectors==="function" ? getPropagationVectors() : []) || [];
