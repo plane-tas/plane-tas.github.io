@@ -196,7 +196,7 @@ function renderCifStructureView(){
   fn.updateStructureEditorKNote();
   const enabledMoments=[...fn.currentMomentSettings().values()].filter(x=>x.enabled).length;
   const uiRange=fn.structureRange();
-  status.textContent=`${source.label}: x ${uiRange.x.min}–${uiRange.x.max}, y ${uiRange.y.min}–${uiRange.y.max}, z ${uiRange.z.min}–${uiRange.z.max} (${cifState.structureUnitCellReference} fractions); ${displayedAtoms.length} displayed atoms.`+
+  status.textContent=`${source.label}: a ${uiRange.x.min}–${uiRange.x.max}, b ${uiRange.y.min}–${uiRange.y.max}, c ${uiRange.z.min}–${uiRange.z.max} (${cifState.structureUnitCellReference} fractions); ${displayedAtoms.length} displayed atoms.`+
     (cifState.structureUnitCellMode!=='none' && source.structure.incommensurateSingleQ ?
       ' Crystallographic (basic) unit cell shown.':
       cifState.structureUnitCellMode!=='none' && source.structure.magnetic && !parentFrame ?

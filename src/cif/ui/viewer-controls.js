@@ -27,7 +27,8 @@ function createSplitRangeControls(axis){
       const input=document.createElement("input"); input.id=`cifRange${cap}${suffix}`; input.type="number"; input.step="0.1"; input.value=String(value);
       label.append(caption,input); return {label,input};
     };
-    const minField=field("Min",`${axis} min`,parsed.min), maxField=field("Max",`${axis} max`,parsed.max);
+    const cellAxis={x:"a",y:"b",z:"c"}[axis]||axis;
+    const minField=field("Min",`${cellAxis} min`,parsed.min), maxField=field("Max",`${cellAxis} max`,parsed.max);
     if(parent){ parent.insertBefore(minField.label,legacy); parent.insertBefore(maxField.label,legacy); }
     legacy.type="hidden";
     minInput=minField.input; maxInput=maxField.input;
