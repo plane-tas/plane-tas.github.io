@@ -2,6 +2,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {CIF_OUTPUT_FORMAT_STORAGE_KEY} from './constants.js';
 import {atomSiteKey, exportCommensurateMcif, rationalApprox} from '../mcif-export.js';
+import {exportIncommensurateP1Mcif} from '../mcif-incommensurate-export.js';
 
 export function installMcifGenerator(ctx){
   const {deps:{
@@ -66,10 +67,35 @@ function replaceMcifMoments(source,rows){
   else lines.push("",...block);
   return lines.join("\n");
 }
+// Incommensurate structure type: P1 superspace magCIF of the displayed cell
+// (the same atoms, M1, M2, phases and k as the reflections and the 3-D view).
+function incommensurateMcif(){
+  const structure=fn.currentStructureForViewer()?.structure;
+  if(!structure?.atoms?.length) throw new Error("Selected structure is unavailable.");
+  const q=fn.effectivePropagationVectorForStructure();
+  const exact=[q.exact?.h,q.exact?.k,q.exact?.l].map(Number);
+  const live=fn.currentMomentSettings();
+  const result=exportIncommensurateP1Mcif({lattice:structure.lattice,atoms:structure.atoms,
+    q:exact.every(Number.isFinite)?exact:[q.h,q.k,q.l],settingFor:atom=>fn.incommensurateSettingForAtom(atom,live),
+    title:cleanMcifBaseName($("cifGeneratedName")?.value)});
+  // Re-read the file: it must give back the same magnetic sites.
+  const check=parseCifStructure(result.text);
+  if(!check.incommensurateSingleQ) throw new Error("Generated incommensurate mCIF could not be read back.");
+  cifState.lastGeneratedMcifText=result.text;
+  cifState.lastGeneratedMcifName=`${cleanMcifBaseName($("cifGeneratedName")?.value)}.mcif`;
+  return result;
+}
 function generateMcifForReview(){
   const source=getSelectedCifText();
   if(!source) throw new Error("Select a CIF/mCIF before generating.");
-  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: mCIF export is not available (magnetic structure is not exported).");
+  if(fn.spinEditingIsIncommensurate(fn.currentStructureForViewer()?.structure||null)){
+    const result=incommensurateMcif();
+    for(const id of ['structureMcifDownload','structureMcifSet']) if($(id)) $(id).disabled=false;
+    mcifPreview(result.text);
+    mcifMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate P1.1'(abg)0s, ${result.atomCount} atoms, ${result.magneticCount} magnetic.`);
+    return;
+  }
+  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
   if(fn.sourceIsMagneticCif() && cifState.importedMagneticEditMode) throw new Error(
     "This imported mCIF has been modified. Export with the original magnetic symmetry is disabled because it may no longer be valid."
   );
@@ -194,7 +220,15 @@ function individualSettingsFromMagneticModel(structure,model){
 // The public CIF/mCIF Generator exports all decorated atoms in magnetic P1.
 // BNS group classification is NOT inferred; the existing notice stays visible.
 function generateP1McifForReview(){
-  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: mCIF export is not available (magnetic structure is not exported).");
+  if(fn.spinEditingIsIncommensurate(fn.currentStructureForViewer()?.structure||null)){
+    const result=incommensurateMcif();
+    if($("cifPreview")) $("cifPreview").textContent=result.text;
+    if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (incommensurate, P1.1'(abg)0s)`;
+    fn.setCifGeneratedReady(true);
+    fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group P1.1'(abg)0s, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Download or Set.`);
+    return result;
+  }
+  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
   const generated=fn.buildGeneratedCif();
   const structure=generated.parsed;
   const displayed=fn.currentStructureForViewer()?.structure;

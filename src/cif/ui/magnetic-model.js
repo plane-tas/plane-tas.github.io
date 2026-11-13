@@ -11,9 +11,12 @@
 //   mCIF, Manual            one moment per expanded mCIF atom (magnetic cell).
 //   CIF + k (linked)        site moment x modulation(2*pi*k.r) in the k supercell.
 //   CIF, Manual             one moment per atom of the k supercell.
+//   CIF, Incommensurate     M1, M2 and phase per atom of the nuclear cell; k as
+//                           entered (no supercell, see magnetic/incommensurate.js).
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {buildMagneticMotif, cartesianMoment, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 import {atomSiteKey} from '../mcif-export.js';
+import {buildIncommensurateModel, incommensurateMomentAt, incommensurateSettingFromMcifAtom} from '../../magnetic/incommensurate.js';
 
 export function installMagneticModel(ctx){
   const {deps:{
@@ -60,9 +63,26 @@ function siteFromAtom(atom,fract,moment){
     fract:fract.map(wrap),moment,sourceLabel:atom.sourceLabel,sourceSiteIndex:atom.sourceSiteIndex};
 }
 
+// Incommensurate (superspace) mCIF: every expanded atom carries the Fourier
+// components of the file transformed by its operation,
+//   M(r) = T [Mcos cos 2pi(s k.r + t) + Msin sin 2pi(s k.r + t)] + M0,
+// T = (time reversal) det(R) R, s = +/-1 and t the x4 part of the operation.
+// In the form M1 cos(2pi k.r - phi) + M2 sin(2pi k.r - phi):
+//   M1 = T Mcos,  M2 = s T Msin,  phi = -s 2pi t   (crystal-axis components).
+function incommensurateMcifModel(structure){
+  const atoms=structure.atoms||[];
+  const withFourier=atoms.find(atom=>atom.magneticFourier);
+  const pv=structure.propagationVectors?.[0];
+  const q=(withFourier?.magneticFourier?.q||(pv?[pv.h,pv.k,pv.l]:[])).map(Number);
+  return buildIncommensurateModel({lattice:structure.lattice,atoms,q,settingFor:atom=>
+    (atom.magneticFourier||Array.isArray(atom.magneticMoment)) ? {enabled:true,...incommensurateSettingFromMcifAtom(atom)} : null});
+}
 function mcifModel(structure,selected){
-  if(selected.incommensurateSingleQ || selected.atoms.some(atom=>atom.magneticFourier))
-    throw new Error('Fourier-modulated mCIF requires a dedicated satellite structure-factor calculation (not implemented).');
+  if(selected.incommensurateSingleQ || selected.atoms.some(atom=>atom.magneticFourier)){
+    // Edited (Incommensurate type): M1, M2, phases of the Spins rows and k of the sidebar.
+    if(fn.spinEditingIsIncommensurate(structure)) return {...incommensurateEditorModel(structure),source:'incommensurate mCIF (edited)'};
+    return {...incommensurateMcifModel(selected),source:'incommensurate mCIF'};
+  }
   if(structure.atoms.length>MAX_MODEL_ATOMS) throw new Error(`Magnetic cell contains ${structure.atoms.length} atoms (limit ${MAX_MODEL_ATOMS}).`);
   const lattice=structure.lattice;
   let sites, source;
@@ -90,7 +110,20 @@ function mcifModel(structure,selected){
   return {lattice,sites,replication:[1,1,1],parentReplication,source,ambiguousSites:0};
 }
 
+// k as entered (never snapped to a fraction) for the Incommensurate type.
+function exactPropagationVector(){
+  const q=fn.effectivePropagationVectorForStructure();
+  const v=[q.exact?.h,q.exact?.k,q.exact?.l].map(Number);
+  return v.every(Number.isFinite) ? v : [q.h,q.k,q.l];
+}
+function incommensurateEditorModel(structure){
+  if(structure.atoms.length>MAX_MODEL_ATOMS) throw new Error(`Cell contains ${structure.atoms.length} atoms (limit ${MAX_MODEL_ATOMS}).`);
+  const live=fn.currentMomentSettings();
+  return buildIncommensurateModel({lattice:structure.lattice,atoms:structure.atoms,q:exactPropagationVector(),
+    settingFor:atom=>fn.incommensurateSettingForAtom(atom,live)});
+}
 function nuclearCifModel(structure){
+  if(fn.spinEditingIsIncommensurate(structure)) return incommensurateEditorModel(structure);
   const q=fn.effectivePropagationVectorForStructure();
   if(fn.spinEditingIsIndividual(structure)){
     const live=fn.currentMomentSettings();
@@ -135,6 +168,17 @@ function positionKey(element,p,G=2000){
   return `${element}|${p.map(v=>Math.round(wrap(v)*G)%G).join(',')}`;
 }
 function magneticMomentLookup(model){
+  if(model?.incommensurate){
+    // The moment depends on the full position (cell translation included).
+    const byPosition=new Map();
+    for(const s of model.sites||[]) byPosition.set(positionKey(s.element,s.fract),s);
+    return (element,frac)=>{
+      const f=frac.map(Number);
+      const s=byPosition.get(positionKey(element,f)) || (model.sites||[]).find(site=>site.element===element &&
+        site.fract.every((v,i)=>{const d=v-f[i];return Math.abs(d-Math.round(d))<2e-3;}));
+      return s ? incommensurateMomentAt(s,model.q,f) : null;
+    };
+  }
   const exact=new Map();
   for(const s of model?.sites||[]) exact.set(positionKey(s.element,s.fract),s.moment);
   const rep=model?.replication||[1,1,1];

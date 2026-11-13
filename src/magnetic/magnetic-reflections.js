@@ -26,7 +26,7 @@ export function cartesianMoment(crystalAxis,lattice){
   const axes=latticeVectors(lattice).map(unit);
   return crystalAxis.reduce((v,x,i)=>plus(v,times(axes[i],Number(x)||0)),[0,0,0]);
 }
-function reciprocalBasis(lattice){
+export function reciprocalBasis(lattice){
   const [a,b,c]=latticeVectors(lattice);
   const vol=dot(a,cross(b,c));
   return [times(cross(b,c),twopi/vol),times(cross(c,a),twopi/vol),times(cross(a,b),twopi/vol)];
@@ -113,7 +113,7 @@ export function buildMagneticMotif({structure,settings=new Map(),q=[0,0,0],mode=
 // Debye-Waller factor of one site, identical to nuclearStructureFactorSquared:
 // U^ij (CIF convention, along normalized a*,b*,c*) or Biso. A diagonal
 // supercell leaves the reciprocal-axis directions, hence U^ij, unchanged.
-function debyeWaller(site,hkl,q,rlen){
+export function debyeWaller(site,hkl,q,rlen){
   if(site.Uaniso && rlen){
     const g=[hkl[0]*rlen[0],hkl[1]*rlen[1],hkl[2]*rlen[2]];
     let quad=0;
@@ -186,7 +186,7 @@ export function magneticElementsOfMotif(motif){
   return [...new Set((motif?.sites||[]).filter(s=>s.moment&&norm(s.moment)>1e-12)
     .map(s=>String(s.element||'').match(/^[A-Z][a-z]?/)?.[0]).filter(Boolean))].sort();
 }
-function magneticFormFactorDisplay(motif,Q,ionByElement){
+export function magneticFormFactorDisplay(motif,Q,ionByElement){
   const elements=[...new Set(motif.sites.filter(s=>s.moment&&norm(s.moment)>1e-12).map(s=>s.element))].sort();
   if(!elements.length)return {display:'1',sortValue:1};
   const factors=elements.map(element=>({element,ion:ionByElement[element],value:magneticIonFormFactor(element,Q,ionByElement)}));

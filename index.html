@@ -563,7 +563,7 @@
 <label class="cif-generator-file-name">File name
 <span class="cif-filename-entry"><input id="cifGeneratedName" type="text" value="generated_structure"/><span class="cif-filename-suffix" id="cifUnifiedFileSuffix">.cif</span></span>
 </label></div>
-<p class="cif-release-note" id="cifMcifBnsNotice" role="note" hidden>Note: Currently, mCIF export is supported only for single-k magnetic structures with P1 symmetry. Incommensurate mCIF: nuclear reflections only; magnetic intensities and mCIF export are not available.</p>
+<p class="cif-release-note" id="cifMcifBnsNotice" role="note" hidden>Note: mCIF export supports single-k magnetic structures only, written without symmetry: magnetic space group P1 (commensurate) or superspace group P1.1'(abg)0s (Incommensurate type). Always check the generated mCIF (for example, Set it and compare the structure and reflections) before using it elsewhere.</p>
 <div class="cif-source-button-row cif-unified-output-buttons">
 <button class="primary-action" id="cifOutputGenerate" type="button">Generate CIF</button>
 <button disabled id="cifOutputDownload" type="button">Download CIF</button>
@@ -662,7 +662,7 @@
 <label class="structure-entry-field"><span class="structure-entry-label">k1_l</span><input id="cifMomentK1L" type="text" inputmode="text" value="0" aria-label="k1_l"></label>
 </div><select id="cifMomentPropagationVector" class="structure-propagation-legacy-select" tabindex="-1" aria-hidden="true"></select></div>
 <label class="structure-entry-field"><span class="structure-entry-label">Structure type</span><select id="cifMomentStructureType">
-<option selected="" value="collinear">Collinear</option><option value="helical">Helical</option><option value="sinusoidal">Sinusoidal</option>
+<option selected="" value="collinear">Collinear</option><option value="helical">Helical</option><option value="sinusoidal">Sinusoidal</option><option value="incommensurate">Incommensurate</option>
 </select></label>
 <label class="structure-entry-field"><span class="structure-entry-label">Rotation axis</span><select id="cifMomentRotationAxis">
 <option value="a">a</option><option value="b">b</option><option selected="" value="c">c</option>
@@ -670,17 +670,19 @@
 <label class="structure-entry-field"><span class="structure-entry-label">Chirality</span><select id="cifMomentChirality" title="CW/CCW as viewed from the negative side toward the positive side of the selected rotation axis">
 <option selected="" value="CCW">CCW</option><option value="CW">CW</option>
 </select></label>
+<div class="structure-icm-fill-row" hidden id="cifMomentIcmFillRow"><button class="structure-icm-fill" id="cifMomentIcmFill" type="button" title="Incommensurate: fill M1 and M2 with a helix about the Rotation axis with the selected Chirality. The selected row (else the row edited last) is the reference: its M1 and size are copied to the enabled rows (all displayed rows when none is enabled). Without a reference each row keeps its own M1. The phases are not changed.">Fill helix</button><span class="structure-icm-fill-note">Click a row to use it as the reference (otherwise the row edited last).</span></div>
 </div>
 <div class="structure-spin-display-row">
-<label class="structure-entry-field"><span class="structure-entry-label">Direction</span><select id="cifMomentDirectionMode"><option selected="" value="polar">Polar</option><option value="cartesian">Cartesian</option></select></label>
+<label class="structure-entry-field"><span class="structure-entry-label">Direction</span><select id="cifMomentDirectionMode"><option selected="" value="polar">Polar</option><option value="cartesian">a, b, c</option></select></label>
 <label class="structure-entry-field"><span class="structure-entry-label">Arrow length</span><input id="cifMomentGlobalLength" min="0" placeholder="1" step="0.05" type="number" value="1"/></label>
 <label class="structure-entry-field"><span class="structure-entry-label">Arrow width</span><input id="cifMomentGlobalWidth" min="1" placeholder="10" step="1" type="number" value="10"/></label>
 <label class="structure-entry-field"><span class="structure-entry-label">Arrow head</span><input id="cifMomentGlobalHead" min="0.01" placeholder="0.51" step="0.01" type="number" value="0.51"/></label>
 </div>
 <div class="structure-spin-editor-toolbar">
-<label class="structure-entry-field structure-individual-selector"><span class="structure-entry-label">Mode</span><select id="cifSpinEditingMode"><option value="sites">Symmetry operations</option><option value="individual">Manual</option></select></label>
+<label class="structure-entry-field structure-individual-selector"><span class="structure-entry-label">Mode</span><select id="cifSpinEditingMode"><option value="sites">Symmetry operations</option><option value="individual">Manual</option><option hidden value="incommensurate">Incommensurate</option></select></label>
 <label class="structure-entry-field structure-spin-table-element-field"><span class="structure-entry-label">Display</span><select id="cifSpinTableElement" title="Filter spin rows by chemical element"></select></label>
 </div>
+<p class="structure-direction-note" id="cifSpinDirectionNote"></p>
 <div class="structure-help-text" hidden="" id="cifSpinIndividualInfo"></div>
 <div class="structure-spin-table-wrap" aria-label="Magnetic spin moment editor">
   <div class="structure-spin-table" id="cifSpinTable" role="table" aria-label="Magnetic moments">
@@ -690,6 +692,10 @@
     <div class="structure-spin-table-header" id="cifSpinHeaderX" role="columnheader">θ (°)</div>
     <div class="structure-spin-table-header" id="cifSpinHeaderY" role="columnheader">φ (°)</div>
     <div class="structure-spin-table-header" id="cifSpinHeaderZ" role="columnheader">μ (μB)</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2a" role="columnheader" title="M2a: sin component along a (μB)">M2a</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2b" role="columnheader" title="M2b: sin component along b (μB)">M2b</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2c" role="columnheader" title="M2c: sin component along c (μB)">M2c</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderPhase" role="columnheader" title="Phase φ of the site (degrees)">φ (°)</div>
     <div class="structure-spin-table-header" role="columnheader">Color</div>
     <div class="structure-spin-table-rows" id="cifMagMomentRows" role="rowgroup"></div>
   </div>
@@ -744,9 +750,8 @@
 <div class="structure-plot-overlay-left">
 <div aria-label="Structure plot display options" class="structure-plot-toolbar">
 <label><span>Unit cell</span><select id="cifUnitCellMode"><option value="all">All cells</option><option selected="" value="one">One cell</option><option value="none">None</option></select></label>
-<label><span>XYZ axes</span><select id="cifShowXYZ"><option selected="" value="show">Show</option><option value="hide">Hide</option></select></label>
+<label><span>Cell</span><select id="cifUnitCellReference" aria-label="Unit cell type"><option value="crystallographic">Crystallographic</option><option value="magnetic">Magnetic</option></select></label>
 <button id="cifSaveFigure" title="Save current 3D view with legend and coordinate axes as PNG" type="button">Save figure</button>
-<div class="structure-cell-reference-row"><select id="cifUnitCellReference" aria-label="Unit cell type"><option value="crystallographic">Crystallographic</option><option value="magnetic">Magnetic</option></select></div>
 </div>
 <div aria-label="Atom legend" class="structure-atom-legend" id="cifAtomLegend"></div>
 </div>

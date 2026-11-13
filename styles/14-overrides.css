@@ -742,3 +742,22 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* The table area keeps a readable minimum height; in a short window the panel
    scrolls to it instead of squeezing the table to nothing. */
 #structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{min-height:calc(220px * var(--tas-density))!important}
+
+/* Spins, Incommensurate structure type: M1a-c, M2a-c and φ (seven value
+   columns). The table scrolls horizontally when the panel is narrow. */
+#structurePanel #cifSpinTable .structure-spin-table-header[hidden]{display:none!important}
+#structurePanel #cifSpinTable.structure-spin-table-icm{
+  grid-template-columns:
+    calc(34px * var(--tas-density))
+    calc(49px * var(--tas-density))
+    minmax(calc(72px * var(--tas-density)),.9fr)
+    repeat(7,minmax(calc(64px * var(--tas-density)),1fr))
+    calc(45px * var(--tas-density));
+  min-width:calc(760px * var(--tas-density));
+}
+#structurePanel .structure-icm-fill-row{flex:1 1 100%;grid-column:1/-1;display:flex;align-items:center;gap:calc(10px * var(--tas-density));flex-wrap:wrap}
+#structurePanel .structure-icm-fill-row[hidden]{display:none}
+#structurePanel .structure-icm-fill{white-space:nowrap}
+#structurePanel .structure-icm-fill-note{font-size:var(--tas-table-text-size,12px);color:#4a5560}
+#structurePanel .structure-direction-note{margin:calc(2px * var(--tas-density)) 0 calc(6px * var(--tas-density));font-size:var(--tas-table-text-size,12px);color:#4a5560;line-height:1.35}
+#structurePanel .structure-direction-note[hidden]{display:none}

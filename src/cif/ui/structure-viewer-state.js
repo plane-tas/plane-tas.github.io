@@ -116,7 +116,7 @@ cifState.structureMomentGlobalHeadBlank=false;
 cifState.structureUnitCellMode="one";
 // The chosen frame affects ONLY the Structure outline, not atomic coordinates or reflections.
 cifState.structureUnitCellReference="crystallographic";
-cifState.structureShowXYZ=true;
+cifState.structureShowXYZ=false;
 cifState.structureAtomColorOverrides=new Map();
 cifState.structureAtomSizeOverrides=new Map();
 cifState.structureAtomSizeCleared=new Set();
@@ -232,7 +232,7 @@ function resetStructureViewerStateToDefaults(){
     cifState.structureMomentGlobalHeadBlank=false;
     cifState.structureUnitCellMode="one";
     cifState.structureUnitCellReference="crystallographic";
-    cifState.structureShowXYZ=true;
+    cifState.structureShowXYZ=false;
     cifState.structureBondDisplayMode="bonds";
     cifState.restoredStructureBondRules=[];
     cifState.structureControlSignature="";
@@ -356,7 +356,7 @@ function restoreStructureViewerState(){
         cifState.structureMomentSettings.set(key,{...existing,mx:canonical.mx,my:canonical.my,mz:canonical.mz,size:1});
       }
     }
-    if(["collinear","helical","sinusoidal"].includes(String(saved.momentStructureType||""))) cifState.structureMomentStructureType=String(saved.momentStructureType);
+    if(["collinear","helical","sinusoidal","incommensurate"].includes(String(saved.momentStructureType||""))) cifState.structureMomentStructureType=String(saved.momentStructureType);
     else if(String(saved.momentStructureType||"")==="canted") cifState.structureMomentStructureType="collinear";
     if(["a","b","c"].includes(String(saved.momentRotationAxis||""))) cifState.structureMomentRotationAxis=String(saved.momentRotationAxis);
     if(["CW","CCW"].includes(String(saved.momentChirality||""))) cifState.structureMomentChirality=String(saved.momentChirality);
@@ -373,7 +373,8 @@ function restoreStructureViewerState(){
     if(["all","one","none"].includes(String(saved.unitCellMode||""))) cifState.structureUnitCellMode=String(saved.unitCellMode);
     else cifState.structureUnitCellMode="one";
     cifState.structureUnitCellReference=saved.unitCellReference==="magnetic"?"magnetic":"crystallographic";
-    cifState.structureShowXYZ=saved.showXYZ!==false;
+    // The x, y, z (Å) axes of the 3-D scene are never drawn: the cell axes a, b, c are.
+    cifState.structureShowXYZ=false;
     cifState.structureBondDisplayMode=["bonds","polyhedral","both"].includes(saved.structureBondDisplayMode) ? saved.structureBondDisplayMode : "bonds";
     // A persisted cutoff such as 1e100 must never trigger a geometry rebuild
     // on the first load. Disable it against the CURRENT unit-cell diagonal,

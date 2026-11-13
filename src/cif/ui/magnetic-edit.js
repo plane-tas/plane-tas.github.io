@@ -6,7 +6,7 @@ export function installMagneticEdit(ctx){
     $, getPropagationVectors, getSelectedCifStructure
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    activateImportedMagneticEditing, clearSpinRowSelection, propagationSignature,
+    activateImportedMagneticEditing, revertImportedMagneticEditing, clearSpinRowSelection, propagationSignature,
     rememberModifiedMagneticDraft, restoreMagneticDraftFromStorage, selectSpinMomentRow,
     selectedSpinContainsAtom, syncSpinModifyLock
   });
@@ -59,6 +59,7 @@ function syncSpinModifyLock(){
   const host=$("propagationVectors");
   if(host) for(const field of host.querySelectorAll("input,select,button")) field.disabled=false;
   const addQ=$("addPropagationVector"); if(addQ) addQ.disabled=false;
+  fn.syncIncommensurateControls?.();
   for(const id of ["cifMagMomentRows","cifSpinBulkCheckbox"]){
     const host=$(id);
     if(host) for(const field of host.querySelectorAll("input,select,button")) field.disabled=false;
@@ -79,6 +80,33 @@ function activateImportedMagneticEditing(){
   fn.invalidateGeneratedMcif();
   fn.syncImportedMomentStructureType();
   fn.refreshMomentPropagationVectorSelect();
+}
+// Structure type "mCIF": go back to the moments of the loaded file (the
+// edited moments and the saved Modify draft are discarded).
+function revertImportedMagneticEditing(){
+  if(!fn.sourceIsMagneticCif()) return;
+  const structure=fn.currentStructureForViewer()?.structure;
+  const key=magneticDraftIdentity();
+  cifState.importedMagneticEditMode=false;
+  cifState.modifiedMagneticDraft=null;
+  try{
+    const data=JSON.parse(localStorage.getItem(cifState.MCIF_EDIT_DRAFT_KEY)||"{}");
+    if(key && data[key]){ delete data[key]; localStorage.setItem(cifState.MCIF_EDIT_DRAFT_KEY,JSON.stringify(data)); }
+  }catch(_e){}
+  $("cifMagMomentRows")?.replaceChildren();
+  for(const k of [...cifState.structureMomentSettings.keys()]) if(/^(icm|individual):/.test(k)) cifState.structureMomentSettings.delete(k);
+  for(const [siteIndex,site] of (structure?.asymmetricSites||[]).entries()){
+    const k=fn.momentKey({...site,siteIndex});
+    const previous=cifState.structureMomentSettings.get(k)||{};
+    cifState.structureMomentSettings.set(k,{...previous,...fn.defaultMomentSetting(site,structure),
+      color:previous.colorCustomized?previous.color:fn.defaultMomentSetting(site,structure).color,colorCustomized:!!previous.colorCustomized});
+  }
+  fn.invalidateGeneratedMcif();
+  fn.syncImportedMomentStructureType();
+  fn.refreshMomentPropagationVectorSelect();
+  fn.updateMagneticMomentRows(structure||null);
+  fn.saveStructureViewerState();
+  fn.renderCifStructureIfVisible();
 }
 
 cifState.structureMomentRotationAxis="c";
@@ -141,6 +169,7 @@ function selectedSpinContainsAtom(atom){
   for(const key of cifState.selectedSpinRowKeys){
     const site=cifState.visibleSpinSelectionSites.get(key);
     if(!site)continue;
+    if(site.icm){ if(atomSiteKey(atom)===atomSiteKey(site)) return true; continue; }
     if(site.individualKey){
       if(atomSiteKey(atom)!==atomSiteKey(site))continue;
       if(!Array.isArray(atom.cell) || !site.individualCell?.every((v,i)=>v===atom.cell[i]))continue;

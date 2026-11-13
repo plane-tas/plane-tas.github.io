@@ -46,20 +46,14 @@ function recalculateGeneratedReflections(){
     notes.push('This mCIF does not define a safely convertible parent cell; nuclear reflections are not calculated (hkl in the magnetic cell).');
   }
   // Magnetic: only when a spin is set; errors are reported without hiding nuclear peaks.
-  // Incommensurate mCIF: magnetic satellite intensities are not implemented.
-  const incommensurate=fn.selectedCifIsIncommensurate();
-  const magnetic=incommensurate ? {rows:[],parentKnown:true,lattice:null,message:''}
-    : fn.computeMagneticReflections({wavelength:beam.wavelength,twoThetaMax});
-  if(incommensurate){
-    fn.refreshMagneticIonSelectors?.(null);
-    notes.push('Incommensurate mCIF: only nuclear reflections are calculated; magnetic intensities and mCIF export are not available.');
-  }
+  // Incommensurate mCIF: satellites G ± k from the file's Fourier components.
+  const magnetic=fn.computeMagneticReflections({wavelength:beam.wavelength,twoThetaMax});
   if(magnetic.message) notes.push(magnetic.message);
   if(!nuclear && !magnetic.rows.length){
     fn.clearCifReflectionTable(notes.join(' ') || 'Select a CIF/mCIF or Generate CIF to calculate reflections.');
     return;
   }
-  fn.setReflectionData({nuclear,magnetic,notes,wavelength:beam.wavelength,incommensurate,plotRange});
+  fn.setReflectionData({nuclear,magnetic,notes,wavelength:beam.wavelength,plotRange});
   if(estimateNotice && source?.estimatedParent){
     estimateNotice.hidden=false;
     estimateNotice.textContent='Note: Nuclear reflections use an estimated crystallographic cell; verify the parent space group and cell transformation before quantitative use.';

@@ -2,6 +2,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {atomSiteKey, rationalApprox} from '../mcif-export.js';
 import {modulatedMoment, symmetryPhaseShift} from '../../magnetic/magnetic-reflections.js';
+import {incommensurateSettingFromMcifAtom} from '../../magnetic/incommensurate.js';
 
 export function installSpinTable(ctx){
   const {deps:{
@@ -11,7 +12,9 @@ export function installSpinTable(ctx){
     atomCrystalMoment, currentMomentSettings, defaultMomentSetting, individualSettingForAtom,
     individualSpinCandidates, individualSpinDimensions, initialIndividualSpin, magneticCandidateSites,
     mcifCrystalAxisToCartesian, momentKey, resolveIndividualSpin, spinEditingIsIndividual,
-    spinTableFilteredSites, updateMagneticMomentRows
+    spinTableFilteredSites, updateMagneticMomentRows,
+    spinEditingIsIncommensurate, incommensurateSpinCandidates, defaultIncommensurateSetting,
+    spinCandidates, initialSpinSetting, incommensurateSettingForAtom, fillIncommensurateHelix
   });
 
 function magneticCandidateSites(structure){
@@ -64,7 +67,105 @@ function individualSpinCandidates(structure){
     });
   return out;
 }
-function spinEditingIsIndividual(structure){return cifState.structureSpinEditingMode==='individual' && !!structure;}
+function spinEditingIsIndividual(structure){return cifState.structureSpinEditingMode==='individual' && !!structure && !spinEditingIsIncommensurate(structure);}
+// Incommensurate structure type (nuclear CIF only): one row per atom of the
+// nuclear cell with M1, M2 (crystal-axis components, mu_B) and a phase (deg),
+// as in Fcal-n: M(r) = M1 cos(2 pi q.r - phi) + M2 sin(2 pi q.r - phi).
+// Also an incommensurate mCIF once its moments are edited (structure type
+// Incommensurate chosen): the rows start from the file's Fourier components.
+function spinEditingIsIncommensurate(structure){
+  if(cifState.structureMomentStructureType!=='incommensurate' || !structure) return false;
+  if(!structure.magnetic) return true;
+  return !!structure.incommensurateSingleQ && !!cifState.importedMagneticEditMode;
+}
+const incommensurateSpinKey=atom=>`icm:${atomSiteKey(atom)}`;
+function incommensurateSpinCandidates(structure){
+  if(!Array.isArray(structure?.atoms)) return [];
+  if(structure.atoms.length>1200) throw new Error('Incommensurate spin editor limit: 1200 atoms in the cell.');
+  const labelCounts=new Map();
+  // An mCIF lists its magnetic atoms only (as in the other mCIF editors).
+  const atoms=structure.magnetic ? structure.atoms.filter(atom=>atom.magneticFourier||Array.isArray(atom.magneticMoment)) : structure.atoms;
+  return atoms.map(atom=>{
+    const atomIndex=structure.atoms.indexOf(atom);
+    const label=String(atom.sourceLabel||atom.element);
+    const count=(labelCounts.get(label)||0)+1;
+    labelCounts.set(label,count);
+    return {...atom,siteIndex:atom.sourceSiteIndex,label:`${label} #${count}`,
+      individualKey:incommensurateSpinKey(atom),individualIndex:atomIndex,icm:true};
+  });
+}
+function defaultIncommensurateSetting(site){
+  // mCIF atoms start from the file (converted to M1, M2, phi; uniform part M0 kept).
+  const fromFile=(site?.magneticFourier||Array.isArray(site?.magneticMoment)) ? {enabled:true,...incommensurateSettingFromMcifAtom(site)} : null;
+  return {enabled:false,m1:[0,0,0],m2:[0,0,0],phase:0,...(fromFile||{}),
+    size:1,width:10,headSize:0.51,color:fn.elementColor(site.element),colorCustomized:false};
+}
+// Setting of a nuclear-cell (or displayed) atom in the Incommensurate type.
+function incommensurateSettingForAtom(atom,settings=currentMomentSettings()){
+  const key=incommensurateSpinKey(atom);
+  return settings.get(key)||cifState.structureMomentSettings.get(key)||defaultIncommensurateSetting(atom);
+}
+// Fill helix (Incommensurate draft): M1 and M2 of equal size, perpendicular to
+// the Rotation axis and to each other, turning with the selected Chirality —
+// the same sense as the commensurate Helical type (CCW: M2 = -u x M1, CW:
+// M2 = +u x M1, u the unit vector of the axis). An existing M1 keeps its
+// component perpendicular to the axis; otherwise M1 starts along b (axis a),
+// c (axis b) or a (axis c) with the size of the row's moment, or 1 mu_B.
+// Reference row: the selected row (the anchor of a multiple selection), else
+// the row edited last. With a reference, its helix (M1 perpendicular to the
+// axis and the matching M2) is copied to every target row; without one, each
+// row keeps its own M1. Targets: the enabled displayed rows, or all displayed
+// rows when none is enabled, plus the reference row. Phases are not changed.
+function fillIncommensurateHelix(){
+  const structure=fn.currentStructureForViewer()?.structure||null;
+  if(!spinEditingIsIncommensurate(structure)) return;
+  const basis=fn.directLatticeBasis(structure.lattice);
+  if(!basis) return;
+  const live=currentMomentSettings();
+  for(const [key,value] of live) cifState.structureMomentSettings.set(key,value);
+  const sites=spinTableFilteredSites(incommensurateSpinCandidates(structure));
+  const settingOf=site=>({...defaultIncommensurateSetting(site),...(cifState.structureMomentSettings.get(site.individualKey)||{})});
+  let targets=sites.filter(site=>settingOf(site).enabled);
+  if(!targets.length) targets=sites;
+  const selected=[...cifState.selectedSpinRowKeys];
+  const referenceKey=(selected.includes(cifState.spinSelectionAnchorKey)?cifState.spinSelectionAnchorKey:selected[0])
+    || cifState.lastEditedIncommensurateKey;
+  const reference=sites.find(site=>site.individualKey===referenceKey)||null;
+  if(reference && !targets.includes(reference)) targets=[...targets,reference];
+  const axisKey=["a","b","c"].includes(cifState.structureMomentRotationAxis)?cifState.structureMomentRotationAxis:"c";
+  const u=fn.vecNormalize(basis[axisKey]);
+  const start=fn.vecNormalize(basis[{a:"b",b:"c",c:"a"}[axisKey]]);
+  const perp=v=>fn.vecSub(v,fn.vecScale(u,fn.vecDot(u,v)));
+  const sign=cifState.structureMomentChirality==="CW"?1:-1;
+  const referenceSetting=reference?settingOf(reference):null;
+  for(const site of targets){
+    const setting=settingOf(site);
+    const source=referenceSetting||setting;
+    const m1=mcifCrystalAxisToCartesian(basis,source.m1||[0,0,0]);
+    const m2=mcifCrystalAxisToCartesian(basis,source.m2||[0,0,0]);
+    let v=perp(m1);
+    if(!(fn.vecNorm(v)>1e-9)){
+      const size=Math.max(fn.vecNorm(m1),fn.vecNorm(m2))||1;
+      v=fn.vecScale(fn.vecNormalize(perp(start)),size);
+    }
+    const w=fn.vecScale(fn.vecCross(u,v),sign);
+    const crystal=c=>fn.cartesianToMcifCrystalAxis(structure.lattice,c).map(x=>Math.abs(x)<1e-12?0:Number(x.toPrecision(12)));
+    cifState.structureMomentSettings.set(site.individualKey,{...setting,enabled:true,m1:crystal(v),m2:crystal(w)});
+  }
+  $("cifMagMomentRows")?.replaceChildren();
+  updateMagneticMomentRows(structure);
+  fn.invalidateGeneratedMcif?.();
+  fn.saveStructureViewerState();fn.renderCifStructureIfVisible();
+}
+// Rows of the Spins table for the current mode, and their initial settings.
+function spinCandidates(structure){
+  if(spinEditingIsIncommensurate(structure)) return incommensurateSpinCandidates(structure);
+  return spinEditingIsIndividual(structure)?individualSpinCandidates(structure):magneticCandidateSites(structure);
+}
+function initialSpinSetting(site,structure){
+  if(site.icm) return defaultIncommensurateSetting(site);
+  return site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure);
+}
 function initialIndividualSpin(site,structure){
   // Imported mCIF sites have already been individually transformed by the
   // magnetic symmetry group. Show their *actual* dipoles, not repetitions of
@@ -158,6 +259,17 @@ function defaultMomentSetting(site,structure=null){
     mx:cart?.[0]??0,my:cart?.[1]??0,mz:cart?.[2]??0,
     size:1,width:10,headSize:0.51,color:fn.elementColor(site.element),colorCustomized:false};
 }
+// Spins "a, b, c" direction: Cartesian moment <-> components along unit vectors
+// parallel to a, b, c of the displayed structure (as mCIF crystalaxis values).
+function viewerLattice(structure){ return (structure||fn.currentStructureForViewer?.()?.structure)?.lattice||null; }
+function crystalComponentsOf(cart,structure){
+  const lattice=viewerLattice(structure);
+  try{ return lattice ? fn.cartesianToMcifCrystalAxis(lattice,cart.map(v=>Number(v)||0)) : cart.slice(); }catch(_e){ return cart.slice(); }
+}
+function cartesianFromCrystal(crystal){
+  const basis=fn.directLatticeBasis(viewerLattice());
+  return basis ? mcifCrystalAxisToCartesian(basis,crystal) : crystal.slice();
+}
 // Four significant digits are for display only; never round stored vectors.
 function formatSpinValue(value){
   const n=Number(value);
@@ -181,6 +293,22 @@ function currentMomentSettings(){
       const precise=Number(input.dataset.fullPrecision);
       return shown===input.dataset.displayValue && Number.isFinite(precise) ? precise : Number(shown);
     };
+    if(row.querySelector('[data-moment-field="m1a"]')){
+      const read=(field,fallbackValue)=>{ const v=readEditedNumber(field); return Number.isFinite(v)?v:fallbackValue; };
+      const f1=Array.isArray(fallback.m1)?fallback.m1:[0,0,0], f2=Array.isArray(fallback.m2)?fallback.m2:[0,0,0];
+      out.set(key,{
+        enabled:!!row.querySelector('[data-moment-field="enabled"]')?.checked,
+        m1:['a','b','c'].map((axis,i)=>read(`m1${axis}`,Number(f1[i])||0)),
+        m2:['a','b','c'].map((axis,i)=>read(`m2${axis}`,Number(f2[i])||0)),
+        phase:read('phase',Number(fallback.phase)||0),
+        m0:(()=>{ try{ const v=JSON.parse(row.dataset.momentM0||'null'); return Array.isArray(v)?v:(fallback.m0||[0,0,0]); }catch(_e){ return fallback.m0||[0,0,0]; } })(),
+        size:cifState.structureMomentGlobalLength,
+        width:cifState.structureMomentGlobalWidth,headSize:cifState.structureMomentGlobalHeadSize,
+        color:row.querySelector('[data-moment-field="color"]')?.value || row.dataset.momentColor || fn.elementColor(row.dataset.momentElement),
+        colorCustomized:row.dataset.momentColorCustom==="1"
+      });
+      continue;
+    }
     const thetaInput=row.querySelector('[data-moment-field="theta"]');
     const phiInput=row.querySelector('[data-moment-field="phi"]');
     if(thetaInput || phiInput){
@@ -191,9 +319,11 @@ function currentMomentSettings(){
         if([theta,phi,magnitude].every(Number.isFinite) && magnitude>=0) [mx,my,mz]=fn.vecScale(fn.directionFromPolar(theta,phi),magnitude);
       }
     }else{
-      for(const field of ["mx","my","mz"]){
-        const value=readEditedNumber(field);
-        if(Number.isFinite(value)) {if(field==="mx") mx=value; else if(field==="my") my=value; else mz=value;}
+      // Inputs are components along a, b, c; unchanged rows keep their stored Cartesian vector.
+      const inputs=["mx","my","mz"].map(field=>row.querySelector(`[data-moment-field="${field}"]`));
+      if(inputs.every(Boolean) && !inputs.every(input=>input.value===input.dataset.displayValue)){
+        const crystal=["mx","my","mz"].map(readEditedNumber);
+        if(crystal.every(Number.isFinite)) [mx,my,mz]=cartesianFromCrystal(crystal);
       }
     }
     out.set(key,{
@@ -237,13 +367,26 @@ function updateMagneticMomentRows(structure){
   const live=currentMomentSettings();
   for(const [key,value] of live) cifState.structureMomentSettings.set(key,value);
   host.replaceChildren();
-  // Column headings follow Direction even when no structure is loaded.
-  { const headings=cifState.structureMomentDirectionMode==="polar"?["θ (°)","φ (°)","μ (μB)"]:["X (μB)","Y (μB)","Z (μB)"];
-    for(const [i,name] of ["X","Y","Z"].entries()){ const cell=$("cifSpinHeader"+name); if(cell) cell.textContent=headings[i]; } }
+  // Column headings follow Direction (or the Incommensurate type) even when no structure is loaded.
+  const icm=spinEditingIsIncommensurate(structure);
+  { const polarMode=cifState.structureMomentDirectionMode==="polar";
+    const headings=icm?["M1a","M1b","M1c"]:polarMode?["θ (°)","φ (°)","μ (μB)"]:["Ma (μB)","Mb (μB)","Mc (μB)"];
+    const titles=icm?["cos component along a (μB)","cos component along b (μB)","cos component along c (μB)"]
+      :polarMode?["Polar angle from z (⊥ ab plane, ∥ c*)","Azimuth in the ab plane from a toward b","Moment size (μB)"]
+      :["Component along a (unit vector ∥ a, μB)","Component along b (unit vector ∥ b, μB)","Component along c (unit vector ∥ c, μB)"];
+    for(const [i,name] of ["X","Y","Z"].entries()){ const cell=$("cifSpinHeader"+name); if(cell){ cell.textContent=headings[i]; cell.title=titles[i]; } }
+    const note=$("cifSpinDirectionNote");
+    if(note){
+      note.textContent=icm?"":polarMode
+        ?"Polar: (θ, φ) = (0, 0) is parallel to c (to c* when α or β ≠ 90°) and (90, 0) to a; φ turns from a toward b."
+        :"a, b, c: components along unit vectors parallel to a, b and c (μB), as in mCIF. They are not orthogonal in a non-orthogonal cell.";
+      note.hidden=!note.textContent;
+    }
+    for(const id of ["cifSpinHeaderM2a","cifSpinHeaderM2b","cifSpinHeaderM2c","cifSpinHeaderPhase"]){ const cell=$(id); if(cell) cell.hidden=!icm; }
+    $("cifSpinTable")?.classList.toggle("structure-spin-table-icm",icm); }
   cifState.visibleSpinSelectionSites.clear();
-  const individual=spinEditingIsIndividual(structure);
   let allSites=[];
-  try{allSites=individual?individualSpinCandidates(structure):magneticCandidateSites(structure);}
+  try{allSites=spinCandidates(structure);}
   catch(err){const notice=$("cifSpinIndividualInfo");if(notice){notice.hidden=false;notice.textContent=err.message;}fn.syncSpinTableBulkCheckbox(structure,[]);return;}
   const notice=$("cifSpinIndividualInfo");
   if(notice){notice.hidden=true;notice.textContent="";}
@@ -265,7 +408,7 @@ function updateMagneticMomentRows(structure){
     const key=site.individualKey||momentKey(site);
     cifState.visibleSpinSelectionSites.set(key,site);
     const saved=cifState.structureMomentSettings.get(key)||{};
-    const setting={...(site.individualKey?initialIndividualSpin(site,structure):defaultMomentSetting(site,structure)),...saved};
+    const setting={...initialSpinSetting(site,structure),...saved};
     // mCIF XYZ values are physical Cartesian moments, not fractional positions.
     if(!setting.colorCustomized && !saved.colorCustomized) setting.color=fn.elementColor(site.element);
     const row=document.createElement("div");
@@ -303,7 +446,20 @@ function updateMagneticMomentRows(structure){
     const atomCell=makeCell("atom",siteLabel);
     const momentInputs=[];
     const fieldCells=[];
-    if(polar){
+    if(icm){
+      const m1=Array.isArray(setting.m1)?setting.m1:[0,0,0], m2=Array.isArray(setting.m2)?setting.m2:[0,0,0];
+      if(Array.isArray(setting.m0)) row.dataset.momentM0=JSON.stringify(setting.m0);
+      const fields=[...['a','b','c'].map((axis,i)=>[`m1${axis}`,`M1 (cos) component along ${axis} (μB)`,m1[i]]),
+        ...['a','b','c'].map((axis,i)=>[`m2${axis}`,`M2 (sin) component along ${axis} (μB)`,m2[i]]),
+        ['phase','Phase φ (degrees)',Number(setting.phase)||0]];
+      for(const [field,title,value] of fields){
+        const input=document.createElement("input");
+        input.type="number"; input.step=field==="phase"?"1":"0.01";
+        input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(Number(value)||0);
+        input.dataset.momentField=field;input.title=title;input.setAttribute("aria-label",`${site.label||site.element}: ${title}`);
+        momentInputs.push(input);fieldCells.push(makeCell("value",input));
+      }
+    }else if(polar){
       const angles=fn.directionToPolar([setting.mx,setting.my,setting.mz]);
       for(const [field,title,value] of [["theta","Polar angle from +z (degrees)",angles.theta],["phi","Azimuth from +x toward +y (degrees)",angles.phi],["moment","Physical magnetic moment magnitude (μB)",fn.vecNorm([setting.mx,setting.my,setting.mz])]]){
         const input=document.createElement("input");
@@ -313,12 +469,14 @@ function updateMagneticMomentRows(structure){
         momentInputs.push(input);fieldCells.push(makeCell("value",input));
       }
     }else{
-      for(const [field,value] of [["mx",setting.mx],["my",setting.my],["mz",setting.mz]]){
+      // Components along unit vectors parallel to a, b, c (stored as Cartesian).
+      const crystal=crystalComponentsOf([setting.mx,setting.my,setting.mz],structure);
+      for(const [i,[field,value]] of [["mx",crystal[0]],["my",crystal[1]],["mz",crystal[2]]].entries()){
         const input=document.createElement("input");
         input.type="number";input.step="0.01";
         input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(value);
         input.dataset.momentField=field;
-        input.title=`Cartesian magnetic moment component ${field.slice(1)} (μB)`;
+        input.title=`Moment component along ${["a","b","c"][i]} (unit vector ∥ ${["a","b","c"][i]}, μB)`;
         input.setAttribute("aria-label",`${site.label||site.element}: ${input.title}`);
         momentInputs.push(input);fieldCells.push(makeCell("value",input));
       }
@@ -345,6 +503,7 @@ function updateMagneticMomentRows(structure){
     });
     for(const input of momentInputs){
       const autoEnable=()=>{
+        if(icm) cifState.lastEditedIncommensurateKey=key;
         if(!enabled.checked) enabled.checked=true;
         commit();fn.syncSpinTableBulkCheckbox(structure,allSites);
       };

@@ -39,6 +39,8 @@ function enabledPropagationVectorsForStructure(){
     const snapped=(h.snapped||k.snapped||l.snapped) ? {h:h.snapped||null,k:k.snapped||null,l:l.snapped||null} : null;
     return {index:index+1,h:h.value,k:k.value,l:l.value,snapped,
       raw:{h:String(row?.h??'').trim(),k:String(row?.k??'').trim(),l:String(row?.l??'').trim()},
+      // As entered (never replaced by a fraction): used by the Incommensurate type.
+      exact:{h:parseNumericValue(row?.h),k:parseNumericValue(row?.k),l:parseNumericValue(row?.l)},
       enabled:!!row?.enabled};
   }).filter(q=>q.enabled && [q.h,q.k,q.l].every(Number.isFinite));
 }

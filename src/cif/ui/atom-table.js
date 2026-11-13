@@ -73,15 +73,14 @@ function syncSpinTableBulkCheckbox(structure,candidates=null){
   checkbox.setAttribute("aria-label",checkbox.title);
   let all=candidates;
   if(!all){
-    try{ all=fn.spinEditingIsIndividual(structure)?fn.individualSpinCandidates(structure):fn.magneticCandidateSites(structure); }
+    try{ all=fn.spinCandidates(structure); }
     catch(_e){all=[];}
   }
   const visible=fn.spinTableFilteredSites(all);
   const live=fn.currentMomentSettings();
   const values=visible.map(site=>{
     const key=site.individualKey||fn.momentKey(site);
-    const setting=live.get(key)||cifState.structureMomentSettings.get(key)||
-      (site.individualKey?fn.initialIndividualSpin(site,structure):fn.defaultMomentSetting(site,structure));
+    const setting=live.get(key)||cifState.structureMomentSettings.get(key)||fn.initialSpinSetting(site,structure);
     return !!setting.enabled;
   });
   checkbox.disabled=!values.length;
@@ -94,10 +93,10 @@ function setSpinEnabledForDisplayed(enabled){
   fn.activateImportedMagneticEditing();
   const live=fn.currentMomentSettings();
   for(const [key,value] of live) cifState.structureMomentSettings.set(key,value);
-  const candidates=fn.spinEditingIsIndividual(structure)?fn.individualSpinCandidates(structure):fn.magneticCandidateSites(structure);
+  const candidates=fn.spinCandidates(structure);
   for(const site of fn.spinTableFilteredSites(candidates)){
     const key=site.individualKey||fn.momentKey(site);
-    const initial=site.individualKey?fn.initialIndividualSpin(site,structure):fn.defaultMomentSetting(site,structure);
+    const initial=fn.initialSpinSetting(site,structure);
     cifState.structureMomentSettings.set(key,{...initial,...(cifState.structureMomentSettings.get(key)||{}),enabled:!!enabled});
   }
   // updateMagneticMomentRows() snapshots current DOM rows first. Reflect the

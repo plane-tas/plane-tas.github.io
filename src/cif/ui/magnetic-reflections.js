@@ -3,6 +3,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {explicitMagneticIonFactors, hklInParentCell, magneticBraggPeaks, magneticElementsOfMotif} from '../../magnetic/magnetic-reflections.js';
 import {availableMagneticIons} from '../../magnetic/magnetic-form-factor.js';
+import {incommensurateSatellites} from '../../magnetic/incommensurate.js';
 import {chargeBalancedOxidationStates, compositionOfSites, preferredOxidationState} from '../../magnetic/oxidation-states.js';
 
 export function installMagneticReflections(ctx){
@@ -91,6 +92,21 @@ function computeMagneticReflections({wavelength,twoThetaMax=180}){
   if(!motif) return empty();
   const spinCount=motif.sites.filter(site=>Math.hypot(...(site.moment||[0,0,0]))>1e-10).length;
   if(!spinCount) return empty();
+  if(motif.incommensurate){
+    // Satellites G ± k in the nuclear cell, |F_M|^2 per nuclear cell.
+    try{
+      const ionByElement=selectedMagneticIons();
+      const raw=incommensurateSatellites(motif,wavelength,{twoThetaMax,ionByElement});
+      const fmt=v=>String(Number(Number(v).toPrecision(6)));
+      let message=motif.source==='incommensurate mCIF'
+        ? `Incommensurate mCIF: magnetic satellites G ± k with k = (${motif.q.map(fmt).join(', ')}) from the file's Fourier components; one magnetic domain (the k of the file).`
+        : `Incommensurate: magnetic satellites G ± k with k = (${motif.q.map(fmt).join(', ')}) as entered; one magnetic domain (the entered k).`;
+      if(!raw.length) message+=' No magnetic satellites in the selected wavelength range.';
+      const rows=raw.map(row=>({hkl:row.hkl,fm2:row.intensity,formFactor:row.formFactor,formFactorSort:row.formFactorSort,
+        twoTheta:row.twoTheta,q:row.q,d:row.d,satellite:row.satellite}));
+      return {rows,parentKnown:true,lattice:motif.lattice,message};
+    }catch(err){ return empty(err?.message||String(err)); }
+  }
   try{
     const ionByElement=selectedMagneticIons();
     const raw=magneticBraggPeaks(motif,wavelength,{twoThetaMax,ionByElement});

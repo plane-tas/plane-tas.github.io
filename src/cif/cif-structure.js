@@ -470,7 +470,9 @@ export function parseCifStructure(text){
       magneticMoment:sourceMoment,magneticFourier:fourier});
     const moment=magneticMomentForLabel(momentLoop,siteLabel);
     const unique=[];
-    const opsToUse=(superspaceOps && fourier) ? superspaceOps : (magneticOps||symops);
+    // A superspace magCIF lists only superspace operations: nonmagnetic atoms
+    // (no Fourier components) are expanded with the same operations.
+    const opsToUse=superspaceOps || magneticOps || symops;
     for(const op of opsToUse){
       const applyRaw=v=>(magneticOps||superspaceOps)?applyMagneticOperatorRaw(op,v):applySymmetryOperationRaw(op,v);
       const raw=applyRaw(xyz);

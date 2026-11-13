@@ -12,6 +12,7 @@ export function installMomentTraces(ctx){
     refreshMomentPropagationVectorSelect, rotateVectorAroundAxis, structureMomentRotationAxisVector
   });
 function atomMomentSetting(atom,settings,structure){
+  if(fn.spinEditingIsIncommensurate(structure)) return fn.incommensurateSettingForAtom(atom,settings);
   if(fn.spinEditingIsIndividual(structure)) return fn.individualSettingForAtom(atom,structure,settings);
   const sourceIndex=Number.isInteger(atom.sourceSiteIndex)?atom.sourceSiteIndex:null;
   if(sourceIndex!==null){
@@ -66,7 +67,7 @@ function effectivePropagationVectorForStructure(){
     q=qs[0];
     cifState.structureMomentPropagationIndex=q.index;
   }
-  return {h:q.h,k:q.k,l:q.l,index:q.index,count:qs.length,snapped:q.snapped||null,raw:q.raw||null};
+  return {h:q.h,k:q.k,l:q.l,index:q.index,count:qs.length,snapped:q.snapped||null,raw:q.raw||null,exact:q.exact||null};
 }
 // k as used for the structure: fractions for snapped/commensurate components.
 function formatStructureKComponent(v){
@@ -93,7 +94,14 @@ function updateStructureEditorKNote(){
   const lines=[];
   const q=effectivePropagationVectorForStructure();
   const momentsOn=[...(fn.currentMomentSettings?.().values?.()||[])].some(x=>x?.enabled);
-  if(q.count && !fn.sourceIsMagneticCif?.()){
+  const icm=fn.spinEditingIsIncommensurate?.(fn.currentStructureForViewer?.()?.structure||null);
+  if(q.count && icm){
+    const idx=q.index||1, exact=[q.exact?.h,q.exact?.k,q.exact?.l].map(Number);
+    const comps=exact.every(Number.isFinite)?exact:[q.h,q.k,q.l];
+    lines.push({text:`Incommensurate: k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}) is used as entered. M(r) = M1 cos(2πk·r − φ) + M2 sin(2πk·r − φ); M1, M2 are components along a, b, c (μB).`,cls:'info'});
+  }else if(icm){
+    lines.push({text:'Incommensurate: enter a propagation vector k.',cls:'warn'});
+  }else if(q.count && !fn.sourceIsMagneticCif?.()){
     const idx=q.index||1, comps=[q.h,q.k,q.l];
     if(q.snapped){
       const entered=['h','k','l'].map(a=>q.raw?.[a]||'').join(', ');

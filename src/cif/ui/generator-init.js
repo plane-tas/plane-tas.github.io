@@ -415,10 +415,12 @@ async function initializeCifGenerator(){
     const requestMagneticUpdate=()=>fn.scheduleLiveReflectionRecalc({nuclear:false,magnetic:true});
     for(const id of ['cifMagMomentRows','cifMomentStructureType','cifMomentRotationAxis',
       'cifMomentChirality','cifMomentPropagationVector',
-      'cifSpinEditingMode','propagationVectors']){
+      'cifSpinEditingMode','propagationVectors','cifSpinBulkCheckbox']){
       $(id)?.addEventListener('input',requestMagneticUpdate);
       $(id)?.addEventListener('change',requestMagneticUpdate);
     }
+    // Fill helix rewrites M1 and M2 of the Incommensurate rows.
+    $('cifMomentIcmFill')?.addEventListener('click',requestMagneticUpdate);
     for(const id of ["Uh","Uk","Ul","Vh","Vk","Vl"]){
       $(id)?.addEventListener("change",fn.recalculateGeneratedReflections);
     }

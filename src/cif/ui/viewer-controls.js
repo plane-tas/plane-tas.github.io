@@ -4,7 +4,7 @@ export function installViewerControls(ctx){
   const {deps:{
     $
   }, state:cifState, fn}=ctx;
-  Object.assign(fn,{
+  Object.assign(fn,{syncIncommensurateControls,
     prepareStructureViewerControls, requestGeneratorViewportHeightSync,
     requestStructureTableHeightSync, syncImportedMomentStructureType
   });
@@ -77,6 +77,15 @@ function syncImportedMomentStructureType(){
   for(const [id,value] of inputs){
     const select=$(id); if(!select) continue;
     let option=select.querySelector('option[value="mcif"]');
+    // Structure type of an mCIF: "mCIF" stays available after an edit, to go
+    // back to the moments of the file.
+    if(id==="cifMomentStructureType" && fn.sourceIsMagneticCif()){
+      if(!option){ option=document.createElement("option"); option.value="mcif"; option.textContent="mCIF";select.prepend(option); }
+      option.title="Moments of the loaded mCIF (discards the edits)";
+      select.value=original ? "mcif" : value;
+      select.title=original ? "Original imported mCIF arrangement. Choose a setting to edit it." : "Edited magnetic structure. Choose mCIF to go back to the file.";
+      continue;
+    }
     if(original){
       if(!option){ option=document.createElement("option"); option.value="mcif"; option.textContent="mCIF";select.prepend(option); }
       select.value="mcif";
@@ -375,9 +384,20 @@ function prepareStructureViewerControls(){
       structureTypeSelect.dataset.structureBound="1";
       structureTypeSelect.addEventListener("change",()=>{
         const requestedType=structureTypeSelect.value;
+        if(requestedType==="mcif"){ fn.revertImportedMagneticEditing(); syncIncommensurateControls(); return; }
+        const wasEditing=!!cifState.importedMagneticEditMode;
         fn.activateImportedMagneticEditing();
-        cifState.structureMomentStructureType=["collinear","helical","sinusoidal"].includes(requestedType)?requestedType:"collinear";
+        const wasIcm=cifState.structureMomentStructureType==="incommensurate";
+        // Keep the edited rows before the table changes between the usual and the Incommensurate rows.
+        for(const [key,value] of fn.currentMomentSettings())cifState.structureMomentSettings.set(key,value);
+        cifState.structureMomentStructureType=["collinear","helical","sinusoidal","incommensurate"].includes(requestedType)?requestedType:"collinear";
+        structureTypeSelect.value=cifState.structureMomentStructureType;
         syncMomentStructureModeControls();
+        if(wasIcm!==(cifState.structureMomentStructureType==="incommensurate") || wasEditing!==!!cifState.importedMagneticEditMode){
+          $('cifMagMomentRows')?.replaceChildren();
+          fn.updateMagneticMomentRows(fn.currentStructureForViewer()?.structure||null);
+        }
+        syncIncommensurateControls();
         fn.saveStructureViewerState();
         fn.renderCifStructureIfVisible();
       });
@@ -410,5 +430,34 @@ function prepareStructureViewerControls(){
     }
   }
   syncMomentStructureModeControls();
+  const fill=$("cifMomentIcmFill");
+  if(fill && !fill.dataset.structureBound){
+    fill.dataset.structureBound="1";
+    fill.addEventListener("click",()=>fn.fillIncommensurateHelix());
+  }
+  syncIncommensurateControls();
+}
+// Incommensurate type: Mode shows "Incommensurate" (fixed), Direction does not
+// apply (M1, M2 are crystal-axis components) and the Fill helix draft is shown.
+// Rotation axis and Chirality stay active: they define the Fill helix.
+function syncIncommensurateControls(){
+  const structure=fn.currentStructureForViewer()?.structure||null;
+  const icm=fn.spinEditingIsIncommensurate(structure);
+  const editing=$("cifSpinEditingMode");
+  if(editing){
+    if(icm){ editing.value="incommensurate"; editing.disabled=true; }
+    else{ editing.value=cifState.structureSpinEditingMode; editing.disabled=false; }
+  }
+  const direction=$("cifMomentDirectionMode");
+  if(direction){ direction.disabled=icm; direction.title=icm?"Incommensurate: M1 and M2 are components along a, b and c (μB).":""; }
+  const fill=$("cifMomentIcmFillRow"); if(fill) fill.hidden=!icm;
+  // Types offered: a nuclear CIF all but mCIF; a commensurate mCIF all but
+  // Incommensurate; an incommensurate mCIF only mCIF and Incommensurate.
+  const typeSelect=$("cifMomentStructureType");
+  const incMcif=!!structure?.magnetic && !!structure?.incommensurateSingleQ;
+  for(const option of typeSelect?.options||[]){
+    if(option.value==="incommensurate") option.disabled=!!structure?.magnetic && !incMcif;
+    else if(["collinear","helical","sinusoidal"].includes(option.value)) option.disabled=incMcif;
+  }
 }
 }
