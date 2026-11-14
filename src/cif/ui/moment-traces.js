@@ -96,9 +96,7 @@ function updateStructureEditorKNote(){
   const momentsOn=[...(fn.currentMomentSettings?.().values?.()||[])].some(x=>x?.enabled);
   const icm=fn.spinEditingIsIncommensurate?.(fn.currentStructureForViewer?.()?.structure||null);
   if(q.count && icm){
-    const idx=q.index||1, exact=[q.exact?.h,q.exact?.k,q.exact?.l].map(Number);
-    const comps=exact.every(Number.isFinite)?exact:[q.h,q.k,q.l];
-    lines.push({text:`Incommensurate: k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}) is used as entered. M(r) = M1 cos(2πk·r − φ) + M2 sin(2πk·r − φ); M1, M2 are components along a, b, c (μB).`,cls:'info'});
+    lines.push({text:'M(r) = M0 + M1 cos(2πk·r − φ) + M2 sin(2πk·r − φ); M0 (uniform), M1, M2 are components along a, b, c (μB).',cls:'info'});
   }else if(icm){
     lines.push({text:'Incommensurate: enter a propagation vector k.',cls:'warn'});
   }else if(q.count && (!fn.sourceIsMagneticCif?.() || fn.currentStructureForViewer?.()?.mcifSource)){

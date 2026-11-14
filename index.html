@@ -546,7 +546,7 @@
 <div class="magff-footer"><button id="magffDownload" type="button">Download CSV</button></div>
 </section>
 </div>
-<div aria-labelledby="tabCifGenerator" class="tab-panel hidden" id="structurePanel" role="tabpanel"><section class="calc-card generator-unified-card"><div class="generator-unified-grid" id="cifGeneratorPanel"><div class="generator-unified-left"><section class="generator-shared-file"><div class="cif-pane-heading">
+<div aria-labelledby="tabCifGenerator" class="tab-panel hidden" id="structurePanel" role="tabpanel"><section class="calc-card generator-unified-card"><div class="generator-unified-grid" id="cifGeneratorPanel"><div class="generator-unified-left"><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><section class="generator-shared-file"><div class="cif-pane-heading">
 <h3>Input file</h3>
 <div class="cif-heading-actions"><button id="cifReloadCurrent" type="button" disabled title="Discard current Structure editor changes and restore the original loaded CIF/mCIF">Reload current file</button><button id="cifShowCurrent" type="button">Show load file</button></div>
 </div><div class="cif-generator-source-row">
@@ -554,16 +554,16 @@
 <input aria-label="Selected CIF or mCIF for CIF Generator" class="cif-file-name" id="cifGeneratorSourceName" readonly="" type="text" value="No file selected"/>
 <button disabled="" id="cifGeneratorSourceClear" type="button">Clear</button>
 <input accept=".cif,.mcif,text/plain,chemical/x-cif" class="hidden" id="cifLoadFile" type="file"/>
-</div></section><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><div class="cif-generator-input-pane">
+</div></section><div class="cif-generator-input-pane">
 <section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated">Show generate file</button></div></div>
 <div class="cif-unified-output-line">
-<label class="cif-output-format-label">Format
+<label class="cif-output-format-label">
 <select id="cifOutputFormat" aria-label="Output file format"><option value="cif">CIF</option><option value="mcif">mCIF</option></select>
 </label>
-<label class="cif-generator-file-name">File name
-<span class="cif-filename-entry"><input id="cifGeneratedName" type="text" value="generated_structure"/><span class="cif-filename-suffix" id="cifUnifiedFileSuffix">.cif</span></span>
+<label class="cif-generator-file-name">
+<span class="cif-filename-entry"><input id="cifGeneratedName" type="text" value="generated_structure" aria-label="Output file name" title="Output file name"/><span class="cif-filename-suffix" id="cifUnifiedFileSuffix">.cif</span></span>
 </label></div>
-<p class="cif-release-note" id="cifMcifBnsNotice" role="note" hidden>Note: mCIF export supports single-k magnetic structures only, written without symmetry: magnetic space group P1 (commensurate) or superspace group P1.1'(abg)0s (Incommensurate type).</p>
+<p class="cif-release-note" id="cifMcifBnsNotice" role="note" hidden>Note: mCIF export supports single-k magnetic structures only, written without symmetry: magnetic space group P1 or superspace group P1.1'(abg)0s / P1(abg)0.</p>
 <div class="cif-source-button-row cif-unified-output-buttons">
 <button class="primary-action" id="cifOutputGenerate" type="button">Generate CIF</button>
 <button disabled id="cifOutputDownload" type="button">Download CIF</button>
@@ -657,9 +657,9 @@
 <div class="structure-config-panel" data-structure-config-panel="spins" hidden="">
 <div class="structure-moment-axis-row structure-spin-mode-row">
 <div class="structure-entry-field structure-k1-field"><span class="structure-entry-label">Propagation vector</span><div class="structure-k1-fields">
-<label class="structure-entry-field"><span class="structure-entry-label">k1_h</span><input id="cifMomentK1H" type="text" inputmode="text" value="0" aria-label="k1_h"></label>
-<label class="structure-entry-field"><span class="structure-entry-label">k1_k</span><input id="cifMomentK1K" type="text" inputmode="text" value="0" aria-label="k1_k"></label>
-<label class="structure-entry-field"><span class="structure-entry-label">k1_l</span><input id="cifMomentK1L" type="text" inputmode="text" value="0" aria-label="k1_l"></label>
+<input id="cifMomentK1H" type="text" inputmode="text" value="0" placeholder="k1_h" title="k1_h (r.l.u.)" aria-label="k1_h">
+<input id="cifMomentK1K" type="text" inputmode="text" value="0" placeholder="k1_k" title="k1_k (r.l.u.)" aria-label="k1_k">
+<input id="cifMomentK1L" type="text" inputmode="text" value="0" placeholder="k1_l" title="k1_l (r.l.u.)" aria-label="k1_l">
 </div><select id="cifMomentPropagationVector" class="structure-propagation-legacy-select" tabindex="-1" aria-hidden="true"></select></div>
 <label class="structure-entry-field"><span class="structure-entry-label">Structure type</span><select id="cifMomentStructureType">
 <option selected="" value="collinear">Collinear</option><option value="helical">Helical</option><option value="sinusoidal">Sinusoidal</option><option value="incommensurate">Incommensurate</option>
@@ -684,17 +684,23 @@
 <div class="structure-help-text" hidden="" id="cifSpinIndividualInfo"></div>
 <div class="structure-spin-table-wrap" aria-label="Magnetic spin moment editor">
   <div class="structure-spin-table" id="cifSpinTable" role="table" aria-label="Magnetic moments">
-    <div class="structure-spin-table-header" role="columnheader">No</div>
+    <div class="structure-spin-table-header" role="columnheader" aria-label="No"></div>
     <div class="structure-spin-table-header structure-spin-bulk-header" role="columnheader"><label title="Toggle all spins for the element selected in Display"><input type="checkbox" id="cifSpinBulkCheckbox" aria-label="Enable all displayed spins"/><span id="cifSpinBulkElement">All</span></label></div>
     <div class="structure-spin-table-header" role="columnheader">Atom</div>
+    <div class="structure-spin-table-header structure-spin-group-header" hidden id="cifSpinGroupM0" role="columnheader" title="M0: uniform moment, components along a, b, c (μB)">M0</div>
+    <div class="structure-spin-table-header structure-spin-group-header" hidden id="cifSpinGroupM1" role="columnheader" title="M1: cos component, along a, b, c (μB)">M1</div>
+    <div class="structure-spin-table-header structure-spin-group-header" hidden id="cifSpinGroupM2" role="columnheader" title="M2: sin component, along a, b, c (μB)">M2</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM0a" role="columnheader" title="M0 along a (μB)">a</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM0b" role="columnheader" title="M0 along b (μB)">b</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM0c" role="columnheader" title="M0 along c (μB)">c</div>
     <div class="structure-spin-table-header" id="cifSpinHeaderX" role="columnheader">θ (°)</div>
     <div class="structure-spin-table-header" id="cifSpinHeaderY" role="columnheader">φ (°)</div>
     <div class="structure-spin-table-header" id="cifSpinHeaderZ" role="columnheader">μ (μB)</div>
-    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2a" role="columnheader" title="M2a: sin component along a (μB)">M2a</div>
-    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2b" role="columnheader" title="M2b: sin component along b (μB)">M2b</div>
-    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2c" role="columnheader" title="M2c: sin component along c (μB)">M2c</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2a" role="columnheader" title="M2 (sin) along a (μB)">a</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2b" role="columnheader" title="M2 (sin) along b (μB)">b</div>
+    <div class="structure-spin-table-header" hidden id="cifSpinHeaderM2c" role="columnheader" title="M2 (sin) along c (μB)">c</div>
     <div class="structure-spin-table-header" hidden id="cifSpinHeaderPhase" role="columnheader" title="Phase φ of the site (degrees)">φ (°)</div>
-    <div class="structure-spin-table-header" role="columnheader">Color</div>
+    <div class="structure-spin-table-header" role="columnheader" aria-label="Color"></div>
     <div class="structure-spin-table-rows" id="cifMagMomentRows" role="rowgroup"></div>
   </div>
 </div>

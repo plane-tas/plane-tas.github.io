@@ -92,7 +92,7 @@ function generateMcifForReview(){
     const result=incommensurateMcif();
     for(const id of ['structureMcifDownload','structureMcifSet']) if($(id)) $(id).disabled=false;
     mcifPreview(result.text);
-    mcifMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate P1.1'(abg)0s, ${result.atomCount} atoms, ${result.magneticCount} magnetic.`);
+    mcifMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic.`);
     return;
   }
   if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
@@ -224,9 +224,9 @@ function generateP1McifForReview(){
   if(fn.spinEditingIsIncommensurate(fn.currentStructureForViewer()?.structure||null)){
     const result=incommensurateMcif();
     if($("cifPreview")) $("cifPreview").textContent=result.text;
-    if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (incommensurate, P1.1'(abg)0s)`;
+    if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (incommensurate, ${result.superspaceGroup})`;
     fn.setCifGeneratedReady(true);
-    fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group P1.1'(abg)0s, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Download or Set.`);
+    fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Download or Set.`);
     return result;
   }
   if(fn.selectedCifIsIncommensurate() && !fn.currentStructureForViewer()?.structure?.fromMcifParent) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");

@@ -132,7 +132,7 @@ export function incommensurateSatellites(model,wavelength,{twoThetaMax=180,ionBy
     const theta2=2*Math.asin(Math.min(1,e.q*lambda/(4*Math.PI)))*180/Math.PI;
     if(theta2>twoThetaMax+1e-8) continue;
     const ff=magneticFormFactorDisplay(model,e.q,ionByElement);
-    const label=e.parts.map(({G,branch})=>`(${G.join(' ')})${branch>0?'+k':branch<0?'−k':' (uniform moment)'}`).join(' = ');
+    const label=e.parts.map(({G,branch})=>branch ? `(${G.join(' ')})${branch>0?'+k':'−k'}` : `uniform moment M0 at (${G.join(' ')})`).join(' = ');
     result.push({hkl:e.hkl,satellite:label,q:e.q,d:twopi/e.q,twoTheta:theta2,intensity,formFactor:ff.display,formFactorSort:ff.sortValue});
   }
   const max=Math.max(0,...result.map(r=>r.intensity));

@@ -285,7 +285,7 @@ function renderCifReflectionTable(){
     tr.classList.toggle('cif-reflection-selected',selected);
     tr.setAttribute('aria-selected',String(selected));
     if(r.members.length>1) tr.title=r.members.map(h=>`(${h.map(v=>Number(Number(v).toFixed(6))).join(' ')})`).join(' ');
-    else if(r.satellite) tr.title=`Satellite ${r.satellite}`;
+    else if(r.satellite) tr.title=/[+−]k/.test(r.satellite) ? `Satellite ${r.satellite}` : `Magnetic: ${r.satellite}`;
     for(const c of cols){ const td=document.createElement('td'); td.textContent=c.text(r); tr.appendChild(td); }
     frag.appendChild(tr);
   }

@@ -455,7 +455,9 @@ function syncIncommensurateControls(){
     else{ editing.value=cifState.structureSpinEditingMode; editing.disabled=false; editing.title=""; }
   }
   const direction=$("cifMomentDirectionMode");
-  if(direction){ direction.disabled=icm; direction.title=icm?"Incommensurate: M1 and M2 are components along a, b and c (μB).":""; }
+  // Incommensurate: M1 and M2 are always a, b, c components (the Polar/a, b, c
+  // preference is kept and shown again for the other types).
+  if(direction){ direction.disabled=icm; direction.value=icm?"cartesian":cifState.structureMomentDirectionMode; direction.title=icm?"Incommensurate: M1 and M2 are components along a, b and c (μB).":""; }
   const fill=$("cifMomentIcmFillRow"); if(fill) fill.hidden=!icm;
   // Types offered: every type (an mCIF also "mCIF"). For an mCIF, a type of
   // the other kind than the file (Collinear, Helical, Sinusoidal for an

@@ -75,7 +75,7 @@ function spinEditingIsIndividual(structure){return cifState.structureSpinEditing
 // incommensurate): as loaded they show the file's Fourier components as M1,
 // M2, phi; editing one switches to the Incommensurate structure type.
 function spinEditingIsIncommensurate(structure){
-  if(!structure) return false;
+  if(!structure) return cifState.structureMomentStructureType==='incommensurate';
   if(structure.magnetic) return !!structure.incommensurateSingleQ;
   return cifState.structureMomentStructureType==='incommensurate';
 }
@@ -273,11 +273,11 @@ function cartesianFromCrystal(crystal){
   return basis ? mcifCrystalAxisToCartesian(basis,crystal) : crystal.slice();
 }
 // Four significant digits are for display only; never round stored vectors.
-function formatSpinValue(value){
+function formatSpinValue(value,digits=4){
   const n=Number(value);
   if(!Number.isFinite(n)) return "0";
   if(Math.abs(n)<1e-12) return "0";
-  return String(Number(n.toPrecision(4)));
+  return String(Number(n.toPrecision(digits)));
 }
 function currentMomentSettings(){
   const rows=[...document.querySelectorAll("#cifMagMomentRows .structure-moment-row")];
@@ -303,7 +303,7 @@ function currentMomentSettings(){
         m1:['a','b','c'].map((axis,i)=>read(`m1${axis}`,Number(f1[i])||0)),
         m2:['a','b','c'].map((axis,i)=>read(`m2${axis}`,Number(f2[i])||0)),
         phase:read('phase',Number(fallback.phase)||0),
-        m0:(()=>{ try{ const v=JSON.parse(row.dataset.momentM0||'null'); return Array.isArray(v)?v:(fallback.m0||[0,0,0]); }catch(_e){ return fallback.m0||[0,0,0]; } })(),
+        m0:['a','b','c'].map((axis,i)=>read(`m0${axis}`,Number((fallback.m0||[0,0,0])[i])||0)),
         size:cifState.structureMomentGlobalLength,
         width:cifState.structureMomentGlobalWidth,headSize:cifState.structureMomentGlobalHeadSize,
         color:row.querySelector('[data-moment-field="color"]')?.value || row.dataset.momentColor || fn.elementColor(row.dataset.momentElement),
@@ -372,8 +372,8 @@ function updateMagneticMomentRows(structure){
   // Column headings follow Direction (or the Incommensurate type) even when no structure is loaded.
   const icm=spinEditingIsIncommensurate(structure);
   { const polarMode=cifState.structureMomentDirectionMode==="polar";
-    const headings=icm?["M1a","M1b","M1c"]:polarMode?["θ (°)","φ (°)","μ (μB)"]:["Ma (μB)","Mb (μB)","Mc (μB)"];
-    const titles=icm?["cos component along a (μB)","cos component along b (μB)","cos component along c (μB)"]
+    const headings=icm?["a","b","c"]:polarMode?["θ (°)","φ (°)","μ (μB)"]:["Ma (μB)","Mb (μB)","Mc (μB)"];
+    const titles=icm?["M1 (cos) along a (μB)","M1 (cos) along b (μB)","M1 (cos) along c (μB)"]
       :polarMode?["Polar angle from z (⊥ ab plane, ∥ c*)","Azimuth in the ab plane from a toward b","Moment size (μB)"]
       :["Component along a (unit vector ∥ a, μB)","Component along b (unit vector ∥ b, μB)","Component along c (unit vector ∥ c, μB)"];
     for(const [i,name] of ["X","Y","Z"].entries()){ const cell=$("cifSpinHeader"+name); if(cell){ cell.textContent=headings[i]; cell.title=titles[i]; } }
@@ -384,7 +384,8 @@ function updateMagneticMomentRows(structure){
         :"a, b, c: components along unit vectors parallel to a, b and c (μB), as in mCIF. They are not orthogonal in a non-orthogonal cell.";
       note.hidden=!note.textContent;
     }
-    for(const id of ["cifSpinHeaderM2a","cifSpinHeaderM2b","cifSpinHeaderM2c","cifSpinHeaderPhase"]){ const cell=$(id); if(cell) cell.hidden=!icm; }
+    for(const id of ["cifSpinGroupM0","cifSpinGroupM1","cifSpinGroupM2","cifSpinHeaderM0a","cifSpinHeaderM0b","cifSpinHeaderM0c",
+      "cifSpinHeaderM2a","cifSpinHeaderM2b","cifSpinHeaderM2c","cifSpinHeaderPhase"]){ const cell=$(id); if(cell) cell.hidden=!icm; }
     $("cifSpinTable")?.classList.toggle("structure-spin-table-icm",icm); }
   cifState.visibleSpinSelectionSites.clear();
   let allSites=[];
@@ -450,14 +451,16 @@ function updateMagneticMomentRows(structure){
     const fieldCells=[];
     if(icm){
       const m1=Array.isArray(setting.m1)?setting.m1:[0,0,0], m2=Array.isArray(setting.m2)?setting.m2:[0,0,0];
-      if(Array.isArray(setting.m0)) row.dataset.momentM0=JSON.stringify(setting.m0);
-      const fields=[...['a','b','c'].map((axis,i)=>[`m1${axis}`,`M1 (cos) component along ${axis} (μB)`,m1[i]]),
+      const m0=Array.isArray(setting.m0)?setting.m0:[0,0,0];
+      const fields=[...['a','b','c'].map((axis,i)=>[`m0${axis}`,`M0 (uniform) component along ${axis} (μB)`,m0[i]]),
+        ...['a','b','c'].map((axis,i)=>[`m1${axis}`,`M1 (cos) component along ${axis} (μB)`,m1[i]]),
         ...['a','b','c'].map((axis,i)=>[`m2${axis}`,`M2 (sin) component along ${axis} (μB)`,m2[i]]),
         ['phase','Phase φ (degrees)',Number(setting.phase)||0]];
       for(const [field,title,value] of fields){
         const input=document.createElement("input");
         input.type="number"; input.step=field==="phase"?"1":"0.01";
-        input.value=formatSpinValue(value);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(Number(value)||0);
+        // Narrow columns: 3 significant digits shown, the full value is kept.
+        input.value=formatSpinValue(value,3);input.dataset.displayValue=input.value;input.dataset.fullPrecision=String(Number(value)||0);
         input.dataset.momentField=field;input.title=title;input.setAttribute("aria-label",`${site.label||site.element}: ${title}`);
         momentInputs.push(input);fieldCells.push(makeCell("value",input));
       }
