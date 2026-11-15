@@ -317,12 +317,20 @@ function renderSingle(cache,index=0){
   const nuclearMax=Math.max(0,...cache.Gpoints.map(nuclearI));
   const magneticMax=magneticIntensity ? Math.max(0,...cache.magPoints.map(magneticI)) : 0;
   const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
+  // Strongest magnetic peak relative to the strongest nuclear peak (same
+  // units: barn per crystallographic cell, same Lorentz factor).
+  const ratioBox=$('mfMaxRatio');
+  if(ratioBox){
+    const ratio=(magneticIntensity && nuclearMax>0) ? magneticMax/nuclearMax : NaN;
+    const fmt=v=>v>=0.01 ? String(Number(v.toPrecision(2))) : v.toExponential(1).replace(/e([+-])(\d+)/,(m,sg,d)=>`×10${sg==='-'?'⁻':''}${[...d].map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')}`);
+    ratioBox.textContent=Number.isFinite(ratio) ? `M = ${fmt(ratio)} N` : '';
+  }
   const magneticRelative=p=>magneticMax>0 ? magneticI(p)/magneticMax : 0;
   const lorentzText=p=>{ if(!lorentzOn) return null; const L=lorentz(p); return L ? `L = 1/sin 2θ = ${L.toPrecision(4)}` : 'not reachable elastically'; };
   const iSymbol=lorentzOn?'²L':'²';
   // Colorbars on the right: nuclear above, magnetic below (single k only).
-  const nuclearBar=magneticIntensity ? {len:0.36,y:0.73} : {len:0.62,y:0.52};
-  const magneticBar={len:0.36,y:0.25};
+  const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
+  const magneticBar={len:0.34,y:0.23};
   const peakHoverAngles=singleMapBraggHoverAngles(cache,cache.hwList[i]);
 
   const traces=[

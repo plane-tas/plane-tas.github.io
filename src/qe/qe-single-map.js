@@ -244,6 +244,13 @@ function positionSingleColorbarEntries(){
   if(magnetic){
     place($('mfColorMaxEntry'),magnetic,magnetic.top-outer.top);
     place($('mfColorMinEntry'),magnetic,magnetic.bottom-outer.top);
+    // M = r N just above the magnetic maximum.
+    const ratio=$('mfMaxRatio'), maxEntry=$('mfColorMaxEntry')?.getBoundingClientRect();
+    if(ratio && maxEntry){
+      const r=ratio.getBoundingClientRect();
+      ratio.style.left=`${Math.max(0,Math.min(width-r.width-3*density,magnetic.left-outer.left-4*density))}px`;
+      ratio.style.top=`${Math.max(0,maxEntry.top-outer.top-r.height)}px`;
+    }
   }
   // Lorentz-factor selector just above the nuclear maximum.
   const lorentz=$('qeLorentz');

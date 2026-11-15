@@ -749,3 +749,8 @@
 #singlePlotFrame #sfColorbarRange select.qe-lorentz-select{position:absolute;pointer-events:auto;box-sizing:border-box;
   width:max(98px,calc(100px * var(--tas-density)))!important;min-width:0!important;max-width:none!important;height:max(22px,calc(24px * var(--tas-density)))!important;
   min-height:0!important;padding:0 2px!important;font:400 max(12px,calc(13px * var(--tas-density))) Arial,sans-serif!important}
+
+/* Strongest magnetic peak relative to the strongest nuclear peak, above the
+   magnetic colorbar. */
+#sfColorbarRange .qe-magnetic-ratio{position:absolute;white-space:nowrap;pointer-events:none;
+  font:400 max(12px,calc(13px * var(--tas-density))) Arial,sans-serif;color:#7a1010}
