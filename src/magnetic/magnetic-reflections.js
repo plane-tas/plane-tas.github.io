@@ -41,7 +41,7 @@ export function rationalDenominator(value,max=24,tol=1e-8){
   const v=Number(value);
   if(!Number.isFinite(v))throw Error('Invalid propagation-vector component.');
   for(let d=1;d<=max;d++)if(Math.abs(v*d-Math.round(v*d))<=tol*d)return d;
-  throw Error('Incommensurate k is not supported in the finite-cell Bragg calculator.');
+  throw Error('k is not a fraction with denominator ≤ 24: use the Incommensurate structure type for this k.');
 }
 // Moment of an atom at position r (parent-cell fractional coordinates,
 // including the lattice-cell offset) for a single-k structure. The phase is

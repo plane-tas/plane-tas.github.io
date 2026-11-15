@@ -95,11 +95,15 @@ function updateStructureEditorKNote(){
   const q=effectivePropagationVectorForStructure();
   const momentsOn=[...(fn.currentMomentSettings?.().values?.()||[])].some(x=>x?.enabled);
   const icm=fn.spinEditingIsIncommensurate?.(fn.currentStructureForViewer?.()?.structure||null);
-  if(q.count && icm){
-    lines.push({text:'M(r) = M0 + M1 cos(2πk·r − φ) + M2 sin(2πk·r − φ); M0 (uniform), M1, M2 are components along a, b, c (μB).',cls:'info'});
-  }else if(icm){
+  // Meaning of the moment entries: Polar or a, b, c (always a, b, c for the
+  // Incommensurate type, whose M0, M1, M2 are a, b, c components).
+  const cartesian=icm || cifState.structureMomentDirectionMode!=='polar';
+  lines.push({text:cartesian
+    ? 'a, b, c: components along unit vectors parallel to a, b and c (μB), as in mCIF. They are not orthogonal in a non-orthogonal cell.'
+    : 'Polar: (θ, φ) = (0, 0) is parallel to c (to c* when α or β ≠ 90°) and (90, 0) to a; φ turns from a toward b.',cls:'info'});
+  if(icm && !q.count){
     lines.push({text:'Incommensurate: enter a propagation vector k.',cls:'warn'});
-  }else if(q.count && (!fn.sourceIsMagneticCif?.() || fn.currentStructureForViewer?.()?.mcifSource)){
+  }else if(!icm && q.count && (!fn.sourceIsMagneticCif?.() || fn.currentStructureForViewer?.()?.mcifSource)){
     const idx=q.index||1, comps=[q.h,q.k,q.l];
     if(q.snapped){
       const entered=['h','k','l'].map(a=>q.raw?.[a]||'').join(', ');
@@ -108,7 +112,7 @@ function updateStructureEditorKNote(){
     let commensurate=true;
     try{ comps.forEach(v=>rationalDenominator(v)); }catch(_e){ commensurate=false; }
     if(!commensurate && momentsOn)
-      lines.push({text:`Incommensurate k is not supported in the finite-cell Bragg calculator: spins, magnetic reflections and mCIF export are not available for k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}). Enter k as a fraction with denominator ≤ 24 (e.g. 1/3).`,cls:'warn'});
+      lines.push({text:`k${idx} = (${comps.map(v=>String(Number(v.toPrecision(6)))).join(', ')}) is not a fraction with denominator ≤ 24, which Collinear, Helical and Sinusoidal need: choose the Incommensurate structure type (k is used as entered), or enter k as a fraction (e.g. 1/3).`,cls:'warn'});
   }
   if(cifState.magneticModelError && !lines.some(l=>l.cls==='warn'))
     lines.push({text:`Spins not drawn: ${cifState.magneticModelError}`,cls:'warn'});

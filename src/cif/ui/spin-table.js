@@ -379,10 +379,8 @@ function updateMagneticMomentRows(structure){
     for(const [i,name] of ["X","Y","Z"].entries()){ const cell=$("cifSpinHeader"+name); if(cell){ cell.textContent=headings[i]; cell.title=titles[i]; } }
     const note=$("cifSpinDirectionNote");
     if(note){
-      note.textContent=icm?"":polarMode
-        ?"Polar: (θ, φ) = (0, 0) is parallel to c (to c* when α or β ≠ 90°) and (90, 0) to a; φ turns from a toward b."
-        :"a, b, c: components along unit vectors parallel to a, b and c (μB), as in mCIF. They are not orthogonal in a non-orthogonal cell.";
-      note.hidden=!note.textContent;
+      // Shown in the blue note above the table (moment-traces.js).
+      note.textContent=""; note.hidden=true;
     }
     for(const id of ["cifSpinGroupM0","cifSpinGroupM1","cifSpinGroupM2","cifSpinHeaderM0a","cifSpinHeaderM0b","cifSpinHeaderM0c",
       "cifSpinHeaderM2a","cifSpinHeaderM2b","cifSpinHeaderM2c","cifSpinHeaderPhase"]){ const cell=$(id); if(cell) cell.hidden=!icm; }
