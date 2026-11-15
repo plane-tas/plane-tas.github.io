@@ -65,7 +65,6 @@
     "height": 15,
     "shape": "rectangle"
   },
-  "s2_dep_ei": "no",
   "M2_min": 23,
   "M2_max": 45,
   "A2_min": -10,
@@ -73,12 +72,12 @@
   "S2_min": -5,
   "S2_limits": [
     {
-      "S2limit": -100,
-      "Ei": 45
+      "M2": 0,
+      "S2limit": -100
     },
     {
-      "S2limit": -100,
-      "Ei": 10
+      "M2": 180,
+      "S2limit": -100
     }
   ],
   "instrument_type": "tas",

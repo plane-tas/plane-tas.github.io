@@ -65,7 +65,6 @@
     "height": 15,
     "shape": "rectangle"
   },
-  "s2_dep_ei": "no",
   "M2_min": 41.3,
   "M2_max": 41.3,
   "A2_min": -60,
@@ -73,12 +72,12 @@
   "S2_min": -5,
   "S2_limits": [
     {
-      "S2limit": -130,
-      "Ei": 14.5
+      "M2": 0,
+      "S2limit": -130
     },
     {
-      "S2limit": -130,
-      "Ei": 0.1
+      "M2": 180,
+      "S2limit": -130
     }
   ],
   "instrument_type": "four-circle",
@@ -95,12 +94,12 @@
     "M2_max": 41.3,
     "S2_limits": [
       {
-        "S2limit": -92,
-        "Ei": 14.5
+        "M2": 0,
+        "S2limit": -92
       },
       {
-        "S2limit": -92,
-        "Ei": 0.1
+        "M2": 180,
+        "S2limit": -92
       }
     ],
     "phi_sign": "ccw",

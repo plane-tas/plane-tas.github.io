@@ -3,7 +3,6 @@
   "energy_mode": "Ei fixed",
   "sense": "+-+",
   "s1sign": "ccw",
-  "s2_dep_ei": "no",
   "instrument_type": "diffractometer",
   "instrument_setting": ["diffractometer", "larmor-diffractometer"],
   "diffractometer": {
@@ -13,8 +12,12 @@
     "S2_min": -10.0,
     "S2_limits": [
       {
-        "S2limit": -120.0,
-        "Ei": 27.6
+        "M2": 0,
+        "S2limit": -120
+      },
+      {
+        "M2": 180,
+        "S2limit": -120
       }
     ],
     "available_crystals": {
@@ -35,8 +38,12 @@
     "S2_min": -30.0,
     "S2_limits": [
       {
-        "S2limit": -60.0,
-        "Ei": 13.9
+        "M2": 0,
+        "S2limit": -60
+      },
+      {
+        "M2": 180,
+        "S2limit": -60
       }
     ],
     "available_crystals": {

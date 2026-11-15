@@ -1,6 +1,5 @@
 // Instrument configuration: Q-E range tables, S2 limits, analyzer/monochromator crystals and defaults.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {interpExtrap} from '../core/tas-core.js';
 import {normalizeS1Sign, normalizeTasSense, tasConvention} from '../core/tas-conventions.js';
 
 export function createInstrumentSetup(deps){
@@ -191,7 +190,12 @@ function energyTransferRange(inst,{energyMode,Ei,Ef}){
   if(energyMode==='Ef fixed'){
     const m2=analyzerFree ? null : energyRangeFromAngles(angleRange(inst,'M2'),Number($('dMono')?.value));
     if(m2 && Ef>0) return {hwMin:m2.min-Ef,hwMax:m2.max-Ef,EiRange:m2,source:'M2'};
-    const EiMax=Math.max(...rangeTable(inst).map(x=>Number(x.Ei)));
+    // Largest Ei of the S2 table: its smallest monochromator angle (older
+    // tables: their largest Ei); a table spanning 0-180 deg gives no limit.
+    const legacyEi=rangeTable(inst).map(x=>Number(x.Ei)).filter(v=>v>0);
+    const m2s=rangeTable(inst).map(x=>Number(x.M2)).filter(v=>v>0 && v<180);
+    const EiTable=legacyEi.length ? Math.max(...legacyEi) : (m2s.length ? energyAtTwoTheta(Number($('dMono')?.value),Math.min(...m2s)) : NaN);
+    const EiMax=Number.isFinite(EiTable) && EiTable>Ef ? EiTable : 2*Ef;
     return {hwMin:0,hwMax:EiMax-Ef,source:'S2 table'};
   }
   if(!analyzerFree && Ei>0){
@@ -228,33 +232,47 @@ function energyTransferGrid(range,{energyMode,Ei,Ef},step=null){
   }
   return out;
 }
-function instrumentInterp(inst,lambdaHalf=false){
-  const table=rangeTable(inst);
-  // S2 limits may be written signed (negative for an S2 < 0 instrument);
-  // the calculation uses their magnitudes.
-  const pairs=table.map(x=>[Number(x.Ei)*(lambdaHalf?4:1),Math.abs(Number(x.S2limit))]).sort((a,b)=>a[0]-b[0]);
-  const xp=pairs.map(x=>x[0]), yp=pairs.map(x=>x[1]);
-  return x=>interpExtrap(xp,yp,x);
+// S2 maximum: table "S2_limits" of (M2, S2limit) rows in the instrument file,
+// M2 = monochromator 2θ_M (deg), at least two rows; a constant maximum is
+// given by two rows with the same S2limit (e.g. M2 = 0 and 180).  The S2
+// limit (shielding / guide-wall interference) depends on the monochromator
+// angle, so the table holds for any monochromator crystal.  The M2 of an Ei
+// uses the d of the selected monochromator and the fundamental wavelength:
+// with λ/2 the elastic neutrons have 4 Ei but the monochromator is set for
+// the entered energy.  Older tables of (Ei, S2limit) rows are converted with
+// the selected d.  Outside the table the end values are used.
+function monochromatorTwoTheta(Ei,lambdaHalf=false){
+  const d=Number($('dMono')?.value);
+  const E=lambdaHalf ? Ei/4 : Ei;
+  if(!(d>0) || !(E>0)) return NaN;
+  const s=Math.sqrt(81.8042/E)/(2*d);
+  return s<1 ? 2*Math.asin(s)*180/Math.PI : NaN;
 }
-
-// S2-limit policy is explicit in the instrument JSON.
-//   s2_dep_ei = "yes": the JSON S2 maximum is evaluated from the Ei-dependent
-//                      curve.  The user may edit either Delta S2 or the current
-//                      Effective S2 max; editing Effective converts it back to a
-//                      single Delta that is then applied to the full Ei curve.
-//   s2_dep_ei = "no" : the JSON S2 maximum is constant, but the same two-way
-//                      Delta/Effective controls are retained for a uniform UI.
-// Legacy files without the flag keep backward-compatible behavior: if the
-// table actually varies in S2limit, it is treated as Ei-dependent.
+function s2LimitRows(inst){
+  return rangeTable(inst).map(x=>{
+    const S2=Math.abs(Number(x.S2limit));
+    const M2=Number.isFinite(Number(x.M2)) && x.M2!==null && x.M2!=='' ? Number(x.M2) : monochromatorTwoTheta(Number(x.Ei));
+    return [M2,S2];
+  }).filter(([M2,S2])=>Number.isFinite(M2) && Number.isFinite(S2)).sort((p,q)=>p[0]-q[0]);
+}
+function instrumentInterp(inst,lambdaHalf=false){
+  const rows=s2LimitRows(inst);
+  return Ei=>{
+    if(!rows.length) return NaN;
+    const M2=monochromatorTwoTheta(Ei,lambdaHalf);
+    // Beyond the monochromator's reach (λ > 2d): the largest-angle end.
+    const x=Number.isFinite(M2) ? M2 : rows[rows.length-1][0];
+    if(x<=rows[0][0]) return rows[0][1];
+    if(x>=rows[rows.length-1][0]) return rows[rows.length-1][1];
+    const j=rows.findIndex(r=>r[0]>=x);
+    const [x0,y0]=rows[j-1],[x1,y1]=rows[j];
+    return x1>x0 ? y0+(y1-y0)*(x-x0)/(x1-x0) : y1;
+  };
+}
+// A table whose S2limit varies is applied at the current M2 and shown read
+// only; a constant one is the editable default of the S2 max field.
 function s2DependsOnEi(inst){
-  const raw=inst?.s2_dep_ei ?? inst?.qe_range?.s2_dep_ei;
-  if(typeof raw==='string'){
-    const v=raw.trim().toLowerCase();
-    if(v==='yes') return true;
-    if(v==='no') return false;
-  }
-  if(typeof raw==='boolean') return raw;
-  const values=rangeTable(inst).map(x=>Math.abs(Number(x.S2limit))).filter(Number.isFinite);
+  const values=s2LimitRows(inst).map(r=>r[1]);
   return values.some(v=>Math.abs(v-values[0])>1e-10);
 }
 function configuredConstantS2Max(inst){
@@ -271,8 +289,8 @@ function baseS2MaxAtEi(inst,Ei,lambdaHalf=false){
   return s2DependsOnEi(inst) ? Number(instrumentInterp(inst,lambdaHalf)(Ei)) : configuredConstantS2Max(inst);
 }
 // S2 max: the instrument file gives the default.  It is editable, except
-// for s2_dep_ei = "yes" instruments (CTAX, HODACA), whose Ei-dependent
-// maximum is always taken from the file.
+// when the table varies with M2 (CTAX, HODACA): then the value at the
+// current monochromator angle is always taken from the file.
 function effectiveS2MaxAtEi(inst,Ei,lambdaHalf=false){
   const base=baseS2MaxAtEi(inst,Ei,lambdaHalf);
   if(s2DependsOnEi(inst)) return base;
@@ -305,7 +323,7 @@ function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null,{re
     if(dep || reset || String(out.value).trim()==='') out.value=formatS2ControlValue(s2DisplaySign()*ctx.base);
     out.readOnly=dep;
     out.title=dep
-      ? 'S2 maximum from the instrument file at the displayed Ei (read only: s2_dep_ei = "yes").'
+      ? 'S2 maximum from the instrument file at the current monochromator angle M2 (read only).'
       : 'S2 maximum (default from the instrument file).';
   }catch(_err){
     out.value='';

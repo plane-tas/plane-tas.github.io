@@ -19,14 +19,17 @@
   "distance": {
     "LSD": null
   },
-  "s2_dep_ei": "no",
   "M2_min": 42.23,
   "M2_max": 42.23,
   "S2_min": -5.0,
   "S2_limits": [
     {
-      "S2limit": -150.0,
-      "Ei": 14.0
+      "M2": 0,
+      "S2limit": -150
+    },
+    {
+      "M2": 180,
+      "S2limit": -150
     }
   ],
   "instrument_type": "diffractometer",
