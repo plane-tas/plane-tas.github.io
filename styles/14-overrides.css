@@ -838,3 +838,13 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   #structurePanel .structure-moment-axis-row.structure-spin-mode-row{grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr))!important}
 }
 #structurePanel .structure-k1-fields input{padding-left:calc(3px * var(--tas-density))!important;padding-right:calc(3px * var(--tas-density))!important}
+
+/* Sidebar: fade and a small chevron at the bottom while more settings lie
+   below (set by bootstrap.js; overlay scrollbars are often hidden). */
+.shell > .sidebar.sidebar-has-more::after{
+  content:"⌄";position:sticky;bottom:calc(-10px * var(--tas-density));display:block;
+  height:calc(46px * var(--tas-density));margin-top:calc(-46px * var(--tas-density));
+  pointer-events:none;text-align:center;color:#7d8794;font-size:calc(22px * var(--tas-density));
+  line-height:calc(60px * var(--tas-density));
+  background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.92) 60%,#fff);
+}

@@ -3,6 +3,29 @@
 import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
+// Sidebar: a fade at the bottom while more settings lie below (overlay
+// scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
+function initializeSidebarMoreHint(){
+  const sidebar=document.querySelector('.shell > .sidebar');
+  if(!sidebar || sidebar.dataset.moreHintBound) return;
+  sidebar.dataset.moreHintBound='1';
+  let frame=0;
+  const update=()=>{
+    frame=0;
+    const more=sidebar.scrollHeight-sidebar.clientHeight-sidebar.scrollTop>2 && getComputedStyle(sidebar).overflowY!=='visible';
+    sidebar.classList.toggle('sidebar-has-more',more);
+  };
+  const request=()=>{ if(!frame) frame=requestAnimationFrame(update); };
+  sidebar.addEventListener('scroll',request,{passive:true});
+  window.addEventListener('resize',request);
+  if(typeof ResizeObserver==='function'){
+    const observer=new ResizeObserver(request);
+    observer.observe(sidebar);
+    for(const child of sidebar.children) observer.observe(child);
+  }
+  request();
+}
+
 export function createAppBootstrap(deps){
   const {
     applyDarkAngleSlotColors, applyInstrumentCrystalAvailability, applyInstrumentDefaults,
@@ -218,6 +241,7 @@ async function initialize(){
   });
   syncPowderLinkedInputs();
   initializeResponsivePlotResize();
+  initializeSidebarMoreHint();
   setActiveTab(savedActiveTab());
   $('gm1').addEventListener('change',updateSupermirrorUI);$('calcMode').addEventListener('change',updateCalcMode);bindResolutionManualCalculation();$('calcScanResolution')?.addEventListener('click',doScanResolution);$('scanSlider').addEventListener('input',()=>renderResolutionScan(num('scanSlider')));$('prev').addEventListener('click',()=>renderResolutionScan(num('scanSlider')-1));$('next').addEventListener('click',()=>renderResolutionScan(num('scanSlider')+1));
   for(const id of ['h','k','l','h0','k0','l0','h1','k1','l1','npts','Uh','Uk','Ul','Vh','Vk','Vl','a','b','c','alpha','beta','gamma']){
