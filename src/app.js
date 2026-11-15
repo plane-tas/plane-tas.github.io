@@ -53,7 +53,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryPointWarnings, currentGeometryScanOutputTab, setGeometryScanOutputTab, setGeometryCalculationMode, updateGeometryCalculationModeVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryPointWarnings, currentGeometryScanOutputTab, setGeometryScanOutputTab, setGeometryCalculationMode, updateGeometryCalculationModeVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal;
@@ -746,6 +746,7 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   deg2rad, dot, effectiveOrientationReference, effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL,
   getDarkAssets, getSelectedCifFileName:()=>selectedCifFileName,
   getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null,
+  getMagneticPeakIntensities:qMax=>magneticPeakIntensities?.(qMax) ?? null,
   hklToQ, isAllowedByCentering, latticeParams, linspace, makeSpiceScatteringPlaneBasis, maxArray, norm,
   nuclearStructureFactorSquared, num, rad2deg, rangeTable, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons,
   representativePowderHklText, scale, selectedBackgrounds, selectedS1Sign,
@@ -840,6 +841,7 @@ geometrySliders.bindGeometrySliders();
   setCifOutputTab,
   initializeCifGenerator,
   nuclearStructureForSelectedCif,
+  magneticPeakIntensities,
   refreshAfterStateRestore:refreshCifAfterStateRestore
 }=createCifUI({
   $, PI, RL_calc, add, canonicalReflectionHkl, checkedValue, clamp, clearError, compareHkl, cross,

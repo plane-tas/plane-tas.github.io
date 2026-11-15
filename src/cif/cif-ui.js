@@ -96,6 +96,7 @@ export function createCifUI(deps){
     setCifOutputTab:fn.setCifOutputTab,
     initializeCifGenerator:fn.initializeCifGenerator,
     nuclearStructureForSelectedCif:fn.nuclearStructureForSelectedCif,
+    magneticPeakIntensities:(...args)=>fn.magneticPeakIntensities(...args),
     refreshAfterStateRestore
   };
 }

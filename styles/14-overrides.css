@@ -731,8 +731,12 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #structurePanel #generatorReflectionsPane .generator-reflection-pane > #cifReflectionsPanel{
   overflow-x:hidden;
   overflow-y:auto;
-  overscroll-behavior:contain;
+  /* Let the wheel reach the page when this panel (or the table inside it)
+     cannot scroll further, e.g. in a half-width window where the editor and
+     the output are stacked. */
+  overscroll-behavior:auto;
 }
+#structurePanel #generatorReflectionsPane #cifReflectionTableWrap{overscroll-behavior:auto}
 /* Inside the scrolling panel the controls keep their natural height (they
    would otherwise shrink and overlap); only the table area shrinks.  The
    Table / Graph tabs stay at the top while the panel is scrolled. */
@@ -812,3 +816,19 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #structurePanel #cifSpinTable.structure-spin-table-icm > :is(#cifSpinHeaderM0a,#cifSpinHeaderM0b,#cifSpinHeaderM0c,
   #cifSpinHeaderX,#cifSpinHeaderY,#cifSpinHeaderZ,#cifSpinHeaderM2a,#cifSpinHeaderM2b,#cifSpinHeaderM2c){
   top:var(--icm-group-h);min-height:0!important;padding-top:calc(3px * var(--tas-density))!important;padding-bottom:calc(3px * var(--tas-density))!important}
+
+/* Phones / narrow windows. Spins: the propagation vector takes its own row
+   above Structure type / Rotation axis / Chirality; the Incommensurate table
+   keeps readable columns and scrolls sideways like the other spin tables. */
+@media (max-width:700px){
+  #structurePanel .structure-moment-axis-row.structure-spin-mode-row{grid-template-columns:repeat(3,minmax(0,1fr))!important;row-gap:calc(6px * var(--tas-density));column-gap:calc(10px * var(--tas-density))!important}
+  #structurePanel .structure-spin-mode-row > .structure-k1-field{grid-column:1/-1}
+  #structurePanel .structure-spin-mode-row .structure-k1-fields{max-width:calc(320px * var(--tas-density))}
+}
+@media (max-width:900px){
+  #structurePanel .structure-spin-table-wrap #cifSpinTable.structure-spin-table-icm{min-width:calc(640px * var(--tas-density))!important}
+}
+
+/* CIF/mCIF Generator: no outer frame around the editor and the output (as
+   in Q-E Range, each side keeps its own card). */
+#structurePanel > .calc-card.generator-unified-card{border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}

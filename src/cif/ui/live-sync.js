@@ -118,6 +118,8 @@ function scheduleLiveReflectionRecalc({nuclear=true,magnetic=false}={}){
     liveReflectionRecalcTimer=0;
     // Nuclear and magnetic reflections share one table: recalculate both.
     if(nuclear || magnetic) fn.recalculateGeneratedReflections();
+    // Magnetic intensities are also drawn on the Q-E map.
+    if(magnetic) scheduleRecalc?.();
   },LIVE_REFLECTION_DELAY_MS);
 }
 function readLiveEditorNuclearStructure(){

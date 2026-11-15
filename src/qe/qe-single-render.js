@@ -298,6 +298,31 @@ function renderSingle(cache,index=0){
   // slice has no nuclear peak, e.g. a four-circle W layer between lattice planes.
   // Plotly drops the colorbar of an empty trace, so carry one unplotted point.
   const colorbarOnly=!!cache.cifStructure && visibleGpoints.length===0;
+  // Peak shading: I = |F|^2 L with the single-crystal (omega scan) Lorentz
+  // factor L = 1/sin 2theta at the elastic wave vector of the fixed energy,
+  // each colorbar relative to its own maximum. |F_N|^2 is in fm^2
+  // (/100 -> barn), |F_M|^2 in barn per crystallographic cell. A peak beyond
+  // 2k cannot be reached elastically: I = 0.
+  const magneticIntensity=!!cache.magneticIntensity && !!cache.cifStructure;
+  const braggK=Number(cache.braggK);
+  const lorentzOn=$('qeLorentz')?.value!=='off';
+  const lorentz=p=>{
+    if(!lorentzOn) return 1;
+    const s=Number(p.q)/(2*braggK);
+    if(!(braggK>0) || !Number.isFinite(s) || s>1) return null;
+    return 1/Math.max(1e-3,Math.sin(2*Math.asin(s)));
+  };
+  const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
+  const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
+  const nuclearMax=Math.max(0,...cache.Gpoints.map(nuclearI));
+  const magneticMax=magneticIntensity ? Math.max(0,...cache.magPoints.map(magneticI)) : 0;
+  const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
+  const magneticRelative=p=>magneticMax>0 ? magneticI(p)/magneticMax : 0;
+  const lorentzText=p=>{ if(!lorentzOn) return null; const L=lorentz(p); return L ? `L = 1/sin 2θ = ${L.toPrecision(4)}` : 'not reachable elastically'; };
+  const iSymbol=lorentzOn?'²L':'²';
+  // Colorbars on the right: nuclear above, magnetic below (single k only).
+  const nuclearBar=magneticIntensity ? {len:0.36,y:0.73} : {len:0.62,y:0.52};
+  const magneticBar={len:0.36,y:0.25};
   const peakHoverAngles=singleMapBraggHoverAngles(cache,cache.hwList[i]);
 
   const traces=[
@@ -333,11 +358,11 @@ function renderSingle(cache,index=0){
       meta:"nuclear-data",
       zorder:0,
       marker:cache.cifStructure ? {
-        color:colorbarOnly?[0]:visibleGpoints.map(p=>Number.isFinite(p.sfNorm)?p.sfNorm:0),
+        color:colorbarOnly?[0]:visibleGpoints.map(nuclearRelative),
         colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
-        colorbar:{title:{text:"|F_N|² / max",side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:0.62,x:1.01,xanchor:"left",y:0.52,
+        colorbar:{title:{text:`|F_N|${iSymbol} / max`,side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:nuclearBar.len,x:1.01,xanchor:"left",y:nuclearBar.y,
           ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
         // A dark rim keeps weak (near-white) peaks visible on any background
@@ -348,10 +373,10 @@ function renderSingle(cache,index=0){
         if(!p.label) return p.label;
         const lines=[p.label,peakHoverAngles(p)];
         if(cache.cifStructure){
-          const raw=Number.isFinite(p.sf2)?p.sf2:0, rel=Number.isFinite(p.sfNorm)?p.sfNorm:0;
-          lines.push(`|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn`,`|F<sub>N</sub>|² / max = ${rel.toFixed(4)}`);
+          const raw=Number.isFinite(p.sf2)?p.sf2:0;
+          lines.push(`|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn`,lorentzText(p),`|F<sub>N</sub>|${iSymbol} / max = ${nuclearRelative(p).toFixed(4)}`);
         }
-        return lines.join('<br>');
+        return lines.filter(Boolean).join('<br>');
       }),
       hovertemplate:"%{hovertext}<extra></extra>"
     },
@@ -382,8 +407,30 @@ function renderSingle(cache,index=0){
     const pts=transformedMag.filter(p=>p.qIndex===qIndex);
     if(!pts.length) continue;
     const symbol=magneticSymbols[(qIndex-1)%magneticSymbols.length];
+    const name=`Magnetic Bragg peaks: k${qIndex}`;
+    if(magneticIntensity){
+      // Single k: white-to-red |F_M|^2 colorbar below the nuclear one; the
+      // legend keeps a plain red entry.
+      traces.push({x:[null],y:[null],mode:"markers",name,marker:{color:"red",size:initialMarkerSizes.magnetic,symbol},
+        hoverinfo:"skip",meta:"magnetic-legend",zorder:10});
+      traces.push({
+        x:pts.map(p=>p.x),y:pts.map(p=>p.y),mode:"markers",name,showlegend:false,meta:"magnetic-data",
+        marker:{color:pts.map(magneticRelative),
+          colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(255,200,200)"],[0.5,"rgb(250,130,130)"],[0.75,"rgb(225,55,55)"],[1,"rgb(180,0,0)"]],
+          cmin:Number($("mfColorMinEntry")?.value ?? 0),cmax:Number($("mfColorMaxEntry")?.value ?? 1),showscale:true,
+          colorbar:{title:{text:`|F_M|${iSymbol} / max`,side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
+            ...singleColorbarTicks(Number($("mfColorMinEntry")?.value ?? 0),Number($("mfColorMaxEntry")?.value ?? 1))},
+          size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol,
+          line:{color:"rgb(110,0,0)",width:1.3}},
+        hovertext:pts.map(p=>p.label ? [p.label,peakHoverAngles(p),
+          `|F<sub>M</sub>|² = ${(Number(p.fm2)||0).toPrecision(6)} barn`,lorentzText(p),`|F<sub>M</sub>|${iSymbol} / max = ${magneticRelative(p).toFixed(4)}`].filter(Boolean).join('<br>') : p.label),
+        hovertemplate:"%{hovertext}<extra></extra>",
+        zorder:10
+      });
+      continue;
+    }
     traces.push({
-      x:pts.map(p=>p.x),y:pts.map(p=>p.y),mode:"markers",name:`Magnetic Bragg peaks: k${qIndex}`,
+      x:pts.map(p=>p.x),y:pts.map(p=>p.y),mode:"markers",name,
       marker:{color:"red",size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol},
       hovertext:pts.map(p=>p.label ? `${p.label}<br>${peakHoverAngles(p)}` : p.label),
       hovertemplate:"%{hovertext}<extra></extra>",
@@ -495,6 +542,7 @@ function renderSingle(cache,index=0){
     bindSingleZoomPeakScaling(cache,2*QplotX,2*QplotY);
     bindSingleRluGrid(cache);
     $('sfColorbarRange')?.classList.toggle('hidden',!cache.cifStructure);
+    $('sfColorbarRange')?.classList.toggle('qe-magnetic-colorbar',magneticIntensity);
     positionSingleColorbarEntries();
   }).catch(err=>console.warn('Constant E map drawing warning:',err));
 

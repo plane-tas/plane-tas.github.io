@@ -741,3 +741,11 @@
     width: calc(73px * var(--tas-density));
   }
 }
+
+/* Magnetic colorbar endpoints only for a single-k magnetic structure. */
+#sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry{display:none}
+
+/* Lorentz factor of the peak shading, above the nuclear colorbar. */
+#singlePlotFrame #sfColorbarRange select.qe-lorentz-select{position:absolute;pointer-events:auto;box-sizing:border-box;
+  width:max(98px,calc(100px * var(--tas-density)))!important;min-width:0!important;max-width:none!important;height:max(22px,calc(24px * var(--tas-density)))!important;
+  min-height:0!important;padding:0 2px!important;font:400 max(12px,calc(13px * var(--tas-density))) Arial,sans-serif!important}

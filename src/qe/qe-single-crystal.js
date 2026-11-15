@@ -10,7 +10,7 @@ export function createQESingleCrystal(deps){
     backgroundPowderPeaks, calcQ0, centeringFromSpaceGroup, checkedValue, clamp,
     currentInstrument, deg2rad, dot, effectiveOrientationReference, effectiveS2MaxAtEi,
     enabledPropagationVectors, formatHKL, getDarkAssets, getSelectedCifFileName,
-    getNuclearCifStructure, hklToQ, isAllowedByCentering, latticeParams, linspace,
+    getNuclearCifStructure, getMagneticPeakIntensities, hklToQ, isAllowedByCentering, latticeParams, linspace,
     makeSpiceScatteringPlaneBasis, norm, nuclearStructureFactorSquared, num,
     rad2deg, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons, representativePowderHklText,
     scale, selectedBackgrounds, selectedS1Sign, selectedSampleSpaceGroup, selectedTasSense,
@@ -309,7 +309,7 @@ export function createQESingleCrystal(deps){
           ? nuclearStructureFactorSquared(nuclearCifStructure,hkl,norm(G))
           : null;
         Gpoints.push({
-          x:xy[0],y:xy[1],hkl,label:isOrigin?"":`(${formatHKL(hkl)})`,
+          x:xy[0],y:xy[1],hkl,q:norm(G),label:isOrigin?"":`(${formatHKL(hkl)})`,
           sf2:Number.isFinite(sf2)?sf2:null,sfNorm:null
         });
       }
@@ -329,7 +329,7 @@ export function createQESingleCrystal(deps){
           ? nuclearStructureFactorSquared(nuclearCifStructure,hkl,norm(G))
           : null;
         Gpoints.push({
-          x:dot(G,ex),y:dot(G,ey),hkl,label:isOrigin?"":`(${formatHKL(hkl)})`,
+          x:dot(G,ex),y:dot(G,ey),hkl,q:norm(G),label:isOrigin?"":`(${formatHKL(hkl)})`,
           sf2:Number.isFinite(sf2)?sf2:null,sfNorm:null
         });
       }
@@ -370,11 +370,42 @@ export function createQESingleCrystal(deps){
               x:xyM[0],
               y:xyM[1],
               qIndex:q.index,
-              hkl:hm,
+              hkl:hm,q:norm(Gm),
               label:`k${q.index}: (${hm.map(x=>x.toFixed(2)).join(",")})`
             });
           }
         }
+      }
+    }
+
+    // Single-k magnetic structure (one enabled propagation vector): the
+    // |F_M|^2 of each satellite from the Structure editor model (same values
+    // as the reflection table). Matched within 0.006 r.l.u., which also covers
+    // a decimal k calculated as the nearest fraction (e.g. 0.333 -> 1/3).
+    let magneticIntensity=false;
+    if(enabledPropagationVectors().length===1 && magPoints.length && typeof getMagneticPeakIntensities==="function"){
+      const rows=getMagneticPeakIntensities(QplotLattice);
+      if(rows?.length){
+        const cell=v=>Math.round(v*100);
+        const grid=new Map();
+        for(const row of rows){
+          const key=row.hkl.map(cell).join(',');
+          if(!grid.has(key)) grid.set(key,[]);
+          grid.get(key).push(row);
+        }
+        const near=hkl=>{
+          const base=hkl.map(cell);
+          let best=null,bestD=0.006;
+          for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++) for(let c=-1;c<=1;c++){
+            for(const row of grid.get([base[0]+a,base[1]+b,base[2]+c].join(','))||[]){
+              const d=Math.max(...row.hkl.map((v,i)=>Math.abs(v-hkl[i])));
+              if(d<=bestD){ bestD=d; best=row; }
+            }
+          }
+          return best;
+        };
+        for(const p of magPoints){ const row=near(p.hkl); p.fm2=row ? row.fm2 : 0; }
+        magneticIntensity=true;
       }
     }
 
@@ -402,7 +433,9 @@ export function createQESingleCrystal(deps){
       inst,lc,latticeCentering,sampleSpaceGroup,U,V,rl,ex,ey,ez,
       energyMode,Ei,Ef,lambdaHalf,hwList,
       regions,S2list,QmaxList,darkKF,darkKI,darkFixed,addDark,
-      Gpoints,magPoints,ringData,darkAssets,QrefXY,sense,
+      // Elastic wave vector of the Bragg peaks (fixed energy): Lorentz factor.
+      braggK:2*PI/wavelength,
+      Gpoints,magPoints,magneticIntensity,ringData,darkAssets,QrefXY,sense,
       fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,chiFactor,
       cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };

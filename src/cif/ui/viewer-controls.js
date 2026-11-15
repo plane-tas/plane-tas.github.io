@@ -118,7 +118,9 @@ function requestGeneratorViewportHeightSync(){
     // preserve ordinary scrolling in that exceptional case.
     const main=card.closest('main');
     const viewportBottom=Math.min(window.innerHeight,main?.getBoundingClientRect().bottom||window.innerHeight);
-    const freeHeight=Math.floor(viewportBottom-card.getBoundingClientRect().top-12);
+    // 12 px bottom gap; one more pixel absorbs sub-pixel rounding, which
+    // otherwise left a 1 px page scroll (and its scrollbar) on this tab.
+    const freeHeight=Math.floor(viewportBottom-card.getBoundingClientRect().top-13);
     const fit=desktop && freeHeight>=330;
     const prevHeight=card.style.getPropertyValue('--generator-visible-height');
     const wasFit=card.classList.contains('generator-height-limited');

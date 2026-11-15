@@ -231,6 +231,9 @@
   <div class="qe-colorbar-range hidden" id="sfColorbarRange" aria-label="Nuclear structure-factor colorbar limits">
     <input class="qe-colorbar-value qe-colorbar-value-max" id="sfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit colorbar maximum" title="Click to edit colorbar maximum; press Enter to apply"/>
     <input class="qe-colorbar-value qe-colorbar-value-min" id="sfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit colorbar minimum" title="Click to edit colorbar minimum; press Enter to apply"/>
+    <select class="qe-lorentz-select" id="qeLorentz" aria-label="Lorentz factor of the peak shading" title="Lorentz factor of the peak shading: single-crystal ω scan L = 1/sin 2θ, or none (|F|² only)"><option value="on">L = 1/sin 2θ</option><option value="off">L = 1</option></select>
+    <input class="qe-colorbar-value qe-colorbar-value-max qe-magnetic-entry" id="mfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit magnetic colorbar maximum" title="Click to edit the magnetic colorbar maximum; press Enter to apply"/>
+    <input class="qe-colorbar-value qe-colorbar-value-min qe-magnetic-entry" id="mfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit magnetic colorbar minimum" title="Click to edit the magnetic colorbar minimum; press Enter to apply"/>
   </div>
 </div><div class="qe-plot powder hidden" id="powderPlot"></div>
 <div class="qe-external-legend hidden" id="qePowderLegend" aria-label="Powder Q–E map legend"></div>

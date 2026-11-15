@@ -222,25 +222,37 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
 function positionSingleColorbarEntries(){
   const frame=$('singlePlotFrame'),gd=$('singlePlot'),controls=$('sfColorbarRange');
   if(!frame || !gd || !controls || controls.classList.contains('hidden')) return;
-  // Place editable text at the exact endpoints of Plotly's colorbar. The
-  // corresponding native endpoint labels are omitted via colorbar.ticktext.
-  const bar=gd.querySelector('.colorbar .cbfill') || gd.querySelector('.cbfill');
-  const rect=bar?.getBoundingClientRect();
+  // Place editable text at the exact endpoints of Plotly's colorbars (nuclear
+  // above, magnetic below for a single k). The native endpoint labels are
+  // omitted via colorbar.ticktext.
+  const bars=[...gd.querySelectorAll('.colorbar .cbfill, .cbfill')].filter((el,i,all)=>all.indexOf(el)===i)
+    .map(el=>el.getBoundingClientRect()).filter(r=>r.height>=1).sort((p,q)=>p.top-q.top);
   const outer=frame.getBoundingClientRect();
-  if(!rect || rect.height<1 || !outer.width) return;
-  // Native layout: Plotly and overlay inputs now use the same CSS-pixel
-  // coordinate system. No inverse-transform correction is required.
-  const max=$('sfColorMaxEntry'),min=$('sfColorMinEntry');
+  if(!bars.length || !outer.width) return;
   const density=window.tasUIDensity?.() || 1;
   const entryWidth=58*density;
   const width=outer.width, height=outer.height;
-  const x=Math.max(0,Math.min(width-entryWidth,rect.right-outer.left+7*density));
-  const topY=rect.top-outer.top, bottomY=rect.bottom-outer.top;
-  for(const [entry,cy] of [[max,topY],[min,bottomY]]){
-    if(!entry) continue;
-    entry.style.left=`${x}px`;
+  const place=(entry,rect,cy)=>{
+    if(!entry) return;
+    entry.style.left=`${Math.max(0,Math.min(width-entryWidth,rect.right-outer.left+7*density))}px`;
     const entryHeight=entry.getBoundingClientRect().height;
     entry.style.top=`${Math.max(0,Math.min(height-entryHeight,cy-entryHeight/2))}px`;
+  };
+  const nuclear=bars[0], magnetic=controls.classList.contains('qe-magnetic-colorbar') ? bars[1] : null;
+  place($('sfColorMaxEntry'),nuclear,nuclear.top-outer.top);
+  place($('sfColorMinEntry'),nuclear,nuclear.bottom-outer.top);
+  if(magnetic){
+    place($('mfColorMaxEntry'),magnetic,magnetic.top-outer.top);
+    place($('mfColorMinEntry'),magnetic,magnetic.bottom-outer.top);
+  }
+  // Lorentz-factor selector just above the nuclear maximum.
+  const lorentz=$('qeLorentz');
+  if(lorentz){
+    const r=lorentz.getBoundingClientRect();
+    const maxEntry=$('sfColorMaxEntry')?.getBoundingClientRect();
+    const top=(maxEntry ? maxEntry.top-outer.top : nuclear.top-outer.top)-r.height-2*density;
+    lorentz.style.left=`${Math.max(0,Math.min(width-r.width-2*density,nuclear.left-outer.left-4*density))}px`;
+    lorentz.style.top=`${Math.max(0,top)}px`;
   }
 }
 

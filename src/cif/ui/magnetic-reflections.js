@@ -7,9 +7,9 @@ import {incommensurateSatellites} from '../../magnetic/incommensurate.js';
 import {chargeBalancedOxidationStates, compositionOfSites, preferredOxidationState} from '../../magnetic/oxidation-states.js';
 
 export function installMagneticReflections(ctx){
-  const {deps:{$, getSelectedCifText}, fn}=ctx;
+  const {deps:{$, getSelectedCifText, scheduleRecalc}, fn}=ctx;
   Object.assign(fn,{
-    computeMagneticReflections, initializeGeneratorTableOutsideClick, refreshMagneticIonSelectors
+    computeMagneticReflections, initializeGeneratorTableOutsideClick, magneticPeakIntensities, refreshMagneticIonSelectors
   });
 
 // ---- Magnetic-ion choice (form factor) per element that carries a spin ----
@@ -62,6 +62,7 @@ function refreshMagneticIonSelectors(motif=currentMagneticMotif()){
     select.addEventListener('change',()=>{
       magneticIonChoice[element]=select.value;
       fn.recalculateGeneratedReflections();
+      scheduleRecalc?.();
     });
     label.append(caption,select);
     box.appendChild(label);
@@ -97,11 +98,8 @@ function computeMagneticReflections({wavelength,twoThetaMax=180}){
     try{
       const ionByElement=selectedMagneticIons();
       const raw=incommensurateSatellites(motif,wavelength,{twoThetaMax,ionByElement});
-      const fmt=v=>String(Number(Number(v).toPrecision(6)));
-      let message=motif.source==='incommensurate mCIF'
-        ? `Incommensurate mCIF: magnetic satellites G ± k with k = (${motif.q.map(fmt).join(', ')}) from the file's Fourier components; one magnetic domain (the k of the file).`
-        : `Incommensurate: magnetic satellites G ± k with k = (${motif.q.map(fmt).join(', ')}) as entered; one magnetic domain (the entered k).`;
-      if(!raw.length) message+=' No magnetic satellites in the selected wavelength range.';
+      let message='';
+      if(!raw.length) message='No magnetic satellites in the selected wavelength range.';
       const rows=raw.map(row=>({hkl:row.hkl,fm2:row.intensity,formFactor:row.formFactor,formFactorSort:row.formFactorSort,
         twoTheta:row.twoTheta,q:row.q,d:row.d,satellite:row.satellite}));
       return {rows,parentKnown:true,lattice:motif.lattice,message};
@@ -133,6 +131,19 @@ function computeMagneticReflections({wavelength,twoThetaMax=180}){
   }catch(err){
     return empty(err?.message||String(err));
   }
+}
+
+// |F_M|^2 (barn per crystallographic cell) of every magnetic reflection with
+// |Q| <= qMax, indexed in the crystallographic cell, for the Q-E map: the
+// same model and form factors as the reflection table. Null when no spin is
+// set, the crystallographic cell is unknown or the calculation fails.
+function magneticPeakIntensities(qMax){
+  const q=Number(qMax);
+  if(!(q>0)) return null;
+  let result;
+  try{ result=computeMagneticReflections({wavelength:4*Math.PI/q,twoThetaMax:180}); }catch(_e){ return null; }
+  if(!result?.rows?.length || !result.parentKnown) return null;
+  return result.rows.map(row=>({hkl:row.hkl.map(Number),fm2:Number(row.fm2)})).filter(r=>r.hkl.every(Number.isFinite) && Number.isFinite(r.fm2));
 }
 
 function initializeGeneratorTableOutsideClick(){

@@ -171,6 +171,43 @@ async function initialize(){
       saveRightPanelState();
     });
   }
+  // Magnetic colorbar endpoints (single-k magnetic structure): 0...1, max > min.
+  const syncMagneticColorbar=source=>{
+    const minEntry=$('mfColorMinEntry'),maxEntry=$('mfColorMaxEntry');
+    if(!minEntry||!maxEntry) return;
+    const read=(el,fallback)=>{ const v=el.value.trim()===''?fallback:Number(el.value); return Number.isFinite(v)?Math.max(0,Math.min(1,v)):fallback; };
+    let min=read(minEntry,0),max=read(maxEntry,1);
+    if(max-min<1e-4){ if(source==='max') min=Math.max(0,max-1e-4); else max=Math.min(1,min+1e-4); }
+    if(max-min<1e-4){ if(source==='max') max=Math.min(1,min+1e-4); else min=Math.max(0,max-1e-4); }
+    minEntry.value=String(Number(min.toFixed(4))); maxEntry.value=String(Number(max.toFixed(4)));
+  };
+  for(const [id,source] of [['mfColorMaxEntry','max'],['mfColorMinEntry','min']]){
+    const field=$(id);
+    field?.addEventListener('focus',()=>field.select());
+    field?.addEventListener('keydown',event=>{
+      if(event.key==='Enter'){ event.preventDefault(); field.blur(); }
+      else if(event.key==='Escape'){
+        event.preventDefault();
+        const tr=$('singlePlot')?.data?.find(t=>t.meta==='magnetic-data');
+        field.value=String(source==='max'?(tr?.marker?.cmax ?? 1):(tr?.marker?.cmin ?? 0));
+        field.blur();
+      }
+    });
+    field?.addEventListener('change',()=>{
+      syncMagneticColorbar(source);
+      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
+      saveRightPanelState();
+    });
+  }
+  // Lorentz factor of the Q-E peak shading (1/sin 2θ or none).
+  const qeLorentz=$('qeLorentz');
+  if(qeLorentz){
+    try{ const saved=localStorage.getItem('tas-qe-lorentz'); if(saved==='on'||saved==='off') qeLorentz.value=saved; }catch(_e){}
+    qeLorentz.addEventListener('change',()=>{
+      try{ localStorage.setItem('tas-qe-lorentz',qeLorentz.value); }catch(_e){}
+      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
+    });
+  }
   $('cifSelectButton').addEventListener('click',()=>$('cifFileInput').click());
   $('cifClearButton')?.addEventListener('click',clearSelectedCif);
   $('cifFileInput').addEventListener('change',async()=>{
