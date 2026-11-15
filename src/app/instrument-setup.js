@@ -145,7 +145,8 @@ function rangeTable(inst){
 }
 // Energy-transfer range of the Q-E maps from the crystal angle ranges in the
 // instrument file:
-//   "M2_min" / "M2_max": monochromator 2θ_M range (deg, magnitudes) -> Ei range
+//   "M2_min" / "M2_max": monochromator 2θ_M range (deg; signed as the motor, e.g.
+//                        negative for -+-; magnitudes are used) -> Ei range
 //   "A2_min" / "A2_max": analyzer 2θ_A motor range (deg, signed as on the
 //                        instrument page; optional, default = M2 range)
 // E = 81.8042 / λ², λ = 2 d sin(2θ/2), with the d of the selected crystal.
@@ -193,7 +194,7 @@ function energyTransferRange(inst,{energyMode,Ei,Ef}){
     // Largest Ei of the S2 table: its smallest monochromator angle (older
     // tables: their largest Ei); a table spanning 0-180 deg gives no limit.
     const legacyEi=rangeTable(inst).map(x=>Number(x.Ei)).filter(v=>v>0);
-    const m2s=rangeTable(inst).map(x=>Number(x.M2)).filter(v=>v>0 && v<180);
+    const m2s=rangeTable(inst).map(x=>Math.abs(Number(x.M2))).filter(v=>v>0 && v<180);
     const EiTable=legacyEi.length ? Math.max(...legacyEi) : (m2s.length ? energyAtTwoTheta(Number($('dMono')?.value),Math.min(...m2s)) : NaN);
     const EiMax=Number.isFinite(EiTable) && EiTable>Ef ? EiTable : 2*Ef;
     return {hwMin:0,hwMax:EiMax-Ef,source:'S2 table'};
@@ -233,7 +234,8 @@ function energyTransferGrid(range,{energyMode,Ei,Ef},step=null){
   return out;
 }
 // S2 maximum: table "S2_limits" of (M2, S2limit) rows in the instrument file,
-// M2 = monochromator 2θ_M (deg), at least two rows; a constant maximum is
+// M2 = monochromator 2θ_M (deg, signed as the motor: negative for -+-;
+// magnitudes are used), at least two rows; a constant maximum is
 // given by two rows with the same S2limit (e.g. M2 = 0 and 180).  The S2
 // limit (shielding / guide-wall interference) depends on the monochromator
 // angle, so the table holds for any monochromator crystal.  The M2 of an Ei
@@ -251,7 +253,8 @@ function monochromatorTwoTheta(Ei,lambdaHalf=false){
 function s2LimitRows(inst){
   return rangeTable(inst).map(x=>{
     const S2=Math.abs(Number(x.S2limit));
-    const M2=Number.isFinite(Number(x.M2)) && x.M2!==null && x.M2!=='' ? Number(x.M2) : monochromatorTwoTheta(Number(x.Ei));
+    // M2 may be written signed (negative for a -+- instrument); magnitudes are used.
+    const M2=Number.isFinite(Number(x.M2)) && x.M2!==null && x.M2!=='' ? Math.abs(Number(x.M2)) : monochromatorTwoTheta(Number(x.Ei));
     return [M2,S2];
   }).filter(([M2,S2])=>Number.isFinite(M2) && Number.isFinite(S2)).sort((p,q)=>p[0]-q[0]);
 }
