@@ -33,6 +33,7 @@ import {createQESingleCrystal} from "./qe/qe-single-crystal.js";
 import {createTasAngleCalculation} from "./core/tas-angle-calculation.js";
 import {createBackgroundRows} from './app/background-rows.js';
 import {createInstrumentSetup} from './app/instrument-setup.js';
+import {createInstrumentJsonIO} from './app/instrument-json-io.js';
 import {createSidebarRows} from './app/sidebar-rows.js';
 import {createQEPath} from './qe/qe-path.js';
 import {createQESingleMap} from './qe/qe-single-map.js';
@@ -77,8 +78,9 @@ const {
 });
 
 const {
+  CRYSTAL_NAMES, s2DependsOnEi,
   syncS2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
-  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
+  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable, energyTransferRange, energyTransferGrid,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
@@ -87,6 +89,12 @@ const {
   setStatus, tasConventionFromLegacyUiSense, updateAutoW:(...args)=>updateAutoW(...args),
   updateEnergyLabel, getFixedBeamControls:()=>fixedBeamControls, getSingleCache:()=>singleCache
 });
+// Instrument JSON Save / Load and the built-in Custom instrument.
+const {addLocalInstruments, bindInstrumentJsonButtons, updateRemoveButton:updateInstrumentJsonButtons}=createInstrumentJsonIO({
+  $, instruments, refreshSelect:(...args)=>refreshSelect(...args), currentInstrument, crystalNames:CRYSTAL_NAMES,
+  s2DependsOnEi, setStatus, showError
+});
+bindInstrumentJsonButtons();
 // 3rd collimator Soller / radial; the analyzer horizontal focusing selects radial.
 $('anaHF')?.addEventListener('change',syncCollimator3WithAnalyzerFocus);
 $('coll3Type')?.addEventListener('change',updateCollimator3UI);
@@ -408,7 +416,7 @@ function refreshSelect(map,select,emptyLabel){
     .forEach(([key,obj])=>{
       const op=document.createElement("option");
       op.value=key;
-      op.textContent=obj.name || key;
+      op.textContent=obj.__label || obj.name || key;
       select.appendChild(op);
     });
 }
@@ -505,8 +513,28 @@ $("instrument").addEventListener("change",()=>{
   updateInstrumentTypeRows();
   scheduleRecalc();
 });
+// Set default (the selected type is kept):
+//   Instrument configuration -> the sidebar settings (beam, Sense, crystals,
+//   motor limits); Instrument details -> the Resolution instrument parameters.
+function saveAfterInstrumentReset(){
+  saveLeftPanelState?.();
+  saveRightPanelState?.();
+  saveGlobalUIState?.();
+  scheduleRecalc();
+}
+$("instrumentSetDefault")?.addEventListener("click",()=>{
+  clearResolutionResults?.();
+  applyInstrumentConfigurationDefaults();
+  updateInstrumentTypeRows();
+  saveAfterInstrumentReset();
+});
+$("instrumentDetailsSetDefault")?.addEventListener("click",()=>{
+  clearResolutionResults?.();
+  applyInstrumentDetailDefaults();
+  saveAfterInstrumentReset();
+});
 // TAS / 4-circle / Diffractometer: only the type-dependent settings change.
-for(const id of ['phiSign','chiSign','phiMin','phiMax','chiMin','chiMax','S2maxEffective']) $(id)?.addEventListener('change',()=>scheduleRecalc());
+for(const id of ['phiSign','chiSign','phiMin','phiMax','chiMin','chiMax','S2maxEffective','M2min','M2max']) $(id)?.addEventListener('change',()=>scheduleRecalc());
 $('s1sign')?.addEventListener('change',updateS2SignDisplay);
 for(const id of ['sense','s1sign']) $(id)?.addEventListener('change',()=>syncS2FieldSigns());
 $("instrumentType")?.addEventListener("change",()=>{
@@ -908,6 +936,7 @@ const {
   initializeResponsivePlotResize:(...args)=>initializeResponsivePlotResize(...args),
   initializeScriptWorkspaceUI:(...args)=>initializeScriptWorkspaceUI(...args),
   initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments, nearestHWIndex,
+  addLocalInstruments, updateInstrumentJsonButtons,
   prepareToolboxUI:(...args)=>prepareToolboxUI(...args), propagationVectorIndices, qeCommitPathText,
   qeDefaultPathText, qePathInput, recalculate,
   refreshCifAfterStateRestore:(...args)=>refreshCifAfterStateRestore(...args),

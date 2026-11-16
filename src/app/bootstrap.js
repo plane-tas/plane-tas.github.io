@@ -47,7 +47,7 @@ export function createAppBootstrap(deps){
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
-    getGeometrySliders, getSingleCache, setFixedBeamControls
+    getGeometrySliders, getSingleCache, setFixedBeamControls, addLocalInstruments, updateInstrumentJsonButtons
   }=deps;
 
 async function tryLoadDir(directory,map,{skipGitHubPages=false}={}){
@@ -126,12 +126,15 @@ async function initialize(){
     await tryLoadDir('instruments',legacyRangeInstruments);
   }
   mergeLegacyRangeData();
+  // Custom and the instruments loaded from JSON files in this browser.
+  addLocalInstruments?.();
   refreshSelect(instruments,$('instrument'),null);setBackgroundCount(Number($('backgroundCount')?.value)||1);for(const slot of darkAssetSlots()) refreshDarkEnvironmentSelect(slot);
   if(!instruments.size) throw new Error('instrument directory has no JSON files.');
   $('instrument').selectedIndex=0;for(const i of backgroundRowIndices()) $(`backgroundSelect${i}`).value='';for(const slot of darkAssetSlots()) $(darkAssetIds(slot).se).value='';applyInstrumentDefaults();for(const slot of darkAssetSlots()) applySampleEnvironmentDefaults(slot);updateBackgroundSelectAvailability();
   // JSON configuration is now fully loaded.  Only at this point is it safe to
   // overlay browser-local user parameters (including the selected instrument).
   const restoredLocalState=restoreLeftPanelState();
+  updateInstrumentJsonButtons?.();
   // Restored energyMode/energy (meV) are authoritative. The new visible unit
   // selection is remembered, while legacy saves default to the matching E unit.
   getFixedBeamControls()?.syncFromCanonical({preferredQuantity:$('fixedBeamQuantity')?.value});

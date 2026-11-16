@@ -90,7 +90,7 @@
 <div class="shell">
 <aside class="sidebar">
 <section>
-<h2>Instrument configuration</h2>
+<div class="sidebar-heading-row"><h2>Instrument configuration</h2><button id="instrumentSetDefault" type="button" title="Reset the Instrument configuration (energy, Sense, crystals, motor limits) to the values of the selected instrument file">Set default</button></div>
 <div class="instrument-select-row">
 <label>Instrument<select id="instrument"><option>Loading...</option></select></label>
 <label>Type<select id="instrumentType" aria-label="Instrument type"><option value="tas">TAS</option></select></label>
@@ -119,6 +119,10 @@
 <!-- Motor sign and limits: one row per motor (φ / χ rows for 4-circle only). -->
 <div class="motor-limit-table" id="motorLimitTable">
 <span class="motor-limit-head"></span><span class="motor-limit-head">sign</span><span class="motor-limit-head">min (deg)</span><span class="motor-limit-head">max (deg)</span>
+<span class="motor-limit-name" title="Monochromator scattering angle 2θM">M2</span>
+<span></span>
+<input id="M2min" step="0.1" type="number" placeholder="—" aria-label="M2 min (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed (magnitudes are used)"/>
+<input id="M2max" step="0.1" type="number" placeholder="—" aria-label="M2 max (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed (magnitudes are used)"/>
 <span class="motor-limit-name" id="s1LimitName">S1</span>
 <select id="s1sign" aria-label="S1 sign"><option value="ccw">CCW</option><option value="cw">CW</option></select>
 <input id="S1min" step="0.1" type="number" value="-180" aria-label="S1 min (deg)"/>
@@ -135,6 +139,12 @@
 <select id="chiSign" class="four-circle-limit hidden" aria-label="χ sign" title="Positive χ: CCW or CW seen from upstream along the bisector of ki and kf"><option value="ccw">CCW</option><option value="cw">CW</option></select>
 <input id="chiMin" class="four-circle-limit hidden" step="0.1" type="number" aria-label="χ min (deg)"/>
 <input id="chiMax" class="four-circle-limit hidden" step="0.1" type="number" aria-label="χ max (deg)"/>
+</div>
+<div class="instrument-json-row">
+<button id="instrumentJsonSave" type="button" title="Save the selected instrument with the current settings as an instrument JSON file">Save JSON</button>
+<button id="instrumentJsonLoad" type="button" title="Load an instrument JSON file and add it to the Instrument list (kept in this browser)">Load JSON</button>
+<button id="instrumentJsonRemove" type="button" hidden title="Remove this loaded instrument from the Instrument list">Remove</button>
+<input id="instrumentJsonFile" type="file" accept=".json,application/json" hidden/>
 </div>
 </section>
 <section>
@@ -368,7 +378,7 @@
 <div aria-labelledby="tabResolution" class="tab-panel hidden" id="resolutionPanel" role="tabpanel">
 <div class="resolution-workspace">
 <aside class="resolution-instrument-details" id="resolutionInstrumentDetails">
-<div class="resolution-detail-title">Instrument details</div>
+<div class="resolution-detail-title sidebar-heading-row"><span>Instrument details</span><button id="instrumentDetailsSetDefault" type="button" title="Reset the Instrument details (collimation, focusing, mosaic, sizes, distances) to the values of the selected instrument file">Set default</button></div>
 <section class="instrument-fixed-section"><div class="instrument-fixed-heading">Focusing conditions</div>
 <div id="resolutionFocusingGrid">
 <div class="coll-grid focus-grid"><b class="focus-name">Monochromator</b>

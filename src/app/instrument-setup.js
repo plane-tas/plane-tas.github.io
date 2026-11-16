@@ -115,12 +115,31 @@ function syncS2FieldSigns(){
     const el=$(id), v=Number(el?.value);
     if(el && String(el.value).trim()!=='' && Number.isFinite(v)) el.value=formatS2ControlValue(sign*Math.abs(v));
   }
+  syncM2FieldSigns();
+}
+// M2 (monochromator 2θ_M) values carry the sign set by Sense: + for +-+, − for -+-.
+function m2DisplaySign(){
+  try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).monoSign<0 ? -1 : 1; }catch(_e){ return 1; }
+}
+function syncM2FieldSigns(){
+  const sign=m2DisplaySign();
+  for(const id of ['M2min','M2max']){
+    const el=$(id), v=Number(el?.value);
+    if(el && String(el.value).trim()!=='' && Number.isFinite(v)) el.value=formatS2ControlValue(sign*Math.abs(v));
+  }
+}
+function setAngleField(id,value){
+  const el=$(id); if(!el) return;
+  el.value=value!==undefined && value!==null && value!=='' && Number.isFinite(Number(value)) ? String(Number(value)) : '';
 }
 function applyInstrumentTypeDefaults(inst=currentInstrument()){
   const qr=inst.qe_range||{};
   const s2MinJson=Number(qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
   if($("S2min") && Number.isFinite(s2MinJson)) $("S2min").value=formatS2ControlValue(s2DisplaySign()*Math.abs(s2MinJson));
   // Sample-rotation (S1) limits; instruments without them keep the full turn.
+  // Monochromator / analyzer angle ranges (editable; blank = not given).
+  setAngleField("M2min",inst.M2_min); setAngleField("M2max",inst.M2_max);
+  syncM2FieldSigns();
   setIf("S1min",inst.S1_min ?? -180);
   setIf("S1max",inst.S1_max ?? 180);
   // Four-circle (bisecting): S1 = S2/2 is fixed, so a Bragg-peak orientation
@@ -148,7 +167,8 @@ function rangeTable(inst){
 //   "M2_min" / "M2_max": monochromator 2θ_M range (deg; signed as the motor, e.g.
 //                        negative for -+-; magnitudes are used) -> Ei range
 //   "A2_min" / "A2_max": analyzer 2θ_A motor range (deg, signed as on the
-//                        instrument page; optional, default = M2 range)
+//                        instrument page; optional, default = M2 range;
+//                        set in the instrument file only, not in the UI)
 // E = 81.8042 / λ², λ = 2 d sin(2θ/2), with the d of the selected crystal.
 //   Ef fixed: ħω = Ei − Ef over the Ei range of M2 (negative ħω included).
 //   Ei fixed: ħω = Ei − Ef over the Ef range of the analyzer: the largest
@@ -158,8 +178,17 @@ function rangeTable(inst){
 //             (ħω ≥ −Ei).  Without A2, the M2 range is used when it is a range.
 // Without these entries, or for analyzer-free types, the previous range is
 // used: 0 … (largest Ei of the S2 table − Ef) for Ef fixed, 0 … Ei for Ei fixed.
+// The Motor table fields (M2 min, max) hold these values after an
+// instrument is selected; the calculation reads the fields when present
+// (A2 has no field: always the instrument file).
+function angleLimit(inst,key,end){
+  const el=$(`${key}${end}`);
+  if(el){ const t=String(el.value??'').trim(); return t==='' ? NaN : Number(t); }
+  const v=inst?.[`${key}_${end}`];
+  return v===undefined || v===null || v==='' ? NaN : Number(v);
+}
 function angleRange(inst,key){
-  const lo=Math.abs(Number(inst?.[`${key}_min`])), hi=Math.abs(Number(inst?.[`${key}_max`]));
+  const lo=Math.abs(angleLimit(inst,key,'min')), hi=Math.abs(angleLimit(inst,key,'max'));
   if(!Number.isFinite(lo) || !Number.isFinite(hi) || lo<=0 || hi<=0 || lo>=180 || hi>=180) return null;
   return {min:Math.min(lo,hi),max:Math.max(lo,hi)};
 }
@@ -167,7 +196,7 @@ function angleRange(inst,key){
 // minAbs: smallest |2θ_A| on a range that does not reach 0° (null when the
 // small-angle side is unlimited).  A2_min = A2_max: fixed analyzer angle.
 function analyzerAngleRange(inst){
-  const lo=Number(inst?.A2_min), hi=Number(inst?.A2_max);
+  const lo=angleLimit(inst,'A2','min'), hi=angleLimit(inst,'A2','max');
   const ends=[lo,hi].filter(Number.isFinite);
   if(!ends.length) return null;
   const maxAbs=Math.max(...ends.map(Math.abs));
@@ -535,8 +564,10 @@ function updateFocusingTypeUI(){
   for(const [sel,box] of FOCUSING_TYPES) if($(sel) && $(box)) $(sel).value=$(box).checked ? 'focusing' : 'flat';
 }
 
-function applyInstrumentDefaults(){
-  if(!$("instrument").value) return;
+// Instrument configuration (sidebar) from the instrument file: type, beam,
+// Sense, motor limits and crystals.
+function applyInstrumentConfigurationDefaults(){
+  if(!$("instrument").value) return null;
   populateInstrumentTypeSelect();
   const inst=currentInstrument();
   const cfg=(!Array.isArray(inst.configuration) && inst.configuration) ? inst.configuration : {};
@@ -564,6 +595,17 @@ function applyInstrumentDefaults(){
   setSelect("s1sign",tasConvention.s1sign);
   syncS2FieldSigns();
   setSelect("geometry",cfg.geometry || "W");
+  applyInstrumentCrystalAvailability();
+  updateEnergyLabel();
+  // Use wavelength by default for incident-fixed diffractometers, while
+  // conventional TAS instruments retain meV. User choices are restored later.
+  const pref=(inst.instrument_type==='diffractometer' && energyMode==='Ei fixed') ? 'lambda_i' : (energyMode==='Ei fixed'?'Ei':'Ef');
+  getFixedBeamControls()?.syncFromCanonical({preferredQuantity:pref});
+  return inst;
+}
+// Resolution instrument details from the instrument file: collimation,
+// focusing, mosaic, sizes and distances (crystals are set with the sidebar).
+function applyInstrumentDetailDefaults(inst=currentInstrument()){
   setSelect("method",(inst.approximation||{}).method);
 
   const mono=inst.monochromator||{}, ana=inst.analyzer||{}, col=inst.collimator||{}, sm=inst.supermirror||{}, dist=inst.distance||{}, beam=inst.beam||{}, det=inst.detector||{};
@@ -573,7 +615,6 @@ function applyInstrumentDefaults(){
   { const t=String(col['3rd_type']||'').toLowerCase(); const radial=t ? t==='radial' : !!ana.hfocus;
     if($('coll3Type')) $('coll3Type').value=radial?'radial':'soller'; updateCollimator3UI(); }
   setBool("anaVF",ana.vfocus);setIf("monoHB",mono.blade_h);setIf("monoVB",mono.blade_v);setIf("anaHB",ana.blade_h);setIf("anaVB",ana.blade_v);
-  applyInstrumentCrystalAvailability();
   setIf("mosMonoH",mono.mosaic_h);setIf("mosMonoV",mono.mosaic_v);setIf("mosAnaH",ana.mosaic_h);setIf("mosAnaV",ana.mosaic_v);
   setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);
   const sampleDetector=$('sampleDetectorDistance');
@@ -622,17 +663,20 @@ function applyInstrumentDefaults(){
       if(value===undefined || value===null){const control=$(id);if(control) control.checked=false;}
     }
   }
-  updateEnergyLabel();
-  // Use wavelength by default for incident-fixed diffractometers, while
-  // conventional TAS instruments retain meV. User choices are restored later.
-  const pref=(inst.instrument_type==='diffractometer' && energyMode==='Ei fixed') ? 'lambda_i' : (energyMode==='Ei fixed'?'Ei':'Ef');
-  getFixedBeamControls()?.syncFromCanonical({preferredQuantity:pref});
-  updateSupermirrorUI();updateAutoW();setStatus(`${inst.name || $("instrument").value} loaded`);
+  updateSupermirrorUI();updateAutoW();
+}
+// Everything from the instrument file (instrument or type change).
+function applyInstrumentDefaults(){
+  const inst=applyInstrumentConfigurationDefaults();
+  if(!inst) return;
+  applyInstrumentDetailDefaults(inst);
+  setStatus(`${inst.name || $("instrument").value} loaded`);
 }
 
   return {
-    syncS2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
-    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
+    CRYSTAL_NAMES:Object.keys(CRYSTALS).filter(k=>CRYSTALS[k]!=null), formatS2ControlValue, s2DependsOnEi,
+    syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
+    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
     fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
     energyTransferRange, energyTransferGrid,
     syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,

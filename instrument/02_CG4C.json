@@ -67,6 +67,7 @@
   },
   "M2_min": -35,
   "M2_max": -144.78,
+  "A2_min": 74.14,
   "A2_max": 103,
   "S2_min": 8.0,
   "S2_limits": [
@@ -340,7 +341,14 @@
     }
   ],
   "instrument_type": "tas",
-  "instrument_setting": ["tas"],
+  "instrument_setting": ["tas", "diffractometer"],
+  "diffractometer": {
+    "label": "2-axis",
+    "configuration": {
+      "energy_mode": "Ei fixed",
+      "Ei": 4.8
+    }
+  },
   "available_crystals": {
     "monochromator": [
       "PG002"

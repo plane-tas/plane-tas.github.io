@@ -848,3 +848,14 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   line-height:calc(60px * var(--tas-density));
   background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.92) 60%,#fff);
 }
+
+/* Instrument JSON: Save / Load (and Remove for a loaded instrument). */
+.instrument-json-row{display:flex;gap:calc(6px * var(--tas-density));margin-top:calc(8px * var(--tas-density))}
+.instrument-json-row>button{flex:1 1 0;min-width:0}
+.instrument-json-row>button[hidden]{display:none}
+/* Instrument configuration heading with the Set default button on the right. */
+.sidebar-heading-row{display:flex;align-items:center;justify-content:space-between;gap:calc(6px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+.sidebar-heading-row>h2{margin:0!important}
+.sidebar section > .sidebar-heading-row > h2{font-size:calc(19px * var(--tas-density));line-height:1.25}
+#resolutionInstrumentDetails .resolution-detail-title.sidebar-heading-row{display:flex}
+:is(.sidebar,#resolutionInstrumentDetails) .sidebar-heading-row>button{flex:0 0 auto;width:auto;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));font-size:calc(12px * var(--tas-density))}

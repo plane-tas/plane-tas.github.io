@@ -67,8 +67,10 @@
   },
   "M2_min": 41.3,
   "M2_max": 41.3,
-  "A2_min": -60,
+  "A2_min": 0,
   "A2_max": 120,
+  "A2_antiW_min": -60,
+  "A2_antiW_max": 0,
   "S2_min": -5,
   "S2_limits": [
     {
