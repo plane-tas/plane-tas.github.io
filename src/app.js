@@ -43,6 +43,7 @@ import {createQEVectorMap} from './qe/qe-vector-map.js';
 import {createRecalc} from './app/recalc.js';
 import {createGeometryTargets} from './geometry/geometry-targets.js';
 import {createGeometrySliders} from './geometry/geometry-sliders.js';
+import {createPowderGeometrySliders} from './geometry/powder-sliders.js';
 import {installGeometryNumericInputs} from './app/numeric-inputs.js';
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
 import {formatHKL, hklToQ, isAllowedByCentering, maxArray} from './core/hkl-utils.js';
@@ -207,6 +208,7 @@ const legacyRangeInstruments = new Map();
 
 let singleCache = null;
 let geometrySliders = null;
+let powderSliders = null;
 let powderCache = null;
 let selectedCifStructure = null;
 let selectedCifFileName = "";
@@ -825,7 +827,7 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   qeGeometryAngles, rad2deg, scale, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
   selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
   tasConvention, qeSpurionWarnings, userFacingTasMessage, getSingleCache:()=>singleCache,
-  syncGeometrySliders:(...args)=>geometrySliders?.syncGeometrySliders(...args),
+  syncGeometrySliders:(...args)=>{ geometrySliders?.syncGeometrySliders(...args); powderSliders?.syncPowderSliders(); },
   updateGeometryTargetMarker:(...args)=>updateGeometryTargetMarker(...args)
 }));
 // U / V / hbar-omega sliders of Angle calculation & TAS geometry (Single).
@@ -838,6 +840,19 @@ geometrySliders=createGeometrySliders({
   syncMapWFromTarget:(w)=>syncMapWFromTarget(w)
 });
 geometrySliders.bindGeometrySliders();
+// hbar-omega / Q / S2 sliders of Angle calculation & TAS geometry (Powder).
+powderSliders=createPowderGeometrySliders({
+  $, checkedValue, parseNumericValue,
+  powderWavevectors:(...args)=>powderWavevectors(...args),
+  setPowderLinkDriver:(...args)=>setPowderLinkDriver(...args),
+  syncPowderLinkedInputs:(...args)=>syncPowderLinkedInputs(...args),
+  hwRange:()=>{
+    const energyMode=$('energyMode').value, E=num('energy');
+    return energyTransferRange(currentInstrument(),energyMode==='Ef fixed'?{energyMode,Ef:E}:{energyMode,Ei:E});
+  },
+  renderGeometryNow:()=>{ if(powderCache && checkedValue('sampleMode')==='powder') renderGeometry(powderCache,0); }
+});
+powderSliders.bindPowderSliders();
 
 ({
   currentGeometryCardTab,

@@ -308,6 +308,11 @@
 <label class="geometry-slider-row hidden" id="geomSliderWRow"><span id="geomSliderWLabel">W (0, 0, 1)</span><input id="geomSliderW" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0"/><output id="geomSliderWValue">0</output><span></span></label>
 <div class="geometry-slider-row geometry-slider-combo"><span class="geometry-combo-label"><input id="geomComboU" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of U"/>·U + <input id="geomComboV" type="text" inputmode="text" data-fraction="" value="1" aria-label="Coefficient of V"/>·V</span><input id="geomSliderCombo" data-no-persist="" type="range" min="-2" max="2" step="0.01" value="0" aria-label="Move the target along the linear combination of U and V"/><output id="geomSliderComboValue">0</output><button id="geomComboSetOrigin" type="button" title="Use the current target as the origin (slider = 0)">Set origin</button></div>
 </div>
+<div class="geometry-sliders hidden" id="powderGeometrySliders" aria-label="Powder target ħω, Q and S2 sliders">
+<label class="geometry-slider-row"><span>ħω (meV)</span><input id="powderSliderHW" data-no-persist="" type="range" min="-10" max="10" step="0.1" value="0"/><output id="powderSliderHWValue">0</output><span></span></label>
+<label class="geometry-slider-row"><span>Q (Å⁻¹)</span><input id="powderSliderQ" data-no-persist="" type="range" min="0" max="5" step="0.001" value="1"/><output id="powderSliderQValue">1</output><span></span></label>
+<label class="geometry-slider-row"><span>S2 (deg)</span><input id="powderSliderS2" data-no-persist="" type="range" min="-180" max="180" step="0.1" value="-30"/><output id="powderSliderS2Value">-30</output><span></span></label>
+</div>
 <div id="geometryDefaultPlotMount"><div class="qe-plot geometry" id="geometryPlot"></div></div>
 <div class="geometry-scan-output hidden" id="geometryScanOutput">
 <div aria-label="Scan output" class="geometry-card-tabs geometry-inner-tabs" role="tablist">
