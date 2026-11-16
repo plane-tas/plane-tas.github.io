@@ -91,7 +91,7 @@ const {
   updateEnergyLabel, getFixedBeamControls:()=>fixedBeamControls, getSingleCache:()=>singleCache
 });
 // Instrument JSON Save / Load and the built-in Custom instrument.
-const {addLocalInstruments, bindInstrumentJsonButtons, updateRemoveButton:updateInstrumentJsonButtons}=createInstrumentJsonIO({
+const {addLocalInstruments, bindInstrumentJsonButtons}=createInstrumentJsonIO({
   $, instruments, refreshSelect:(...args)=>refreshSelect(...args), currentInstrument, crystalNames:CRYSTAL_NAMES,
   s2DependsOnEi, setStatus, showError
 });
@@ -951,7 +951,7 @@ const {
   initializeResponsivePlotResize:(...args)=>initializeResponsivePlotResize(...args),
   initializeScriptWorkspaceUI:(...args)=>initializeScriptWorkspaceUI(...args),
   initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments, nearestHWIndex,
-  addLocalInstruments, updateInstrumentJsonButtons,
+  addLocalInstruments,
   prepareToolboxUI:(...args)=>prepareToolboxUI(...args), propagationVectorIndices, qeCommitPathText,
   qeDefaultPathText, qePathInput, recalculate,
   refreshCifAfterStateRestore:(...args)=>refreshCifAfterStateRestore(...args),

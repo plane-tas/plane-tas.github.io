@@ -47,7 +47,7 @@ export function createAppBootstrap(deps){
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
-    getGeometrySliders, getSingleCache, setFixedBeamControls, addLocalInstruments, updateInstrumentJsonButtons
+    getGeometrySliders, getSingleCache, setFixedBeamControls, addLocalInstruments
   }=deps;
 
 async function tryLoadDir(directory,map,{skipGitHubPages=false}={}){
@@ -134,7 +134,6 @@ async function initialize(){
   // JSON configuration is now fully loaded.  Only at this point is it safe to
   // overlay browser-local user parameters (including the selected instrument).
   const restoredLocalState=restoreLeftPanelState();
-  updateInstrumentJsonButtons?.();
   // Restored energyMode/energy (meV) are authoritative. The new visible unit
   // selection is remembered, while legacy saves default to the matching E unit.
   getFixedBeamControls()?.syncFromCanonical({preferredQuantity:$('fixedBeamQuantity')?.value});

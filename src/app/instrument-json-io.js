@@ -1,6 +1,6 @@
 // Instrument JSON: Save (current instrument with the sidebar / Resolution
-// settings), Load (adds an instrument file to the Instrument list, kept in
-// this browser) and the built-in "Custom" instrument (every type and crystal).
+// settings), Load (adds an instrument file to the Instrument list; the last
+// loaded one is kept in this browser) and the built-in "Custom" instrument (every type and crystal).
 
 const LOCAL_INSTRUMENTS_STORAGE_KEY='plane-tas-local-instruments-v1';
 // Keys sort after the instrument/ files in the Instrument list.
@@ -74,12 +74,16 @@ function hasS2Table(json){
 export function createInstrumentJsonIO(deps){
   const {$, instruments, refreshSelect, currentInstrument, crystalNames, s2DependsOnEi, setStatus, showError}=deps;
 
-  // Custom + instruments loaded earlier in this browser (after instrument/).
+  // Custom + the instrument loaded last in this browser (after instrument/).
+  // Only one loaded instrument is kept: a new Load JSON replaces it.
   function addLocalInstruments(){
     instruments.set(CUSTOM_KEY,customInstrumentTemplate(crystalNames));
-    for(const [key,json] of Object.entries(readLocalInstruments())){
-      if(key.startsWith(LOCAL_KEY_PREFIX) && json && typeof json==='object') instruments.set(key,withLocalLabel(json));
-    }
+    const entries=Object.entries(readLocalInstruments())
+      .filter(([key,json])=>key.startsWith(LOCAL_KEY_PREFIX) && json && typeof json==='object');
+    if(!entries.length) return;
+    const [key,json]=entries[entries.length-1];
+    instruments.set(key,withLocalLabel(json));
+    if(entries.length>1) writeLocalInstruments({[key]:json});
   }
 
   const value=id=>{
@@ -197,7 +201,6 @@ export function createInstrumentJsonIO(deps){
     refreshSelect(instruments,select,null);
     if(instruments.has(key)) select.value=key; else select.selectedIndex=0;
     select.dispatchEvent(new Event('change',{bubbles:true}));
-    updateRemoveButton();
   }
 
   async function loadInstrumentJson(file){
@@ -211,28 +214,13 @@ export function createInstrumentJsonIO(deps){
       json=cleanInstrumentJson(json);
       if(!json.name) json.name=file.name.replace(/\.json$/i,'');
       const key=LOCAL_KEY_PREFIX+safeFileName(json.name);
-      const saved=readLocalInstruments();
-      saved[key]=json;
-      const stored=writeLocalInstruments(saved);
+      // Replace the previously loaded instrument.
+      for(const old of [...instruments.keys()]) if(old.startsWith(LOCAL_KEY_PREFIX)) instruments.delete(old);
+      const stored=writeLocalInstruments({[key]:json});
       instruments.set(key,withLocalLabel(json));
       selectInstrument(key);
       setStatus?.(`${json.name} loaded${stored ? '' : ' (not kept: browser storage is unavailable)'}`);
     }catch(err){ showError?.(err.message||String(err)); }
-  }
-
-  function removeLoadedInstrument(){
-    const key=$('instrument')?.value;
-    if(!key?.startsWith(LOCAL_KEY_PREFIX)) return;
-    const saved=readLocalInstruments();
-    delete saved[key];
-    writeLocalInstruments(saved);
-    instruments.delete(key);
-    selectInstrument(null);
-  }
-
-  function updateRemoveButton(){
-    const btn=$('instrumentJsonRemove');
-    if(btn) btn.hidden=!String($('instrument')?.value||'').startsWith(LOCAL_KEY_PREFIX);
   }
 
   function bindInstrumentJsonButtons(){
@@ -240,9 +228,7 @@ export function createInstrumentJsonIO(deps){
     $('instrumentJsonSave')?.addEventListener('click',saveInstrumentJson);
     $('instrumentJsonLoad')?.addEventListener('click',()=>file?.click());
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; loadInstrumentJson(f); });
-    $('instrumentJsonRemove')?.addEventListener('click',removeLoadedInstrument);
-    $('instrument')?.addEventListener('change',updateRemoveButton);
   }
 
-  return {addLocalInstruments, bindInstrumentJsonButtons, currentInstrumentJson, updateRemoveButton};
+  return {addLocalInstruments, bindInstrumentJsonButtons, currentInstrumentJson};
 }
