@@ -53,18 +53,12 @@ export function createConvolutionUI(deps){
     }catch(_e){ return null; }
   }
   const storeFile=record=>idbPut(KEY,record);
-  // Results survive a reload too: the 2D volume (for the same dispersion
-  // file) and the 1D scans (current and kept).
-  const store2D=()=>{ updateNamePlaceholders?.(); if(volume) idbPut('results2d',{fileName,A:volume.A,B:volume.B,E:volume.E,I:volume.I,U:volume.U,V:volume.V,settings:volume.settings||null}); };
-  let sliderTimer=0;
-  const writeSliders=()=>{ clearTimeout(sliderTimer); sliderTimer=0; if(volume) idbPut('results2d-sliders',{U:sliderIndex('U'),V:sliderIndex('V'),E:sliderIndex('E')}); };
-  const storeSliders=()=>{ clearTimeout(sliderTimer); sliderTimer=setTimeout(writeSliders,200); };
-  // A pending slider position is written when the page is hidden or left.
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden' && sliderTimer) writeSliders(); });
-  window.addEventListener('pagehide',()=>{ if(sliderTimer) writeSliders(); });
-  // Written at once (small records), so a reload right after a calculation
-  // or a Keep does not lose it.
-  const store1D=()=>idbPut('results1d',{scan,kept});
+  // Results are not kept across a reload (a 2D map can be hundreds of MB):
+  // Save CSV / Load CSV keep them.  Only the dispersion file and the entry
+  // boxes come back.
+  const store2D=()=>{ updateNamePlaceholders?.(); };
+  const storeSliders=()=>{};
+  const store1D=()=>{};
   // The entry boxes of the Convolution pane are saved with every change and
   // put back after a reload (before the table is read, so its defaults do
   // not overwrite them).
@@ -189,32 +183,9 @@ export function createConvolutionUI(deps){
     }
     await restoreResults();
   }
+  // Earlier versions stored the results in the browser: free that space.
   async function restoreResults(){
-    const r2=await idbGet('results2d');
-    if(r2 && interp && r2.fileName===fileName && r2.I?.length===r2.A.length*r2.B.length*r2.E.length){
-      const U=r2.U, V=r2.V;
-      volume={A:Array.from(r2.A),B:Array.from(r2.B),E:Array.from(r2.E),I:r2.I instanceof Float64Array ? r2.I : Float64Array.from(r2.I),U,V,
-        plane:{U,V,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i])},settings:r2.settings||null};
-      $('convDownload2D').disabled=false;
-      setupSliders();
-      const sl=await idbGet('results2d-sliders');
-      if(sl) for(const [key,arr] of [['U',volume.A],['V',volume.B],['E',volume.E]]){
-        const i=Number(sl[key]);
-        if(Number.isInteger(i) && i>=0 && i<arr.length){ $(`convSlider${key}`).value=String(i); $(`convValue${key==='E'?'E':key}`).value=fmt(arr[i],3); }
-      }
-      drawMaps();
-      message('convMessage2D','Completed');
-      // The instrument settings are restored after this point on a reload:
-      // redraw once they are in place (resolution ellipses).
-      setTimeout(()=>{ if(volume) drawMaps(); },1500);
-    }
-    const r1=await idbGet('results1d');
-    if(r1 && (r1.scan || r1.kept?.length)){
-      scan=r1.scan||null;
-      kept.splice(0,kept.length,...(r1.kept||[]).filter(k=>k.kind!=='data'));
-      restoringResults=true;
-      try{ refreshKept(); }finally{ restoringResults=false; }
-    }
+    for(const key of ['results2d','results2d-sliders','results1d']) if(await idbGet(key)) await idbPut(key,null);
   }
 
   const num=id=>{ const v=Number($(id)?.value); return Number.isFinite(v) ? v : NaN; };
@@ -1441,7 +1412,6 @@ export function createConvolutionUI(deps){
         volume=null;
         for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(plotly()) Plotly.purge(id); }catch(_e){} }
         $('convDownload2D').disabled=true;
-        idbPut('results2d',null);
         message('convMessage2D','');
       }
     }else{
