@@ -19,7 +19,7 @@ export function createConvolutionUI(deps){
   let text='', fileName='', data=null, interp=null;
   let volume=null, scan=null;
   let run2D=0, run1D=0;
-  let fileTag='', restoring=false, restoringResults=false;
+  let fileTag='', restoring=false, restoringResults=false, namedFor=null;
   // Colour-scale limits of the three maps (null = automatic).
   const zlim={EU:{min:null,max:null},EV:{min:null,max:null},UV:{min:null,max:null}};
   const kept=[];   // 1D scans kept for comparison
@@ -69,7 +69,7 @@ export function createConvolutionUI(deps){
   // not overwrite them).
   const RANGE_IDS=['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
   const SCAN_INPUT_IDS=['convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1','convPoints1D'];
-  const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convIntegration2D','convIntegration1D'];
+  const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convIntegration2D','convIntegration1D','convCsvName2D','convCsvName1D'];
   // Calculation settings written into Save CSV and put back by Load CSV:
   // instrument (sidebar and Resolution instrument details), lattice,
   // scattering plane, and the entries of the 2D slice or 1D cut box.
@@ -250,6 +250,13 @@ export function createConvolutionUI(deps){
       }
       message('convMessage2D',''); message('convMessage1D',''); message('convStatus1D','');
       bench=null; scheduleEstimates();
+      // Save CSV file names: the dispersion file name + _conv_2d / _conv_1d
+      // when a new file is read (editable; a name kept from the last visit
+      // stays on a reload).
+      if(fileName!==namedFor){
+        namedFor=fileName;
+        for(const kind of ['2d','1d']){ const el=nameInput(kind); if(el && !(restoring && el.value.trim())) el.value=autoBase(fileName,kind); }
+      }
       if(!restoring) saveInputs();
     }catch(err){
       data=null; interp=null;
