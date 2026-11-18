@@ -1,7 +1,7 @@
 {
   "name": "HODACA/HER(C11)@JRR3",
   "approximation": {
-    "method": "Cooper-Nathans"
+    "method": "Popovici"
   },
   "supermirror": {
     "enabled": true,
@@ -37,8 +37,8 @@
     "height": 2.2,
     "thickness": 0.2,
     "vfocus": true,
-    "hfocus": false,
-    "blade_h": 9,
+    "hfocus": true,
+    "blade_h": 7,
     "blade_v": 7
   },
   "detector": {
@@ -49,7 +49,7 @@
   },
   "configuration": {
     "energy_mode": "Ef fixed",
-    "Ef": 3.635,
+    "Ef": 4.5,
     "geometry": "W",
     "sense": "+-+",
     "s1sign": "cw"
@@ -67,8 +67,8 @@
   },
   "M2_min": 47.96,
   "M2_max": 116.97,
-  "A2_min": 90,
-  "A2_max": 90,
+  "A2_min": 78.9,
+  "A2_max": 78.9,
   "S2_min": 3.0,
   "S2_limits": [
     {
@@ -141,7 +141,10 @@
     }
   ],
   "instrument_type": "tas",
-  "instrument_setting": ["tas"],
+  "instrument_setting": [
+    "tas",
+    "multiplexing"
+  ],
   "available_crystals": {
     "monochromator": [
       "PG002"
@@ -149,5 +152,18 @@
     "analyzer": [
       "PG002"
     ]
+  },
+  "multiplexing": {
+    "label": "Multiplexing",
+    "instrument_type": "tas",
+    "configuration": {
+      "Ef": 3.635
+    },
+    "analyzer": {
+      "hfocus": false,
+      "blade_h": 1
+    },
+    "A2_min": 90,
+    "A2_max": 90
   }
 }

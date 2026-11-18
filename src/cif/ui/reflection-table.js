@@ -224,7 +224,7 @@ function updateOptionLabels(){
     else if(lorentz.dataset.tableValue!==undefined){ lorentz.value=lorentz.dataset.tableValue; delete lorentz.dataset.tableValue; }
     lorentz.title=graph?'Powder: L = 1/(2 sin²θ cosθ), always applied':'Single crystal ω scan: L = 1/sin 2θ (or 1 = none)';
   }
-  // along U / V and Download table belong to the single-crystal table only.
+  // along U / V and Save table belong to the single-crystal table only.
   for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('hidden',graph); }
   $('cifDownloadTable')?.classList.toggle('hidden',graph);
   $('cifDownloadPattern')?.classList.toggle('hidden',!graph);
@@ -423,15 +423,15 @@ function renderReflectionPowderPlot(){
 }
 
 // ---- CSV ----
-// Calculated powder pattern (as drawn in Graph) for Download pattern.
+// Calculated powder pattern (as drawn in Graph) for Save pattern.
 function setPowderPattern(pattern){
   cifState.powderPattern=pattern;
   const button=$('cifDownloadPattern'); if(button) button.disabled=!pattern;
 }
 // FullProf-like profile file (2θ, intensity columns) as CSV, one row per
 // point of the drawn pattern.
-// Reflection CSV columns, shared by Download table (single crystal / powder)
-// and the peak lists of Download pattern, so every file has the same layout:
+// Reflection CSV columns, shared by Save table (single crystal / powder)
+// and the peak lists of Save pattern, so every file has the same layout:
 //   h, k, l, code, multiplicity, FN2, FM2, form_factor, I, L, 2θ, Q, d,
 //   equivalent_hkl
 // prefix: column-name prefix ('N_' / 'M_' for the pattern peak lists).

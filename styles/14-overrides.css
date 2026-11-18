@@ -859,3 +859,221 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .sidebar section > .sidebar-heading-row > h2{font-size:calc(19px * var(--tas-density));line-height:1.25}
 #resolutionInstrumentDetails .resolution-detail-title.sidebar-heading-row{display:flex}
 :is(.sidebar,#resolutionInstrumentDetails) .sidebar-heading-row>button{flex:0 0 auto;width:auto;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));font-size:calc(12px * var(--tas-density))}
+
+/* Resolution › Simulation / Convolution. */
+.resolution-mode-tabs{margin-bottom:calc(8px * var(--tas-density))}
+.convolution-layout{display:flex;flex-direction:column;gap:calc(8px * var(--tas-density));min-height:0}
+.convolution-card h2{margin:0 0 calc(6px * var(--tas-density))}
+/* One card: file row, note, then the Preview / 2D slice / 1D cut tabs
+   (each with its calculation condition) filling the rest. */
+.convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column}
+.convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
+#resolutionConvolutionPane :is(.convolution-row label,.convolution-inline,.convolution-hint,.convolution-box .checkbox-label){font-size:max(13px,calc(16px * var(--tas-density)))!important}
+.convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
+.convolution-file button{white-space:nowrap;flex:0 0 auto}
+.convolution-file input{flex:1 1 auto;min-width:0}
+.convolution-summary{font-size:max(13px,calc(16px * var(--tas-density)));color:#444;margin:0 0 calc(6px * var(--tas-density))}
+.convolution-summary.conv-error,.convolution-message.conv-error{color:#b00020}
+.convolution-control-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:stretch}
+.convolution-box{min-width:0;margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));display:flex;flex-direction:column;gap:calc(6px * var(--tas-density))}
+.convolution-box-head{display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density));align-items:center}
+.convolution-integration{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
+.convolution-integration select{font-size:max(13px,calc(16px * var(--tas-density)));width:auto}
+/* Random points: a small label above the box, so the row stays one line. */
+/* Fixed-width slot right of the select: "within ±1.5 FWHM" (Grid) or
+   "[N] points" (Monte Carlo), so the select does not move. */
+.convolution-integration-detail{display:inline-grid;align-items:center;white-space:nowrap}
+.convolution-integration-detail>*{grid-area:1/1}
+.convolution-grid-range{color:#555;font-size:max(13px,calc(16px * var(--tas-density)))}
+/* Both stay in the same cell (the slot is as wide as the wider one); the
+   inactive one is only made invisible. */
+.convolution-integration-detail>[hidden]{display:flex!important;visibility:hidden}
+#resolutionConvolutionPane .convolution-integration .convolution-field{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;color:#555}
+.convolution-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.convolution-integration .convolution-field input{width:calc(90px * var(--tas-density));flex:none}
+.convolution-range-table>button{justify-self:start;font-size:max(13px,calc(15px * var(--tas-density)))}
+#resolutionConvolutionPane .convolution-field{flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;white-space:nowrap}
+.convolution-field input{flex:1 1 auto;width:auto;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-keep-empty{color:#888;font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
+.convolution-buttons{display:flex;gap:calc(8px * var(--tas-density));flex-wrap:wrap}
+.convolution-box button{font-size:max(13px,calc(16px * var(--tas-density)))}
+#resolutionConvolutionPane button.convolution-calc{background:linear-gradient(#3a7bc8,#1f5fa8);color:#fff;border-color:#174c88;font-weight:650;box-shadow:0 1px 1px rgba(0,0,0,.18)}
+#resolutionConvolutionPane button.convolution-calc:hover{background:linear-gradient(#2f6db6,#174c88)}
+#resolutionConvolutionPane button.convolution-calc:active{background:#174c88;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+.convolution-box .checkbox-label{align-self:flex-start;min-height:0}
+.convolution-range-table{display:grid;grid-template-columns:max-content repeat(4,minmax(0,1fr));gap:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));align-items:center;font-size:max(14px,calc(18px * var(--tas-density)))}
+.convolution-range-table input{width:100%;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)));padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
+.convolution-range-name,.convolution-range-head{font-weight:600;font-size:max(14px,calc(18px * var(--tas-density)))}
+.convolution-range-name{padding-right:calc(6px * var(--tas-density))}
+.convolution-range-head{text-align:center}
+.convolution-tab-wrap{flex:1 1 auto;min-height:0;margin-top:calc(2px * var(--tas-density));display:flex;flex-direction:column;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));overflow:hidden}
+.convolution-tabs{flex:0 0 auto;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.convolution-tabs .geometry-card-tab{flex:1 1 0!important;width:auto!important;max-width:none!important;font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-tab-pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:calc(9px * var(--tas-density))}
+.convolution-tab-pane[hidden]{display:none}
+.convolution-actions{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
+.convolution-scan-fields{display:contents}
+.convolution-scan-fields[hidden]{display:none}
+.convolution-inline{flex-direction:column}
+.convolution-inline input,.convolution-inline select{width:calc(100px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-inline input.convolution-hkl{width:calc(190px * var(--tas-density))}
+.convolution-inline select{width:auto}
+.convolution-actions>button{font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-hint{color:#666}
+.convolution-message{font-size:max(13px,calc(16px * var(--tas-density)));color:#333}
+.convolution-sliders{flex:0 0 auto;margin-top:0;grid-template-columns:max-content max-content minmax(0,1fr) calc(110px * var(--tas-density))!important}
+.convolution-sliders input[type=number]{width:100%;max-width:none;min-width:0;text-align:right}
+.convolution-plots{flex:1 1 auto;min-height:calc(300px * var(--tas-density));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density))}
+.convolution-plot{height:100%;min-height:calc(300px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #eee;min-width:0}
+.convolution-scan-plot{flex:1 1 auto}
+.convolution-scan-layout{flex:1 1 auto;min-height:0;display:flex;gap:calc(10px * var(--tas-density))}
+.convolution-scan-layout>.convolution-scan-plot{flex:1 1 0;min-width:0;height:auto}
+.convolution-curves{flex:1 1 0;min-width:0;overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e7ec;border-radius:calc(4px * var(--tas-density))}
+.convolution-curve-table{width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
+.convolution-curve-table th{position:sticky;top:0;z-index:1;background:#f4f6f8;font-weight:650;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #d8dde3;white-space:nowrap}
+.convolution-curve-table th span{margin-left:calc(2px * var(--tas-density));font-size:.9em}
+.convolution-curve-table th input{vertical-align:middle}
+.convolution-curve-table td{padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:top}
+.convolution-curve-table :is(th,td):not(:nth-child(3)){width:1%;white-space:nowrap}
+.convolution-curve-table td:nth-child(2){text-align:center}
+.convolution-curve-table td:nth-child(3){text-align:left;white-space:normal}
+.convolution-curve-name{line-height:1.35;overflow-wrap:break-word;width:auto}
+.convolution-curve-foot{display:flex;justify-content:flex-end;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
+.convolution-curve-foot button{font-size:max(12px,calc(14px * var(--tas-density)))}
+.convolution-curve-current{background:#f7f9fb}
+.convolution-curve-table th:last-child{text-align:right}
+.convolution-curve-table button{font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
+.convolution-swatch{display:inline-block;position:relative;width:calc(30px * var(--tas-density));height:0;border-top:calc(4px * var(--tas-density)) solid;vertical-align:middle;margin-top:calc(9px * var(--tas-density));border-radius:2px}
+.convolution-curve-detail{display:block;color:#777;font-size:.88em}
+.convolution-swatch.dotted{border-top-style:dotted}
+.convolution-table-info{flex:0 0 auto;font-size:max(13px,calc(16px * var(--tas-density)));color:#555;margin-bottom:calc(4px * var(--tas-density))}
+.convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
+.convolution-table{border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)));font-variant-numeric:tabular-nums;white-space:nowrap}
+.convolution-table th{position:sticky;top:0;background:#f4f6f8;padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;border-bottom:1px solid #d8dde3}
+.convolution-table td{padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;line-height:22px}
+.convolution-table tr.convolution-spacer td{padding:0;line-height:0}
+@media(max-width:1100px){
+  .convolution-row{grid-template-columns:1fr 1fr}
+  .convolution-control-row{grid-template-columns:1fr}
+  .convolution-plots{grid-template-columns:1fr}
+  .convolution-plot{height:calc(360px * var(--tas-density))}
+  .convolution-scan-plot{height:calc(360px * var(--tas-density));flex:none}
+  .convolution-scan-layout{flex-direction:column}
+  .convolution-curves{flex:none;max-height:calc(260px * var(--tas-density))}
+  .convolution-table-scroll{height:calc(500px * var(--tas-density));flex:none}
+}
+/* Narrow screens: 2D data above 1D data (each full width) so the range
+   values and the 1D "ini fin bin" entries stay readable on one row. */
+.convolution-file-card{container-type:inline-size}
+@container (max-width:860px){
+  .convolution-control-row{grid-template-columns:1fr}
+}
+/* Convolution: estimated time, Stop state, data curves. */
+.convolution-box-foot{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(10px * var(--tas-density))}
+.convolution-box-foot>*{flex:none}
+.convolution-estimate{margin-left:auto;color:#555;font-size:max(13px,calc(16px * var(--tas-density)));white-space:nowrap;font-variant-numeric:tabular-nums}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop{background:linear-gradient(#d23b2f,#b42318);border-color:#912018}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop:hover{background:linear-gradient(#c02f24,#912018)}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop:active{background:#912018}
+.convolution-swatch.marker{width:calc(11px * var(--tas-density));height:calc(11px * var(--tas-density));border:calc(2.5px * var(--tas-density)) solid;border-radius:50%;margin:calc(4px * var(--tas-density)) calc(9px * var(--tas-density)) 0;box-sizing:border-box;background:transparent!important}
+.convolution-box-foot .checkbox-label{white-space:nowrap}
+/* 2D maps: colour-bar end values edited in place (as in the Q-E map). */
+.convolution-plot-frame{position:relative;min-width:0;min-height:calc(300px * var(--tas-density))}
+.convolution-plot-frame>.convolution-plot{height:100%}
+.convolution-cbar-entries{position:absolute;inset:0;pointer-events:none;z-index:5;visibility:hidden}
+.convolution-cbar-entries[hidden]{display:none}
+.convolution-cbar-value{position:absolute;box-sizing:border-box;width:calc(64px * var(--tas-density));max-width:none;height:calc(26px * var(--tas-density));margin:0;padding:0 calc(2px * var(--tas-density));border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(3px * var(--tas-density));background:transparent;color:#444;font:400 max(11px,calc(14px * var(--tas-density))) Arial,sans-serif;text-align:left;pointer-events:auto;cursor:text;-moz-appearance:textfield;appearance:textfield}
+.convolution-cbar-value::-webkit-inner-spin-button,.convolution-cbar-value::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.convolution-cbar-value:hover{border-bottom-color:#7991a7}
+.convolution-cbar-value:focus{outline:calc(2px * var(--tas-density)) solid #477db0;outline-offset:0;border-color:#7b97b2;background:#fff}
+.convolution-cbar-value.fixed{color:#0b4f8a;font-weight:700}
+.convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-ell-kinds .checkbox-label{min-height:0}
+.convolution-line-toggle{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;color:#555;cursor:pointer}
+.convolution-line-toggle input{width:auto;margin:0}
+.convolution-sliders .convolution-slider-name{font-weight:700}
+.convolution-sliders .convolution-line-toggle{margin-right:calc(6px * var(--tas-density))}
+/* 2D: each map has the one slider that changes it right above it. */
+.convolution-plot-col{display:flex;flex-direction:column;min-width:0;min-height:0}
+.convolution-plot-col>.convolution-sliders{margin:0 0 calc(4px * var(--tas-density));grid-template-columns:max-content minmax(0,1fr) calc(80px * var(--tas-density))!important}
+.convolution-plot-col>.convolution-plot-frame{flex:1 1 auto}
+/* Convolution: plain (not bold) row / column names and slider names. */
+#resolutionConvolutionPane :is(.convolution-range-name,.convolution-range-head),.convolution-sliders .convolution-slider-name{font-weight:400}
+.convolution-estimate-row{justify-content:space-between}
+/* 2D slice tab: display switches above the maps. */
+.convolution-show-row{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(12px * var(--tas-density));margin-bottom:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-show-row>*{flex:none}
+.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;font-size:inherit!important}
+.convolution-show-title{color:#444}
+/* Notes under Dispersion file: the blue information box of the app, black text. */
+.convolution-note{background:#eef6fb;border:calc(1px * var(--tas-density)) solid #b9d8ea;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(9px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+.convolution-note .convolution-summary{color:#222;margin:0}
+.convolution-note .convolution-summary.conv-error{color:#b00020}
+
+/* 2D slice / 1D cut boxes: Calculate, status, integration on the first row;
+   Save / Load CSV and the estimated time on the last. */
+.convolution-box-head .convolution-status{flex:1 1 0;min-width:4em}
+
+/* Buttons: raised (white-to-grey gradient, darker border, small shadow) so
+   they stand apart from flat white entry boxes and flat grey read-only ones.
+   Low specificity (button + :where): any button with its own class style
+   (tabs, toggles, the Convolution Calculate) keeps it, and a button whose
+   colour is set inline (colour palettes) is left alone. */
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])){background:linear-gradient(#ffffff,#e9ecf0);border-color:#9aa4b0;color:#222;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):hover{background:linear-gradient(#f7f9fb,#dde2e8)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):active{background:#dde2e8;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):disabled{background:#fff;border-color:#d6dbe1;color:#a3aab2;box-shadow:none;cursor:default}
+
+/* Calculation entries at the top of the 2D slice and 1D cut tabs, with a
+   line under them (Save / Load CSV row). */
+.convolution-tab-pane>.convolution-box{flex:0 0 auto;margin-bottom:calc(8px * var(--tas-density));border:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd;border-radius:0;padding:0 0 calc(8px * var(--tas-density))}
+
+/* 1D: plot and curve list share the width 1:1. */
+/* Convolution labels the same size as the labels of the other tabs
+   (the control text size, as in Q-E Range and Toolbox); the curve list uses
+   the table size like every other table. */
+#resolutionConvolutionPane :is(.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-grid-range,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}
+
+/* Calculate row under the table, left to right in the order of use:
+   integration (method, range or points), estimated time, Calculate, status.
+   The estimate has a fixed width so Calculate does not move. */
+.convolution-box-head .convolution-estimate{margin-left:calc(4px * var(--tas-density));min-width:11.5em;text-align:left}
+
+.convolution-box-head select.convolution-method{width:auto;font-size:var(--tas-control-text-size)}
+
+/* Status right after Calculate (not stretched), then Keep. */
+.convolution-box-head .convolution-status{flex:0 1 auto;min-width:0}
+/* Progress bar right of Calculate: "45 %" / "Completed" / "Stopped" inside. */
+.convolution-box-head .convolution-status.convolution-progress-on{min-width:9em;text-align:center;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums}
+/* Save: file name entry with a grey ".csv" (as the CIF output file);
+   Load: read-only name of the loaded file.  Both fill the row. */
+.convolution-box-foot,.convolution-box-top{display:flex;flex-wrap:nowrap;align-items:center;gap:calc(8px * var(--tas-density))}
+.convolution-box-foot>.convolution-csv-name,.convolution-box-top>.convolution-load-name{flex:1 1 0;min-width:0}
+.convolution-csv-name input{width:100%;min-width:0}
+/* Calculate and Stop the same width, so the progress bar does not move. */
+#resolutionConvolutionPane button.convolution-calc{min-width:6.5em}
+
+/* Load CSV on its own row above the table. */
+/* Calculate row: equal columns — approximation, integration, range / points,
+   estimate, Calculate, progress bar, Keep (2D: empty).  The progress bar is
+   always there (empty frame), so nothing moves when it fills. */
+#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
+.convolution-box-head .convolution-integration{display:contents}
+.convolution-box-head>select,.convolution-box-head .convolution-integration>select,.convolution-box-head>button{width:100%;min-width:0}
+.convolution-box-head .convolution-integration-detail{min-width:0}
+.convolution-box-head .convolution-integration-detail>*{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.convolution-box-head .convolution-integration-detail label{display:flex;align-items:center;gap:calc(4px * var(--tas-density));min-width:0}
+.convolution-box-head .convolution-integration-detail input{flex:1 1 0;width:auto;min-width:2.5em}
+.convolution-box-head .convolution-estimate{margin:0;min-width:0;white-space:normal;line-height:1.2}
+#resolutionConvolutionPane .convolution-box-head .convolution-status{min-width:0;width:100%;text-align:center;padding:calc(2px * var(--tas-density)) calc(6px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums;min-height:calc(1.6em);box-sizing:border-box}
+#resolutionConvolutionPane .convolution-box-head button.convolution-calc{min-width:0}
+/* Save figure at the top-left of the 1D plot. */
+.convolution-scan-layout{position:relative}
+.convolution-scan-layout>.convolution-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:2}
+/* Narrow: the Calculate row in two lines (4 equal columns). */
+.convolution-tab-pane>.convolution-box{container-type:inline-size}
+@container (max-width:720px){
+  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+/* ".csv" at the same size as the CIF output ".cif". */
+#resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}

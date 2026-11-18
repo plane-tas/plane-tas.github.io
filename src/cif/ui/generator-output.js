@@ -103,7 +103,7 @@ function generateCifForReview(){
   fn.setCifGeneratedReady(true);
   recalculateGeneratedReflections();
   fn.renderCifStructureIfVisible();
-  fn.setCifGeneratorMessage(`Generated ${generated.filename}: ${generated.sg.hm}, ${generated.atoms.length} asymmetric site(s), ${generated.parsed.atoms.length} expanded atom(s). Review the CIF, structure, and reflections, then Download CIF or Set CIF.`);
+  fn.setCifGeneratorMessage(`Generated ${generated.filename}: ${generated.sg.hm}, ${generated.atoms.length} asymmetric site(s), ${generated.parsed.atoms.length} expanded atom(s). Review the CIF, structure, and reflections, then Save CIF or Set CIF.`);
   return generated;
 }
 

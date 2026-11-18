@@ -44,6 +44,7 @@ import {createRecalc} from './app/recalc.js';
 import {createGeometryTargets} from './geometry/geometry-targets.js';
 import {createGeometrySliders} from './geometry/geometry-sliders.js';
 import {createPowderGeometrySliders} from './geometry/powder-sliders.js';
+import {createConvolutionUI} from './convolution/convolution-ui.js';
 import {installGeometryNumericInputs} from './app/numeric-inputs.js';
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
 import {formatHKL, hklToQ, isAllowedByCentering, maxArray} from './core/hkl-utils.js';
@@ -853,6 +854,11 @@ powderSliders=createPowderGeometrySliders({
   renderGeometryNow:()=>{ if(powderCache && checkedValue('sampleMode')==='powder') renderGeometry(powderCache,0); }
 });
 powderSliders.bindPowderSliders();
+// Resolution › Convolution: dispersion table convolved with the TAS resolution.
+createConvolutionUI({
+  $, calcResolution, setStatus, parseNumericValue,
+  collectResolutionBase:(...args)=>collectResolutionBase(...args)
+}).bindConvolutionUI();
 
 ({
   currentGeometryCardTab,

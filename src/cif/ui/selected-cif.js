@@ -265,7 +265,7 @@ function clearSelectedCif(){
   if($("cifFileInput")) $("cifFileInput").value="";
   if($("cifLoadFile")) $("cifLoadFile").value="";
   if($("mcifPreviewText")) $("mcifPreviewText").textContent="Select a CIF/mCIF to preview it.";
-  // Do not leave download/Set actions enabled for an obsolete reviewed file.
+  // Do not leave save/Set actions enabled for an obsolete reviewed file.
   fn.invalidateGeneratedCif("");
   fn.invalidateGeneratedMcif();
   if(cifState.cifSpaceGroups.length) fn.setSampleSpaceGroup(1,{recalc:false});

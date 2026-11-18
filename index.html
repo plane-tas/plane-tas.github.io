@@ -439,6 +439,11 @@
 </details>
 </aside>
 <div class="resolution-main-column">
+<div aria-label="Resolution mode" class="geometry-card-tabs resolution-mode-tabs" role="tablist">
+<button aria-controls="resolutionSimulationPane" aria-selected="true" class="geometry-card-tab active" id="resolutionTabSimulation" role="tab" type="button">Simulation</button>
+<button aria-controls="resolutionConvolutionPane" aria-selected="false" class="geometry-card-tab" id="resolutionTabConvolution" role="tab" type="button">Convolution</button>
+</div>
+<div id="resolutionSimulationPane" role="tabpanel" aria-labelledby="resolutionTabSimulation">
 <section class="calc-card" id="resolutionCalculation"><p id="diffractometerResolutionNote" class="diffractometer-resolution-note hidden">Resolution calculation is not available for diffractometers.</p>
 <h2>Calculation point</h2>
 <div class="toolbar"><label>Approximation<select id="method"><option>Cooper-Nathans</option><option>Popovici</option></select></label><label>Mode<select id="calcMode"><option>single</option><option>scan</option></select></label><label>Unit<select id="unit"><option value="rlu">r.l.u.</option><option value="ainv">Å⁻¹</option></select></label><label title="Axes of the widths and plots. U, V⊥, E, W: V replaced by the in-plane direction perpendicular to U. U, V, E, W: the entered V, oblique when V is not perpendicular to U.">Q axes<select id="resolutionCoordinates"><option value="q">Q∥, Q⊥, E, W</option><option value="orthogonal" selected="">U, U⊥in, E, U⊥out</option><option value="lattice">U, V, E, W</option></select></label><label title="U–V plot for U, V, E, W when U is not perpendicular to V">U–V plot<select id="resolutionUVView" aria-label="U–V plot view" disabled=""><option value="shape">Orthogonal</option><option value="coefficients">U–V</option></select></label></div>
@@ -447,6 +452,121 @@
 <div aria-live="polite" class="orientation-plane-warning hidden" id="resolutionPlaneWarning"></div>
 </section>
 <section class="hidden" id="result"><div aria-label="Results view" class="geometry-card-tabs resolution-result-tabs" id="resolutionResultTabs" role="tablist"><button aria-selected="true" class="geometry-card-tab active" data-resolution-view="calculation" id="resolutionViewCalculation" role="tab" type="button">Result</button><button aria-selected="false" class="geometry-card-tab" data-resolution-view="comparison" id="resolutionViewComparison" role="tab" type="button">Comparison <span class="resolution-compare-count" id="resolutionCompareCount"></span></button></div><div id="resolutionCalculationView"><div class="summary" id="summary"></div><div class="resolution-keep-row" id="resolutionKeepRow"><div class="resolution-keep-buttons"><button id="resolutionKeepResult" type="button" title="Add this result to the Comparison tab">+ Keep this result</button><span class="resolution-keep-spacer"></span><button id="resolutionRemoveLastKept" type="button" title="Remove the result kept last">Remove last kept</button><button id="resolutionClearKept" type="button" title="Remove all kept results">Clear all kept</button></div><div class="resolution-keep-note" id="resolutionKeepNote" role="status"></div></div><div class="scan-nav hidden" id="scanNav"><button id="prev">◀ Prev</button><input id="scanSlider" max="1" min="1" type="range" value="1"/><output id="scanIndex"></output><button id="next">Next ▶</button></div><div class="plots"><div id="plotUE"></div><div id="plotVE"></div><div id="plotUV"></div><div id="plotWE"></div></div><h2>Resolution matrices</h2><div class="resolution-matrix-display"><pre id="matrix" aria-label="Local, U-based and lattice resolution matrices"></pre></div></div><div hidden id="resolutionComparisonView"><div class="resolution-compare-table-wrap"><table class="resolution-compare-table"><thead id="resolutionCompareHead"></thead><tbody id="resolutionCompareRows"></tbody></table></div><p class="resolution-compare-empty" id="resolutionCompareEmpty">No kept results yet. Calculate a point and press “+ Keep this result”.</p><div class="plots resolution-compare-plots"><div id="plotCmpUE"></div><div id="plotCmpVE"></div><div id="plotCmpUV"></div><div id="plotCmpWE"></div></div></div></section>
+</div>
+<div id="resolutionConvolutionPane" role="tabpanel" aria-labelledby="resolutionTabConvolution" hidden>
+<div class="convolution-layout" id="convLayout">
+<section class="calc-card convolution-card convolution-file-card">
+<div class="convolution-row convolution-file-row">
+<label>Dispersion file<span class="convolution-file"><button id="convSelectFile" type="button">Select file</button><input id="convFileName" data-no-persist="" type="text" readonly placeholder=".txt, .dat or .csv" aria-label="Dispersion file name"/></span></label>
+<label>Format<select id="convFormat">
+<option value="index">index, h, k, l, E1 … En, I1 … In</option>
+<option value="plain">h, k, l, E1 … En, I1 … In</option>
+<option value="index-pair">index, h, k, l, E1, I1, … En, In</option>
+<option value="plain-pair">h, k, l, E1, I1, … En, In</option>
+</select></label>
+<input id="convFile" type="file" accept=".txt,.dat,.csv,text/plain,text/csv" hidden/>
+</div>
+<div class="convolution-note"><div class="convolution-summary" id="convSummary">kf³ cot A1 is always applied; for Ef fixed it is a constant and does not matter.</div>
+<div class="convolution-summary convolution-guide">Dispersion table (resolution FWHM): range ≥ calculation range ± 1.5 FWHM, step ≤ FWHM/6.</div></div>
+<div class="convolution-tab-wrap">
+<div aria-label="Convolution view" class="geometry-card-tabs convolution-tabs" role="tablist">
+<button aria-controls="convPaneData" aria-selected="false" class="geometry-card-tab" id="convTabData" data-conv-tab="data" role="tab" type="button">Preview file</button>
+<button aria-controls="convPane2D" aria-selected="true" class="geometry-card-tab active" id="convTab2D" data-conv-tab="2d" role="tab" type="button">2D slice</button>
+<button aria-controls="convPane1D" aria-selected="false" class="geometry-card-tab" id="convTab1D" data-conv-tab="1d" role="tab" type="button">1D cut</button>
+</div>
+<section class="convolution-tab-pane" id="convPaneData" role="tabpanel" aria-labelledby="convTabData" hidden>
+<div class="convolution-table-info" id="convTableInfo">No file loaded.</div>
+<div class="convolution-table-scroll" id="convTableScroll"><table class="convolution-table"><thead id="convTableHead"></thead><tbody id="convTableBody"></tbody></table></div>
+</section>
+<section class="convolution-tab-pane" id="convPane2D" role="tabpanel" aria-labelledby="convTab2D">
+<section class="convolution-box">
+<div class="convolution-box-top">
+<button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv,.txt,.dat,text/csv,text/plain" hidden/>
+<input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+</div>
+<div class="convolution-range-table" id="convRanges">
+<button id="convResetRanges" type="button" disabled title="Set min, max and bin back to the values of the loaded table">Default</button><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>
+<span class="convolution-range-name">min</span><input id="convHmin" type="number" step="any" aria-label="H min"/><input id="convKmin" type="number" step="any" aria-label="K min"/><input id="convLmin" type="number" step="any" aria-label="L min"/><input id="convEmin" type="number" step="any" aria-label="ħω min"/>
+<span class="convolution-range-name">max</span><input id="convHmax" type="number" step="any" aria-label="H max"/><input id="convKmax" type="number" step="any" aria-label="K max"/><input id="convLmax" type="number" step="any" aria-label="L max"/><input id="convEmax" type="number" step="any" aria-label="ħω max"/>
+<span class="convolution-range-name">bin</span><input id="convHbin" type="number" step="any" min="0" aria-label="H bin"/><input id="convKbin" type="number" step="any" min="0" aria-label="K bin"/><input id="convLbin" type="number" step="any" min="0" aria-label="L bin"/><input id="convEbin" type="number" step="any" min="0" aria-label="ħω bin"/>
+</div>
+<div class="convolution-box-head">
+<select id="convMethod2D" class="convolution-method" aria-label="Resolution approximation (same as Simulation)"><option>Cooper-Nathans</option><option>Popovici</option></select>
+<span class="convolution-integration"><select id="convIntegration2D" aria-label="Integration method"><option value="grid">Grid (auto)</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><span class="convolution-grid-range" id="convGridRange2D">within ±1.5 FWHM</span><label class="convolution-field" id="convSamples2DField" hidden><input id="convSamples2D" type="number" min="50" step="50" value="300" aria-label="Random points"/>points</label></span></span>
+<span class="convolution-estimate" id="convEstimate2D"></span>
+<button id="convCalculate2D" type="button" class="convolution-calc">Calculate</button>
+<span class="convolution-message convolution-status" id="convMessage2D" aria-live="polite"></span>
+<span class="convolution-cell-empty"></span>
+</div>
+<div class="convolution-box-foot">
+<button id="convDownload2D" type="button" disabled>Save CSV</button>
+<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName2D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
+</div>
+</section>
+<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span></div>
+<div class="convolution-plots">
+<div class="convolution-plot-col">
+<div class="geometry-sliders convolution-sliders">
+<div class="geometry-slider-row"><span class="convolution-slider-name" id="convSliderVLabel">V</span><input id="convSliderV" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueV" type="number" step="any" aria-label="V value"/></div>
+</div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEU"></div><div class="convolution-cbar-entries" id="convCbarEU" hidden><input class="convolution-cbar-value" id="convZmaxEU" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminEU" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+</div>
+<div class="convolution-plot-col">
+<div class="geometry-sliders convolution-sliders">
+<div class="geometry-slider-row"><span class="convolution-slider-name" id="convSliderULabel">U</span><input id="convSliderU" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueU" type="number" step="any" aria-label="U value"/></div>
+</div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEV"></div><div class="convolution-cbar-entries" id="convCbarEV" hidden><input class="convolution-cbar-value" id="convZmaxEV" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminEV" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+</div>
+<div class="convolution-plot-col">
+<div class="geometry-sliders convolution-sliders">
+<div class="geometry-slider-row"><span class="convolution-slider-name">ħω (meV)</span><input id="convSliderE" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueE" type="number" step="any" aria-label="ħω value"/></div>
+</div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapUV"></div><div class="convolution-cbar-entries" id="convCbarUV" hidden><input class="convolution-cbar-value" id="convZmaxUV" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminUV" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+</div>
+</div>
+</section>
+<section class="convolution-tab-pane" id="convPane1D" role="tabpanel" aria-labelledby="convTab1D" hidden>
+<section class="convolution-box">
+<div class="convolution-box-top">
+<button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV, or measured data (x, I, error)">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv,.txt,.dat,text/csv,text/plain" hidden/>
+<input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+</div>
+<div class="convolution-range-table convolution-scan-table" title="Initial and final points of the scan; a variable with the same initial and final value is fixed">
+<span></span><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>
+<span class="convolution-range-name">initial</span><input id="convH0" type="text" inputmode="text" data-fraction="" aria-label="H initial"/><input id="convK0" type="text" inputmode="text" data-fraction="" aria-label="K initial"/><input id="convL0" type="text" inputmode="text" data-fraction="" aria-label="L initial"/><input id="convE0" type="text" inputmode="text" data-fraction="" aria-label="ħω initial"/>
+<span class="convolution-range-name">final</span><input id="convH1" type="text" inputmode="text" data-fraction="" aria-label="H final"/><input id="convK1" type="text" inputmode="text" data-fraction="" aria-label="K final"/><input id="convL1" type="text" inputmode="text" data-fraction="" aria-label="L final"/><input id="convE1" type="text" inputmode="text" data-fraction="" aria-label="ħω final"/>
+<span class="convolution-range-name">Points</span><input id="convPoints1D" type="number" min="2" max="2001" step="1" value="51" aria-label="Number of points"/>
+</div>
+<div class="convolution-box-head">
+<select id="convMethod1D" class="convolution-method" aria-label="Resolution approximation (same as Simulation)"><option>Cooper-Nathans</option><option>Popovici</option></select>
+<span class="convolution-integration"><select id="convIntegration1D" aria-label="Integration method"><option value="grid">Grid (auto)</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><span class="convolution-grid-range" id="convGridRange1D">within ±1.5 FWHM</span><label class="convolution-field" id="convSamples1DField" hidden><input id="convSamples1D" type="number" min="50" step="50" value="2000" aria-label="Random points"/>points</label></span></span>
+<span class="convolution-estimate" id="convEstimate1D"></span>
+<button id="convCalculate1D" type="button" class="convolution-calc">Calculate</button>
+<span class="convolution-message convolution-status" id="convStatus1D" aria-live="polite"></span>
+<button id="convKeep1D" type="button" disabled>+ Keep this result</button>
+</div>
+<div class="convolution-box-foot">
+<button id="convDownload" type="button" disabled>Save CSV</button>
+<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName1D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
+</div>
+<div class="convolution-message" id="convMessage1D" aria-live="polite"></div>
+</section>
+<div class="convolution-scan-layout">
+<button id="convSaveFigure1D" type="button" class="convolution-save-figure" disabled>Save figure</button>
+<div class="convolution-plot convolution-scan-plot" id="convScanPlot"></div>
+<aside class="convolution-curves" aria-label="Curves">
+<table class="convolution-curve-table">
+<thead><tr><th></th><th title="Include in Save CSV"><input id="convCsvAll" type="checkbox" checked aria-label="Include all curves in Save CSV"/><span>CSV</span></th><th>Legend</th><th><button id="convClearKept1D" type="button" disabled title="Remove all kept scans">Clear all</button></th></tr></thead>
+<tbody id="convCurveList"></tbody>
+</table>
+<div class="convolution-keep-empty" id="convCurveEmpty">Calculate a scan; Keep adds it here for comparison.</div>
+</aside>
+</div>
+</section>
+</div>
+</section>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -536,7 +656,7 @@
 <div class="absorption-right">
 <div class="absorption-plot" id="absorptionPlot"></div>
 <input aria-label="Sample thickness slider" class="absorption-plot-slider" id="absorptionThicknessSlider" max="20" min="0" step="0.01" type="range" value="1.00"/>
-<div class="absorption-plot-actions"><button disabled="" id="absorptionDownload" type="button">Download CSV</button></div>
+<div class="absorption-plot-actions"><button disabled="" id="absorptionDownload" type="button">Save CSV</button></div>
 </div>
 </div>
 </section>
@@ -561,7 +681,7 @@
 <div aria-live="polite" class="magff-info" id="magffInfo" role="status"></div>
 <div aria-label="Magnetic form factor and its square versus momentum transfer" class="magff-plot" id="magffPlot" role="img"></div>
 <input aria-label="Q slider" class="magff-plot-slider" id="magffQSlider" max="10" min="0" step="0.01" type="range" value="2"/>
-<div class="magff-footer"><button id="magffDownload" type="button">Download CSV</button></div>
+<div class="magff-footer"><button id="magffDownload" type="button">Save CSV</button></div>
 </section>
 </div>
 <div aria-labelledby="tabCifGenerator" class="tab-panel hidden" id="structurePanel" role="tabpanel"><section class="calc-card generator-unified-card"><div class="generator-unified-grid" id="cifGeneratorPanel"><div class="generator-unified-left"><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><section class="generator-shared-file"><div class="cif-pane-heading">
@@ -584,7 +704,7 @@
 <p class="cif-release-note" id="cifMcifBnsNotice" role="note" hidden>Note: mCIF export supports single-k magnetic structures only, written without symmetry: magnetic space group P1 or superspace group P1.1'(abg)0s / P1(abg)0.</p>
 <div class="cif-source-button-row cif-unified-output-buttons">
 <button class="primary-action" id="cifOutputGenerate" type="button">Generate CIF</button>
-<button disabled id="cifOutputDownload" type="button">Download CIF</button>
+<button disabled id="cifOutputDownload" type="button">Save CIF</button>
 <button disabled id="cifOutputSet" type="button">Set CIF</button>
 </div>
 <div aria-live="polite" class="cif-generator-message hidden" id="cifGeneratorMessage"></div>
@@ -796,8 +916,8 @@
 <label class="cif-reflection-plane-toggle"><input checked="" id="cifReflectionAlongV" type="checkbox"/> along V</label>
 <label class="cif-reflection-plane-toggle"><input checked="" id="cifReflectionWithinS2Max" type="checkbox"/> within instrument 2θ max</label>
 <label class="cif-reflection-plane-toggle"><input id="cifReflectionLambdaHalf" type="checkbox"/> λ/2</label>
-<button disabled="" id="cifDownloadTable" type="button">Download table</button>
-<button class="hidden" disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Download pattern</button>
+<button disabled="" id="cifDownloadTable" type="button">Save table</button>
+<button class="hidden" disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Save pattern</button>
 </div>
 <div class="magnetic-options reflection-options">
 <label class="hidden"><span>Mode</span><select id="reflectionMode" title="Table: one row per hkl (single crystal). Graph: powder pattern."><option value="table">Table</option><option value="graph">Graph</option></select></label>

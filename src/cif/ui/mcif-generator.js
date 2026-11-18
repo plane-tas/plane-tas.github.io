@@ -142,7 +142,7 @@ function generateMcifForReview(){
   });
   if(!records.length) throw new Error("No spin sites enabled. Enable at least one spin.");
   const text=replaceMcifMoments(source,records);
-  // Reparse and verify symmetry consistency before allowing Set or Download.
+  // Reparse and verify symmetry consistency before allowing Set or Save.
   const check=parseCifStructure(text);
   if(!check.magnetic) throw new Error("Generated file lost magnetic structure information.");
   for(const site of check.asymmetricSites){
@@ -226,7 +226,7 @@ function generateP1McifForReview(){
     if($("cifPreview")) $("cifPreview").textContent=result.text;
     if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (incommensurate, ${result.superspaceGroup})`;
     fn.setCifGeneratedReady(true);
-    fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Download or Set.`);
+    fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Save or Set.`);
     return result;
   }
   if(fn.selectedCifIsIncommensurate() && !fn.currentStructureForViewer()?.structure?.fromMcifParent) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
@@ -271,7 +271,7 @@ function generateP1McifForReview(){
   if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (magnetic P1)`;
   fn.setCifGeneratedReady(true);
   if(output.ambiguousSites) fn.setCifGeneratorMessage(`Warning: ${output.ambiguousSites} magnetic atom(s) lie on a node of cos(2πk·r) (k·r ≈ 1/4 or 3/4); their collinear sign is arbitrary for this k. Check the structure before Download or Set (use Sinusoidal, another k, or Manual spins if needed).`,true);
-  else fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: magnetic P1, ${output.atomCount} atoms. Review before Download or Set.`);
+  else fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: magnetic P1, ${output.atomCount} atoms. Review before Save or Set.`);
   return output;
 }
 
@@ -289,7 +289,7 @@ function initializeUnifiedOutputActions(){
     const notice=$("cifMcifBnsNotice");
     if(notice) notice.hidden=!mcif;
     generate.textContent=`Generate ${word}`;
-    if($("cifOutputDownload")) $("cifOutputDownload").textContent=`Download ${word}`;
+    if($("cifOutputDownload")) $("cifOutputDownload").textContent=`Save ${word}`;
     if($("cifOutputSet")) $("cifOutputSet").textContent=`Set ${word}`;
     const suffix=$("cifUnifiedFileSuffix");
     if(suffix) suffix.textContent=mcif?".mcif":".cif";
@@ -303,7 +303,7 @@ function initializeUnifiedOutputActions(){
   update();
 }
 function initMcifGeneratorActions(){
-  // mCIF Generate is available; Download/Set remain disabled until generation.
+  // mCIF Generate is available; Save/Set remain disabled until generation.
   if($("structureMcifGenerate")) $("structureMcifGenerate").disabled=false;
   invalidateGeneratedMcif();
   $("structureMcifShowCurrent")?.addEventListener("click",()=>{
@@ -319,7 +319,7 @@ function initMcifGeneratorActions(){
   $("structureMcifDownload")?.addEventListener("click",()=>{
     if(!cifState.lastGeneratedMcifText)return;
     fn.downloadGeneratedCif(cifState.lastGeneratedMcifText,cifState.lastGeneratedMcifName);
-    mcifMessage(`Downloaded ${cifState.lastGeneratedMcifName}.`);
+    mcifMessage(`Saved ${cifState.lastGeneratedMcifName}.`);
   });
   $("structureMcifSet")?.addEventListener("click",()=>{
     try{

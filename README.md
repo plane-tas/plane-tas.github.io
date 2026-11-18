@@ -2,7 +2,7 @@
 
 **Planning Experiments with a Triple-Axis Spectrometer**
 
-PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer (TAS) experiments. It brings together accessible momentum–energy ranges, scattering geometry, instrumental resolution, crystal-structure visualization, and measurement scripting.
+PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer (TAS) experiments. It brings together accessible momentum–energy ranges, scattering geometry, instrumental resolution and its convolution with a dispersion, crystal-structure visualization, and measurement scripting.
 
 **Web application:** https://plane-tas.github.io/  
 **Source code:** https://github.com/plane-tas/plane-tas.github.io
@@ -27,6 +27,14 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 - Single-point and scan calculations, with projected and sliced resolution ellipses, widths and resolution matrices.
 - Popovici uses component sizes in cm (distances in m), converted to second moments as in Popovici (1975) (rectangle A²/12, circle/cylinder D²/16); the source is a rectangle or circle, the detector a rectangle or cylinder, and the sample a cuboid (edges along U and along ⊥U in the scattering plane, height; default 1 × 1 × 2 cm) or a cylinder (diameter, height).
 - Not available for diffractometer presets.
+
+### Convolution
+
+- Convolution of a dispersion table (h, k, l, energies and intensities of each branch, on a regular grid or as scattered points) with the TAS resolution, under Resolution → Convolution.
+- **2D slice**: three maps (ħω along U, ħω along V, and the U–V plane) over an h, k, l, ħω range, with sliders, the bare dispersion, resolution ellipses and an adjustable colour scale.
+- **1D cut**: a scan between two (H, K, L, ħω) points; results can be kept for comparison, and measured data (x, I, error) can be overlaid on their own axis.
+- Integration over the resolution ellipsoid on an automatic grid (default) or by Monte Carlo sampling; an estimated calculation time is shown before calculating.
+- Save CSV writes the results with every calculation setting (instrument, lattice, scattering plane, ranges); Load CSV restores them. Save figure saves the 1D plot with its legend.
 
 ### Structure editor and reflections
 
@@ -87,6 +95,7 @@ The browser application uses plain ES modules (no build step). All code lives in
 | `src/qe/` | Q–E Range: single-crystal and powder maps, Q-vector map and path, dark-angle overlays |
 | `src/geometry/` | TAS geometry view (`tas-geometry-view.js` wires the parts in `src/geometry/view/`), quick geometry targets and target sliders |
 | `src/resolution/` | Resolution calculations and display (`resolution-ui.js` wires the parts in `src/resolution/ui/`) |
+| `src/convolution/` | Convolution of a dispersion table with the resolution: table reading, interpolation and integration (`convolution-core.js`), and its interface (`convolution-ui.js`) |
 | `src/cif/` | CIF/mCIF parsing, symmetry, nuclear structure factors and mCIF export; `cif-ui.js` installs the Structure editor parts in `src/cif/ui/` |
 | `src/magnetic/` | Magnetic reflections and magnetic form factors |
 | `src/toolbox/` | Unit conversion, S2 conversion, attenuation and form-factor toolbox |

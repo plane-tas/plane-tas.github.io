@@ -94,7 +94,7 @@ async function initializeCifGenerator(){
     });
 
     // Any structure-input edit invalidates the reviewed/generated snapshot.
-    // Download/Set therefore always operate on exactly what the user last reviewed.
+    // Save/Set therefore always operate on exactly what the user last reviewed.
     const inputPane=document.querySelector(".cif-generator-input-pane");
     const outputPane=document.querySelector(".cif-generator-output-pane");
 
@@ -221,7 +221,7 @@ async function initializeCifGenerator(){
       const name=mcif?cifState.lastGeneratedMcifName:cifState.lastGeneratedCifName;
       if(!text){ fn.setCifGeneratorMessage("Press Generate before downloading.",true); return; }
       fn.downloadGeneratedCif(text,name);
-      fn.setCifGeneratorMessage(`Downloaded ${name}.`);
+      fn.setCifGeneratorMessage(`Saved ${name}.`);
     });
     $("cifDownloadTable")?.addEventListener("click",()=>{
       try{ fn.downloadCifReflectionTable(); }
