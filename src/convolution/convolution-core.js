@@ -248,7 +248,10 @@ function normalCdf(z){
   const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
   return z>=0 ? 0.5*(1+y) : 0.5*(1-y);
 }
-export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
+// Local frame of a resolution point: Cholesky factor L of the Q covariance
+// (at fixed E), the E–Q coupling m / mEE (μ = −m·d / mEE), the energy
+// variance, and the columns that turn local Å⁻¹ into h, k, l.
+function localFrame(hkl0,res,opts){
   const RM=res.RM, UB=res.UB;
   const qi=[0,1,3];
   const MQQ=qi.map(i=>qi.map(j=>RM[i][j]));
@@ -263,19 +266,64 @@ export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
   const eX=normalize([q0[0],q0[1],0]), eZ=[0,0,1], eY=cross(eZ,eX);
   const UBinv=res.UBinv || inverse(UB);
   const col=[eX,eY,eZ].map(e=>matvec(UBinv,e).map(x=>x/TWO_PI));
+  return {L,m,mEE,varE,col};
+}
+// Is (hkl0, E0) so far from every branch that its intensity is negligible?
+// At the centre and at ±1, ±2 σ along each axis of the ellipsoid,
+// x = E_b − μ; a quadratic through those values bounds how far x moves out
+// to the grid edge (3.5 σ) along that axis.  The point is far when, for
+// every branch with intensity, |x − E0| at the centre exceeds that reach
+// plus 6 σ_E (about 2.5 FWHM in energy).  Not for the phonon model.
+function farFromDispersion(hkl0,E0,F,interp){
+  const {L,m,mEE,varE,col}=F, nB=interp.nBranch, sd=Math.sqrt(varE);
+  const at=z=>{
+    const d0=L[0][0]*z[0], d1=L[1][0]*z[0]+L[1][1]*z[1], d2=L[2][0]*z[0]+L[2][1]*z[1]+L[2][2]*z[2];
+    const v=interp.evaluate(hkl0[0]+col[0][0]*d0+col[1][0]*d1+col[2][0]*d2,
+                            hkl0[1]+col[0][1]*d0+col[1][1]*d1+col[2][1]*d2,
+                            hkl0[2]+col[0][2]*d0+col[1][2]*d1+col[2][2]*d2);
+    // evaluate() reuses its arrays: copy.
+    return v ? {E:Float64Array.from(v.E),I:Float64Array.from(v.I),mu:-(m[0]*d0+m[1]*d1+m[2]*d2)/mEE} : null;
+  };
+  const c=at([0,0,0]);
+  if(!c) return false;
+  // Cheap first test at the centre only.
+  for(let b=0;b<nB;b++) if(c.I[b] && !(Math.abs(c.E[b]-E0)>6*sd)) return false;
+  const side=[];
+  for(let a=0;a<3;a++) for(const t of [1,-1,2,-2]){
+    const z=[0,0,0]; z[a]=t; const p=at(z);
+    if(!p) return false;
+    side.push(p);
+  }
+  for(let b=0;b<nB;b++){
+    const all=[c,...side];
+    if(!all.some(p=>p.I[b])) continue;               // no intensity on this branch here
+    const x=all.map(p=>p.E[b]-p.mu);
+    if(!x.every(Number.isFinite)) return false;
+    const x0=x[0];
+    let r2=0;
+    for(let a=0;a<3;a++){
+      const [p1,m1,p2,m2]=x.slice(1+4*a,5+4*a);
+      const g=Math.max(Math.abs(p1-m1)/2,Math.abs(p2-m2)/4);
+      const k=Math.max(Math.abs(p1+m1-2*x0)/2,Math.abs(p2+m2-2*x0)/8);
+      const reach=3.5*g+12.25*k;
+      r2+=reach*reach;
+    }
+    if(!(Math.abs(x0-E0)>Math.sqrt(r2)+6*sd)) return false;
+  }
+  return true;
+}
+// Is the point worth the full grid?  (False: its intensity is negligible.)
+export function nearDispersion(hkl0,E0,res,interp,opts={}){
+  try{ return !farFromDispersion(hkl0,E0,localFrame(hkl0,res,opts),interp); }catch(_e){ return true; }
+}
+
+export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
+  const F=localFrame(hkl0,res,opts);
+  const {L,m,mEE,varE,col}=F;
   const phonon=opts.model==='phonon', T=Number(opts.temperature)||0, eCut=Number(opts.minEnergy)||0.05;
   const {samples,weights,n}=grid, N=weights.length, nB=interp.nBranch;
-  // Quick exit: every branch at the centre is so far from E0 that no node
-  // can come within reach (opts.slope: largest change of E_b − μ per unit z).
-  if(Number.isFinite(opts.slope) && !phonon){
-    const v=interp.evaluate(...hkl0);
-    if(v){
-      const reach=1.5*opts.slope*Math.hypot(...n.map(k=>k>1 ? 3.5 : 0))+6*Math.sqrt(varE);
-      let far=true;
-      for(let b=0;b<nB;b++){ const e=v.E[b]; if(Number.isFinite(e) && v.I[b] && Math.abs(e-E0)<reach){ far=false; break; } }
-      if(far) return {intensity:0,outside:0};
-    }
-  }
+  // Quick exit: no branch comes near E0 inside the ellipsoid.
+  if(!phonon && opts.skip!==false && farFromDispersion(hkl0,E0,F,interp)) return {intensity:0,outside:0};
   // Pass 1: E_b − μ (and I_b) at every node.
   const X=new Float64Array(N*nB).fill(NaN), Iw=new Float64Array(N*nB), MU=new Float64Array(N);
   let outside=0;

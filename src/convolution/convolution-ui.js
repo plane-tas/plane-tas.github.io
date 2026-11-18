@@ -5,7 +5,7 @@
 // 1D: a scan with each of H, K, L, E given as a value or ini fin bin.
 // Every point is multiplied by the intensity prefactor R0 selected in the
 // file card (kf³ cot A1 at least).
-import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, gaussianGrid, autoGridSize, dispersionAlong} from './convolution-core.js';
+import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize, dispersionAlong} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
 
 const ROW_HEIGHT=22;
@@ -178,6 +178,7 @@ export function createConvolutionUI(deps){
   async function restoreFile(){
     restoreInputs();
     $('convFileName').value='';
+    setLoaded('2D',''); setLoaded('1D','');
     const rec=await idbGet(KEY);
     if(rec && typeof rec.text==='string' && !text){
       text=rec.text; fileName=rec.name||'';
@@ -229,6 +230,7 @@ export function createConvolutionUI(deps){
     try{
       data=parseDispersionTable(text,$('convFormat')?.value||'index');
       interp=createDispersionInterpolator(data);
+      tableKey++;
       volume=null; scan=null;
       $('convDownload2D').disabled=true; updateKeepButtons();
       // After a reload the saved entries win over the table defaults.
@@ -395,12 +397,16 @@ export function createConvolutionUI(deps){
       for(let i=0;i<3;i++) n[i]=Math.max(n[i],a.n[i]);
       slope=Math.max(slope,a.slope);
     }
+    return {n:withinBudget(dim,n),slope};
+  }
+  function withinBudget(dim,n){
+    n=[...n];
     while(n[0]*n[1]*n[2]>GRID_BUDGET[dim]){
       const i=n.indexOf(Math.max(...n));
       if(n[i]<=5) break;
       n[i]-=2;
     }
-    return {n,slope};
+    return n;
   }
   function integrationFor(dim,points){
     if(integrationMode(dim)==='mc') return {mode:'mc',samples:samplesFrom(`convSamples${dim}`,dim==='2D' ? 300 : 2000)};
@@ -482,7 +488,7 @@ export function createConvolutionUI(deps){
     if(keepFill && fill){ el.style.setProperty('--conv-progress',fill); el.classList.add('convolution-progress-on'); }
   }
   // Stop: the 2D result is discarded (the previous maps stay).
-  function stop2D(){ run2D++; busy2D=false; setRunning('convCalculate2D',false); statusEnd('convMessage2D','Stopped',true); }
+  function stop2D(){ run2D++; cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); statusEnd('convMessage2D','Stopped',true); }
   async function calculate2D(){
     if(busy2D){ stop2D(); return; }
     const id=++run2D;
@@ -501,6 +507,20 @@ export function createConvolutionUI(deps){
       };
       busy2D=true; setRunning('convCalculate2D',true);
       setProgress('convMessage2D',0);
+      const P={base,rg,plane,A,Bv,E,strideA,strideB};
+      const ws=getWorkers();
+      if(ws){
+        let out=null;
+        try{ out=await calculate2DWorkers(id,ws,P); }
+        catch(err){
+          if(id!==run2D) return;
+          if(!err?.workerFailed) throw err;
+          // The workers could not start (old browser, file://): one thread.
+          workersBroken=true; killWorkers();
+        }
+        if(id!==run2D) return;
+        if(out){ finish2D(A,Bv,E,out,plane,settings); return; }
+      }
       // Grid size from the resolution nodes inside the h, k, l range.
       const nodePts=[];
       if(integrationMode('2D')==='grid'){
@@ -527,17 +547,144 @@ export function createConvolutionUI(deps){
           await yieldUI(); if(id!==run2D) return;
         }
       }
-      busy2D=false; setRunning('convCalculate2D',false);
-      volume={A,B:Bv,E,I,plane,U:plane.U,V:plane.V,settings};
-      zlim.min=null; zlim.max=null; saveInputs();
-      store2D();
-      $('convDownload2D').disabled=false;
-      showConvTab('2d');
-      setupSliders();
-      drawMaps();
-      setProgress('convMessage2D',1); message('convMessage2D','Completed'); setFill('convMessage2D',1); $('convMessage2D')?.classList.add('convolution-progress-on');
-      setStatus?.('Convolution 2D calculated');
-    }catch(err){ if(id===run2D){ busy2D=false; setRunning('convCalculate2D',false); message('convMessage2D',err.message||String(err),true); } }
+      finish2D(A,Bv,E,I,plane,settings);
+    }catch(err){ if(id===run2D){ cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); message('convMessage2D',err.message||String(err),true); } }
+  }
+  function finish2D(A,Bv,E,I,plane,settings){
+    busy2D=false; setRunning('convCalculate2D',false);
+    volume={A,B:Bv,E,I,plane,U:plane.U,V:plane.V,settings};
+    zlim.min=null; zlim.max=null; saveInputs();
+    store2D();
+    $('convDownload2D').disabled=false;
+    showConvTab('2d');
+    setupSliders();
+    drawMaps();
+    setProgress('convMessage2D',1); message('convMessage2D','Completed'); setFill('convMessage2D',1); $('convMessage2D')?.classList.add('convolution-progress-on');
+    setStatus?.('Convolution 2D calculated');
+  }
+
+  // ------------------------------------------------------------ workers --
+  // A 2D map is shared between the CPU cores: one worker per core, each
+  // with its own copy of the dispersion table.  Jobs go to whichever worker
+  // is free.  Stop terminates the workers (new ones start on the next run).
+  let workers=null, workersBroken=false, tableKey=0, cancelJobs=()=>{};
+  const workerCount=()=>Math.max(1,Math.min(32,Number(navigator.hardwareConcurrency)||4));
+  const workersAvailable=()=>!workersBroken && typeof Worker!=='undefined';
+  function getWorkers(){
+    if(workers || !workersAvailable()) return workers;
+    try{
+      workers=Array.from({length:workerCount()},()=>new Worker(new URL('./convolution-worker.js',import.meta.url),{type:'module'}));
+    }catch(_e){ workersBroken=true; workers=null; }
+    return workers;
+  }
+  function killWorkers(){ workers?.forEach(w=>w.terminate()); workers=null; }
+  const broadcast=(ws,msg)=>ws.forEach(w=>w.postMessage(msg));
+  // Run jobs on the workers; onDone(reply, job) for each.  A worker that
+  // fails to load rejects with workerFailed (the caller then runs serially).
+  function runJobs(ws,jobs,onDone){
+    return new Promise((resolve,reject)=>{
+      let next=0, pending=0, over=false;
+      const end=(fn,arg)=>{
+        if(over) return;
+        over=true; cancelJobs=()=>{};
+        // After an error the other workers may still be busy: their late
+        // replies must not reach the next run.
+        if(fn===reject) killWorkers();
+        fn(arg);
+      };
+      cancelJobs=()=>end(reject,new Error('Stopped'));
+      const give=w=>{
+        if(over) return;
+        if(next>=jobs.length){ if(!pending) end(resolve); return; }
+        const j=jobs[next], idx=next++;
+        pending++; w._job=idx;
+        w.postMessage({...j.msg,id:idx},j.transfer||[]);
+      };
+      for(const w of ws){
+        w.onmessage=ev=>{
+          const m=ev.data;
+          if(m.type==='error'){ end(reject,new Error(m.message)); return; }
+          pending--;
+          try{ onDone(m,jobs[m.id]); }catch(err){ end(reject,err); return; }
+          give(w);
+        };
+        w.onerror=ev=>{ ev.preventDefault?.(); const e=new Error('The calculation threads could not start.'); e.workerFailed=true; end(reject,e); };
+      }
+      if(!jobs.length){ end(resolve); return; }
+      ws.forEach(give);
+    });
+  }
+  async function calculate2DWorkers(id,ws,P){
+    const {base,rg,plane,A,Bv,E,strideA,strideB}=P, nA=A.length, nE=E.length;
+    const gridMode=integrationMode('2D')==='grid';
+    const node=(i,stride,n)=>Math.min(n-1,Math.round(i/stride)*stride);
+    broadcast(ws,{type:'table',key:tableKey,text,format:$('convFormat')?.value||'index'});
+    broadcast(ws,{type:'base',base});
+    // Resolution nodes used by the points inside the range (j: (U, V) node;
+    // its ħω nodes are j·nE + ie).
+    const qIndex=new Map(), qNodes=[];
+    const items=[];  // per row: [{ia,hkl,j}]
+    for(let ib=0;ib<Bv.length;ib++){
+      const row=[];
+      for(let ia=0;ia<nA;ia++){
+        const hkl=plane.hkl(A[ia],Bv[ib]);
+        if(!insideBox(hkl,rg)) continue;
+        const ka=node(ia,strideA,nA), kb=node(ib,strideB,Bv.length), key=kb*nA+ka;
+        if(!qIndex.has(key)){
+          const h=plane.hkl(A[ka],Bv[kb]);
+          qIndex.set(key,qNodes.length); qNodes.push({hkl:h,inside:insideBox(h,rg)});
+        }
+        row.push({ia,hkl,j:qIndex.get(key)});
+      }
+      items.push(row);
+    }
+    const nPts=items.reduce((n,r)=>n+r.length,0)*nE;
+    // Progress: the nodes first (their share from the time per resolution
+    // matrix), then the points.
+    const b=bench, tRes=b?.tRes||2, tPt=b ? (gridMode ? 0.25*999*b.tNode : 300*b.tSample) : 0.2;
+    const shareA=qNodes.length*nE*tRes/(qNodes.length*nE*tRes+nPts*tPt);
+    let lastShow=0;
+    const show=f=>{ const t=performance.now(); if(t-lastShow>150){ lastShow=t; setProgress('convMessage2D',f); } };
+
+    // Phase 1: resolution (and grid size) at the nodes, one (U, V) node per job.
+    const res=new Array(qNodes.length*nE).fill(null);
+    let n=[1,1,1], slope=0, doneA=0;
+    await runJobs(ws,qNodes.map((q,j)=>({j,msg:{type:'nodes',pts:E.map(e=>({hkl:q.hkl,E:e,size:gridMode && q.inside}))}})),(m,job)=>{
+      m.out.forEach((o,ie)=>{
+        res[job.j*nE+ie]=o.r;
+        if(o.n){ for(let i=0;i<3;i++) n[i]=Math.max(n[i],o.n[i]); slope=Math.max(slope,o.slope); }
+      });
+      show(shareA*(++doneA)/qNodes.length);
+    });
+    if(id!==run2D) return null;
+    const first=res.find(Boolean);
+    const integ=gridMode
+      ? {mode:'grid',n:withinBudget('2D',n),slope}
+      : {mode:'mc',samples:Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))};
+    broadcast(ws,{type:'setup',UBinv:first ? inverse(first.UB) : null,nodes:res,integ,E});
+
+    // Phase 2: the points, a piece of a row per job (enough jobs to keep
+    // every worker busy to the end).
+    const I=new Float64Array(nA*Bv.length*nE).fill(NaN);
+    const per=Math.max(1,Math.ceil(nPts/nE/(8*ws.length)));
+    const jobs=[];
+    items.forEach((row,ib)=>{
+      for(let k=0;k<row.length;k+=per){
+        const part=row.slice(k,k+per);
+        jobs.push({ib,part,msg:{type:'row',items:part.map(it=>({hkl:it.hkl,res:Int32Array.from({length:nE},(_,ie)=>it.j*nE+ie)}))}});
+      }
+    });
+    let donePts=0;
+    await runJobs(ws,jobs,(m,job)=>{
+      job.part.forEach((it,k)=>{
+        const o=(job.ib*nA+it.ia)*nE;
+        for(let ie=0;ie<nE;ie++) I[o+ie]=m.I[k*nE+ie];
+      });
+      donePts+=job.part.length*nE;
+      show(shareA+(1-shareA)*donePts/nPts);
+    });
+    if(id!==run2D) return null;
+    return I;
   }
   const nearest=(arr,v)=>{ let best=0; arr.forEach((x,i)=>{ if(Math.abs(x-v)<Math.abs(arr[best]-v)) best=i; }); return best; };
   function setupSliders(){
@@ -760,6 +907,12 @@ export function createConvolutionUI(deps){
   // (time per matrix).  The two unit times are measured once on this
   // computer with the loaded table and the current approximation.
   let bench=null;
+  // Median time of k runs (single runs of a few ms are noisy: JIT, GC).
+  const medianTime=(fn,k)=>{
+    const t=[];
+    for(let i=0;i<k;i++){ const t0=performance.now(); fn(); t.push(performance.now()-t0); }
+    return t.sort((a,b)=>a-b)[Math.floor(k/2)];
+  };
   function measureBench(){
     const base=collectResolutionBase();
     const key=`${fileName}|${data?.nBranch}|${base.approximation?.method}`;
@@ -776,18 +929,15 @@ export function createConvolutionUI(deps){
     if(!res) return null;
     const S=standardNormalSamples(4000);
     convolvePoint(c,res.energies ? (res.energies.Ei-res.energies.Ef) : 0,res,interp,S,{model:'given'});
-    const t1=performance.now();
-    for(let i=0;i<3;i++) convolvePoint(c,res.energies.Ei-res.energies.Ef,res,interp,S,{model:'given'});
+    const tMC=medianTime(()=>convolvePoint(c,res.energies.Ei-res.energies.Ef,res,interp,S,{model:'given'}),5);
     // The test point has every sample inside the table; a real map or scan
     // has many outside it (cheaper), so the measured value is scaled down
     // (calibrated against full runs: estimates within about ±30 %).
-    const tSample=0.75*(performance.now()-t1)/3/4000;
+    const tSample=0.75*tMC/4000;
     // Grid: time per node (two passes, a little more than an MC sample).
     const G=gaussianGrid([11,11,11]), Ec=res.energies.Ei-res.energies.Ef;
-    convolvePointGrid(c,Ec,res,interp,G,{model:'given'});
-    const t2=performance.now();
-    for(let i=0;i<3;i++) convolvePointGrid(c,Ec,res,interp,G,{model:'given'});
-    const tNode=0.75*(performance.now()-t2)/3/G.weights.length;
+    convolvePointGrid(c,Ec,res,interp,G,{model:'given',skip:false});
+    const tNode=0.75*medianTime(()=>convolvePointGrid(c,Ec,res,interp,G,{model:'given',skip:false}),9)/G.weights.length;
     bench={key,tRes,tSample,tNode};
     return bench;
   }
@@ -806,6 +956,19 @@ export function createConvolutionUI(deps){
       el.textContent=timeText(r.t);
     }
   }
+  // Fraction of the given points that need the full grid (not skipped as
+  // far from the dispersion), and the time of the check per point (ms).
+  function nearFraction(base,pts){
+    let near=0, k=0, dt=0;
+    for(const p of pts){
+      const res=resolutionAt(base,p.hkl,p.E,{});
+      if(!res) continue;
+      const t0=performance.now();
+      k++; if(nearDispersion(p.hkl,p.E,res,interp)) near++;
+      dt+=performance.now()-t0;
+    }
+    return {frac:k ? near/k : 1, tCheck:k ? dt/k : 0};
+  }
   // Grid: the size is estimated from a few resolution points (3 × 3 × 3 in
   // the 2D range, 5 along the scan); the real run takes all of them.
   function estimate2D(){
@@ -821,11 +984,21 @@ export function createConvolutionUI(deps){
         if(insideBox(hkl,g.rg)) pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
       }
       n=gridSizeFor('2D',pts).n;
-      // Most map points are far from the dispersion (quick exit, skipped
-      // tails): about 0.4 of the full cost (calibrated on MnF2 maps).
-      per=0.4*n[0]*n[1]*n[2]*b.tNode;
+      // Points far from the dispersion are skipped after a quick check: the
+      // full cost applies to the fraction near it (sampled on a coarse
+      // subset of the map).
+      const sub=(arr,k)=>arr.length<=k ? arr : Array.from({length:k},(_,i)=>arr[Math.round(i*(arr.length-1)/(k-1))]);
+      const sample=[];
+      for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
+        const hkl=g.plane.hkl(a,bb);
+        if(insideBox(hkl,g.rg)) for(const e of sub(g.E,9)) sample.push({hkl,E:e});
+      }
+      const {frac,tCheck}=nearFraction(g.base,sample);
+      per=tCheck+0.8*frac*n[0]*n[1]*n[2]*b.tNode;
     }
-    return {t:(g.nInside*g.E.length*per+g.nRes*b.tRes)/1000,n};
+    // Shared between the cores (measured: 1.75 × on 2 cores).
+    const k=workersAvailable() ? workerCount() : 1, speedup=1+0.75*(k-1);
+    return {t:(g.nInside*g.E.length*per+g.nRes*b.tRes)/1000/speedup,n};
   }
   function estimate1D(){
     const b=measureBench(); if(!b) return {t:NaN};
@@ -836,7 +1009,8 @@ export function createConvolutionUI(deps){
       const base=collectResolutionBase(), m=sc.pts.length-1;
       const pts=[0,0.25,0.5,0.75,1].map(t=>sc.pts[Math.round(t*m)]).map(p=>({...p,res:resolutionAt(base,p.hkl,p.E,{})}));
       n=gridSizeFor('1D',pts).n;
-      per=n[0]*n[1]*n[2]*b.tNode;
+      const {frac,tCheck}=nearFraction(base,[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1].map(t=>sc.pts[Math.round(t*m)]));
+      per=tCheck+frac*n[0]*n[1]*n[2]*b.tNode;
     }
     return {t:sc.pts.length*(per+b.tRes)/1000,n};
   }
@@ -1257,7 +1431,7 @@ export function createConvolutionUI(deps){
   // file brought in (the 2D maps if they are still the loaded ones; the
   // curves read from it in 1D) and empties the name.
   function setLoaded(dim,name){
-    const box=$(`convLoad${dim}Name`); if(box){ box.value=name||'No file selected'; box.title=name||''; }
+    const box=$(`convLoad${dim}Name`); if(box){ box.value=name||''; box.title=name||''; }
     if($(`convLoad${dim}Clear`)) $(`convLoad${dim}Clear`).disabled=!name;
   }
   function clearLoaded(dim){

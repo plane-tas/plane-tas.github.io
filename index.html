@@ -482,7 +482,7 @@
 <section class="convolution-box">
 <div class="convolution-box-top">
 <button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv,text/csv" hidden/>
-<input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+<input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
 <button id="convLoad2DClear" type="button" disabled>Clear</button>
 </div>
 <div class="convolution-range-table" id="convRanges">
@@ -530,7 +530,7 @@
 <section class="convolution-box">
 <div class="convolution-box-top">
 <button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv,text/csv" hidden/>
-<input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+<input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
 <button id="convLoad1DClear" type="button" disabled>Clear</button>
 </div>
 <div class="convolution-range-table convolution-scan-table" title="Initial and final points of the scan; a variable with the same initial and final value is fixed">

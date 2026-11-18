@@ -148,7 +148,7 @@
 <ol>
 <li><b>Approximation</b> (Cooper-Nathans or Popovici): the same setting as Resolution → Simulation.</li>
 <li><b>Grid (auto)</b> (default) integrates over the resolution ellipsoid on a Gaussian-weighted grid within ±1.5 FWHM; the number of grid points follows how steeply the dispersion crosses the resolution, and the result is smooth. <b>Monte Carlo</b> uses random points (enter their number); the noise decreases as the number grows. To check a result, compare it with Monte Carlo at many points.</li>
-<li><b>Estimated time</b> is the time the calculation should take on this computer.</li>
+<li><b>Estimated time</b> is the time the calculation should take on this computer. A 2D slice is shared between all CPU cores; points far from the dispersion (beyond the dispersion spread inside the resolution ellipsoid plus about 2.5 FWHM in energy) are skipped.</li>
 <li><b>Calculate</b> starts the calculation; while it runs the button is <b>Stop</b>, and the bar next to it shows the progress, then <b>Completed</b> or <b>Stopped</b>.</li>
 <li><b>Save CSV</b> writes the result. The file name is the entry next to it; left empty, it is the dispersion file name with _conv_2d or _conv_1d. The file holds every calculation setting (instrument and its type, energies, collimation, crystals, focusing, sizes, lattice, scattering plane, ranges and integration). <b>Load CSV</b> reads such a file back and restores those settings, so the calculation can be repeated; an instrument that is not in the list is replaced by Custom with the saved values.</li>
 </ol>
