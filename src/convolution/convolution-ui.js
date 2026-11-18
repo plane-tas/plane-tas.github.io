@@ -21,7 +21,8 @@ export function createConvolutionUI(deps){
   let run2D=0, run1D=0;
   let fileTag='', restoring=false, restoringResults=false, namedFor=null;
   // Colour-scale limits of the three maps (null = automatic).
-  const zlim={EU:{min:null,max:null},EV:{min:null,max:null},UV:{min:null,max:null}};
+  // Colour scale of the three 2D maps (one range; null = automatic).
+  const zlim={min:null,max:null};
   const kept=[];   // 1D scans kept for comparison
 
   // The last dispersion file is kept in IndexedDB (localStorage is too small
@@ -172,7 +173,7 @@ export function createConvolutionUI(deps){
     for(const id of INPUT_IDS) if(typeof saved[id]==='string' && $(id)) $(id).value=saved[id];
     if(saved.checks) for(const id of CHECK_IDS) if(typeof saved.checks[id]==='boolean' && $(id)) $(id).checked=saved.checks[id];
     showIntegration();
-    if(saved.zlim) for(const k of Object.keys(zlim)) zlim[k]={min:Number.isFinite(saved.zlim[k]?.min) ? saved.zlim[k].min : null,max:Number.isFinite(saved.zlim[k]?.max) ? saved.zlim[k].max : null};
+    if(saved.zlim){ zlim.min=Number.isFinite(saved.zlim.min) ? saved.zlim.min : null; zlim.max=Number.isFinite(saved.zlim.max) ? saved.zlim.max : null; }
   }
   async function restoreFile(){
     restoreInputs();
@@ -209,7 +210,7 @@ export function createConvolutionUI(deps){
     const r1=await idbGet('results1d');
     if(r1 && (r1.scan || r1.kept?.length)){
       scan=r1.scan||null;
-      kept.splice(0,kept.length,...(r1.kept||[]));
+      kept.splice(0,kept.length,...(r1.kept||[]).filter(k=>k.kind!=='data'));
       restoringResults=true;
       try{ refreshKept(); }finally{ restoringResults=false; }
     }
@@ -528,6 +529,7 @@ export function createConvolutionUI(deps){
       }
       busy2D=false; setRunning('convCalculate2D',false);
       volume={A,B:Bv,E,I,plane,U:plane.U,V:plane.V,settings};
+      zlim.min=null; zlim.max=null; saveInputs();
       store2D();
       $('convDownload2D').disabled=false;
       showConvTab('2d');
@@ -604,22 +606,18 @@ export function createConvolutionUI(deps){
     const zUV=B.map((_,b)=>A.map((_,a)=>at(a,b,ie)));
     const {U,V}=volume, sym=planeSymbols(U,V);
     const lineU=pointText(U,V,sym.u,B[ib]), lineV=pointText(U,V,A[ia],sym.v), planeUV=pointText(U,V,sym.u,sym.v);
-    // Colour scale of each map: its own min / max (edited on the colour bar),
-    // automatic when not set.  The end labels of the bar are the entries.
-    const limits=(key,z)=>{
-      let lo=Infinity, hi=-Infinity;
-      for(const row of z) for(const v of row) if(Number.isFinite(v)){ if(v<lo) lo=v; if(v>hi) hi=v; }
-      if(!Number.isFinite(lo)){ lo=0; hi=1; }
-      const zmin=zlim[key].min ?? lo, zmax=zlim[key].max ?? hi;
-      return zmax>zmin ? [zmin,zmax] : [zmin,zmin+Math.max(1e-12,Math.abs(zmin)*1e-6)];
-    };
-    const shown={};
+    // Colour scale: one range for the three maps, from the whole calculated
+    // volume (so it stays the same while the sliders move) unless set in the
+    // Show row.
+    const auto=volumeRange(I);
+    const zmin=zlim.min ?? auto[0], zmax0=zlim.max ?? auto[1];
+    const zmax=zmax0>zmin ? zmax0 : zmin+Math.max(1e-12,Math.abs(zmin)*1e-6);
     const heat=(key,x,y,z,xl,yl)=>{
-      const [zmin,zmax]=limits(key,z); shown[key]=[zmin,zmax];
+      // Five labelled ticks including both ends (kept in saved images).
       const vals=Array.from({length:5},(_,i)=>zmin+(zmax-zmin)*i/4);
       return {type:'heatmap',x,y,z,colorscale:'Viridis',zauto:false,zmin,zmax,showscale:true,
         colorbar:{thickness:14,len:0.9,outlinewidth:0,tickfont:{size:16},tickmode:'array',tickvals:vals,
-          ticktext:vals.map((v,i)=>i===0||i===4 ? '' : String(Number(v.toPrecision(3))))},
+          ticktext:vals.map(v=>String(Number(v.toPrecision(3))))},
         hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{z:.4g}<extra></extra>`};
     };
     // Slider positions as dashed lines, each switched by the box next to its slider.
@@ -657,38 +655,18 @@ export function createConvolutionUI(deps){
       {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B),
        shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);
-    for(const k of ['EU','EV','UV']){
-      const [lo,hi]=shown[k];
-      const mx=$(`convZmax${k}`), mn=$(`convZmin${k}`);
-      if(document.activeElement!==mx){ mx.value=String(Number(hi.toPrecision(4))); }
-      if(document.activeElement!==mn){ mn.value=String(Number(lo.toPrecision(4))); }
-      mx.classList.toggle('fixed',zlim[k].max!==null); mn.classList.toggle('fixed',zlim[k].min!==null);
-      $(`convCbar${k}`).hidden=false;
-      // Re-place the entries whenever Plotly has finished drawing this map.
-      const gd=$(`convMap${k}`);
-      if(gd?.on && !gd.__convCbarHook){ gd.on('plotly_afterplot',()=>requestAnimationFrame(placeColorbarEntries)); gd.__convCbarHook=true; }
+    // Entries: the range in use (automatic: the whole calculation); a value
+    // typed in fixes that end, clearing the box returns to automatic.
+    for(const [end,v] of [['min',zmin],['max',zmax]]){
+      const el=$(`convZ${end}`); if(!el) continue;
+      el.placeholder='auto';
+      if(document.activeElement!==el) el.value=String(Number(v.toPrecision(4)));
     }
-    requestAnimationFrame(placeColorbarEntries);
   }
-  // Put the two entries of each map on the ends of its colour bar.
-  function placeColorbarEntries(){
-    for(const k of ['EU','EV','UV']){
-      const gd=$(`convMap${k}`), box=$(`convCbar${k}`);
-      if(!gd || !box || box.hidden) continue;
-      const bar=gd.querySelector('.cbfill')?.getBoundingClientRect();
-      const outer=box.getBoundingClientRect();
-      if(!bar || !bar.height || !outer.width){ box.style.visibility='hidden'; continue; }
-      box.style.visibility='visible';
-      const d=window.tasUIDensity?.() || 1;
-      // As wide as the space between the colour bar and the frame edge.
-      const left=bar.right-outer.left+4*d, w=Math.max(30*d,Math.min(64*d,outer.width-left-2*d));
-      for(const [id,y] of [[`convZmax${k}`,bar.top],[`convZmin${k}`,bar.bottom]]){
-        const el=$(id), h=el.getBoundingClientRect().height||26*d;
-        el.style.width=`${w}px`;
-        el.style.left=`${Math.max(0,Math.min(outer.width-w,left))}px`;
-        el.style.top=`${Math.max(0,Math.min(outer.height-h,y-outer.top-h/2))}px`;
-      }
-    }
+  function volumeRange(I){
+    let lo=Infinity, hi=-Infinity;
+    for(const v of I) if(Number.isFinite(v)){ if(v<lo) lo=v; if(v>hi) hi=v; }
+    return Number.isFinite(lo) ? [lo,hi] : [0,1];
   }
 
   // FWHM resolution ellipses (projection onto the plotted plane) on a coarse
@@ -951,13 +929,6 @@ export function createConvolutionUI(deps){
   const AXIS_NAMES=['H (r.l.u.)','K (r.l.u.)','L (r.l.u.)','ħω (meV)'];
   const PALETTE=['#1f77b4','#d62728','#2ca02c','#9467bd','#ff7f0e','#8c564b','#e377c2','#17becf','#7f7f7f','#bcbd22'];
   function scanTrace(sc,name,color,current){
-    if(sc.kind==='data'){
-      // Measured data: markers with error bars on the right-hand axis.
-      return {type:'scatter',mode:'markers',name,x:sc.x,y:sc.I,yaxis:'y2',
-        error_y:sc.err ? {type:'data',array:sc.err,visible:true,color,thickness:1,width:2} : undefined,
-        marker:{size:6,color,symbol:'circle-open',line:{width:1.5,color}},
-        hovertemplate:`x = %{x:.4g}<br>I = %{y:.4g}<extra></extra>`};
-    }
     const x=sc.pts.map(p=>sc.axis===3 ? p.E : p.hkl[sc.axis]);
     const custom=sc.pts.map(p=>`(${p.hkl.map(v=>fmt(v)).join(', ')}), ${fmt(p.E,3)} meV`);
     // Solid, fairly thick lines so the colours read well in the legend.
@@ -996,7 +967,6 @@ export function createConvolutionUI(deps){
     return moving.length ? `${q}, ħω = ${fmt(e0,3)}~${fmt(e1,3)} meV` : q;
   }
   function legendText(k){
-    if(k.kind==='data') return k.label;
     const pts=k.pts||[];
     if(!pts.length) return k.label||'';
     const parts=[qeText(pts)];
@@ -1023,14 +993,10 @@ export function createConvolutionUI(deps){
     const traces=curves.map(c=>({...scanTrace(c.k,legendText(c.k),c.color,c.current),legendgroup:c.tag,name:legendText(c.k)}));
     // Horizontal axis title: every scanned variable shown (kept scans may differ).
     const axes=[...new Set(curves.map(c=>c.k.axis))];
-    const hasData=curves.some(c=>c.k.kind==='data'), hasCalc=curves.some(c=>c.k.kind!=='data');
     const frame={showline:true,ticks:'outside',linecolor:'#444',linewidth:1,zeroline:false,automargin:true};
-    const layout={font:FONT,margin:{l:96,r:hasData?96:20,t:44,b:76},showlegend:false,
+    const layout={font:FONT,margin:{l:96,r:20,t:44,b:76},showlegend:false,
       xaxis:{...frame,mirror:true,title:{text:axes.map(i=>AXIS_NAMES[i]).join(' / '),font:AXIS_TITLE_FONT}},
-      yaxis:{...frame,mirror:!hasData,title:{text:'I (arb.)',font:AXIS_TITLE_FONT},rangemode:'tozero'}};
-    // Measured data keep their own scale (counts) on the right-hand axis.
-    if(hasData) layout.yaxis2={...frame,overlaying:hasCalc ? 'y' : undefined,side:'right',title:{text:'I (data)',font:AXIS_TITLE_FONT},rangemode:'tozero'};
-    if(hasData && !hasCalc){ layout.yaxis2.overlaying=undefined; }
+      yaxis:{...frame,mirror:true,title:{text:'I (arb.)',font:AXIS_TITLE_FONT},rangemode:'tozero'}};
     return {curves,traces,layout};
   }
   function drawScan(){
@@ -1063,7 +1029,6 @@ export function createConvolutionUI(deps){
     });
     const fig={...layout,width:w,height:H,margin:{...layout.margin,b},showlegend:false,shapes,annotations,
       xaxis:{...layout.xaxis,...keep('xaxis'),automargin:false},yaxis:{...layout.yaxis,...keep('yaxis'),automargin:false}};
-    if(layout.yaxis2) fig.yaxis2={...layout.yaxis2,...keep('yaxis2'),automargin:false};
     const tmp=document.createElement('div');
     tmp.style.cssText=`position:fixed;left:-10000px;top:0;width:${w}px;height:${H}px`;
     document.body.appendChild(tmp);
@@ -1104,7 +1069,7 @@ export function createConvolutionUI(deps){
         if(c.current) tr.className='convolution-curve-current';
         const td=()=>{ const cell=document.createElement('td'); tr.appendChild(cell); return cell; };
         const sw=document.createElement('span');
-        sw.className='convolution-swatch'+(c.k.kind==='data' ? ' marker' : '');
+        sw.className='convolution-swatch';
         sw.style.borderColor=c.color; sw.style.color=c.color;
         td().appendChild(sw);
         const box=document.createElement('input'); box.type='checkbox'; box.checked=c.k.selected!==false;
@@ -1113,7 +1078,7 @@ export function createConvolutionUI(deps){
         td().appendChild(box);
         // The full scan (the plot legend shows the short form).
         const name=td(); name.className='convolution-curve-name';
-        name.textContent=c.k.kind==='data' ? `${c.k.label} (measured data)` : legendText(c.k);
+        name.textContent=legendText(c.k);
         const act=td();
         // Keep (also next to Save CSV) for the current scan, Remove for kept ones.
         const btn=document.createElement('button'); btn.type='button';
@@ -1157,8 +1122,8 @@ export function createConvolutionUI(deps){
     const curves=curveList().filter(c=>c.k.selected!==false).map(c=>({...c.k,tag:c.tag}));
     if(!curves.length) return;
     const lines=['# PLANE-TAS convolution: 1D cut',`# dispersion file: ${fileName}`,'# intensity includes kf^3 cot(A1)',
-      ...curves.map(c=>`# curve ${c.tag}: ${c.kind==='data' ? `data ${c.label}` : `${c.label} (${c.method})`}`),
-      ...curves.map(c=>c.kind==='data' ? null : settingsLine(c.settings,`settings curve ${c.tag}`)).filter(Boolean),
+      ...curves.map(c=>`# curve ${c.tag}: ${c.label} (${c.method})`),
+      ...curves.map(c=>settingsLine(c.settings,`settings curve ${c.tag}`)).filter(Boolean),
       'curve,H,K,L,hw_meV,I_arb,dI'];
     const num6=v=>Number.isFinite(v) ? String(Number(v.toFixed(6))) : '';
     for(const c of curves) c.pts.forEach((p,i)=>lines.push(`${c.tag},${p.hkl.map(num6).join(',')},${num6(p.E)},${Number.isFinite(c.I[i]) ? c.I[i].toPrecision(8) : ''},${c.err && Number.isFinite(c.err[i]) ? c.err[i].toPrecision(6) : ''}`));
@@ -1204,10 +1169,8 @@ export function createConvolutionUI(deps){
     return q.length ? q.reduce((a,b)=>span(b)>span(a)?b:a,q[0]) : 3;
   }
   const varText=(pts,j)=>{ const v=pts.map(p=>j===3 ? p.E : p.hkl[j]); const a=v[0], b=v[v.length-1]; return Math.abs(b-a)>1e-9 ? `${fmt(a)}~${fmt(b)}` : fmt(a); };
-  // 1D: a CSV written by Save CSV (curve, H, K, L, hw, I[, dI]) becomes
-  // kept curves; any other table is measured data: x, I[, error] in columns
-  // (or in rows, as x / I / error lines), with x = ħω unless a header names
-  // H, K or L.
+  // 1D: only a CSV written by Save CSV (curve, H, K, L, hw, I[, dI]); its
+  // curves become kept curves.  Other tables (measured data) are not read.
   function load1DText(textIn,name){
     const lines=String(textIn).split(/\r?\n/);
     const comments=lines.filter(l=>/^\s*#/.test(l));
@@ -1228,36 +1191,15 @@ export function createConvolutionUI(deps){
         const val=(r,c)=>c>=0 && r[c]!==undefined && r[c]!=='' ? Number(r[c]) : NaN;
         const pts=rs.map(r=>({hkl:[val(r,cH),val(r,cK),val(r,cL)],E:val(r,cE)}));
         const I=rs.map(r=>val(r,cI)), err=cD>=0 ? rs.map(r=>val(r,cD)) : null;
-        if(/^data\s/.test(meta)){
-          const axis=pts.some(p=>Number.isFinite(p.E)) ? 3 : [0,1,2].find(j=>pts.some(p=>Number.isFinite(p.hkl[j])))??3;
-          added.push({kind:'data',label:meta.replace(/^data\s+/,''),axis,x:pts.map(p=>axis===3 ? p.E : p.hkl[axis]),I,err:err?.some(Number.isFinite) ? err : null,pts});
-          continue;
-        }
+        if(/^data\s/.test(meta)) continue;
         const m=meta.match(/\((Cooper-Nathans|Popovici)\)\s*$/);
         const axis=scanAxis(pts);
         const settings=readSettings(comments,new RegExp(`^\\s*#\\s*settings curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`));
         added.push({axis,pts,I,label:(meta.replace(/\s*\((Cooper-Nathans|Popovici)\)\s*$/,'')||`${name} ${tag}`),method:m?.[1]||'',inputs:[0,1,2,3].map(j=>varText(pts,j)),settings});
       }
-    }else{
-      let m=rows.map(r=>r.map(Number));
-      if(m.some(r=>r.some(v=>!Number.isFinite(v)))) throw new Error('Non-numeric values in the data rows.');
-      // Rows as variables (x / I / error lines) when there are only 2–3 long rows.
-      if(m.length<=3 && m[0].length>3) m=m[0].map((_,j)=>m.map(r=>r[j]));
-      if(m[0].length<2) throw new Error('Measured data need at least two columns: x and I.');
-      const names=header||[];
-      const find=re=>names.findIndex(n=>re.test(n));
-      let cx=find(/^(e|hw|energy|en|ħω|omega|hw_mev|e_mev)$/), axis=3;
-      if(cx<0){ for(const [j,re] of [[0,/^h$/],[1,/^k$/],[2,/^l$/]]){ const c=find(re); if(c>=0){ cx=c; axis=j; break; } } }
-      if(cx<0) cx=0;
-      let cI=find(/^(i|int|intensity|counts|cnts|i_arb|y)$/); if(cI<0) cI=cx===0 ? 1 : 0;
-      let cE=find(/^(di|err|error|sigma|de|dy|i_err)$/); if(cE<0 && m[0].length>=3 && names.length===0) cE=2;
-      const order=m.map((r,i)=>i).sort((a,b)=>m[a][cx]-m[b][cx]);
-      const x=order.map(i=>m[i][cx]), I=order.map(i=>m[i][cI]), err=cE>=0 ? order.map(i=>m[i][cE]) : null;
-      const pts=x.map(v=>axis===3 ? {hkl:[NaN,NaN,NaN],E:v} : {hkl:[0,1,2].map(j=>j===axis ? v : NaN),E:NaN});
-      added.push({kind:'data',label:name,axis,x,I,err,pts});
-    }
+    }else throw new Error('Not a 1D CSV saved with Save CSV.');
     if(!added.length) throw new Error('No curves found in the file.');
-    for(const k of added) kept.push({...k,color:nextColor()});
+    for(const k of added) kept.push({...k,color:nextColor(),source:name});
     // The settings of the last calculated curve go back into the sidebar,
     // Resolution and the 1D cut box.
     const last=[...added].reverse().find(k=>k.settings);
@@ -1304,11 +1246,37 @@ export function createConvolutionUI(deps){
     for(const o of recs) I[(ib.get(o.b)*A.length+ia.get(o.a))*E.length+ie.get(o.E)]=o.I;
     const notes=settings ? applySettings(settings,'2D') : [];
     volume={A,B,E,I,U,V,plane:{U,V,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i])},settings};
+    zlim.min=null; zlim.max=null; saveInputs();
     store2D();
     $('convDownload2D').disabled=false;
     showConvTab('2d');
     setupSliders(); drawMaps();
     return {nA:A.length,nB:B.length,nE:E.length,restored:!!settings,notes};
+  }
+  // Load CSV row: the loaded file name, and Clear, which removes what that
+  // file brought in (the 2D maps if they are still the loaded ones; the
+  // curves read from it in 1D) and empties the name.
+  function setLoaded(dim,name){
+    const box=$(`convLoad${dim}Name`); if(box){ box.value=name||'No file selected'; box.title=name||''; }
+    if($(`convLoad${dim}Clear`)) $(`convLoad${dim}Clear`).disabled=!name;
+  }
+  function clearLoaded(dim){
+    const name=$(`convLoad${dim}Name`)?.title||'';
+    if(dim==='2D'){
+      if(volume && volume.source===name){
+        volume=null;
+        for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(plotly()) Plotly.purge(id); }catch(_e){} }
+        $('convDownload2D').disabled=true;
+        idbPut('results2d',null);
+        message('convMessage2D','');
+      }
+    }else{
+      const n=kept.length;
+      kept.splice(0,kept.length,...kept.filter(k=>k.source!==name));
+      if(kept.length!==n) refreshKept();
+      message('convStatus1D',''); message('convMessage1D','');
+    }
+    setLoaded(dim,'');
   }
   function pickFile(inputId,handler){
     const f=$(inputId);
@@ -1390,20 +1358,22 @@ export function createConvolutionUI(deps){
     $('method')?.addEventListener('change',()=>{ for(const id of ['convMethod2D','convMethod1D']) if($(id)) $(id).value=$('method').value; });
     $('convCalculate2D')?.addEventListener('click',calculate2D);
     $('convLoad2D')?.addEventListener('click',()=>$('convLoad2DFile')?.click());
+    $('convLoad2DClear')?.addEventListener('click',()=>clearLoaded('2D'));
+    $('convLoad1DClear')?.addEventListener('click',()=>clearLoaded('1D'));
     $('convLoad1D')?.addEventListener('click',()=>$('convLoad1DFile')?.click());
     pickFile('convLoad2DFile',async file=>{
       if(busy2D) stop2D();
-      if($('convLoad2DName')) $('convLoad2DName').value=file.name;
       try{
         const g=load2DText(await file.text());
+        volume.source=file.name; setLoaded('2D',file.name);
         message('convMessage2D',[`Loaded${g.restored ? ' with its settings' : ` ${file.name}`}.`,...g.notes].join(' '),g.notes.length>0);
       }
       catch(err){ message('convMessage2D',`${file.name}: ${err.message||err}`,true); }
     });
     pickFile('convLoad1DFile',async file=>{
-      if($('convLoad1DName')) $('convLoad1DName').value=file.name;
       try{
         const r=load1DText(await file.text(),file.name);
+        setLoaded('1D',file.name);
         message('convStatus1D',`Loaded ${r.n} curve${r.n>1?'s':''}${r.restored ? ' with settings' : ''}`);
         message('convMessage1D',r.notes.join(' '),r.notes.length>0);
       }
@@ -1429,17 +1399,16 @@ export function createConvolutionUI(deps){
     $('convDownload2D')?.addEventListener('click',downloadVolume);
     $('convShowDispersion')?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
     for(const id of ['convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
-    for(const k of ['EU','EV','UV']) for(const end of ['min','max']){
-      const el=$(`convZ${end}${k}`);
+    for(const end of ['min','max']){
+      const el=$(`convZ${end}`);
       const apply=()=>{
         const v=Number.parseFloat(el.value);
-        zlim[k][end]=el.value.trim()==='' || !Number.isFinite(v) ? null : v;
+        zlim[end]=el.value.trim()==='' || !Number.isFinite(v) ? null : v;
         saveInputs(); drawMaps();
       };
       el?.addEventListener('change',apply);
       el?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); apply(); el.blur(); } });
     }
-    window.addEventListener('resize',()=>requestAnimationFrame(placeColorbarEntries));
     for(const [key,input,arr] of [['U','convValueU','A'],['V','convValueV','B'],['E','convValueE','E']]){
       $(`convSlider${key}`)?.addEventListener('input',()=>{ if(!volume) return; $(input).value=fmt(volume[arr][sliderIndex(key)],3); drawMaps(); storeSliders(); });
       $(input)?.addEventListener('change',()=>{

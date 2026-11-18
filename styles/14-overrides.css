@@ -980,13 +980,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* 2D maps: colour-bar end values edited in place (as in the Q-E map). */
 .convolution-plot-frame{position:relative;min-width:0;min-height:calc(300px * var(--tas-density))}
 .convolution-plot-frame>.convolution-plot{height:100%}
-.convolution-cbar-entries{position:absolute;inset:0;pointer-events:none;z-index:5;visibility:hidden}
-.convolution-cbar-entries[hidden]{display:none}
-.convolution-cbar-value{position:absolute;box-sizing:border-box;width:calc(64px * var(--tas-density));max-width:none;height:calc(26px * var(--tas-density));margin:0;padding:0 calc(2px * var(--tas-density));border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(3px * var(--tas-density));background:transparent;color:#444;font:400 max(11px,calc(14px * var(--tas-density))) Arial,sans-serif;text-align:left;pointer-events:auto;cursor:text;-moz-appearance:textfield;appearance:textfield}
-.convolution-cbar-value::-webkit-inner-spin-button,.convolution-cbar-value::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-.convolution-cbar-value:hover{border-bottom-color:#7991a7}
-.convolution-cbar-value:focus{outline:calc(2px * var(--tas-density)) solid #477db0;outline-offset:0;border-color:#7b97b2;background:#fff}
-.convolution-cbar-value.fixed{color:#0b4f8a;font-weight:700}
 .convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-ell-kinds .checkbox-label{min-height:0}
 .convolution-line-toggle{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;color:#555;cursor:pointer}
@@ -1077,3 +1070,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 }
 /* ".csv" at the same size as the CIF output ".cif". */
 #resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
+
+/* Colour scale of the 2D maps, at the end of the Show row. */
+.convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
+.convolution-zrange input{width:calc(110px * var(--tas-density))}

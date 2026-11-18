@@ -121,12 +121,21 @@ function syncS2FieldSigns(){
 function m2DisplaySign(){
   try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).monoSign<0 ? -1 : 1; }catch(_e){ return 1; }
 }
+// The two fields are shown in numerical order: min < max also for negative
+// angles (-67 … -12, not -12 … -67).  The calculations use the magnitudes
+// in either order (angleRange).
 function syncM2FieldSigns(){
   const sign=m2DisplaySign();
-  for(const id of ['M2min','M2max']){
-    const el=$(id), v=Number(el?.value);
-    if(el && String(el.value).trim()!=='' && Number.isFinite(v)) el.value=formatS2ControlValue(sign*Math.abs(v));
+  const lo=$('M2min'), hi=$('M2max');
+  const mag=el=>{ const t=String(el?.value??'').trim(), v=Number(t); return t!=='' && Number.isFinite(v) ? Math.abs(v) : null; };
+  const a=mag(lo), b=mag(hi);
+  if(a!==null && b!==null){
+    const small=Math.min(a,b), large=Math.max(a,b);
+    lo.value=formatS2ControlValue(sign>0 ? small : -large);
+    hi.value=formatS2ControlValue(sign>0 ? large : -small);
+    return;
   }
+  for(const [el,v] of [[lo,a],[hi,b]]) if(el && v!==null) el.value=formatS2ControlValue(sign*v);
 }
 function setAngleField(id,value){
   const el=$(id); if(!el) return;

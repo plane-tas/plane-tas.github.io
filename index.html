@@ -481,8 +481,9 @@
 <section class="convolution-tab-pane" id="convPane2D" role="tabpanel" aria-labelledby="convTab2D">
 <section class="convolution-box">
 <div class="convolution-box-top">
-<button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv,.txt,.dat,text/csv,text/plain" hidden/>
+<button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv,text/csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+<button id="convLoad2DClear" type="button" disabled>Clear</button>
 </div>
 <div class="convolution-range-table" id="convRanges">
 <button id="convResetRanges" type="button" disabled title="Set min, max and bin back to the values of the loaded table">Default</button><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>
@@ -503,33 +504,34 @@
 <span class="cif-filename-entry convolution-csv-name"><input id="convCsvName2D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
 </div>
 </section>
-<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span></div>
+<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span><span class="convolution-zrange">Color scale <input id="convZmin" type="number" step="any" aria-label="Colour scale minimum" placeholder="auto"/> to <input id="convZmax" type="number" step="any" aria-label="Colour scale maximum" placeholder="auto"/></span></div>
 <div class="convolution-plots">
 <div class="convolution-plot-col">
 <div class="geometry-sliders convolution-sliders">
 <div class="geometry-slider-row"><span class="convolution-slider-name" id="convSliderVLabel">V</span><input id="convSliderV" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueV" type="number" step="any" aria-label="V value"/></div>
 </div>
-<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEU"></div><div class="convolution-cbar-entries" id="convCbarEU" hidden><input class="convolution-cbar-value" id="convZmaxEU" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminEU" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEU"></div></div>
 </div>
 <div class="convolution-plot-col">
 <div class="geometry-sliders convolution-sliders">
 <div class="geometry-slider-row"><span class="convolution-slider-name" id="convSliderULabel">U</span><input id="convSliderU" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueU" type="number" step="any" aria-label="U value"/></div>
 </div>
-<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEV"></div><div class="convolution-cbar-entries" id="convCbarEV" hidden><input class="convolution-cbar-value" id="convZmaxEV" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminEV" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapEV"></div></div>
 </div>
 <div class="convolution-plot-col">
 <div class="geometry-sliders convolution-sliders">
 <div class="geometry-slider-row"><span class="convolution-slider-name">ħω (meV)</span><input id="convSliderE" data-no-persist="" type="range" min="0" max="1" step="1" value="0" disabled/><input id="convValueE" type="number" step="any" aria-label="ħω value"/></div>
 </div>
-<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapUV"></div><div class="convolution-cbar-entries" id="convCbarUV" hidden><input class="convolution-cbar-value" id="convZmaxUV" type="number" step="any" aria-label="Colour scale maximum" title="Colour scale maximum: type a value and press Enter; clear it for automatic"/><input class="convolution-cbar-value" id="convZminUV" type="number" step="any" aria-label="Colour scale minimum" title="Colour scale minimum: type a value and press Enter; clear it for automatic"/></div></div>
+<div class="convolution-plot-frame"><div class="convolution-plot" id="convMapUV"></div></div>
 </div>
 </div>
 </section>
 <section class="convolution-tab-pane" id="convPane1D" role="tabpanel" aria-labelledby="convTab1D" hidden>
 <section class="convolution-box">
 <div class="convolution-box-top">
-<button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV, or measured data (x, I, error)">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv,.txt,.dat,text/csv,text/plain" hidden/>
+<button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv,text/csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="No file selected" aria-label="Loaded CSV file"/>
+<button id="convLoad1DClear" type="button" disabled>Clear</button>
 </div>
 <div class="convolution-range-table convolution-scan-table" title="Initial and final points of the scan; a variable with the same initial and final value is fixed">
 <span></span><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>

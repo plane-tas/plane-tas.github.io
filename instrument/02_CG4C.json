@@ -65,8 +65,8 @@
     "height": 14,
     "shape": "rectangle"
   },
-  "M2_min": -35,
-  "M2_max": -144.78,
+  "M2_min": -35.7,
+  "M2_max": -127.741,
   "A2_max": 103,
   "S2_min": 8.0,
   "S2_limits": [

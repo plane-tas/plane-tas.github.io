@@ -32,7 +32,7 @@ PLANE-TAS is a browser-based tool for planning neutron triple-axis spectrometer 
 
 - Convolution of a dispersion table (h, k, l, energies and intensities of each branch, on a regular grid or as scattered points) with the TAS resolution, under Resolution → Convolution.
 - **2D slice**: three maps (ħω along U, ħω along V, and the U–V plane) over an h, k, l, ħω range, with sliders, the bare dispersion, resolution ellipses and an adjustable colour scale.
-- **1D cut**: a scan between two (H, K, L, ħω) points; results can be kept for comparison, and measured data (x, I, error) can be overlaid on their own axis.
+- **1D cut**: a scan between two (H, K, L, ħω) points; results can be kept for comparison.
 - Integration over the resolution ellipsoid on an automatic grid (default) or by Monte Carlo sampling; an estimated calculation time is shown before calculating.
 - Save CSV writes the results with every calculation setting (instrument, lattice, scattering plane, ranges); Load CSV restores them. Save figure saves the 1D plot with its legend.
 
