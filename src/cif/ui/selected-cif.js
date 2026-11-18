@@ -17,32 +17,44 @@ function hasSelectedCif(){
   return checkedValue("sampleMode")==="single" && !!getSelectedCifStructure();
 }
 
+// Show a file name in a read-only box so that its extension stays visible.
+const fileNameCanvas=document.createElement("canvas").getContext("2d");
+function showFileName(el,name){
+  if(!el) return;
+  el.dataset.fullName=name||"";
+  el.title=name||"";
+  if(!name){ el.value="No file selected"; return; }
+  const cs=getComputedStyle(el);
+  fileNameCanvas.font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const room=el.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)-2;
+  const fits=t=>fileNameCanvas.measureText(t).width<=room;
+  if(!(room>0) || fits(name)){ el.value=name; return; }
+  const dot=name.lastIndexOf("."), ext=dot>0 ? name.slice(dot) : "", stem=dot>0 ? name.slice(0,dot) : name;
+  // Keep the extension and the last few characters before it.
+  const tail=stem.slice(-3)+ext;
+  let lo=0, hi=stem.length-3;
+  while(lo<hi){ const mid=(lo+hi+1)>>1; if(fits(stem.slice(0,mid)+"…"+tail)) lo=mid; else hi=mid-1; }
+  el.value=lo>0 ? stem.slice(0,lo)+"…"+tail : "…"+ext;
+}
+// Re-fit when the boxes change width.
+if(typeof ResizeObserver==="function"){
+  const ro=new ResizeObserver(entries=>{ for(const e of entries){ const el=e.target; if(el.dataset.fullName) showFileName(el,el.dataset.fullName); } });
+  queueMicrotask(()=>{ for(const id of ["cifFileName","cifGeneratorSourceName","structureCifName"]){ const el=document.getElementById(id); if(el) ro.observe(el); } });
+}
+
 function updateCifUI(){
   const row=$("cifSelectRow");
   if(row) row.classList.remove("hidden");
-  const name=$("cifFileName");
-  if(name){
-    name.value=getSelectedCifFileName() || "No file selected";
-    if(getSelectedCifStructure()){
-      const bits=[getSelectedCifStructure().name];
-      if(getSelectedCifStructure().spaceGroup) bits.push(`Space group: ${getSelectedCifStructure().spaceGroup}`);
-      bits.push(`${getSelectedCifStructure().asymmetricSiteCount} asymmetric site(s)`);
-      bits.push(`${getSelectedCifStructure().symmetryOperationCount} symmetry operation(s)`);
-      name.title=bits.join(" | ");
-    }else name.title="";
-  }
+  // File name boxes: the whole name when it fits, otherwise the start, "…"
+  // and the end with the extension (.cif / .mcif stays visible); the hover
+  // text is the full file name.
+  const fileName=getSelectedCifFileName();
+  for(const id of ["cifFileName","cifGeneratorSourceName","structureCifName"]) showFileName($(id),fileName);
   const clearButton=$("cifClearButton");
   if(clearButton) clearButton.disabled=!getSelectedCifStructure();
   // All three file selectors display the same shared, parsed CIF/mCIF state.
-  const generatorName=$("cifGeneratorSourceName");
-  if(generatorName){
-    generatorName.value=getSelectedCifFileName() || "No file selected";
-    generatorName.title=getSelectedCifFileName() || "";
-  }
   const generatorClear=$("cifGeneratorSourceClear");
   if(generatorClear) generatorClear.disabled=!getSelectedCifStructure();
-  const structureName=$("structureCifName");
-  if(structureName) structureName.value=getSelectedCifFileName() || "No file selected";
   const structureClear=$("structureCifClear");
   if(structureClear) structureClear.disabled=!getSelectedCifStructure();
   if($("structureMcifShowCurrent")) $("structureMcifShowCurrent").disabled=!getSelectedCifText();

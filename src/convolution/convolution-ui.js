@@ -75,6 +75,7 @@ export function createConvolutionUI(deps){
   // scattering plane, and the entries of the 2D slice or 1D cut box.
   const INSTRUMENT_SETTING_IDS=['instrument','instrumentType','monoCrystal','anaCrystal',
     'energyMode','energy','fixedBeamQuantity','geometry','sense','s1sign','method',
+    'coll1Type','monoHType','monoVType','anaHType','anaVType',
     'gm1','div1m','div1h','div1v','div2h','div2v','div3h','div3v','coll3Type','div4h','div4v',
     'dMono','mosMonoH','mosMonoV','monoHF','monoVF','monoHB','monoVB','monoWcm','monoHcm','monoTcm',
     'dAna','mosAnaH','mosAnaV','anaHF','anaVF','anaHB','anaVB','anaWcm','anaHcm','anaTcm',
@@ -114,6 +115,15 @@ export function createConvolutionUI(deps){
       if(id==='instrument' || id==='instrumentType') continue;
       put(id,inst[id]);
     }
+    // The visible comboboxes drive hidden checkboxes (focusing, supermirror):
+    // set them too, from the checkboxes for files saved before they were
+    // recorded.  The analyzer focusing switches the 3rd collimator to radial,
+    // so the saved 3rd-collimator type is put back last.
+    const yes=v=>v===true || v==='true';
+    for(const [sel,box] of [['monoHType','monoHF'],['monoVType','monoVF'],['anaHType','anaHF'],['anaVType','anaVF']])
+      if(inst[box]!==undefined) put(sel,inst[sel]??(yes(inst[box]) ? 'focusing' : 'flat'));
+    if(inst.gm1!==undefined) put('coll1Type',inst.coll1Type??(yes(inst.gm1) ? 'supermirror' : 'soller'));
+    if(inst.coll3Type!==undefined){ const c3=$('coll3Type'); if(c3 && c3.value!==String(inst.coll3Type)){ c3.value=String(inst.coll3Type); c3.dispatchEvent(new Event('change',{bubbles:true})); } }
     for(const [id,v] of Object.entries(set.convolution||{})) if(BOX_SETTING_IDS[dim].includes(id)) put(id,v);
     showIntegration(); saveInputs(); bench=null; scheduleEstimates();
     const f=set.dispersion?.file;
