@@ -7,6 +7,7 @@
 // file card (kf³ cot A1 at least).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize, dispersionAlong} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
+import {createEngine, initialLattice, newNodes, refineLattice, roughCells, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
 const ROW_HEIGHT=22;
 const NOTE='kf³ cot A1 is always applied; for Ef fixed it is a constant and does not matter.';
@@ -428,14 +429,12 @@ export function createConvolutionUI(deps){
     A=A.slice(...span(hitA)); Bv=Bv.slice(...span(hitB));
     if(A.length<2 || Bv.length<2) throw new Error('The h, k, l range is too narrow in the scattering plane.');
     const E=grid(rg.E.min,rg.E.max,rg.E.bin,MAX_TABLE_RANGE_POINTS.E);
-    // The resolution matrix changes slowly with Q: it is calculated on a
-    // coarse (U, V) grid (at most 7 × 7 nodes) for every ħω and taken from
-    // the nearest node; the dispersion is still sampled at every point.
-    const strideA=Math.max(1,Math.ceil((A.length-1)/6)), strideB=Math.max(1,Math.ceil((Bv.length-1)/6));
+    // Resolution matrices: on a lattice of nodes, refined where needed (see
+    // convolution-lattice.js); about twice the starting lattice.
     let nInside=0;
     for(const b of Bv) for(const a of A) if(insideBox(plane.hkl(a,b),rg)) nInside++;
-    const nodes=(n,stride)=>Math.floor((n-1)/stride)+1+((n-1)%stride ? 1 : 0);
-    return {base,rg,plane,A,Bv,E,strideA,strideB,nInside,nRes:nodes(A.length,strideA)*nodes(Bv.length,strideB)*E.length};
+    const L0=initialLattice(A,Bv,E);
+    return {base,rg,plane,A,Bv,E,nInside,nRes:2*L0.a.length*L0.b.length*L0.e.length};
   }
   let busy2D=false;
   // While calculating, Calculate is the Stop button.  The status next to it
@@ -464,61 +463,26 @@ export function createConvolutionUI(deps){
     if(busy2D){ stop2D(); return; }
     const id=++run2D;
     try{
-      const {base,rg,plane,A,Bv,E,strideA,strideB}=prepare2D();
+      const P=prepare2D();
+      const {A,Bv,E,plane}=P;
       const settings=settingsSnapshot('2D');
-      const I=new Float64Array(A.length*Bv.length*E.length).fill(NaN);
-      const cache={}, stats={unreachable:0,outside:0};
-      const total=A.length*Bv.length;
-      const node=(i,stride,n)=>Math.min(n-1,Math.round(i/stride)*stride);
-      const resCache=new Map();
-      const resAt=(ia,ib,ie)=>{
-        const ka=node(ia,strideA,A.length), kb=node(ib,strideB,Bv.length), key=`${ka},${kb},${ie}`;
-        if(!resCache.has(key)) resCache.set(key,resolutionAt(base,plane.hkl(A[ka],Bv[kb]),E[ie],cache));
-        return resCache.get(key);
-      };
       busy2D=true; setRunning('convCalculate2D',true);
       setProgress('convMessage2D',0);
-      const P={base,rg,plane,A,Bv,E,strideA,strideB};
+      let out=null;
       const ws=getWorkers();
       if(ws){
-        let out=null;
-        try{ out=await calculate2DWorkers(id,ws,P); }
+        try{ out=await run2DOn(id,workerRunner(ws),P); }
         catch(err){
           if(id!==run2D) return;
           if(!err?.workerFailed) throw err;
           // The workers could not start (old browser, file://): one thread.
           workersBroken=true; killWorkers();
         }
-        if(id!==run2D) return;
-        if(out){ finish2D(A,Bv,E,out,plane,settings); return; }
       }
-      // Grid size from the resolution nodes inside the h, k, l range.
-      const nodePts=[];
-      if(integrationMode('2D')==='grid'){
-        let t1=performance.now();
-        for(let ib=0;ib<Bv.length;ib++) for(let ia=0;ia<A.length;ia++){
-          if(node(ia,strideA,A.length)!==ia || node(ib,strideB,Bv.length)!==ib) continue;
-          const hkl=plane.hkl(A[ia],Bv[ib]);
-          if(!insideBox(hkl,rg)) continue;
-          for(let ie=0;ie<E.length;ie++) nodePts.push({hkl,E:E[ie],res:resAt(ia,ib,ie)});
-          if(performance.now()-t1>150){ t1=performance.now(); await yieldUI(); if(id!==run2D) return; }
-        }
-      }
-      const integ=integrationFor('2D',nodePts);
-      let done=0, t0=performance.now();
-      for(let ib=0;ib<Bv.length;ib++) for(let ia=0;ia<A.length;ia++){
-        const hkl=plane.hkl(A[ia],Bv[ib]);
-        if(insideBox(hkl,rg)){
-          for(let ie=0;ie<E.length;ie++) I[(ib*A.length+ia)*E.length+ie]=intensityAt(base,hkl,E[ie],integ,cache,stats,resAt(ia,ib,ie));
-        }
-        done++;
-        if(performance.now()-t0>150){
-          t0=performance.now();
-          setProgress('convMessage2D',done/total);
-          await yieldUI(); if(id!==run2D) return;
-        }
-      }
-      finish2D(A,Bv,E,I,plane,settings);
+      if(id!==run2D) return;
+      if(!out) out=await run2DOn(id,pageRunner(id),P);
+      if(id!==run2D || !out) return;
+      finish2D(A,Bv,E,out,plane,settings);
     }catch(err){ if(id===run2D){ cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); message('convMessage2D',err.message||String(err),true); } }
   }
   function finish2D(A,Bv,E,I,plane,settings){
@@ -538,6 +502,7 @@ export function createConvolutionUI(deps){
   // A 2D map is shared between the CPU cores: one worker per core, each
   // with its own copy of the dispersion table.  Jobs go to whichever worker
   // is free.  Stop terminates the workers (new ones start on the next run).
+  // Without workers the page runs the same engine itself.
   let workers=null, workersBroken=false, tableKey=0, cancelJobs=()=>{};
   const workerCount=()=>Math.max(1,Math.min(32,Number(navigator.hardwareConcurrency)||4));
   const workersAvailable=()=>!workersBroken && typeof Worker!=='undefined';
@@ -549,9 +514,8 @@ export function createConvolutionUI(deps){
     return workers;
   }
   function killWorkers(){ workers?.forEach(w=>w.terminate()); workers=null; }
-  const broadcast=(ws,msg)=>ws.forEach(w=>w.postMessage(msg));
   // Run jobs on the workers; onDone(reply, job) for each.  A worker that
-  // fails to load rejects with workerFailed (the caller then runs serially).
+  // fails to load rejects with workerFailed (the caller then runs on the page).
   function runJobs(ws,jobs,onDone){
     return new Promise((resolve,reject)=>{
       let next=0, pending=0, over=false;
@@ -568,8 +532,8 @@ export function createConvolutionUI(deps){
         if(over) return;
         if(next>=jobs.length){ if(!pending) end(resolve); return; }
         const j=jobs[next], idx=next++;
-        pending++; w._job=idx;
-        w.postMessage({...j.msg,id:idx},j.transfer||[]);
+        pending++;
+        w.postMessage({...j.msg,id:idx});
       };
       for(const w of ws){
         w.onmessage=ev=>{
@@ -585,68 +549,99 @@ export function createConvolutionUI(deps){
       ws.forEach(give);
     });
   }
-  async function calculate2DWorkers(id,ws,P){
-    const {base,rg,plane,A,Bv,E,strideA,strideB}=P, nA=A.length, nE=E.length;
+  const workerRunner=ws=>({
+    size:ws.length,
+    broadcast:msg=>ws.forEach(w=>w.postMessage(msg)),
+    run:(jobs,onDone)=>runJobs(ws,jobs,onDone)
+  });
+  function pageRunner(id){
+    const engine=createEngine(calcResolution);
+    return {
+      size:1,
+      broadcast:msg=>engine.handle(msg),
+      async run(jobs,onDone){
+        let t0=performance.now();
+        for(let i=0;i<jobs.length;i++){
+          onDone(engine.handle({...jobs[i].msg,id:i}),jobs[i]);
+          if(performance.now()-t0>150){ t0=performance.now(); await yieldUI(); if(id!==run2D) throw new Error('Stopped'); }
+        }
+      }
+    };
+  }
+  // A 2D map in two phases.  1: resolution matrices on the lattice of nodes,
+  // refined round by round where they change too much (and the automatic
+  // grid size from the nodes inside the range).  2: the points, a piece of a
+  // row per job.
+  async function run2DOn(id,R,P){
+    const {base,rg,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
     const gridMode=integrationMode('2D')==='grid';
-    const node=(i,stride,n)=>Math.min(n-1,Math.round(i/stride)*stride);
-    broadcast(ws,{type:'table',key:tableKey,text,format:$('convFormat')?.value||'index'});
-    broadcast(ws,{type:'base',base});
-    // Resolution nodes used by the points inside the range (j: (U, V) node;
-    // its ħω nodes are j·nE + ie).
-    const qIndex=new Map(), qNodes=[];
-    const items=[];  // per row: [{ia,hkl,j}]
+    R.broadcast({type:'table',key:tableKey,text,format:$('convFormat')?.value||'index'});
+    R.broadcast({type:'base',base});
+    const items=[];  // per row: [{ia,hkl}] inside the range
     for(let ib=0;ib<Bv.length;ib++){
       const row=[];
-      for(let ia=0;ia<nA;ia++){
-        const hkl=plane.hkl(A[ia],Bv[ib]);
-        if(!insideBox(hkl,rg)) continue;
-        const ka=node(ia,strideA,nA), kb=node(ib,strideB,Bv.length), key=kb*nA+ka;
-        if(!qIndex.has(key)){
-          const h=plane.hkl(A[ka],Bv[kb]);
-          qIndex.set(key,qNodes.length); qNodes.push({hkl:h,inside:insideBox(h,rg)});
-        }
-        row.push({ia,hkl,j:qIndex.get(key)});
-      }
+      for(let ia=0;ia<nA;ia++){ const hkl=plane.hkl(A[ia],Bv[ib]); if(insideBox(hkl,rg)) row.push({ia,hkl}); }
       items.push(row);
     }
     const nPts=items.reduce((n,r)=>n+r.length,0)*nE;
+    const bins={a:nA>1 ? Math.abs(A[1]-A[0]) : Infinity,b:Bv.length>1 ? Math.abs(Bv[1]-Bv[0]) : Infinity,e:nE>1 ? Math.abs(E[1]-E[0]) : Infinity};
     // Progress: the nodes first (their share from the time per resolution
     // matrix), then the points.
     const b=bench, tRes=b?.tRes||2, tPt=b ? (gridMode ? 0.25*999*b.tNode : 300*b.tSample) : 0.2;
-    const shareA=qNodes.length*nE*tRes/(qNodes.length*nE*tRes+nPts*tPt);
+    let lat=initialLattice(A,Bv,E), old=null;
+    const estNodes=2*lat.a.length*lat.b.length*lat.e.length;
+    const shareA=estNodes*tRes/(estNodes*tRes+nPts*tPt);
     let lastShow=0;
     const show=f=>{ const t=performance.now(); if(t-lastShow>150){ lastShow=t; setProgress('convMessage2D',f); } };
 
-    // Phase 1: resolution (and grid size) at the nodes, one (U, V) node per job.
-    const res=new Array(qNodes.length*nE).fill(null);
-    let n=[1,1,1], slope=0, doneA=0;
-    await runJobs(ws,qNodes.map((q,j)=>({j,msg:{type:'nodes',pts:E.map(e=>({hkl:q.hkl,E:e,size:gridMode && q.inside}))}})),(m,job)=>{
-      m.out.forEach((o,ie)=>{
-        res[job.j*nE+ie]=o.r;
-        if(o.n){ for(let i=0;i<3;i++) n[i]=Math.max(n[i],o.n[i]); slope=Math.max(slope,o.slope); }
+    // Phase 1
+    const key=(a,b,e)=>`${a},${b},${e}`, store=new Map(), cov=new Map();
+    let n=[1,1,1], slope=0, doneNodes=0;
+    for(let round=0;round<10;round++){
+      const fresh=newNodes(lat,old).filter(p=>!store.has(key(p.a,p.b,p.e)));
+      const chunk=Math.max(1,Math.min(64,Math.ceil(fresh.length/(4*R.size))));
+      const jobs=[];
+      for(let k=0;k<fresh.length;k+=chunk){
+        const part=fresh.slice(k,k+chunk);
+        jobs.push({part,msg:{type:'nodes',pts:part.map(p=>{ const hkl=plane.hkl(p.a,p.b); return {hkl,E:p.e,size:gridMode && insideBox(hkl,rg)}; })}});
+      }
+      await R.run(jobs,(m,job)=>{
+        m.out.forEach((o,i)=>{
+          const p=job.part[i], k=key(p.a,p.b,p.e);
+          store.set(k,o.r);
+          let c=null; if(o.r){ try{ c=inverse(o.r.RM); }catch(_e){} }
+          cov.set(k,c);
+          if(o.n){ for(let d=0;d<3;d++) n[d]=Math.max(n[d],o.n[d]); slope=Math.max(slope,o.slope); }
+        });
+        doneNodes+=job.part.length;
+        show(shareA*Math.min(1,doneNodes/estNodes));
       });
-      show(shareA*(++doneA)/qNodes.length);
-    });
-    if(id!==run2D) return null;
+      if(id!==run2D) return null;
+      const all=newNodes(lat,null);
+      const next=refineLattice(lat,all.map(p=>cov.get(key(p.a,p.b,p.e))),bins,LATTICE_MAX_NODES);
+      if(!next) break;
+      old=lat; lat=next;
+    }
+    const res=newNodes(lat,null).map(p=>store.get(key(p.a,p.b,p.e))||null);
     const first=res.find(Boolean);
+    if(!first) throw new Error('No point of the map can be reached with this instrument setting.');
     const integ=gridMode
       ? {mode:'grid',n:withinBudget('2D',n),slope}
       : {mode:'mc',samples:Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))};
-    broadcast(ws,{type:'setup',UBinv:first ? inverse(first.UB) : null,nodes:res,integ,E});
+    R.broadcast({type:'setup',lattice:{a:lat.a,b:lat.b,e:lat.e,res,rough:roughCells(lat,newNodes(lat,null).map(p=>cov.get(key(p.a,p.b,p.e))))},UB:first.UB,UBinv:inverse(first.UB),integ,E});
 
-    // Phase 2: the points, a piece of a row per job (enough jobs to keep
-    // every worker busy to the end).
+    // Phase 2
     const I=new Float64Array(nA*Bv.length*nE).fill(NaN);
-    const per=Math.max(1,Math.ceil(nPts/nE/(8*ws.length)));
+    const per=Math.max(1,Math.ceil(nPts/nE/(8*R.size)));
     const jobs=[];
     items.forEach((row,ib)=>{
       for(let k=0;k<row.length;k+=per){
         const part=row.slice(k,k+per);
-        jobs.push({ib,part,msg:{type:'row',items:part.map(it=>({hkl:it.hkl,res:Int32Array.from({length:nE},(_,ie)=>it.j*nE+ie)}))}});
+        jobs.push({ib,part,msg:{type:'row',items:part.map(it=>({hkl:it.hkl,a:A[it.ia],b:Bv[ib]}))}});
       }
     });
     let donePts=0;
-    await runJobs(ws,jobs,(m,job)=>{
+    await R.run(jobs,(m,job)=>{
       job.part.forEach((it,k)=>{
         const o=(job.ib*nA+it.ia)*nE;
         for(let ie=0;ie<nE;ie++) I[o+ie]=m.I[k*nE+ie];
@@ -888,14 +883,21 @@ export function createConvolutionUI(deps){
     const base=collectResolutionBase();
     const key=`${fileName}|${data?.nBranch}|${base.approximation?.method}`;
     if(bench && bench.key===key) return bench;
-    const c=interp.axes.map(a=>a[Math.floor(a.length/2)]);
+    // A reachable table point: the centre first, then others (a table
+    // centred on Q = 0 cannot be reached there).
+    const at=(f)=>interp.axes.map((a,i)=>a[Math.round(f[i]*(a.length-1))]);
+    const fr=[[0.5,0.5,0.5],[0.75,0.5,0.75],[1,0.5,1],[0.75,0.5,0.5],[0.5,0.5,0.75],[1,0.5,0.5],[0.5,0.5,1],[0.25,0.5,0.25],[0,0.5,0]];
     const Es=[data.eMin,(data.eMin+data.eMax)/2,data.eMax,1,5,10];
-    let res=null, tRes=0;
-    for(const E of Es){
-      const t0=performance.now(); let r=null;
-      for(let i=0;i<3;i++) r=resolutionAt(base,c,E,{});
-      tRes=(performance.now()-t0)/3;
-      if(r){ res=r; break; }
+    let res=null, tRes=0, c=null;
+    for(const f of fr){
+      c=at(f);
+      for(const E of Es){
+        if(!resolutionAt(base,c,E,{})) continue;
+        const t0=performance.now(); let r=null;
+        for(let i=0;i<3;i++) r=resolutionAt(base,c,E,{});
+        tRes=(performance.now()-t0)/3; res=r; break;
+      }
+      if(res) break;
     }
     if(!res) return null;
     const S=standardNormalSamples(4000);
