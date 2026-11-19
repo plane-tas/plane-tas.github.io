@@ -900,8 +900,8 @@ export function createConvolutionUI(deps){
     }
     if(!res) return null;
     const S=standardNormalSamples(4000);
-    convolvePoint(c,res.energies ? (res.energies.Ei-res.energies.Ef) : 0,res,interp,S,{model:'given'});
-    const tMC=medianTime(()=>convolvePoint(c,res.energies.Ei-res.energies.Ef,res,interp,S,{model:'given'}),5);
+    convolvePoint(c,res.energies ? (res.energies.Ei-res.energies.Ef) : 0,res,interp,S,{model:'given',skip:false});
+    const tMC=medianTime(()=>convolvePoint(c,res.energies.Ei-res.energies.Ef,res,interp,S,{model:'given',skip:false}),5);
     // The test point has every sample inside the table; a real map or scan
     // has many outside it (cheaper), so the measured value is scaled down
     // (calibrated against full runs: estimates within about ±30 %).
@@ -947,7 +947,22 @@ export function createConvolutionUI(deps){
     const b=measureBench(); if(!b) return {t:NaN};
     const g=prepare2D();
     let per, n=null;
-    if(integrationMode('2D')==='mc') per=Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))*b.tSample;
+    // Points far from the dispersion are skipped after a quick check (Grid
+    // and Monte Carlo): the full cost applies to the fraction near it
+    // (sampled on a coarse subset of the map).
+    const sub=(arr,k)=>arr.length<=k ? arr : Array.from({length:k},(_,i)=>arr[Math.round(i*(arr.length-1)/(k-1))]);
+    const near=()=>{
+      const sample=[];
+      for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
+        const hkl=g.plane.hkl(a,bb);
+        if(insideBox(hkl,g.rg)) for(const e of sub(g.E,9)) sample.push({hkl,E:e});
+      }
+      return nearFraction(g.base,sample);
+    };
+    if(integrationMode('2D')==='mc'){
+      const {frac,tCheck}=near();
+      per=tCheck+frac*Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))*b.tSample;
+    }
     else{
       const pick=arr=>[arr[0],arr[Math.floor(arr.length/2)],arr[arr.length-1]];
       const pts=[];
@@ -956,16 +971,7 @@ export function createConvolutionUI(deps){
         if(insideBox(hkl,g.rg)) pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
       }
       n=gridSizeFor('2D',pts);
-      // Points far from the dispersion are skipped after a quick check: the
-      // full cost applies to the fraction near it (sampled on a coarse
-      // subset of the map).
-      const sub=(arr,k)=>arr.length<=k ? arr : Array.from({length:k},(_,i)=>arr[Math.round(i*(arr.length-1)/(k-1))]);
-      const sample=[];
-      for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
-        const hkl=g.plane.hkl(a,bb);
-        if(insideBox(hkl,g.rg)) for(const e of sub(g.E,9)) sample.push({hkl,E:e});
-      }
-      const {frac,tCheck}=nearFraction(g.base,sample);
+      const {frac,tCheck}=near();
       per=tCheck+0.8*frac*n[0]*n[1]*n[2]*b.tNode;
     }
     // Shared between the cores (measured: 1.75 × on 2 cores).
@@ -976,12 +982,16 @@ export function createConvolutionUI(deps){
     const b=measureBench(); if(!b) return {t:NaN};
     const sc=scanPoints();
     let per, n=null;
-    if(integrationMode('1D')==='mc') per=Math.min(20000,Math.max(50,Math.round(num('convSamples1D')||2000)))*b.tSample;
+    const base=collectResolutionBase(), m=sc.pts.length-1;
+    const near=()=>nearFraction(base,[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1].map(t=>sc.pts[Math.round(t*m)]));
+    if(integrationMode('1D')==='mc'){
+      const {frac,tCheck}=near();
+      per=tCheck+frac*Math.min(20000,Math.max(50,Math.round(num('convSamples1D')||2000)))*b.tSample;
+    }
     else{
-      const base=collectResolutionBase(), m=sc.pts.length-1;
       const pts=[0,0.25,0.5,0.75,1].map(t=>sc.pts[Math.round(t*m)]).map(p=>({...p,res:resolutionAt(base,p.hkl,p.E,{})}));
       n=gridSizeFor('1D',pts);
-      const {frac,tCheck}=nearFraction(base,[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1].map(t=>sc.pts[Math.round(t*m)]));
+      const {frac,tCheck}=near();
       per=tCheck+frac*n[0]*n[1]*n[2]*b.tNode;
     }
     return {t:sc.pts.length*(per+b.tRes)/1000,n};

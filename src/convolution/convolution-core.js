@@ -209,11 +209,15 @@ export function gaussianGrid(n,zmax=3.5){
 
 // Monte Carlo integration over the resolution ellipsoid: samples are
 // standard-normal points z (3 per point), each with weight 1/N.  The energy
-// Gaussian is integrated analytically at every point.
+// Gaussian is integrated analytically at every point.  As for the grid, a
+// point far from every branch (see farFromDispersion) is skipped: its
+// intensity is negligible, and a wide map has many such points.
 export function convolvePoint(hkl0,E0,res,interp,samples,opts={}){
-  const {L,m,mEE,varE,col}=localFrame(hkl0,res,opts);
+  const F=localFrame(hkl0,res,opts);
+  const {L,m,mEE,varE,col}=F;
   const norm=1/Math.sqrt(TWO_PI*varE);
   const phonon=opts.model==='phonon', T=Number(opts.temperature)||0, eCut=Number(opts.minEnergy)||0.05;
+  if(!phonon && opts.skip!==false && farFromDispersion(hkl0,E0,F,interp)) return {intensity:0,outside:0};
   const N=samples.length/3;
   let sum=0, outside=0;
   for(let s=0;s<N;s++){
