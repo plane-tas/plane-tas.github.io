@@ -239,7 +239,6 @@ function resetStructureViewerStateToDefaults(){
     
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value="one";
     const referenceSelect=$("cifUnitCellReference"); if(referenceSelect) referenceSelect.value="crystallographic";
-    const xyzSelect=$("cifShowXYZ"); if(xyzSelect) xyzSelect.value="show";
     syncRestoredSpinControls();
   }finally{ restoringStructureViewer=false; }
 }
@@ -398,7 +397,6 @@ function restoreStructureViewerState(){
     
     const unitCellSelect=$("cifUnitCellMode"); if(unitCellSelect) unitCellSelect.value=cifState.structureUnitCellMode;
     const referenceSelect=$("cifUnitCellReference"); if(referenceSelect) referenceSelect.value=cifState.structureUnitCellReference;
-    const xyzSelect=$("cifShowXYZ"); if(xyzSelect) xyzSelect.value=cifState.structureShowXYZ?"show":"hide";
     syncRestoredSpinControls();
     return true;
   }finally{ restoringStructureViewer=false; }

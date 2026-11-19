@@ -558,14 +558,6 @@
   color:#6a4a00;
 }
 @media(max-width:1250px){.s2-conversion-card{overflow-x:auto}.s2-conversion-grid{grid-template-columns:repeat(6,minmax(calc(150px * var(--tas-density)),1fr));min-width:calc(980px * var(--tas-density))}}
-.geometry-scan-target{padding:calc(8px * var(--tas-density)) 0 calc(2px * var(--tas-density))}
-.geometry-scan-grid label,.geometry-scan-grid input[type=number],.geometry-scan-grid input[data-fraction]{min-width:0;width:100%;max-width:none}
-.geometry-scan-empty{min-height:calc(1px * var(--tas-density))}
-.geometry-scan-output-pane{background:#fff;padding:calc(8px * var(--tas-density))}
-.geometry-scan-point-row label{flex:1}
-.geometry-scan-point-row input[type=range]{width:100%}
-.geometry-scan-point-row output{min-width:calc(62px * var(--tas-density));text-align:right;font-size:calc(12px * var(--tas-density));font-variant-numeric:tabular-nums}
-.geometry-scan-table-panel{background:#fff;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(4px * var(--tas-density));max-width:100%;overflow:auto;max-height:calc(430px * var(--tas-density))}
 
 /* v9 Time estimate: settings and Info share a single row; Info stays right-aligned. */
 #geometryTimePane .time-estimate-settings {
@@ -598,13 +590,12 @@
   text-align:center;
 }
 
-/* Angle calculation: single-point and scan output, without resizing Plotly. */
+/* Angle calculation output, without resizing Plotly. */
 #geometryAnglesPane .geometry-angles {
   font-size: calc(17px * var(--tas-density));
   line-height: 1.55;
 }
 #geometryAnglesPane .geometry-target label,
-#geometryAnglesPane .geometry-scan-target label,
 #geometryAnglesPane .powder-geometry-target label,
 #qePanel .qe-range-control label {
   font-size: calc(15.5px * var(--tas-density));
@@ -622,20 +613,11 @@
   height:auto;
   line-height:1.3;
 }
-.geometry-scan-point-row > output {
-  min-width:6ch;
-  font-variant-numeric:tabular-nums;
-}
 /* The geometry warning row is reserved even when there is no warning. */
 #geometryAngles .geometry-warning-line{
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-}
-
-/* Angle calculation: distinguish the main Angle/Time switch from Single/Scan. */
-#singleMain .geometry-card #geometryCalcModeTabs{
-  margin-top:calc(12px * var(--tas-density));
 }
 /* Align the Fix header and each scan's Fix checkbox to the regular 17px controls. */
 .time-scan-table .time-fix-header input[type=checkbox],

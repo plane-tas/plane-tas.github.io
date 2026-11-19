@@ -6,35 +6,20 @@ import {exportIncommensurateP1Mcif} from '../mcif-incommensurate-export.js';
 
 export function installMcifGenerator(ctx){
   const {deps:{
-    $, getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText, parseCifStructure,
-    updateModeVisibility
+    $, getSelectedCifStructure, parseCifStructure
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     generateP1McifForReview, initMcifGeneratorActions, initializeUnifiedOutputActions,
     invalidateGeneratedMcif, replaceMcifMoments, cartesianToMcifCrystalAxis:crystalComponents
   });
 
-// mCIF Generator: preserve the complete source symmetry/orbit specification.
 cifState.lastGeneratedMcifText=""; cifState.lastGeneratedMcifName="";
 function cleanMcifBaseName(name){
   return fn.cleanStructureBaseName(name);
 }
-function nextMcifGeneratedBaseName(raw){
-  const current=cleanMcifBaseName(raw), matched=current.match(/^(.*)_generate(\d+)$/i);
-  return matched?`${matched[1]}_generate${String(Number(matched[2])+1).padStart(2,"0")}`:`${current}_generate01`;
-}
 function invalidateGeneratedMcif(){
   cifState.lastGeneratedMcifText=""; cifState.lastGeneratedMcifName="";
-  for(const id of ["structureMcifDownload","structureMcifSet"]) if($(id)) $(id).disabled=true;
   if($("cifOutputFormat")?.value==="mcif") fn.setCifGeneratedReady(false);
-}
-function mcifMessage(message,error=false){
-  const el=$("structureMcifMessage"); if(!el) return;
-  el.textContent=message; el.classList.toggle("error",error);
-}
-function mcifPreview(text){
-  if($("mcifPreviewText")) $("mcifPreviewText").textContent=text;
-  fn.showUnifiedCifPreview(text,`Generated file: ${cifState.lastGeneratedMcifName||"mCIF"}`);
 }
 function crystalComponents(lattice,cart){
   const basis=fn.directLatticeBasis(lattice);
@@ -84,76 +69,6 @@ function incommensurateMcif(){
   cifState.lastGeneratedMcifText=result.text;
   cifState.lastGeneratedMcifName=`${cleanMcifBaseName($("cifGeneratedName")?.value)}.mcif`;
   return result;
-}
-function generateMcifForReview(){
-  const source=getSelectedCifText();
-  if(!source) throw new Error("Select a CIF/mCIF before generating.");
-  if(fn.spinEditingIsIncommensurate(fn.currentStructureForViewer()?.structure||null)){
-    const result=incommensurateMcif();
-    for(const id of ['structureMcifDownload','structureMcifSet']) if($(id)) $(id).disabled=false;
-    mcifPreview(result.text);
-    mcifMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic.`);
-    return;
-  }
-  if(fn.selectedCifIsIncommensurate()) throw new Error("Incommensurate mCIF: choose the Incommensurate structure type to write it as a P1 superspace mCIF.");
-  if(fn.sourceIsMagneticCif() && cifState.importedMagneticEditMode) throw new Error(
-    "This imported mCIF has been modified. Export with the original magnetic symmetry is disabled because it may no longer be valid."
-  );
-  const structure=getSelectedCifStructure();
-  if(!structure) throw new Error("Selected structure is unavailable.");
-  if(!structure.magnetic){
-    const live=fn.currentMomentSettings();
-    const settings=(structure.asymmetricSites||[]).map((site,siteIndex)=>{
-      const key=fn.momentKey({...site,siteIndex});
-      return live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(site,structure);
-    });
-    const isIndividual=fn.spinEditingIsIndividual(structure);
-    const allIndividualSites=isIndividual?fn.individualSpinCandidates(structure):[];
-    const individualSettings=isIndividual ? Object.fromEntries(allIndividualSites.map(site=>[
-      site.individualKey.replace(/^individual:/,''),fn.resolveIndividualSpin(site,structure,live)
-    ])) : null;
-    if(!(individualSettings ? Object.values(individualSettings).some(s=>s.enabled) : settings.some(s=>s.enabled)))
-      throw new Error('Enable at least one magnetic site to generate an mCIF.');
-    const q=fn.effectivePropagationVectorForStructure();
-    const basis=fn.directLatticeBasis(structure.lattice);
-    const result=exportCommensurateMcif({source,structure,settings,q:[q.h,q.k,q.l],mode:cifState.structureMomentStructureType,
-      axis:fn.structureMomentRotationAxisVector(basis),chirality:cifState.structureMomentChirality,
-      fallbackOperations:fn.findGeneratorSpaceGroup(structure)?.operations||[],
-      individualSettings});
-    const base=cleanMcifBaseName($('cifGeneratedName')?.value);
-    cifState.lastGeneratedMcifText=result.text;cifState.lastGeneratedMcifName=`${base}.mcif`;
-    for(const id of ['structureMcifDownload','structureMcifSet']) if($(id)) $(id).disabled=false;
-    mcifPreview(result.text);
-    mcifMessage(`Generated ${cifState.lastGeneratedMcifName}: ${result.atomCount} atoms in ${result.supercell.join('×')} supercell, ${result.operationCount} magnetic operations, ${result.representatives} independent sites. k ≈ (${result.approximatedQ.join(', ')}).`);
-    return;
-  }
-  const hasMagOps=/_space_group_symop_magn_operation[._]/i.test(source);
-  if(!hasMagOps) throw new Error("This generator currently requires an mCIF with magnetic symmetry operations. A nonmagnetic CIF cannot be converted without choosing a magnetic space group.");
-  const live=fn.currentMomentSettings();
-  const records=[];
-  (structure.asymmetricSites||[]).forEach((site,siteIndex)=>{
-    const key=fn.momentKey({...site,siteIndex});
-    const setting=live.get(key)||cifState.structureMomentSettings.get(key)||fn.defaultMomentSetting(site,structure);
-    if(!setting.enabled) return;
-    const cart=[Number(setting.mx)||0,Number(setting.my)||0,Number(setting.mz)||0];
-    if(cart.some(x=>!Number.isFinite(x))) throw new Error(`Invalid spin components for ${site.label}`);
-    const v=crystalComponents(structure.lattice,cart);
-    records.push(`${site.label} ${v.map(x=>Number(x.toFixed(8))).join(" ")} mx,my,mz`);
-  });
-  if(!records.length) throw new Error("No spin sites enabled. Enable at least one spin.");
-  const text=replaceMcifMoments(source,records);
-  // Reparse and verify symmetry consistency before allowing Set or Save.
-  const check=parseCifStructure(text);
-  if(!check.magnetic) throw new Error("Generated file lost magnetic structure information.");
-  for(const site of check.asymmetricSites){
-    const expected=structure.asymmetricSites.find(x=>x.label===site.label);
-    if(!expected) throw new Error(`Magnetic site ${site.label} was lost.`);
-  }
-  const base=cleanMcifBaseName($("cifGeneratedName")?.value);
-  cifState.lastGeneratedMcifText=text; cifState.lastGeneratedMcifName=`${base}.mcif`;
-  for(const id of ["structureMcifDownload","structureMcifSet"]) if($(id)) $(id).disabled=false;
-  mcifPreview(text);
-  mcifMessage(`Generated ${cifState.lastGeneratedMcifName}; magnetic symmetry checked (${check.atoms.filter(a=>Array.isArray(a.magneticMoment)).length} magnetic atoms).`);
 }
 // ---- Imported mCIF -> magnetic P1: transfer the ACTUAL magnetic structure ----
 // The moments of an imported mCIF are generated by its magnetic space group
@@ -303,35 +218,7 @@ function initializeUnifiedOutputActions(){
   update();
 }
 function initMcifGeneratorActions(){
-  // mCIF Generate is available; Save/Set remain disabled until generation.
-  if($("structureMcifGenerate")) $("structureMcifGenerate").disabled=false;
   invalidateGeneratedMcif();
-  $("structureMcifShowCurrent")?.addEventListener("click",()=>{
-    if(!getSelectedCifText()){mcifMessage("No current CIF/mCIF selected.",true);return;}
-    mcifPreview(getSelectedCifText());mcifMessage(`Showing ${getSelectedCifFileName()}.`);
-  });
-  $("structureMcifGenerate")?.addEventListener("click",()=>{
-    const el=$("cifGeneratedName"),previous=el?.value;
-    if(el) el.value=nextMcifGeneratedBaseName(previous);
-    try{ generateMcifForReview(); }
-    catch(err){if(el)el.value=previous;invalidateGeneratedMcif();mcifMessage(err.message||String(err),true);}
-  });
-  $("structureMcifDownload")?.addEventListener("click",()=>{
-    if(!cifState.lastGeneratedMcifText)return;
-    fn.downloadGeneratedCif(cifState.lastGeneratedMcifText,cifState.lastGeneratedMcifName);
-    mcifMessage(`Saved ${cifState.lastGeneratedMcifName}.`);
-  });
-  $("structureMcifSet")?.addEventListener("click",()=>{
-    try{
-      if(!cifState.lastGeneratedMcifText)throw new Error("Generate mCIF first.");
-      if($("sampleMode")?.value!=="single"){
-        $("sampleMode").value="single";updateModeVisibility();
-      }
-      fn.loadCifText(cifState.lastGeneratedMcifText,cifState.lastGeneratedMcifName);
-      $("mcifTabStructure")?.click();fn.renderCifStructureIfVisible();
-      mcifMessage(`Set ${cifState.lastGeneratedMcifName} as the current mCIF.`);
-    }catch(err){mcifMessage(err.message||String(err),true);}
-  });
   // Any change to the source cell, atomic positions, or magnetic model makes
   // the previously reviewed mCIF stale (not just editing an XYZ spin field).
   const magneticSourceChanged=ev=>{

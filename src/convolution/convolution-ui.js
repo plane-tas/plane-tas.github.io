@@ -5,7 +5,7 @@
 // 1D: a scan with each of H, K, L, E given as a value or ini fin bin.
 // Every point is multiplied by the intensity prefactor R0 selected in the
 // file card (kf³ cot A1 at least).
-import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize, dispersionAlong} from './convolution-core.js';
+import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
@@ -1328,7 +1328,7 @@ export function createConvolutionUI(deps){
     const added=[];
     if(header && header[0]==='curve' && header.includes('hw_mev')){
       const col=n=>header.indexOf(n);
-      const [cH,cK,cL,cE,cI,cD]=['h','k','l','hw_mev','i_arb','di'].map(col);
+      const [cH,cK,cL,cE,cI]=['h','k','l','hw_mev','i_arb'].map(col);
       const groups=new Map();
       for(const r of rows){
         const tag=r[0]; if(!groups.has(tag)) groups.set(tag,[]);
@@ -1338,7 +1338,7 @@ export function createConvolutionUI(deps){
         const meta=(comments.find(l=>new RegExp(`^\\s*#\\s*curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`).test(l))||'').replace(/^\s*#\s*curve\s+\S+:\s*/,'');
         const val=(r,c)=>c>=0 && r[c]!==undefined && r[c]!=='' ? Number(r[c]) : NaN;
         const pts=rs.map(r=>({hkl:[val(r,cH),val(r,cK),val(r,cL)],E:val(r,cE)}));
-        const I=rs.map(r=>val(r,cI)), err=cD>=0 ? rs.map(r=>val(r,cD)) : null;
+        const I=rs.map(r=>val(r,cI));
         if(/^data\s/.test(meta)) continue;
         const m=meta.match(/\((Cooper-Nathans|Popovici)\)\s*$/);
         const axis=scanAxis(pts);

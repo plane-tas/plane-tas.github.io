@@ -23,23 +23,18 @@ function renderGeometry(cache,index=0){
   const sense=convention.sense;
   // Schematic placement depends on physical scattering Sense only.
   const displaySense=convention.sense;
-  const scanMode=!isPowder && fn.geometryCalculationMode()==='scan';
   // Keep the U / V / hbar-omega sliders and the Constant E map marker on the
   // current target (Single only).
   syncGeometrySliders?.();
   if(!isPowder) updateGeometryTargetMarker?.(cache);
-  const scanPoints=scanMode ? fn.geometryScanPoints() : [];
-  fn.updateGeometryPlaneWarning(scanPoints);
-  const scanIndex=scanMode ? fn.syncGeometryScanPointSlider(scanPoints.length) : 0;
-  const scanCalc=scanMode ? (scanPoints[scanIndex] || null) : null;
+  fn.updateGeometryPlaneWarning();
   const mirror=displaySense==="+-+" ? 1 : -1;
 
-  // A Single-crystal target is h,k,l,hw. Scan mode supplies the selected
-  // interpolated point without changing the established single-point inputs.
-  // A Powder target is the linked S2/Q pair together with hw.
+  // A Single-crystal target is h,k,l,hw; a Powder target is the linked S2/Q
+  // pair together with hw.
   let target=null;
   let targetError="";
-  try{ target=isPowder ? powderGeometryTarget() : qeGeometryAngles(cache,null,null,scanCalc); }
+  try{ target=isPowder ? powderGeometryTarget() : qeGeometryAngles(cache); }
   catch(err){ targetError=userFacingTasMessage(err?.message || String(err)); }
 
   const L=2.05;
@@ -82,7 +77,7 @@ function renderGeometry(cache,index=0){
     const canonicalConvention=tasConvention("+-+","ccw");
     const drawTarget=isPowder
       ? powderGeometryTarget(canonicalConvention,true)
-      : qeGeometryAngles(cache,null,canonicalConvention,scanCalc);
+      : qeGeometryAngles(cache,null,canonicalConvention);
     const {angles,ki,kf}=drawTarget;
     source=[-L,0];
     mono=[0,0];
@@ -172,7 +167,7 @@ function renderGeometry(cache,index=0){
     // Previous idealized fallback.
     sample=[0,0]; mono=[0,L]; source=[-L,L]; analyzer=[-mirror*0.75*L,0]; detector=[-mirror*0.75*L,0.5*L];
     if(isDiffractometer) detector=[-mirror*L,0];
-    thetaKi=-Math.PI/2; thetaKf=mirror>0?Math.PI:-0; thetaOut=-Math.PI/2;
+    thetaKi=-Math.PI/2; thetaKf=mirror>0?Math.PI:-0;
     monoPlaneAngle=mirror*deg2rad(45); anaPlaneAngle=mirror*deg2rad(45);
     qAngle=-mirror*Math.PI/4;
   }
@@ -190,7 +185,6 @@ function renderGeometry(cache,index=0){
   detector=rotateCCW90(detector);
   thetaKi-=Math.PI/2;
   thetaKf-=Math.PI/2;
-  thetaOut-=Math.PI/2;
   monoPlaneAngle-=Math.PI/2;
   anaPlaneAngle-=Math.PI/2;
   qAngle-=Math.PI/2;
@@ -204,7 +198,6 @@ function renderGeometry(cache,index=0){
     const reflectAngle=a=>Math.PI-a;
     thetaKi=reflectAngle(thetaKi);
     thetaKf=reflectAngle(thetaKf);
-    thetaOut=reflectAngle(thetaOut);
     monoPlaneAngle=reflectAngle(monoPlaneAngle);
     anaPlaneAngle=reflectAngle(anaPlaneAngle);
     qAngle=reflectAngle(qAngle);
@@ -560,9 +553,6 @@ function renderGeometry(cache,index=0){
   const yMin=mono[1]-fy*ySpan, yMax=yMin+ySpan;
 
   const angleBox=$("geometryAngles");
-  if(scanMode){
-    fn.renderGeometryScanTable(cache,scanPoints,sense,displaySense,scanIndex);
-  }
   if(angleBox){
     if(target){
       angleBox.classList.remove("error-text");

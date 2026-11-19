@@ -4,18 +4,14 @@ export function createUIShell(deps){
   const {
     $,
     BACKGROUND_SLOTS,
-    GEOMETRY_CALC_MODE_STORAGE_KEY,
-    GEOMETRY_SCAN_OUTPUT_STORAGE_KEY,
     applyInstrumentDefaults, applyInstrumentTypeChange, applySampleEnvironmentDefaults,
     backgroundRowValues,
     buildResolutionLattice,
     checkedValue,
     currentGeometryCardTab,
-    currentGeometryScanOutputTab,
     darkAssetIds,
     darkAssetSlots,
     darkAssetValues,
-    geometryCalculationMode,
     markResolutionScanDirty,
     mountTimeEstimateForScript,
     propagationVectorValues,
@@ -33,9 +29,7 @@ export function createUIShell(deps){
     setBackgroundCount,
     setDarkAssetCount,
     setDarkRangeCount,
-    setGeometryCalculationMode,
     setGeometryCardTab,
-    setGeometryScanOutputTab,
     setPropagationVectorCount,
     setQEMapTab,
     updateAutoW,
@@ -366,14 +360,7 @@ function saveRightPanelState(){
     for(const el of rightPanelControls()){
       values[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : el.value;
     }
-    // Keep the tab state alongside the right-panel values as well as in its
-    // dedicated keys.  This makes Single/Scan and Table/TAS geometry survive
-    // reloads even if initialization later rebuilds or re-renders the panel.
-    values.__geometryCalculationMode=geometryCalculationMode();
-    values.__geometryScanOutputTab=currentGeometryScanOutputTab();
     localStorage.setItem(RIGHT_PANEL_STORAGE_KEY,JSON.stringify({version:2,values}));
-    localStorage.setItem(GEOMETRY_CALC_MODE_STORAGE_KEY,values.__geometryCalculationMode);
-    localStorage.setItem(GEOMETRY_SCAN_OUTPUT_STORAGE_KEY,values.__geometryScanOutputTab);
   }catch(_e){ /* localStorage may be unavailable in a restricted browser context. */ }
 }
 
@@ -392,13 +379,6 @@ function restoreRightPanelState(){
       }else el.value=String(value);
     }
     updateCalcMode();
-    // Restore the geometry sub-tabs after every right-panel value has been
-    // applied.  Applying this last prevents later UI refreshes from leaving the
-    // HTML-default Single/Table tabs selected.
-    const savedGeometryMode=saved.values.__geometryCalculationMode;
-    const savedGeometryOutput=saved.values.__geometryScanOutputTab;
-    if(savedGeometryMode==='single' || savedGeometryMode==='scan') setGeometryCalculationMode(savedGeometryMode);
-    if(savedGeometryOutput==='table' || savedGeometryOutput==='plot') setGeometryScanOutputTab(savedGeometryOutput);
     return true;
   }finally{restoringRightPanel=false;}
 }
@@ -408,18 +388,6 @@ function savedActiveTab(){
     const name=localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
     return ['qe','resolution','toolbox','cif-generator','structure','script'].includes(name) ? name : 'qe';
   }catch(_e){ return 'qe'; }
-}
-
-function restoreGeometrySubTabsFromStorage(){
-  try{
-    const mode=localStorage.getItem(GEOMETRY_CALC_MODE_STORAGE_KEY);
-    const output=localStorage.getItem(GEOMETRY_SCAN_OUTPUT_STORAGE_KEY);
-    setGeometryCalculationMode(mode==='scan'?'scan':'single');
-    setGeometryScanOutputTab(output==='plot'?'plot':'table');
-  }catch(_e){
-    setGeometryCalculationMode('single');
-    setGeometryScanOutputTab('table');
-  }
 }
 
 function enableRightPanelPersistence(){
@@ -459,7 +427,7 @@ function globalUIPersistentControls(){
     // Spins and Structure-view controls belong to the per-structure viewer
     // state (tas-simulator-structure-viewer-v2). Restoring an older global
     // snapshot here, without change events, made them disagree with it.
-    if(/^(cifMoment|cifSpin|cifRange|cifUnitCell|cifShowXYZ)/.test(el.id)) return false;
+    if(/^(cifMoment|cifSpin|cifRange|cifUnitCell)/.test(el.id)) return false;
     return true;
   });
 }
@@ -487,8 +455,6 @@ function saveGlobalUIState(){
       }) || 'qe',
       qeMap:$('qeMapTabVector')?.classList.contains('active') ? 'vector' : 'constant',
       geometryCard:currentGeometryCardTab(),
-      geometryMode:geometryCalculationMode(),
-      geometryOutput:currentGeometryScanOutputTab(),
       cifOutput:currentCifOutputTab()
     };
     localStorage.setItem(APP_UI_STORAGE_KEY,JSON.stringify({version:2,
@@ -532,8 +498,6 @@ function restoreGlobalUIState(){
     const tabs=saved.tabs||{};
     if(['constant','vector'].includes(tabs.qeMap)) setQEMapTab(tabs.qeMap);
     if(['angles','time'].includes(tabs.geometryCard)) setGeometryCardTab(tabs.geometryCard);
-    if(['single','scan'].includes(tabs.geometryMode)) setGeometryCalculationMode(tabs.geometryMode);
-    if(['table','plot'].includes(tabs.geometryOutput)) setGeometryScanOutputTab(tabs.geometryOutput);
     // CIF/mCIF generator output tabs have their own four-tab persistence in
     // cif-ui.js (tas-simulator-generator-output-tab-v1). Do not restore the
     // legacy two-tab `cifOutput` value here: it runs AFTER that restore and
@@ -764,7 +728,6 @@ function restoreLeftPanelState(){
     saveRightPanelState,
     restoreRightPanelState,
     savedActiveTab,
-    restoreGeometrySubTabsFromStorage,
     enableRightPanelPersistence,
     saveGlobalUIState,
     restoreGlobalUIState,

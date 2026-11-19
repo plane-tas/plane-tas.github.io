@@ -13,12 +13,6 @@
   justify-content:flex-start!important;
   margin:0!important;
 }
-.geometry-scan-table th,.geometry-scan-table td{border:calc(1px * var(--tas-density)) solid #ddd;padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));text-align:right;font-variant-numeric:tabular-nums;background:#fff}
-.geometry-scan-table th{background:#f2f2f2;font-weight:650;position:sticky;top:0;z-index:1}
-.geometry-scan-table th:first-child,.geometry-scan-table td:first-child{text-align:center;width:calc(52px * var(--tas-density));min-width:calc(52px * var(--tas-density))}
-.geometry-scan-table th:last-child,.geometry-scan-table td:last-child{text-align:left;white-space:normal;min-width:calc(150px * var(--tas-density))}
-.geometry-scan-table tbody tr{cursor:pointer}
-.geometry-scan-table tbody tr:hover td{background:#fff9e8}
 .structure-color-chip.selected{
   border-color:#111;
   box-shadow:0 0 0 calc(1px * var(--tas-density)) #fff inset;
@@ -397,7 +391,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .qe-s2-control-entry > span,
 .tab-panel .qe-path-snap-label,
 .tab-panel .energy-slider-row output,
-.tab-panel .geometry-scan-point-row > output,
 .tab-panel .cif-reflection-plane-toggle,
 .tab-panel .structure-entry-label,
 .tab-panel .cif-unified-preview-label {
@@ -442,11 +435,10 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   padding-top: calc(15px * var(--tas-density));
 }
 
-/* Slider/checkbox/combobox captions match Angle calculation > Scan slider. */
+/* Slider/checkbox/combobox captions. */
 .tab-panel label:has(> input[type="range"]),
 .tab-panel label:has(> input[type="checkbox"]),
 .tab-panel label:has(> select),
-.tab-panel .geometry-scan-point-row > :is(label,output),
 .tab-panel .energy-slider-row > :is(label,output),
 #qeConstantMapPane .qe-control-entry,
 #qeConstantMapPane .qe-control-entry > :is(span,label),
@@ -464,7 +456,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
                .qe-s2-control-entry > span, .qe-path-snap-label,
                .cif-reflection-plane-toggle, .cif-unified-preview-label),
 .tab-panel .energy-slider-row output,
-.tab-panel .geometry-scan-point-row output,
 #qeDisplayControls :is(.qe-map-toolbar label, .checkbox-label, .qe-path-snap-label),
 #qeConstantMapPane .qe-control-entry > :is(span,label) {
   font-size: var(--plane-tab-label-font) !important;

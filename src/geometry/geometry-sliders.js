@@ -4,7 +4,7 @@
 // Q-E cache; releasing a slider commits through the normal input path.
 export function createGeometrySliders(deps){
   const {$, checkedValue, collectResolutionBase, getSingleCache, hklToQ, makeSpiceScatteringPlaneBasis,
-    norm, dot, num, renderGeometryNow, geometryCalculationMode, syncMapHWFromTarget, syncMapWFromTarget}=deps;
+    norm, dot, num, renderGeometryNow, syncMapHWFromTarget, syncMapWFromTarget}=deps;
 
   const ids={u:'geomSliderU',v:'geomSliderV',w:'geomSliderW',hw:'geomSliderHW',combo:'geomSliderCombo'};
   let syncing=false;
@@ -76,7 +76,7 @@ export function createGeometrySliders(deps){
   }
 
   function visible(){
-    return checkedValue('sampleMode')==='single' && geometryCalculationMode()!=='scan';
+    return checkedValue('sampleMode')==='single';
   }
   // Move the sliders to the current H, K, L, hbar-omega (no events fired).
   function syncGeometrySliders(){

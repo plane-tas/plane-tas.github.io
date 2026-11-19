@@ -413,21 +413,8 @@
   line-height:1.5!important;
 }
 
-/* v94 Angle calculation Single / Scan controls */
+/* Inner tab rows (e.g. Angle calculation / Time estimate). */
 .geometry-inner-tabs{margin-top:0}
-.geometry-scan-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:calc(8px * var(--tas-density));align-items:end}
-.geometry-scan-grid-final{margin-top:calc(8px * var(--tas-density))}
-.geometry-scan-output{margin-top:calc(8px * var(--tas-density));border-top:calc(1px * var(--tas-density)) solid #ddd}
-.geometry-scan-point-row{display:flex;align-items:center;gap:calc(10px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
-.geometry-scan-table-wrap{width:max-content;min-width:100%;overflow:visible;background:#fff}
-.geometry-scan-table{width:100%;border-collapse:collapse;font-size:calc(13px * var(--tas-density));white-space:nowrap;background:#fff}
-.geometry-scan-hkl-head,.geometry-scan-hkl-cell{width:calc(64px * var(--tas-density));min-width:calc(64px * var(--tas-density));max-width:calc(64px * var(--tas-density))}
-/* Keep Angle calculation > Scan in the same five aligned columns on narrow screens.
-   Initial: H, K, L, energy, Points; final: H, K, L, energy, blank.
-   The blank fifth cell below Points is intentional for visual clarity. */
-@media(max-width:900px){
-  .geometry-scan-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
-}
 
 /* vUI: compact instrument setup and balanced sample selectors. */
 .instrument-primary-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:calc(4px * var(--tas-density));align-items:end;min-width:0}

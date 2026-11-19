@@ -37,7 +37,7 @@ export function createAppBootstrap(deps){
     initializeScriptWorkspaceUI, initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments,
     nearestHWIndex, prepareToolboxUI, propagationVectorIndices, qeCommitPathText, qeDefaultPathText,
     qePathInput, recalculate, refreshCifAfterStateRestore, refreshDarkEnvironmentSelect, refreshSelect,
-    renderResolutionScan, renderSingle, restoreGeometrySubTabsFromStorage, restoreGlobalUIState,
+    renderResolutionScan, renderSingle, restoreGlobalUIState,
     restoreLeftPanelState, restoreRightPanelState, sampleEnvironments, saveGlobalUIState,
     saveLeftPanelState, saveRightPanelState, savedActiveTab, selectCifFile, setActiveTab,
     setBackgroundCount, setDarkAssetCount, setGeometryTargetHKL, setPowderLinkDriver,
@@ -76,7 +76,6 @@ async function initialize(){
     const savedMapTab=localStorage.getItem('tas-qe-map-tab-v1');
     setQEMapTab(savedMapTab==='vector'?'vector':'constant');
   }catch(_e){ setQEMapTab('constant'); }
-  restoreGeometrySubTabsFromStorage();
 
   // Register the main tabs before any optional async data source is loaded.
   // A missing optional directory or CIF-generator asset must never leave the
@@ -85,7 +84,6 @@ async function initialize(){
   $('tabResolution')?.addEventListener('click',()=>setActiveTab('resolution'));
   $('tabToolbox')?.addEventListener('click',()=>setActiveTab('toolbox'));
   $('tabCifGenerator')?.addEventListener('click',()=>setActiveTab('cif-generator'));
-  $('tabStructure')?.addEventListener('click',()=>setActiveTab('structure'));
   $('tabScript')?.addEventListener('click',()=>setActiveTab('script'));
 
   setStatus('neutron data / instrument / BG_material / sample_environments loading...');
@@ -153,11 +151,6 @@ async function initialize(){
   const restoredRightState=restoreRightPanelState();
   applyInstrumentCrystalAvailability({preserveCurrent:true});
   syncSidebarCrystalSelectors();
-  // Re-apply the geometry tab state at the end of right-panel restoration.
-  // This is deliberately late: dynamic controls and saved numeric values are
-  // already in place, so no subsequent initialization step can overwrite the
-  // selected Single/Scan or Table/TAS geometry tab.
-  restoreGeometrySubTabsFromStorage();
   syncSfColorMaxControl("restore");
   enableRightPanelPersistence();
   bindToolboxUI();

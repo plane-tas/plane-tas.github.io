@@ -1,6 +1,7 @@
 // CIF Generator: messages, space group, lattice constraints and magnetic cell.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {CIF_MAGNETIC_CELL_STORAGE_KEY} from './constants.js';
+import {applyLatticeConstraints} from '../../core/lattice-constraints.js';
 
 export function installGeneratorCell(ctx){
   const {deps:{
@@ -35,7 +36,6 @@ function clearCifReflectionTable(message="No reflections available."){
     td.colSpan=$("cifReflectionHead")?.rows?.[0]?.cells?.length||9; td.className="cif-reflection-empty"; td.textContent=message;
     tr.appendChild(td); body.appendChild(tr);
   }
-  if($("cifReflectionSummary")) $("cifReflectionSummary").textContent=message;
 }
 
 function invalidateGeneratedCif(message="Inputs changed — press Generate to refresh the CIF."){
@@ -159,42 +159,7 @@ function applyCifLatticeConstraints(){
   // Magnetic lattice editing must not silently inherit a 230-group IT setting.
   const sg=selectedCifGeneratorSpaceGroup();
   if(!sg) return;
-  const latticeFields=cifState.CIF_LATTICE_FIELDS;
-  const inputs=Object.fromEntries(Object.entries(latticeFields).map(([key,id])=>[key,$(id)]));
-  for(const input of Object.values(inputs)){
-    if(!input) continue;
-    input.readOnly=false;
-    input.removeAttribute("aria-readonly");
-    input.title="";
-  }
-  const lockValue=(key,value,reason)=>{
-    const input=inputs[key]; if(!input) return;
-    input.value=String(value); input.readOnly=true; input.setAttribute("aria-readonly","true"); input.title=reason;
-  };
-  const lockEqual=(key,sourceKey,reason)=>{
-    const source=Number(inputs[sourceKey]?.value);
-    if(Number.isFinite(source)) lockValue(key,source,reason);
-  };
-  const cs=String(sg.crystal_system||"").toLowerCase();
-  if(cs==="monoclinic"){
-    lockValue("alpha",90,"Fixed by the standard monoclinic setting.");
-    lockValue("gamma",90,"Fixed by the standard monoclinic setting.");
-  }else if(cs==="orthorhombic"){
-    for(const k of ["alpha","beta","gamma"]) lockValue(k,90,"Fixed by orthorhombic symmetry.");
-  }else if(cs==="tetragonal"){
-    lockEqual("b","a","b = a by tetragonal symmetry.");
-    for(const k of ["alpha","beta","gamma"]) lockValue(k,90,"Fixed by tetragonal symmetry.");
-  }else if(cs==="trigonal" || cs==="hexagonal"){
-    // The bundled standard settings use hexagonal axes for trigonal groups.
-    lockEqual("b","a",`${cs==="trigonal"?"Trigonal (hexagonal setting)":"Hexagonal"} symmetry requires b = a.`);
-    lockValue("alpha",90,"Fixed by the standard hexagonal-axis setting.");
-    lockValue("beta",90,"Fixed by the standard hexagonal-axis setting.");
-    lockValue("gamma",120,"Fixed by the standard hexagonal-axis setting.");
-  }else if(cs==="cubic"){
-    lockEqual("b","a","b = a by cubic symmetry.");
-    lockEqual("c","a","c = a by cubic symmetry.");
-    for(const k of ["alpha","beta","gamma"]) lockValue(k,90,"Fixed by cubic symmetry.");
-  }
+  applyLatticeConstraints(Object.fromEntries(Object.entries(cifState.CIF_LATTICE_FIELDS).map(([key,id])=>[key,$(id)])),sg);
 }
 
 // Magnetic-cell controls are independent from the crystallographic cell.

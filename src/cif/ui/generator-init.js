@@ -282,10 +282,6 @@ async function initializeCifGenerator(){
         fn.saveStructureViewerState();fn.renderCifStructureIfVisible();
       });
     }
-    const xyzSelect=$("cifShowXYZ");
-    if(xyzSelect){ xyzSelect.value=cifState.structureShowXYZ?"show":"hide"; xyzSelect.addEventListener("change",()=>{ cifState.structureShowXYZ=xyzSelect.value!=="hide"; fn.saveStructureViewerState(); fn.renderCifStructureIfVisible(); }); }
-    $("structureCifSelect")?.addEventListener("click",()=>$("cifFileInput")?.click());
-    $("structureCifClear")?.addEventListener("click",fn.clearSelectedCif);
     for(const button of document.querySelectorAll("[data-cif-structure-view]")){
       button.addEventListener("click",()=>{
         cifState.cifStructureViewMode=button.dataset.cifStructureView || "a";

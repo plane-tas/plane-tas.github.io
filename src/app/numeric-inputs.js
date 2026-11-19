@@ -5,8 +5,6 @@
 // the capture phase so every other change listener sees the cleaned value.
 export const GEOMETRY_NUMERIC_INPUT_IDS=[
   'geomH','geomK','geomL','geomHW','geomComboU','geomComboV',
-  'geomScanH0','geomScanK0','geomScanL0','geomScanHW0',
-  'geomScanH1','geomScanK1','geomScanL1','geomScanHW1',
   'powderGeomS2','powderGeomQ','powderGeomHW'
 ];
 const ALLOWED=/^[0-9+\-.\/⁄／eE ]*$/;

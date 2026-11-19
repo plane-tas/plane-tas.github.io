@@ -587,10 +587,6 @@ main{
 
 /* v87: multi-peak S2 conversion results */
 
-.geometry-scan-selected-row td{background:#fff0ad !important}
-.geometry-scan-warning-row td{background:#fde9e2 !important;color:#111 !important}
-.geometry-scan-warning-row.geometry-scan-selected-row td{background:#fde9e2 !important;box-shadow:inset 0 0 0 calc(2px * var(--tas-density)) #d27a62}
-.geometry-scan-table tbody tr.geometry-scan-warning-row:hover td{background:#f9ddd3 !important}
 
 #structurePanel.hidden{
   display:none;
@@ -726,7 +722,6 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 :is(table,table th,table td,
     .harmonic-table,.harmonic-table > *,
     .time-scan-table,.time-scan-header,.time-scan-index,
-    .geometry-scan-table,.geometry-scan-table th,.geometry-scan-table td,
     .s2-conversion-table,.s2-conversion-table th,.s2-conversion-table td,
     .cif-atom-table,.cif-atom-header,.cif-atom-index,
     .cif-thermal-table,.cif-thermal-header,

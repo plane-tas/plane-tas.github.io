@@ -1,4 +1,4 @@
-import {installGeometryScanPanel} from './view/scan-panel.js';
+import {installGeometryResultPanel} from './view/result-panel.js';
 import {installGeometryRender} from './view/render.js';
 
 // Angle calculation & TAS geometry view.  One closure split into parts under
@@ -9,17 +9,13 @@ export function createTasGeometryView(deps){
   // values shared between parts on `ctx.state` (`shared` in the parts); everything else stays private to its file.
   // Parts are installed in the original top-to-bottom order of the former single closure.
   const ctx={deps, state:{}, fn:{}};
-  installGeometryScanPanel(ctx);
+  installGeometryResultPanel(ctx);
   installGeometryRender(ctx);
   const fn=ctx.fn;
 
   return {
-    geometryCalculationMode:fn.geometryCalculationMode,
     geometryPointWarnings:fn.geometryPointWarnings,
-    currentGeometryScanOutputTab:fn.currentGeometryScanOutputTab,
-    setGeometryScanOutputTab:fn.setGeometryScanOutputTab,
-    setGeometryCalculationMode:fn.setGeometryCalculationMode,
-    updateGeometryCalculationModeVisibility:fn.updateGeometryCalculationModeVisibility,
+    updateGeometryTargetVisibility:fn.updateGeometryTargetVisibility,
     renderGeometry:fn.renderGeometry
   };
 }

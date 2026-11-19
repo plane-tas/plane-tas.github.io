@@ -3,7 +3,7 @@ import {
   solve, submatrix, swapRowsCols, symmetrize, choleskyPositiveDefinite,
   det3, dot, norm, cross, normalize, eigSym2
 } from '../core/matrix.js';
-import {OUT_OF_PLANE_TOLERANCE_DEG} from '../core/tas-core.js';
+import {OUT_OF_PLANE_TOLERANCE_DEG, RL_calc, UB_calc} from '../core/tas-core.js';
 
 const PI=Math.PI;
 const D2R=PI/180;
@@ -15,28 +15,9 @@ const E2K2_RES=2.072142;
 const sind=d=>Math.sin(d*D2R), cosd=d=>Math.cos(d*D2R), tand=d=>Math.tan(d*D2R);
 const asind=x=>Math.asin(x)*R2D, acosd=x=>Math.acos(x)*R2D, atand=x=>Math.atan(x)*R2D;
 
-export function RL_calc(lc){
-  const {a,b,c,alpha,beta,gamma}=lc;
-  const ca=cosd(alpha), cb=cosd(beta), cg=cosd(gamma);
-  const V0=Math.sqrt(1-ca*ca-cb*cb-cg*cg+2*ca*cb*cg);
-  const V=a*b*c*V0;
-  const alphaStar=acosd((cb*cg-ca)/(sind(beta)*sind(gamma)));
-  const betaStar =acosd((ca*cg-cb)/(sind(alpha)*sind(gamma)));
-  const gammaStar=acosd((ca*cb-cg)/(sind(alpha)*sind(beta)));
-  const n_a=2*PI/V*b*c*sind(alpha);
-  const n_b=2*PI/V*a*c*sind(beta);
-  const n_c=2*PI/V*a*b*sind(gamma);
-  const astar=[n_a,0,0];
-  const bstar=[n_b*cosd(gammaStar),n_b*sind(gammaStar),0];
-  const cstarX=cosd(betaStar);
-  const cstarY=(cosd(alphaStar)-cosd(betaStar)*cosd(gammaStar))/sind(gammaStar);
-  const cstarZ=Math.sqrt(Math.max(0,1-cstarX*cstarX-cstarY*cstarY));
-  const cstar=[n_c*cstarX,n_c*cstarY,n_c*cstarZ];
-  for(const v of [astar,bstar,cstar]) for(let i=0;i<3;i++) if(Math.abs(v[i])<=1e-6) v[i]=0;
-  return {astar,bstar,cstar,alpha_star:alphaStar,beta_star:betaStar,gamma_star:gammaStar,n_a,n_b,n_c,V,V0};
-}
-
-
+// Reciprocal lattice and UB: the same routines as the angle calculation
+// (src/core/tas-core.js), so the two can never disagree.
+export {RL_calc};
 
 function gcdInt(a,b){
   a=Math.abs(Math.trunc(a)); b=Math.abs(Math.trunc(b));
@@ -135,33 +116,6 @@ export function inferOutOfPlaneHKL(rl, sv1, sv2){
   return w;
 }
 
-export function UB_calc(lc,rl){
-  const sv1=lc.sv1.map(Number), sv2=lc.sv2.map(Number);
-  if(norm(sv1)<1e-12) throw new Error('sv1 must not be zero.');
-  if(norm(sv2)<1e-12) throw new Error('sv2 must not be zero.');
-  const basis=[rl.astar,rl.bstar,rl.cstar];
-  const qOf=hkl=>[0,1,2].map(j=>hkl[0]*basis[0][j]+hkl[1]*basis[1][j]+hkl[2]*basis[2][j]);
-  const q1=qOf(sv1), q2=qOf(sv2);
-  if(norm(q1)<1e-12) throw new Error('sv1 gives a zero reciprocal-space vector.');
-  if(norm(q2)<1e-12) throw new Error('sv2 gives a zero reciprocal-space vector.');
-  const U1=normalize(q1);
-  const q2perp=q2.map((x,i)=>x-dot(U1,q2)*U1[i]);
-  if(norm(q2perp)<1e-12) throw new Error('sv1 and sv2 must not be parallel.');
-  // Preserve the entered U/V handedness.  U3 follows the raw physical
-  // reciprocal-space cross product, so swapping U and V reverses U3.
-  const U3=normalize(cross(q1,q2));
-  const U2=normalize(cross(U3,U1));
-  const U=[U1,U2,U3];
-  const B=[
-    [rl.astar[0],rl.bstar[0],rl.cstar[0]],
-    [rl.astar[1],rl.bstar[1],rl.cstar[1]],
-    [rl.astar[2],rl.bstar[2],rl.cstar[2]],
-  ].map(r=>r.map(x=>x/(2*PI)));
-  const UB=matmul(U,B);
-  for(const M of [U,B,UB]) for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(Math.abs(M[i][j])<=1e-12) M[i][j]=0;
-  return {U,B,UB};
-}
-
 function qFromUB(UB,hkl){ return matvec(UB,hkl).map(x=>2*PI*x); }
 
 function schur2(RM, keep){
@@ -209,7 +163,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   // 3rd horizontal collimator: Soller (entered value) or radial (the angular
   // size of the analyzer seen from the sample).
   const radial3=!!col.radial_3rd;
-  let div1h=col.div_1st_h, div1v=col.div_1st_v;
+  const div1h=col.div_1st_h, div1v=col.div_1st_v;
   const div1m=col.div_1st_m;
   const {div_2nd_h:div2h,div_2nd_v:div2v,div_3rd_h:div3h,div_3rd_v:div3v,div_4th_h:div4h,div_4th_v:div4v}=col;
   const MHF=!!focusing.monochromator.horizontal.enabled, MVF=!!focusing.monochromator.vertical.enabled;
@@ -294,7 +248,6 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     // natural-Ni critical angle at this wavelength (about 0.1 deg per A).
     const thetaC=Math.asin(val);
     alpha1=div1m*thetaC/Math.sqrt(3); beta1=alpha1;
-    div1h=alpha1/GAUSS_SIGMA_FROM_FWHM*180/PI*60; div1v=div1h;
   }
   const alpha2=collSigma(div2h,'h2');
   let alpha3;

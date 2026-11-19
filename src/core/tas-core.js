@@ -167,15 +167,3 @@ export function arange(start,stop,step) {
   else for(let x=start;x>stop+1e-12;x+=step) out.push(x);
   return out;
 }
-export function interpExtrap(xp,yp,x) {
-  if (xp.length!==yp.length || xp.length===0) throw new Error("Invalid interpolation table.");
-  if (xp.length===1) return yp[0];
-  let i=0;
-  if (x<=xp[0]) i=0;
-  else if (x>=xp[xp.length-1]) i=xp.length-2;
-  else {
-    while(i<xp.length-2 && x>xp[i+1]) i++;
-  }
-  const t=(x-xp[i])/(xp[i+1]-xp[i]);
-  return yp[i]+t*(yp[i+1]-yp[i]);
-}

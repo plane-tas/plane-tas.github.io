@@ -125,7 +125,6 @@ function doSingleResolution(){
     $('scanNav').classList.add('hidden');
     // Single-point Calc: always fit to this calculation's resolution ellipse.
     renderResolution(e,'',fn.resolutionFrame(e.result).lim);
-    $('calcSingleResolution')?.classList.remove('needs-calc');
   }catch(e){showResolutionCalculationWarning(e);}
 }
 function doScanResolution(){

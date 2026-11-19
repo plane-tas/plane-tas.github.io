@@ -60,7 +60,6 @@ function clearResolutionResults(){
   if($('summary')) $('summary').textContent='';
   if($('matrix')) $('matrix').textContent='';
   $('calcScanResolution')?.classList.remove('needs-calc');
-  $('calcSingleResolution')?.classList.remove('needs-calc');
 }
 function formatAutoHKL(v){return v.map(x=>{if(Math.abs(x)<1e-10)return '0';const r=Math.round(x);if(Math.abs(x-r)<1e-10)return String(r);return Number(x.toPrecision(6)).toString();}).join(', ');}
 function buildResolutionLattice(){

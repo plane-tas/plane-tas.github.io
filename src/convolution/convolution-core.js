@@ -425,8 +425,3 @@ function cholesky3(A){
   }
   return L;
 }
-
-// The bare dispersion along a line (for overlays): branch energies at points.
-export function dispersionAlong(interp,points){
-  return points.map(p=>{ const v=interp.evaluate(...p); return v ? Array.from(v.E) : null; });
-}

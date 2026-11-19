@@ -218,10 +218,6 @@
   outline:calc(2px * var(--tas-density)) solid #477db0;outline-offset:0;
   border-color:#7b97b2;background:#fff;
 }
-#geometryAnglesPane .geometry-scan-table {
-  font-size: calc(15px * var(--tas-density));
-}
-
 /* Input descriptions in Toolbox, and Q-E display checkboxes. */
 #toolboxPanel .toolbox-subpanel label,
 #qeDisplayControls .checkbox-label,
@@ -241,24 +237,6 @@
 .time-scan-table .time-range-field{min-width:0;}
 .time-scan-table .time-range-field input{min-width:0;max-width:100%;}
 /* HKL headings and H/K/L field labels were smaller than other input labels. */
-
-/* Angle calculation > Scan > TAS geometry: readable slider index & counter.
-   Only text sizing changes; the responsive input and geometry scaling remain intact. */
-.geometry-scan-point-row > label,
-.geometry-scan-point-row > output {
-  font-size:max(14px,calc(16px * var(--tas-density)));
-  line-height:1.35;
-}
-/* The Scan table has an upstream !important font rule; override the table,
-   its cells and its point indicator so both Scan views match Single. */
-#geometryAnglesPane .geometry-scan-table,
-#geometryAnglesPane .geometry-scan-table th,
-#geometryAnglesPane .geometry-scan-table td,
-#geometryAnglesPane .geometry-scan-point-row > label,
-#geometryAnglesPane .geometry-scan-point-row > output{
-  font-size:var(--tas-calculation-output-font-size)!important;
-  line-height:1.45;
-}
 
 /* Q vector–E: mode toggle remains on one readable line when there is room. */
 

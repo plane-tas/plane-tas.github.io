@@ -630,7 +630,7 @@ function syncSingleNavigation(cache,index){
   const slider=$('s2Slider'), entry=$('s2Entry');
   if(slider){ slider.min=lo; slider.max=hi; slider.step=0.1; }
   let v=Number(entry?.value); if(!Number.isFinite(v)) v=Math.max(0,Math.abs(num('S2min'))); v=Math.max(lo,Math.min(hi,v));
-  if(slider) slider.value=v; if(entry) entry.value=v.toFixed(1); if($('s2Value')) $('s2Value').textContent=`${v.toFixed(1)}°`;
+  if(slider) slider.value=v; if(entry) entry.value=v.toFixed(1);
   return v;
 }
 function qeWVectorText(v){

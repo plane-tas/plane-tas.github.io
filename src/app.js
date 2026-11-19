@@ -56,7 +56,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryCalculationMode, geometryPointWarnings, currentGeometryScanOutputTab, setGeometryScanOutputTab, setGeometryCalculationMode, updateGeometryCalculationModeVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, restoreGeometrySubTabsFromStorage, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryPointWarnings, updateGeometryTargetVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal;
@@ -438,15 +438,12 @@ function updateModeVisibility(){
   // Instrument configuration is intentionally identical for Single crystal and
   // Powder. Only sample-specific controls and the left Q-E plot switch modes.
   updateInstrumentTypeRows();
-  $("s1minWrap")?.classList.remove("hidden");
-  $("s1maxWrap")?.classList.remove("hidden");
   // Powder has no sample-orientation degree of freedom. Keep the common
   // Instrument configuration layout, but make the S1 limits read-only in
   // practice by disabling their entry boxes only while Powder is selected.
   if($("S1min")) $("S1min").disabled=!single;
   if($("S1max")) $("S1max").disabled=!single;
   $("lambdaHalf")?.closest("label")?.classList.remove("hidden");
-  if($("s2Label")?.childNodes?.length) $("s2Label").childNodes[0].nodeValue="S2 min (deg)";
 
   // Q-E Range uses one shared two-column workspace for Single crystal and Powder.
   // Only the left plot and the Angle-calculation target controls change with mode;
@@ -460,7 +457,7 @@ function updateModeVisibility(){
   document.querySelector('#qePanel .qe-map-tabs')?.classList.toggle("hidden",!single);
   document.querySelector('#qeConstantMapPane .qe-constant-path-input')?.classList.toggle("hidden",!single);
   if(!single && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
-  updateGeometryCalculationModeVisibility();
+  updateGeometryTargetVisibility();
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
@@ -505,9 +502,6 @@ function qeGeometryAngles(cache, senseOverride=null, uiSenseOverride=null, calcO
 }
 
 
-
-const GEOMETRY_CALC_MODE_STORAGE_KEY='tas-geometry-calc-mode-v1';
-const GEOMETRY_SCAN_OUTPUT_STORAGE_KEY='tas-geometry-scan-output-tab-v1';
 
 $("instrument").addEventListener("change",()=>{
   // Do not carry resolution plots or scan points across instruments.
@@ -612,39 +606,6 @@ $('qeMapTabConstant')?.addEventListener('click',()=>setQEMapTab('constant'));
 $('qeMapTabVector')?.addEventListener('click',()=>setQEMapTab('vector'));
 bindQEPathControls();
 
-// Angle calculation Scan inputs are display-only.  Rebuilding the complete
-// single-crystal Q-E cache on every keypress made H/K/L/hw editing sluggish,
-// especially when the scan table contains many points.  Reuse the current
-// cache and debounce only the Angle/TAS geometry redraw while typing.
-let geometryScanInputTimer=null;
-const GEOMETRY_SCAN_INPUT_IDS=[
-  'geomScanH0','geomScanK0','geomScanL0','geomScanHW0',
-  'geomScanH1','geomScanK1','geomScanL1','geomScanHW1','geomScanNpts'
-];
-function renderGeometryScanFromCurrentCache(){
-  clearTimeout(geometryScanInputTimer);
-  geometryScanInputTimer=null;
-  if(singleCache && checkedValue('sampleMode')==='single' && geometryCalculationMode()==='scan'){
-    renderGeometry(singleCache,Number($('hwSlider')?.value)||0);
-  }
-}
-function scheduleGeometryScanRender(delay=180){
-  clearTimeout(geometryScanInputTimer);
-  geometryScanInputTimer=setTimeout(renderGeometryScanFromCurrentCache,Math.max(0,Number(delay)||0));
-}
-for(const id of GEOMETRY_SCAN_INPUT_IDS){
-  $(id)?.addEventListener('input',()=>scheduleGeometryScanRender(180));
-  $(id)?.addEventListener('change',renderGeometryScanFromCurrentCache);
-}
-
-$('geometryModeSingle')?.addEventListener('click',()=>{setGeometryCalculationMode('single');saveRightPanelState();});
-$('geometryModeScan')?.addEventListener('click',()=>{setGeometryCalculationMode('scan');saveRightPanelState();});
-$('geometryScanTabTable')?.addEventListener('click',()=>{setGeometryScanOutputTab('table');saveRightPanelState();});
-$('geometryScanTabPlot')?.addEventListener('click',()=>{setGeometryScanOutputTab('plot');saveRightPanelState();});
-$('geomScanPointSlider')?.addEventListener('input',()=>{
-  if(singleCache && checkedValue('sampleMode')==='single') renderGeometry(singleCache,Number($('hwSlider')?.value)||0);
-});
-
 $("geomSetU").addEventListener("click",setGeometryTargetFromU);
 $("geomSetV").addEventListener("click",setGeometryTargetFromV);
 $("geomPerpU").addEventListener("click",setGeometryKiPerpU);
@@ -680,7 +641,6 @@ $("resolutionToGeometry")?.addEventListener("click",()=>{
     dst.dispatchEvent(new Event("change",{bubbles:true}));
   }
   setActiveTab("qe");
-  if(geometryCalculationMode?.()!=="single") setGeometryCalculationMode?.("single");
   $("geometryTabAngles")?.click();
   saveRightPanelState?.();
   saveGlobalUIState?.();
@@ -700,12 +660,10 @@ document.querySelectorAll("input,select").forEach(el=>{
     "seSelect","seSelect2","seSelect3",
     ...BACKGROUND_SLOTS.map(slot=>slot.id),
     "hwSlider",
-    "geomScanPointSlider",
     "scanSlider",
     // Display frame of the Resolution results: redraws, no recalculation.
     "resolutionCoordinates","resolutionUVView",
-    'qeVectorHKLPath','qePathHKLConstant','qePathSnap',
-    ...GEOMETRY_SCAN_INPUT_IDS
+    'qeVectorHKLPath','qePathHKLConstant','qePathSnap'
   ].includes(el.id)) return;
 
   el.addEventListener("input",scheduleRecalc);
@@ -813,21 +771,17 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
 }));
 
 ({
-  geometryCalculationMode,
   geometryPointWarnings,
-  currentGeometryScanOutputTab,
-  setGeometryScanOutputTab,
-  setGeometryCalculationMode,
-  updateGeometryCalculationModeVisibility,
+  updateGeometryTargetVisibility,
   renderGeometry
 }=createTasGeometryView({
-  $, GEOMETRY_CALC_MODE_STORAGE_KEY, GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, PI, add, angleDiffDeg, checkedValue, clamp,
+  $, angleDiffDeg, checkedValue, clamp,
   currentInstrument, deg2rad, directBeamOrientationCorrection, dot, effectiveOrientationReference, effectiveS2MaxAtEi,
-  formatAngle, hklInCurrentScatteringPlane:(...args)=>hklInCurrentScatteringPlane(...args), hklToQ, linspace,
-  makeSpiceScatteringPlaneBasis, norm, num, parseNumericValue, powderGeometryTarget, qeDarkBlockWarningsForHKLE,
-  qeGeometryAngles, rad2deg, scale, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
+  formatAngle, hklToQ, linspace,
+  makeSpiceScatteringPlaneBasis, norm, num, powderGeometryTarget, qeDarkBlockWarningsForHKLE,
+  qeGeometryAngles, rad2deg, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
   selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
-  tasConvention, qeSpurionWarnings, userFacingTasMessage, getSingleCache:()=>singleCache,
+  tasConvention, qeSpurionWarnings, userFacingTasMessage,
   syncGeometrySliders:(...args)=>{ geometrySliders?.syncGeometrySliders(...args); powderSliders?.syncPowderSliders(); },
   updateGeometryTargetMarker:(...args)=>updateGeometryTargetMarker(...args)
 }));
@@ -835,7 +789,6 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
 geometrySliders=createGeometrySliders({
   $, checkedValue, collectResolutionBase:(...args)=>collectResolutionBase(...args), getSingleCache:()=>singleCache,
   hklToQ, makeSpiceScatteringPlaneBasis, norm, dot, num,
-  geometryCalculationMode:(...args)=>geometryCalculationMode(...args),
   renderGeometryNow:()=>{ if(singleCache && checkedValue('sampleMode')==='single') renderGeometry(singleCache,Number($('hwSlider')?.value)||0); },
   syncMapHWFromTarget:()=>syncMapHWFromTarget(),
   syncMapWFromTarget:(w)=>syncMapWFromTarget(w)
@@ -914,7 +867,6 @@ createConvolutionUI({
   saveRightPanelState,
   restoreRightPanelState,
   savedActiveTab,
-  restoreGeometrySubTabsFromStorage,
   enableRightPanelPersistence,
   saveGlobalUIState,
   restoreGlobalUIState,
@@ -922,14 +874,13 @@ createConvolutionUI({
   saveLeftPanelState,
   restoreLeftPanelState
 }=createUIShell({
-  $, BACKGROUND_SLOTS, GEOMETRY_CALC_MODE_STORAGE_KEY,
-  GEOMETRY_SCAN_OUTPUT_STORAGE_KEY, add, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
+  $, BACKGROUND_SLOTS, add, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
   applySampleEnvironmentDefaults, backgroundRowValues, buildResolutionLattice, checkedValue, currentGeometryCardTab,
-  currentGeometryScanOutputTab, darkAssetIds, darkAssetSlots, darkAssetValues, geometryCalculationMode, markResolutionScanDirty,
+  darkAssetIds, darkAssetSlots, darkAssetValues, markResolutionScanDirty,
   mountTimeEstimateForScript, propagationVectorValues, refreshDarkEnvironmentSelect, renderGeometry, renderQEVectorMap,
   renderResolutionScan, renderSingle, replaceBackgroundRows, replaceDarkAssets, replacePropagationVectors,
   resolutionPanelIsVisible, scheduleRecalc, selectedS1Sign, setBackgroundCount, setCifOutputTab, setDarkAssetCount,
-  setDarkRangeCount, setGeometryCalculationMode, setGeometryCardTab, setGeometryScanOutputTab, setPropagationVectorCount,
+  setDarkRangeCount, setGeometryCardTab, setPropagationVectorCount,
   setQEMapTab, setupTasConventionUI, sub, updateAutoW, updateBackgroundSelectAvailability, updateDarkReferenceUI,
   updateEnergyLabel, updateModeVisibility, updateOrientationReferenceUI, updateResolutionPlaneWarning, updateS2MaxDisplay,
   updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
@@ -963,7 +914,6 @@ const {
   refreshCifAfterStateRestore:(...args)=>refreshCifAfterStateRestore(...args),
   refreshDarkEnvironmentSelect, refreshSelect,
   renderResolutionScan:(...args)=>renderResolutionScan(...args), renderSingle,
-  restoreGeometrySubTabsFromStorage:(...args)=>restoreGeometrySubTabsFromStorage(...args),
   restoreGlobalUIState:(...args)=>restoreGlobalUIState(...args),
   restoreLeftPanelState:(...args)=>restoreLeftPanelState(...args),
   restoreRightPanelState:(...args)=>restoreRightPanelState(...args), sampleEnvironments,

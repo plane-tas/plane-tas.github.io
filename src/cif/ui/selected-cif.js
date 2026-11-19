@@ -39,7 +39,7 @@ function showFileName(el,name){
 // Re-fit when the boxes change width.
 if(typeof ResizeObserver==="function"){
   const ro=new ResizeObserver(entries=>{ for(const e of entries){ const el=e.target; if(el.dataset.fullName) showFileName(el,el.dataset.fullName); } });
-  queueMicrotask(()=>{ for(const id of ["cifFileName","cifGeneratorSourceName","structureCifName"]){ const el=document.getElementById(id); if(el) ro.observe(el); } });
+  queueMicrotask(()=>{ for(const id of ["cifFileName","cifGeneratorSourceName"]){ const el=document.getElementById(id); if(el) ro.observe(el); } });
 }
 
 function updateCifUI(){
@@ -49,15 +49,12 @@ function updateCifUI(){
   // and the end with the extension (.cif / .mcif stays visible); the hover
   // text is the full file name.
   const fileName=getSelectedCifFileName();
-  for(const id of ["cifFileName","cifGeneratorSourceName","structureCifName"]) showFileName($(id),fileName);
+  for(const id of ["cifFileName","cifGeneratorSourceName"]) showFileName($(id),fileName);
   const clearButton=$("cifClearButton");
   if(clearButton) clearButton.disabled=!getSelectedCifStructure();
   // All three file selectors display the same shared, parsed CIF/mCIF state.
   const generatorClear=$("cifGeneratorSourceClear");
   if(generatorClear) generatorClear.disabled=!getSelectedCifStructure();
-  const structureClear=$("structureCifClear");
-  if(structureClear) structureClear.disabled=!getSelectedCifStructure();
-  if($("structureMcifShowCurrent")) $("structureMcifShowCurrent").disabled=!getSelectedCifText();
   const showCurrentButton=$("cifShowCurrent");
   if(showCurrentButton) showCurrentButton.disabled=!getSelectedCifText();
   if($("cifReloadCurrent")) $("cifReloadCurrent").disabled=!getSelectedCifText();
@@ -154,7 +151,6 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
   cifState.structureModifyLocked=false;
   cifState.importedOriginalQ=importedQ.map(q=>({...q}));
   cifState.modifiedMagneticDraft=null;
-  if($("mcifPreviewText")) $("mcifPreviewText").textContent=cifText;
   // CIF and mCIF share a single filename entry.
   fn.invalidateGeneratedMcif();
   // An explicit new file replaces the previous editing session. Only startup
@@ -276,7 +272,6 @@ function clearSelectedCif(){
   cifState.cifStructureSourcePreference="selected";
   if($("cifFileInput")) $("cifFileInput").value="";
   if($("cifLoadFile")) $("cifLoadFile").value="";
-  if($("mcifPreviewText")) $("mcifPreviewText").textContent="Select a CIF/mCIF to preview it.";
   // Do not leave save/Set actions enabled for an obsolete reviewed file.
   fn.invalidateGeneratedCif("");
   fn.invalidateGeneratedMcif();
