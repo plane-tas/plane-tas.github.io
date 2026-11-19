@@ -120,8 +120,9 @@ export function reachable(cfg,qnorm,E){
   const c=(ki*ki+kf*kf-qnorm*qnorm)/(2*ki*kf);
   return c>=-1-1e-10 && c<=1+1e-10;
 }
-// Monitor normalisation of an S(Q,ω) table, kf⁴ cot A1 at ħω (A1: analyzer
-// Bragg angle): kf³ cot A1 times the kf of the cross-section (as ResLib).
+// kf⁴ cot A1 at ħω (A1: analyzer Bragg angle): the part of the intensity
+// prefactor R0/Rmon (calcResolution's prefactor) that changes fast with ħω.
+// The lattice keeps the slowly varying rest, prefactor / kf⁴ cot A1, as g.
 export function prefactorAt(cfg,E){
   const Ef=cfg.energyMode==='Ei fixed' ? cfg.Ei-E : cfg.Ef;
   const kf=Math.sqrt(Ef/E2K2), th=Math.asin(Math.min(1,Math.PI/(cfg.dAna*kf)));
@@ -154,29 +155,30 @@ export function latticeResolution(L,a,b,E){
     if(L.rough[(ci*cb+cj)*ce+ck]) return null;
   }
   const RM=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
-  let wsum=0;
+  let wsum=0, g=0;
   for(const [i,fa] of [[a0,1-wa],[a1,wa]]) for(const [j,fb] of [[b0,1-wb],[b1,wb]]) for(const [k,fe] of [[e0,1-we],[e1,we]]){
     const w=fa*fb*fe; if(!(w>0)) continue;
     const r=L.res[idx(L,i,j,k)]; if(!r) return null;
     for(let p=0;p<4;p++) for(let q=0;q<4;q++) RM[p][q]+=w*r.RM[p][q];
+    g+=w*r.g;
     wsum+=w;
   }
   if(!(wsum>0)) return null;
   for(let p=0;p<4;p++) for(let q=0;q<4;q++) RM[p][q]/=wsum;
-  return {RM,UB:L.UB,UBinv:L.UBinv};
+  return {RM,UB:L.UB,UBinv:L.UBinv,g:g/wsum};
 }
 
 // The calculation engine: messages in, replies out (a worker posts them,
 // the page calls handle() directly).
 export function createEngine(calcResolution){
   let interp=null, tableKey=null, base=null, UBinv=null, lattice=null, integ=null, cfg=null;
-  const slim=r=>r ? {RM:r.RM,UB:r.UB} : null;
+  const slim=(r,E)=>r ? {RM:r.RM,UB:r.UB,g:Number.isFinite(r.prefactor) ? r.prefactor/prefactorAt(cfg,E) : NaN} : null;
   function resolutionAt(hkl,E){
     try{
       const r=calcResolution(base.lc,base.rl,base.col,base.mos,base.config,base.approximation,base.focusing,base.geom,
         {h:hkl[0],k:hkl[1],l:hkl[2],hw:E},'ainv');
       if(!UBinv) UBinv=inverse(r.UB);
-      return slim(r);
+      return slim(r,E);
     }catch(_e){ return null; }
   }
   return {
@@ -222,7 +224,7 @@ export function createEngine(calcResolution){
               ? convolvePointGrid(it.hkl,E[ie],r,interp,integ.grid,{model:'given'})
               : convolvePoint(it.hkl,E[ie],r,interp,integ.samples,{model:'given'});
             if(c.outside>outside) outside=c.outside;
-            I[k*nE+ie]=c.intensity*prefactorAt(cfg,E[ie]);
+            I[k*nE+ie]=c.intensity*prefactorAt(cfg,E[ie])*r.g;
           }
         }
         return {type:'row',id:msg.id,I,outside,unreachable};

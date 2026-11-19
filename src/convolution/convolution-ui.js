@@ -4,13 +4,13 @@
 // shown as E–U and E–V maps and a constant-ħω U–V map selected by sliders.
 // 1D: a scan with each of H, K, L, E given as a value or ini fin bin.
 // Every point is multiplied by the intensity prefactor R0 selected in the
-// file card (kf⁴ cot A1 at least).
+// file card (R0/Rmon, normalisation to monitor counts).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
 const ROW_HEIGHT=22;
-const NOTE='Intensities are S(Q,ω); kf⁴ cot A1 is applied (constant for Ef fixed).';
+const NOTE='Intensities are S(Q,ω); R0/Rmon (normalisation to monitor counts) is applied automatically.';
 // Plotly sizes are scaled by the UI density (about 0.67 on a laptop).
 const FONT={size:19}, TITLE_FONT={size:21}, AXIS_TITLE_FONT={size:20};
 const MAX_TABLE_RANGE_POINTS={ab:101,E:301};
@@ -337,14 +337,9 @@ export function createConvolutionUI(deps){
     stats.outside=Math.max(stats.outside,r.outside);
     return r.intensity*prefactor(res);
   }
-  // Intensity prefactor kf⁴ cot A1 for an S(Q,ω) table, monitor normalisation
-  // (A1 = analyzer Bragg angle θA = A2/2; constant for Ef fixed): the analyzer
-  // factor kf³ cot A1 times the kf/ki of the cross-section, whose 1/ki the 1/v
-  // monitor cancels.  The same normalisation as ResLib.
-  function prefactor(res){
-    const kf=Math.sqrt(res.energies.Ef/2.072), th=Math.abs(res.angles.thetaA)*Math.PI/180;
-    return kf*kf*kf*kf/Math.tan(th);
-  }
+  // Intensity prefactor of an S(Q,ω) table: R0/Rmon of the selected
+  // approximation, normalisation to monitor counts (calcResolution's prefactor).
+  const prefactor=res=>Number.isFinite(res.prefactor) ? res.prefactor : NaN;
   // Is a Q point inside the table?  A single-valued axis is flat (any value).
   const inTable=hkl=>interp.ranges.every((r,i)=>interp.flat?.[i] || (hkl[i]>=r.min-1e-9 && hkl[i]<=r.max+1e-9));
   const tableRangeText=()=>['H','K','L'].map((n,i)=>interp.flat?.[i] ? `${n} any` : `${n} ${fmt(interp.ranges[i].min)}…${fmt(interp.ranges[i].max)}`).join(', ');
@@ -1272,7 +1267,7 @@ export function createConvolutionUI(deps){
     // Curve tags are plain numbers (a leading # would read as a comment).
     const curves=curveList().filter(c=>c.k.selected!==false).map(c=>({...c.k,tag:c.tag}));
     if(!curves.length) return;
-    const lines=['# PLANE-TAS convolution: 1D cut',`# dispersion file: ${fileName}`,'# intensity: S(Q,w) table x kf^4 cot(A1) (monitor normalisation)',
+    const lines=['# PLANE-TAS convolution: 1D cut',`# dispersion file: ${fileName}`,'# intensity: S(Q,w) table x R0/Rmon (normalisation to monitor counts; monitor half way between monochromator and sample, taking the whole beam)',
       ...curves.map(c=>`# curve ${c.tag}: ${c.label} (${c.method})`),
       ...curves.map(c=>settingsLine(c.settings,`settings curve ${c.tag}`)).filter(Boolean),
       'curve,H,K,L,hw_meV,I_arb,dI'];
@@ -1291,7 +1286,7 @@ export function createConvolutionUI(deps){
     if(!volume) return;
     const {A,B,E,I,plane}=volume, nA=A.length, nE=E.length;
     const idx=!!data?.offset;
-    const lines=['# PLANE-TAS convolution: 2D slice',`# dispersion file: ${volume.settings?.dispersion?.file||fileName}`,'# intensity: S(Q,w) table x kf^4 cot(A1) (monitor normalisation)',
+    const lines=['# PLANE-TAS convolution: 2D slice',`# dispersion file: ${volume.settings?.dispersion?.file||fileName}`,'# intensity: S(Q,w) table x R0/Rmon (normalisation to monitor counts; monitor half way between monochromator and sample, taking the whole beam)',
       settingsLine(volume.settings),(idx ? 'index,' : '')+'H,K,L,hw_meV,I_arb'].filter(Boolean);
     let n=0;
     for(let b=0;b<B.length;b++) for(let a=0;a<nA;a++){

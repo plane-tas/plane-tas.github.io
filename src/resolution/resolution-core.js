@@ -1,7 +1,7 @@
 import {
   zeros, transpose, add, sub, matmul, matvec, diag, blockDiag, inverse,
   solve, submatrix, swapRowsCols, symmetrize, choleskyPositiveDefinite,
-  det3, dot, norm, cross, normalize, eigSym2
+  det3, dot, norm, cross, normalize, eigSym2, logAbsDet
 } from '../core/matrix.js';
 import {OUT_OF_PLANE_TOLERANCE_DEG, RL_calc, UB_calc} from '../core/tas-core.js';
 
@@ -288,7 +288,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
 
   const term=inverse(add(G,matmul(matmul(transpose(C),F),C)));
   const HF=matmul(matmul(A,term),transpose(A));
-  let Minv;
+  let Minv, lnH=null, lnHmon=null;
   if(method==='Popovici'){
     // Shape matrices hold second moments <x^2> of uniform distributions
     // (Popovici 1975, App. 3), all in metres:
@@ -355,12 +355,47 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     const core2=add(inverse(core1),Gpop);
     const inner=inverse(core2);
     Minv=matmul(matmul(matmul(matmul(B,A),inner),transpose(A)),transpose(B));
+    // Popovici parts of R0 and Rmon (see the prefactor below).  The monitor
+    // is half way between monochromator and sample and large enough to take
+    // the whole incident beam (1 m x 1 m; its size then no longer matters).
+    try{
+      const Lm=L1/2, f2=submatrix(F,[0,1],[0,1]), i4=[0,1,2,3];
+      const t=zeros(2,7), d=zeros(4,7);
+      t[0][0]=-1/(2*L0); t[0][2]=cosd(thetaM)*(1/Lm-1/L0)/2; t[0][3]=sind(thetaM)*(1/L0+1/Lm-2/(monorh*sind(thetaM)))/2; t[0][6]=1/(2*Lm);
+      t[1][1]=-1/(2*L0*sind(thetaM)); t[1][4]=(1/L0+1/Lm-2*sind(thetaM)/monorv)/(2*sind(thetaM));
+      d[0][0]=-1/L0; d[0][2]=-cosd(thetaM)/L0; d[0][3]=sind(thetaM)/L0; d[2][1]=-1/L0; d[2][4]=1/L0;
+      d[1][2]=cosd(thetaM)/Lm; d[1][3]=sind(thetaM)/Lm; d[1][6]=1/Lm; d[3][4]=-1/Lm;
+      const s=inverse(blockDiag(bshape,mshape,diag([rect(1),rect(1)])));
+      const hMon=add(inverse(matmul(matmul(d,inverse(add(s,matmul(matmul(transpose(t),f2),t)))),transpose(d))),submatrix(Gpop,i4,i4));
+      lnH=logAbsDet(core2); lnHmon=logAbsDet(hMon);
+    }catch(_e){ lnH=NaN; }
   } else if(method==='Cooper-Nathans'){
     if(AHF){
       const P=inverse(HF); P[4][4]=(1/(kf*alpha3))**2; P[3][4]=0; P[3][3]=(tand(thetaA)/(etaA*kf))**2; P[4][3]=0;
       Minv=matmul(matmul(B,inverse(P)),transpose(B));
     } else Minv=matmul(matmul(B,HF),transpose(B));
   } else throw new Error(`Unknown approximation: ${method}`);
+
+  // Intensity prefactor, normalised to monitor counts: R0/Rmon (R0: eq. 7
+  // Cooper-Nathans or eq. 8 Popovici, normalised to source flux; Rmon: eq. 9 or
+  // 10, the monitor rate) times the 1/v monitor efficiency ki and the kf/ki
+  // of the cross-section.  It multiplies the resolution function normalised
+  // to unit volume (Chesser-Axe normalisation), so the ki^3 cot(thetaM)
+  // monochromator factor cancels:
+  //   prefactor = kf^3 cot(thetaA) (2pi)^2/(8pi sin thetaA)
+  //               * sqrt(det F det Hmon / (det H det Fmon)) * kf .
+  let prefactor=null;
+  try{
+    const i4=[0,1,2,3], f2=submatrix(F,[0,1],[0,1]), c2=submatrix(C,[0,1],i4);
+    if(method!=='Popovici'){
+      lnH=logAbsDet(add(G,matmul(matmul(transpose(C),F),C)));
+      lnHmon=logAbsDet(add(submatrix(G,i4,i4),matmul(matmul(transpose(c2),f2),c2)));
+    }
+    const lr=(logAbsDet(F)-lnH-logAbsDet(f2)+lnHmon)/2;
+    const Ra=kf*kf*kf/Math.abs(tand(thetaA));
+    const v=Ra*(2*PI)*(2*PI)/(8*PI*Math.abs(sind(thetaA)))*Math.exp(lr)*kf;
+    prefactor=Number.isFinite(v) ? v : null;
+  }catch(_e){ prefactor=null; }
 
   let RM=swapRowsCols(inverse(Minv),[0,1,3,2]);
   let RMinv=inverse(RM); RMinv[1][1]+=Q*Q*etaS*etaS; RMinv[3][3]+=Q*Q*etaSp*etaSp; RM=inverse(RMinv);
@@ -536,5 +571,5 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     displayAxes:{U:lc.sv1.slice(),V:sv2Orth,W:lc.sv3.slice()},
     lattice, qframe,
     angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
-    collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}};
+    collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}, prefactor};
 }

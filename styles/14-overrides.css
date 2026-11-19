@@ -1043,6 +1043,16 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    always there (empty frame), so nothing moves when it fills. */
 #resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
 .convolution-box-head .convolution-integration{display:contents}
+/* Approximation and, for Popovici, the intensity prefactors on the first
+   line; integration, estimate, Calculate and status on the second. */
+.convolution-box-head .convolution-norm{grid-column:2/span 3;display:flex;align-items:center;gap:calc(14px * var(--tas-density));white-space:nowrap;font-size:var(--tas-control-text-size)}
+#resolutionConvolutionPane .convolution-box-head .convolution-norm label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));margin:0;font-size:max(13px,calc(16px * var(--tas-density)))!important;color:#222}
+#resolutionConvolutionPane .convolution-box-head .convolution-norm input{width:auto;margin:0}
+.convolution-box-head .convolution-norm.convolution-norm-off{visibility:hidden}
+.convolution-box-head .convolution-integration>select{grid-column:1}
+.convolution-box-head .convolution-estimate{grid-column:4}
+/* Blue note: only the table rule (and messages such as file errors). */
+.convolution-note .convolution-summary:empty{display:none}
 .convolution-box-head>select,.convolution-box-head .convolution-integration>select,.convolution-box-head>button{width:100%;min-width:0}
 .convolution-box-head .convolution-integration-detail{min-width:0}
 .convolution-box-head .convolution-integration-detail>*{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -1058,6 +1068,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .convolution-tab-pane>.convolution-box{container-type:inline-size}
 @container (max-width:720px){
   #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #resolutionConvolutionPane .convolution-box-head .convolution-estimate{grid-column:auto}
 }
 /* ".csv" at the same size as the CIF output ".cif". */
 #resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}

@@ -50,6 +50,20 @@ export function inverse(A){
   }
   return M.map(r=>r.slice(n));
 }
+// Natural logarithm of |det A| (LU with partial pivoting); -Infinity when singular.
+export function logAbsDet(A){
+  const n=A.length, M=A.map(r=>r.slice());
+  let s=0;
+  for(let col=0;col<n;col++){
+    let piv=col;
+    for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[piv][col])) piv=r;
+    if(!(Math.abs(M[piv][col])>0)) return -Infinity;
+    if(piv!==col) [M[piv],M[col]]=[M[col],M[piv]];
+    const d=M[col][col]; s+=Math.log(Math.abs(d));
+    for(let r=col+1;r<n;r++){ const f=M[r][col]/d; if(f) for(let j=col;j<n;j++) M[r][j]-=f*M[col][j]; }
+  }
+  return s;
+}
 export function solve(A,b){ return matvec(inverse(A),b); }
 export function submatrix(A, rows, cols){ return rows.map(i=>cols.map(j=>A[i][j])); }
 export function swapRowsCols(A, order){ return order.map(i=>order.map(j=>A[i][j])); }
