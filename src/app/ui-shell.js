@@ -1,3 +1,4 @@
+import {renamedInstrument} from './instrument-renames.js';
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
 export function createUIShell(deps){
@@ -593,6 +594,8 @@ function restoreLeftPanelState(){
     v.instrument=poplarKey;
     v.instrumentType=poplarType;
   }
+  // HODACA's file renamed 11_HODACA.json -> 11_C11.json.
+  { const key=renamedInstrument(v.instrument,[...($('instrument')?.options||[])].map(o=>o.value)); if(key) v.instrument=key; }
   restoringLeftPanel=true;
   try{
     // 1) The instrument must exist before its dependent defaults can be applied.

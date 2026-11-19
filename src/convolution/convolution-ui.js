@@ -7,6 +7,7 @@
 // file card (R0/Rmon, normalisation to monitor counts).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
+import {renamedInstrument} from '../app/instrument-renames.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
 const ROW_HEIGHT=22;
@@ -98,7 +99,8 @@ export function createConvolutionUI(deps){
       if(el.value===String(v)) return true;
       el.value=String(v); fire(el); return true;
     };
-    const inst=set.instrument||{};
+    const inst={...(set.instrument||{})};
+    { const key=renamedInstrument(inst.instrument,[...($('instrument')?.options||[])].map(o=>o.value)); if(key) inst.instrument=key; }
     // An instrument that is not in the list (loaded from a JSON file in
     // another browser): Custom (every type and crystal) takes its settings.
     if(inst.instrument!==undefined && !put('instrument',inst.instrument)){
@@ -132,6 +134,8 @@ export function createConvolutionUI(deps){
     if(!set) return null;
     const enc=v=>{ const t=String(v); return /[;,=%]/.test(t) ? encodeURIComponent(t) : t; };
     const flat={...set.instrument,...set.convolution,dispersionFile:set.dispersion?.file||'',dispersionFormat:set.dispersion?.format||''};
+    // Radial 3rd collimator: its equivalent divergence (arcmin) as calculated.
+    const r3=set.derived?.radial3Arcmin; if(Number.isFinite(r3)) flat.radial3Arcmin=Number(r3.toFixed(2));
     return `# ${prefix}: ${Object.entries(flat).map(([k,v])=>`${k}=${enc(v)}`).join('; ')}`;
   };
   const readSettings=(lines,re)=>{
@@ -149,6 +153,7 @@ export function createConvolutionUI(deps){
       const el=$(k); if(el?.type==='checkbox') v=v==='true';
       if(k==='dispersionFile') set.dispersion.file=v;
       else if(k==='dispersionFormat') set.dispersion.format=v;
+      else if(k==='radial3Arcmin'){ const a=Number(v); if(Number.isFinite(a)) set.derived={radial3Arcmin:a}; }
       else if(INSTRUMENT_SETTING_IDS.includes(k)) set.instrument[k]=v;
       else if(all.includes(k)) set.convolution[k]=v;
     }
@@ -1157,7 +1162,7 @@ export function createConvolutionUI(deps){
   // Curves of the 1D plot: the kept scans (numbered, coloured) and the
   // current one.  Each has "show" (plot) and "selected" (Save CSV) flags.
   const curveList=()=>[...kept.map((k,i)=>({k,tag:String(i+1),title:`#${i+1}`,color:k.color,current:false})),
-    ...(scan ? [{k:scan,tag:'current',title:'Current',color:'#111',current:true}] : [])];
+    ...(scan ? [{k:scan,tag:'current',title:'Current',color:scan.color||'#111',current:true}] : [])];
   // Legend: Q (moving components as H, K, L: "(H, H, 1)"), ħω, then the
   // conditions that are worth comparing: fixed Ef / Ei, horizontal
   // collimation (blank = open), flat or focusing analyzer, approximation.
@@ -1179,30 +1184,124 @@ export function createConvolutionUI(deps){
         return r<0 ? `${fmt(c)}−${mag}` : `${mag}${c<0 ? '−' : '+'}${fmt(Math.abs(c))}`;
       }).join(', ')})`;
     }
-    const e0=f0.E, e1=f1.E, eMoves=Math.abs(e1-e0)>1e-9;
-    if(!eMoves) return `${q}, ħω = ${fmt(e0,3)} meV`;
-    return moving.length ? `${q}, ħω = ${fmt(e0,3)}~${fmt(e1,3)} meV` : q;
+    return q;
   }
-  function legendText(k){
-    const pts=k.pts||[];
-    if(!pts.length) return k.label||'';
-    const parts=[qeText(pts)];
-    const si=k.settings?.instrument;
-    if(si){
-      const e=Number(si.energy);
-      if(Number.isFinite(e)) parts.push(`${si.energyMode==='Ei fixed' ? 'Ei' : 'Ef'} = ${fmt(e,3)} meV (fixed)`);
-      // As in the Simulation comparison: SM(m=…) for a supermirror guide,
-      // the equivalent divergence with (R) for a radial 3rd collimator.
-      const col=['div1h','div2h','div3h','div4h'].map(id=>{ const v=String(si[id]??'').trim(); return v==='' ? 'open' : v; });
-      if(si.gm1===true || si.gm1==='true') col[0]=`SM(m=${String(si.div1m??'').trim()||'?'})`;
-      if(si.coll3Type==='radial'){ const a=k.settings?.derived?.radial3Arcmin; col[2]=Number.isFinite(a) ? `${Math.round(a)}(R)` : 'radial'; }
-      parts.push(col.join('-'));
-      parts.push(si.anaHF===true || si.anaHF==='true' ? 'focusing ana' : 'flat ana');
+  // ħω of a scan (meV): the value when constant, "e0~e1" when it moves.
+  function hwText(pts){
+    const e0=pts[0].E, e1=pts[pts.length-1].E;
+    return Math.abs(e1-e0)>1e-9 ? `${fmt(e0,3)}~${fmt(e1,3)}` : fmt(e0,3);
+  }
+  // Legend columns of a curve: position, instrument, Sense, geometry, fixed
+  // energy, horizontal collimation, analyzer, approximation.  Shown as a
+  // table next to the plot and under the saved figure; CSV keeps everything.
+  // Columns of the legend table; the ones shown are chosen above the table
+  // (kept in the browser).
+  const LEGEND_COLS=[
+    {id:'pos',head:'(H, K, L)',on:true},{id:'hw',head:'ħω',on:true},
+    {id:'inst',head:'Instrument',on:false},{id:'sense',head:'Sense',on:true},
+    {id:'geom',head:'Geom.',on:false},{id:'fixed',head:'Fixed',on:true},
+    {id:'mono',head:'Mono',on:false},{id:'ana',head:'Ana',on:false},
+    {id:'focus',head:'Ana HF',on:true},{id:'col',head:'Collimator',on:true},
+    {id:'approx',head:'Approx.',on:true},{id:'integ',head:'Integration',on:false}];
+  const LEGEND_KEY='plane-tas-convolution-legend-columns';
+  let legendShown=(()=>{
+    // Saved as {shown, known}: a column added later (not in known) starts
+    // with its default.  (A plain array: the first version, without ħω.)
+    try{
+      const v=JSON.parse(localStorage.getItem(LEGEND_KEY)||'null');
+      const shown=Array.isArray(v) ? v : v?.shown, known=Array.isArray(v) ? LEGEND_COLS.map(c=>c.id).filter(id=>id!=='hw') : v?.known;
+      // The former E column is now part of Fixed.
+      if(Array.isArray(shown) && Array.isArray(known))
+        return new Set(LEGEND_COLS.filter(c=>known.includes(c.id) ? shown.includes(c.id) : c.on).map(c=>c.id));
+    }catch(_e){}
+    return new Set(LEGEND_COLS.filter(c=>c.on).map(c=>c.id));
+  })();
+  const shownCols=()=>LEGEND_COLS.filter(c=>legendShown.has(c.id));
+  // Instrument: the name of the preset (its option text), with the setting
+  // when it is not the plain TAS one.
+  function instrumentName(si){
+    const v=String(si?.instrument??''); if(!v) return '';
+    const sel=$('instrument'), opt=[...(sel?.options||[])].find(o=>o.value===v);
+    // "HODACA/HER(C11)@JRR3" -> "HODACA/HER(C11)": the site is left out.
+    let name=(opt?.textContent?.trim() || v.replace(/\.json$/i,'').replace(/^\d+_/,'')).replace(/\s*@.*$/,'');
+    const t=String(si.instrumentType??'');
+    if(t && t!=='tas'){
+      const label=sel?.value===v ? [...($('instrumentType')?.options||[])].find(o=>o.value===t)?.textContent : '';
+      name+=` (${label||t})`;
     }
-    const m=si?.method||k.method;
-    if(m) parts.push(m);
-    return parts.join(', ');
+    return name;
   }
+  // Radial 3rd collimator: equivalent Gaussian FWHM (arcmin) of the analyzer
+  // seen from the sample, as in calcResolution (needs Ef: at the first point
+  // of the scan when Ei is fixed).
+  function radialArcmin(si,E){
+    const d=Number(si.dAna), w=Number(si.anaWcm)/100, n=Number(si.anaHB), L2=Number(si.L2), e=Number(si.energy);
+    const Ef=si.energyMode==='Ei fixed' ? e-E : e;
+    if(!(d>0 && w>0 && n>0 && L2>0 && Ef>0)) return NaN;
+    const s=Math.PI/(d*Math.sqrt(Ef/2.072));
+    if(!(s<=1)) return NaN;
+    const af=2*Math.atan(w*n*s/2/L2)*180/Math.PI;
+    return af*60*Math.sqrt(8*Math.log(2)/12);
+  }
+  // Integration of a 1D curve: "Grid σ/3 (21³)" or "MC 3000".
+  function integrationText(cv){
+    if(!cv) return '';
+    const mode=String(cv.convIntegration1D??'');
+    const optText=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v))?.textContent?.replace(/\s*\(\d+(\.\d+)?[–-][\d.]+%\)\s*$/,'').replace(/\s+\d+(\.\d+)?[–-][\d.]+%$/,'').trim();
+    if(mode==='mc') return `MC ${optText('convSamples1D',cv.convSamples1D)||cv.convSamples1D||''}`.trim();
+    if(mode==='grid') return `Grid ${optText('convGrid1D',cv.convGrid1D)||cv.convGrid1D||''}`.trim();
+    return mode;
+  }
+  // Horizontal focusing (HF) of the analyzer: "on (7)" with the number of
+  // blades, or "off".
+  function hfText(si,part){
+    const on=v=>v===true || v==='true';
+    const t=String(si[`${part}HB`]??'').trim();
+    return on(si[`${part}HF`]) ? `on${t ? ` (${t})` : ''}` : 'off';
+  }
+  // Integration of a 1D curve: "Grid σ/3 (21³)" or "MC 3000".
+  function integrationText(cv){
+    if(!cv) return '';
+    const mode=String(cv.convIntegration1D??'');
+    const optText=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v))?.textContent?.replace(/\s*\(\d+(\.\d+)?[–-][\d.]+%\)\s*$/,'').replace(/\s+\d+(\.\d+)?[–-][\d.]+%$/,'').trim();
+    if(mode==='mc') return `MC ${optText('convSamples1D',cv.convSamples1D)||cv.convSamples1D||''}`.trim();
+    if(mode==='grid') return `Grid ${optText('convGrid1D',cv.convGrid1D)||cv.convGrid1D||''}`.trim();
+    return mode;
+  }
+  // Horizontal focusing of the analyzer: "on (7)" with the number of blades,
+  // or "off"; a horizontally focusing monochromator is added as "M on (n)".
+  function hFocusText(si){
+    const on=v=>v===true || v==='true';
+    const n=v=>{ const t=String(v??'').trim(); return t ? ` (${t})` : ''; };
+    const ana=on(si.anaHF) ? `on${n(si.anaHB)}` : 'off';
+    return on(si.monoHF) ? `M on${n(si.monoHB)}, A ${ana}` : ana;
+  }
+  // Legend values of a curve, by column id.
+  function legendFields(k){
+    const pts=k.pts||[];
+    const pos=pts.length ? qeText(pts) : (k.label||'');
+    const hw=pts.length ? hwText(pts) : '';
+    const si=k.settings?.instrument;
+    const m=si?.method||k.method||'';
+    if(!si) return {pos,hw,approx:m};
+    const e=Number(si.energy);
+    const col=['div1h','div2h','div3h','div4h'].map(id=>{ const v=String(si[id]??'').trim(); return v==='' ? 'open' : v; });
+    if(si.gm1===true || si.gm1==='true') col[0]=`SM(${String(si.div1m??'').trim()||'?'})`;
+    if(si.coll3Type==='radial'){
+      // As calculated (recorded with the curve and in Save CSV); from the
+      // analyzer size and Ef for files saved before it was recorded.
+      let a=k.settings?.derived?.radial3Arcmin;
+      if(!Number.isFinite(a)) a=radialArcmin(si,pts[0]?.E??0);
+      col[2]=Number.isFinite(a) ? `${Math.round(a)}(R)` : 'radial';
+    }
+    return {pos,hw,inst:instrumentName(si),sense:String(si.sense??''),geom:String(si.geometry??''),
+      mono:String(si.monoCrystal??''),ana:String(si.anaCrystal??''),
+      fixed:`${si.energyMode==='Ei fixed' ? 'Ei' : 'Ef'}${Number.isFinite(e) ? ` (${fmt(e,3)})` : ''}`,
+      col:col.join('-'),focus:hfText(si,'ana'),approx:m,
+      integ:integrationText(k.settings?.convolution)};
+  }
+  // One line (trace names, labels): the non-empty columns.
+  const legendText=k=>{ const f=legendFields(k); return shownCols().map(c=>f[c.id] && c.id==='hw' ? `ħω = ${f[c.id]}` : f[c.id]).filter(Boolean).join(', '); };
   // Traces and layout of the 1D plot.  On screen the curve list next to the
   // plot is the legend; Save figure adds it under the plot.
   function scanFigure(){
@@ -1232,17 +1331,30 @@ export function createConvolutionUI(deps){
     if(!curves.length) return;
     const el=$('convScanPlot');
     const fs=FONT?.size||14, line=Math.round(fs*1.5);
-    const names=curves.map(c=>legendText(c.k));
-    const textW=Math.max(...names.map(n=>n.length))*fs*0.56+70;
-    const w=Math.round(Math.max(640,el?.clientWidth||800,textW+layout.margin.l)), h=Math.max(420,Math.round(el?.clientHeight||480));
-    const extra=curves.length*line+16, b=layout.margin.b+extra, H=h+extra;
+    // Columns sized from the text (canvas measure in Plotly's font); a
+    // column empty for every curve is left out.
+    const rows=curves.map(c=>legendFields(c.k));
+    const cols=shownCols().filter(c=>rows.some(r=>r[c.id]));
+    const ctx=document.createElement('canvas').getContext('2d');
+    const family='"Open Sans", verdana, arial, sans-serif';
+    const tw=(t,bold)=>{ ctx.font=`${bold ? 'bold ' : ''}${fs}px ${family}`; return ctx.measureText(t).width; };
+    const gap=Math.round(fs*1.1), swatch=34+10;
+    const colW=cols.map(c=>Math.ceil(Math.max(tw(c.head,true),...rows.map(r=>tw(r[c.id]||'',false)))));
+    const textW=swatch+colW.reduce((a,b)=>a+b,0)+gap*Math.max(0,cols.length-1)+12;
+    const w=Math.round(Math.max(640,el?.clientWidth||800,textW+12+layout.margin.r)), h=Math.max(420,Math.round(el?.clientHeight||480));
+    const nLines=curves.length+1, extra=nLines*line+16, b=layout.margin.b+extra, H=h+extra;
     const plotW=w-layout.margin.l-layout.margin.r, plotH=H-layout.margin.t-b;
     const keep=k=>el?.layout?.[k]?.range ? {range:[...el.layout[k].range],autorange:false} : {};
     const shapes=[], annotations=[];
+    const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const left=-(layout.margin.l-12);   // px from the plot's left edge
+    const yAt=i=>-(layout.margin.b+8+(i+0.5)*line)/plotH;
+    const colX=[]; { let x=left+swatch; for(const wj of colW){ colX.push(x); x+=wj+gap; } }
+    cols.forEach((c,ci)=>annotations.push({xref:'paper',yref:'paper',x:colX[ci]/plotW,y:yAt(0),xanchor:'left',yanchor:'middle',showarrow:false,text:`<b>${esc(c.head)}</b>`,font:FONT,align:'left'}));
     curves.forEach((c,i)=>{
-      const y=-(layout.margin.b+8+(i+0.5)*line)/plotH, x0=-(layout.margin.l-12)/plotW, x1=x0+34/plotW;
+      const y=yAt(i+1), x0=left/plotW, x1=(left+34)/plotW;
       shapes.push({type:'line',xref:'paper',yref:'paper',x0,x1,y0:y,y1:y,line:{color:c.color,width:c.current ? 2.6 : 2.2}});
-      annotations.push({xref:'paper',yref:'paper',x:x1+8/plotW,y,xanchor:'left',yanchor:'middle',showarrow:false,text:names[i].replace(/&/g,'&amp;').replace(/</g,'&lt;'),font:FONT,align:'left'});
+      cols.forEach((col,ci)=>{ const t=rows[i][col.id]; if(t) annotations.push({xref:'paper',yref:'paper',x:colX[ci]/plotW,y,xanchor:'left',yanchor:'middle',showarrow:false,text:esc(t),font:FONT,align:'left'}); });
     });
     const fig={...layout,width:w,height:H,margin:{...layout.margin,b},showlegend:false,shapes,annotations,
       xaxis:{...layout.xaxis,...keep('xaxis'),automargin:false},yaxis:{...layout.yaxis,...keep('yaxis'),automargin:false}};
@@ -1251,7 +1363,8 @@ export function createConvolutionUI(deps){
     document.body.appendChild(tmp);
     try{
       await Plotly.newPlot(tmp,traces,fig,{staticPlot:true});
-      const base=csvName(curves.find(c=>c.k.settings?.dispersion?.file)?.k.settings.dispersion.file||fileName,'1d').replace(/\.csv$/,'');
+      // A fixed name, as structure-figure.png in the CIF generator.
+      const base='1d-cut-figure';
       // Size from the figure's own layout (the page's density scaling applies to it).
       await Plotly.downloadImage(tmp,{format:'png',filename:base,scale:2});
     }finally{ try{ Plotly.purge(tmp); }catch(_e){} tmp.remove(); }
@@ -1270,38 +1383,72 @@ export function createConvolutionUI(deps){
     // A colour stays with its curve when others are removed: take the first
     // palette colour not in use.
     const used=new Set(kept.map(k=>k.color));
-    const color=PALETTE.find(c=>!used.has(c))||PALETTE[kept.length%PALETTE.length];
+    const color=scan.color||PALETTE.find(c=>!used.has(c))||PALETTE[kept.length%PALETTE.length];
     kept.push({...scan,method:scan.method||$('method')?.value||'',color});
     scan=null;
     refreshKept();
+  }
+  // #rgb / rgb() / names -> #rrggbb for <input type=color>.
+  function hexColor(c){
+    const ctx=document.createElement('canvas').getContext('2d'); ctx.fillStyle='#000'; ctx.fillStyle=String(c||'#000');
+    const v=ctx.fillStyle; return /^#[0-9a-f]{6}$/i.test(v) ? v : '#000000';
+  }
+  // Head of the legend columns and the column chooser above the table.
+  function legendHead(){
+    const tr=$('convCurveList')?.closest('table')?.querySelector('thead tr');
+    if(tr){
+      tr.querySelectorAll('th.convolution-legend-head').forEach(th=>th.remove());
+      for(const c of shownCols()){ const th=document.createElement('th'); th.className='convolution-legend-head'; th.textContent=c.head; tr.appendChild(th); }
+    }
+    const box=$('convLegendColumns');
+    if(box && !box.childElementCount){
+      const t=document.createElement('span'); t.textContent='Legend:'; box.appendChild(t);
+      for(const c of LEGEND_COLS){
+        const lab=document.createElement('label'); lab.className='checkbox-label';
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=legendShown.has(c.id);
+        cb.addEventListener('change',()=>{
+          if(cb.checked) legendShown.add(c.id); else legendShown.delete(c.id);
+          try{ localStorage.setItem(LEGEND_KEY,JSON.stringify({shown:[...legendShown],known:LEGEND_COLS.map(c=>c.id)})); }catch(_e){}
+          refreshKept();
+        });
+        lab.append(cb,document.createTextNode(c.head));
+        box.appendChild(lab);
+      }
+    }
   }
   // The side panel doubles as the legend and the keep list.
   function refreshKept(){
     kept.forEach((k,i)=>{ k.name=`#${i+1} ${k.label} (${k.method})`; });
     const curves=curveList();
+    legendHead();
     const body=$('convCurveList');
     if(body){
       body.replaceChildren(...curves.map(c=>{
         const tr=document.createElement('tr');
         if(c.current) tr.className='convolution-curve-current';
         const td=()=>{ const cell=document.createElement('td'); tr.appendChild(cell); return cell; };
-        const sw=document.createElement('span');
-        sw.className='convolution-swatch';
-        sw.style.borderColor=c.color; sw.style.color=c.color;
-        td().appendChild(sw);
-        const box=document.createElement('input'); box.type='checkbox'; box.checked=c.k.selected!==false;
-        box.setAttribute('aria-label',`Include in Save CSV: ${legendText(c.k)}`);
-        box.addEventListener('change',()=>{ c.k.selected=box.checked; refreshKept(); });
-        td().appendChild(box);
-        // The full scan (the plot legend shows the short form).
-        const name=td(); name.className='convolution-curve-name';
-        name.textContent=legendText(c.k);
-        const act=td();
+        // Order: Keep / Remove (under Clear all), colour, CSV, then the
+        // legend columns (all three stay in view when the table scrolls).
         // Keep (also next to Save CSV) for the current scan, Remove for kept ones.
+        const act=td();
         const btn=document.createElement('button'); btn.type='button';
         if(c.current){ btn.textContent='+ Keep'; btn.addEventListener('click',keepScan); }
         else{ btn.textContent='Remove'; btn.addEventListener('click',()=>{ kept.splice(Number(c.tag)-1,1); refreshKept(); }); }
         act.appendChild(btn);
+        // Colour: a square colour picker (as in the CIF generator).
+        const pick=document.createElement('input'); pick.type='color'; pick.value=hexColor(c.color);
+        pick.className='convolution-color-pick'; pick.title='Change the colour';
+        pick.setAttribute('aria-label','Curve colour');
+        pick.addEventListener('input',()=>{ c.k.color=pick.value; drawScan(); });
+        pick.addEventListener('change',()=>{ c.k.color=pick.value; refreshKept(); });
+        td().appendChild(pick);
+        const box=document.createElement('input'); box.type='checkbox'; box.checked=c.k.selected!==false;
+        box.setAttribute('aria-label',`Include in Save CSV: ${legendText(c.k)}`);
+        box.addEventListener('change',()=>{ c.k.selected=box.checked; refreshKept(); });
+        td().appendChild(box);
+        // Legend columns (their heads: legendHead).
+        const f=legendFields(c.k);
+        for(const col of shownCols()){ const cell=td(); cell.className='convolution-curve-field'; cell.textContent=f[col.id]||''; }
         return tr;
       }));
     }
@@ -1336,10 +1483,12 @@ export function createConvolutionUI(deps){
   // CSV: the current scan and every kept scan, one block per curve.
   function downloadScan(){
     // Curve tags are plain numbers (a leading # would read as a comment).
-    const curves=curveList().filter(c=>c.k.selected!==false).map(c=>({...c.k,tag:c.tag}));
+    const curves=curveList().filter(c=>c.k.selected!==false).map(c=>({...c.k,tag:c.tag,color:c.color}));
     if(!curves.length) return;
     const lines=['# PLANE-TAS convolution: 1D cut',`# dispersion file: ${fileName}`,'# intensity: S(Q,w) table x R0/Rmon (normalisation to monitor counts; monitor half way between monochromator and sample, taking the whole beam)',
       ...curves.map(c=>`# curve ${c.tag}: ${c.label} (${c.method})`),
+      // Colour of each curve (put back by Load CSV).
+      ...curves.map(c=>`# color curve ${c.tag}: ${hexColor(c.color)}`),
       ...curves.map(c=>settingsLine(c.settings,`settings curve ${c.tag}`)).filter(Boolean),
       'curve,H,K,L,hw_meV,I_arb,dI'];
     const num6=v=>Number.isFinite(v) ? String(Number(v.toFixed(6))) : '';
@@ -1412,11 +1561,12 @@ export function createConvolutionUI(deps){
         const m=meta.match(/\((Cooper-Nathans|Popovici)\)\s*$/);
         const axis=scanAxis(pts);
         const settings=readSettings(comments,new RegExp(`^\\s*#\\s*settings curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`));
-        added.push({axis,pts,I,label:(meta.replace(/\s*\((Cooper-Nathans|Popovici)\)\s*$/,'')||`${name} ${tag}`),method:m?.[1]||'',inputs:[0,1,2,3].map(j=>varText(pts,j)),settings});
+        const cm=(comments.find(l=>new RegExp(`^\\s*#\\s*color curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`).test(l))||'').match(/#[0-9a-f]{6}\s*$/i);
+        added.push({color:cm ? cm[0].trim().toLowerCase() : '',axis,pts,I,label:(meta.replace(/\s*\((Cooper-Nathans|Popovici)\)\s*$/,'')||`${name} ${tag}`),method:m?.[1]||'',inputs:[0,1,2,3].map(j=>varText(pts,j)),settings});
       }
     }else throw new Error('Not a 1D CSV saved with Save CSV.');
     if(!added.length) throw new Error('No curves found in the file.');
-    for(const k of added) kept.push({...k,color:nextColor(),source:name});
+    for(const k of added) kept.push({...k,color:k.color||nextColor(),source:name});
     // The settings of the last calculated curve go back into the sidebar,
     // Resolution and the 1D cut box.
     const last=[...added].reverse().find(k=>k.settings);
