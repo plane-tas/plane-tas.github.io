@@ -476,7 +476,7 @@
 </div>
 <div class="convolution-box-head">
 <select id="convMethod2D" class="convolution-method" aria-label="Resolution approximation (same as Simulation)"><option>Cooper-Nathans</option><option>Popovici</option></select>
-<span class="convolution-integration"><select id="convIntegration2D" aria-label="Integration method"><option value="grid">Grid (auto)</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><span class="convolution-grid-range" id="convGridRange2D">within ±1.5 FWHM</span><label class="convolution-field" id="convSamples2DField" hidden><input id="convSamples2D" type="number" min="50" step="50" value="300" aria-label="Random points"/>points</label></span></span>
+<span class="convolution-integration"><select id="convIntegration2D" aria-label="Integration method"><option value="grid">Grid</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><label class="convolution-field" id="convGridRange2D" title="Grid nodes over the resolution ellipsoid (within ±1.5 FWHM). Shows the automatic number until you enter one; leave empty for automatic.">nodes<input id="convNodes2D" type="number" min="27" step="1000" placeholder="auto" data-auto="1" aria-label="Grid nodes"/></label><label class="convolution-field" id="convSamples2DField" hidden>points<input id="convSamples2D" type="number" min="50" step="50" value="300" placeholder="300" aria-label="Random points"/></label></span></span>
 <span class="convolution-estimate" id="convEstimate2D"></span>
 <button id="convCalculate2D" type="button" class="convolution-calc">Calculate</button>
 <span class="convolution-message convolution-status" id="convMessage2D" aria-live="polite"></span>
@@ -524,7 +524,7 @@
 </div>
 <div class="convolution-box-head">
 <select id="convMethod1D" class="convolution-method" aria-label="Resolution approximation (same as Simulation)"><option>Cooper-Nathans</option><option>Popovici</option></select>
-<span class="convolution-integration"><select id="convIntegration1D" aria-label="Integration method"><option value="grid">Grid (auto)</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><span class="convolution-grid-range" id="convGridRange1D">within ±1.5 FWHM</span><label class="convolution-field" id="convSamples1DField" hidden><input id="convSamples1D" type="number" min="50" step="50" value="2000" aria-label="Random points"/>points</label></span></span>
+<span class="convolution-integration"><select id="convIntegration1D" aria-label="Integration method"><option value="grid">Grid</option><option value="mc">Monte Carlo</option></select><span class="convolution-integration-detail"><label class="convolution-field" id="convGridRange1D" title="Grid nodes over the resolution ellipsoid (within ±1.5 FWHM). Shows the automatic number until you enter one; leave empty for automatic.">nodes<input id="convNodes1D" type="number" min="27" step="1000" placeholder="auto" data-auto="1" aria-label="Grid nodes"/></label><label class="convolution-field" id="convSamples1DField" hidden>points<input id="convSamples1D" type="number" min="50" step="50" value="2000" placeholder="2000" aria-label="Random points"/></label></span></span>
 <span class="convolution-estimate" id="convEstimate1D"></span>
 <button id="convCalculate1D" type="button" class="convolution-calc">Calculate</button>
 <span class="convolution-message convolution-status" id="convStatus1D" aria-live="polite"></span>

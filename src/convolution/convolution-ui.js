@@ -65,7 +65,7 @@ export function createConvolutionUI(deps){
   // not overwrite them).
   const RANGE_IDS=['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
   const SCAN_INPUT_IDS=['convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1','convPoints1D'];
-  const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convIntegration2D','convIntegration1D','convCsvName2D','convCsvName1D'];
+  const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convNodes2D','convNodes1D','convIntegration2D','convIntegration1D','convCsvName2D','convCsvName1D'];
   // Calculation settings written into Save CSV and put back by Load CSV:
   // instrument (sidebar and Resolution instrument details), lattice,
   // scattering plane, and the entries of the 2D slice or 1D cut box.
@@ -78,7 +78,7 @@ export function createConvolutionUI(deps){
     'mosSamH','mosSamV','sampleShape','sampleUcm','sampleVcm','sampleDcm','sampleHcm',
     'L0','L1','L2','L3','srcWcm','srcHcm','sourceShape','detWcm','detHcm','detectorShape',
     'a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','unit'];
-  const BOX_SETTING_IDS={'2D':[...RANGE_IDS,'convIntegration2D','convSamples2D'],'1D':[...SCAN_INPUT_IDS,'convIntegration1D','convSamples1D']};
+  const BOX_SETTING_IDS={'2D':[...RANGE_IDS,'convIntegration2D','convSamples2D','convNodes2D'],'1D':[...SCAN_INPUT_IDS,'convIntegration1D','convSamples1D','convNodes1D']};
   const controlValue=el=>el.type==='checkbox' ? !!el.checked : el.value;
   function settingsSnapshot(dim){
     const pick=ids=>Object.fromEntries(ids.filter(id=>$(id)).map(id=>[id,controlValue($(id))]));
@@ -159,6 +159,7 @@ export function createConvolutionUI(deps){
   const savedInputsComplete=ids=>ids.every(id=>String($(id)?.value??'').trim()!=='');
   function saveInputs(){
     try{ localStorage.setItem(INPUTS_KEY,JSON.stringify({...Object.fromEntries(INPUT_IDS.map(id=>[id,$(id)?.value??''])),zlim,
+      nodesAuto:Object.fromEntries(['convNodes2D','convNodes1D'].map(id=>[id,$(id)?.dataset.auto??'1'])),
       checks:Object.fromEntries(CHECK_IDS.map(id=>[id,!!$(id)?.checked]))})); }catch(_e){}
   }
   function restoreInputs(){
@@ -166,6 +167,7 @@ export function createConvolutionUI(deps){
     try{ saved=JSON.parse(localStorage.getItem(INPUTS_KEY)||'null'); }catch(_e){}
     if(!saved) return;
     for(const id of INPUT_IDS) if(typeof saved[id]==='string' && $(id)) $(id).value=saved[id];
+    for(const id of ['convNodes2D','convNodes1D']) if($(id) && saved.nodesAuto?.[id]) $(id).dataset.auto=saved.nodesAuto[id];
     if(saved.checks) for(const id of CHECK_IDS) if(typeof saved.checks[id]==='boolean' && $(id)) $(id).checked=saved.checks[id];
     showIntegration();
     if(saved.zlim){ zlim.min=Number.isFinite(saved.zlim.min) ? saved.zlim.min : null; zlim.max=Number.isFinite(saved.zlim.max) ? saved.zlim.max : null; }
@@ -343,11 +345,15 @@ export function createConvolutionUI(deps){
   // Is a Q point inside the table?  A single-valued axis is flat (any value).
   const inTable=hkl=>interp.ranges.every((r,i)=>interp.flat?.[i] || (hkl[i]>=r.min-1e-9 && hkl[i]<=r.max+1e-9));
   const tableRangeText=()=>['H','K','L'].map((n,i)=>interp.flat?.[i] ? `${n} any` : `${n} ${fmt(interp.ranges[i].min)}…${fmt(interp.ranges[i].max)}`).join(', ');
-  const samplesFrom=(id,fallback)=>standardNormalSamples(Math.min(20000,Math.max(50,Math.round(num(id)||fallback))));
-  // Integration over the resolution ellipsoid.  Grid (auto): a Gaussian-
-  // weighted grid whose size per axis follows how steeply the dispersion
-  // crosses the resolution there (largest over the given resolution points),
-  // capped at a node budget.  Monte Carlo: random points.
+  // Monte Carlo points: at least 50, no upper limit (a large number only
+  // takes longer).  Empty: the default.
+  const mcSamples=dim=>Math.max(50,Math.round(num(`convSamples${dim}`)||(dim==='2D' ? 300 : 2000)));
+  const samplesFrom=(id,fallback)=>standardNormalSamples(mcSamples(id.endsWith('2D') ? '2D' : '1D'));
+  // Integration over the resolution ellipsoid.  Grid: a Gaussian-weighted
+  // grid whose size per axis follows how steeply the dispersion crosses the
+  // resolution there (largest over the given resolution points).  The total
+  // number of nodes is automatic (capped at a budget) or the number entered
+  // in the nodes field.  Monte Carlo: random points.
   const GRID_BUDGET={'2D':1000,'1D':3000};
   const integrationMode=dim=>$(`convIntegration${dim}`)?.value==='mc' ? 'mc' : 'grid';
   function showIntegration(){
@@ -367,7 +373,7 @@ export function createConvolutionUI(deps){
       for(let i=0;i<3;i++) n[i]=Math.max(n[i],a.n[i]);
       sized++;
     }
-    return withinBudget(dim,sized ? n : DEFAULT_GRID);
+    return sizeGrid(dim,sized ? n : DEFAULT_GRID);
   }
   // Grid size when no resolution point could be checked.
   const DEFAULT_GRID=[11,11,11];
@@ -376,6 +382,47 @@ export function createConvolutionUI(deps){
     while(n[0]*n[1]*n[2]>GRID_BUDGET[dim]){
       const i=n.indexOf(Math.max(...n));
       if(n[i]<=5) break;
+      n[i]-=2;
+    }
+    return n;
+  }
+  // Nodes entered by the user (null: automatic).  The field shows the
+  // automatic number (data-auto) until the user types; emptied, it is
+  // automatic again.  At least 27, no upper limit (a large number only takes
+  // longer).
+  function gridNodes(dim){
+    const el=$(`convNodes${dim}`);
+    if(!el || el.dataset.auto==='1') return null;
+    const raw=el.value;
+    if(raw==null || String(raw).trim()==='') return null;
+    const v=Math.round(Number(raw));
+    return Number.isFinite(v) && v>0 ? Math.max(27,v) : null;
+  }
+  // Show the automatic number of nodes: as the value while the field is
+  // automatic, as the placeholder when it has been emptied (the number that
+  // is then used).
+  function showAutoNodes(dim,n){
+    const el=$(`convNodes${dim}`);
+    if(!el || !n) return;
+    const N=String(n[0]*n[1]*n[2]);
+    el.placeholder=N;
+    if(el.dataset.auto==='1') el.value=N;
+  }
+  // Grid size from the automatic one: capped at the budget, or scaled to the
+  // entered number of nodes.  The scaling keeps the proportions between the
+  // axes (an axis along which nothing changes keeps 1 node) and odd counts
+  // (a node at the centre).
+  function sizeGrid(dim,nAuto){
+    const N=gridNodes(dim);
+    if(N==null) return withinBudget(dim,nAuto);
+    const act=[0,1,2].filter(i=>nAuto[i]>1);
+    if(!act.length) return [1,1,1];
+    const prod=act.reduce((p,i)=>p*nAuto[i],1), f=Math.pow(N/prod,1/act.length);
+    const n=[1,1,1];
+    for(const i of act){ const x=nAuto[i]*f, m=Math.round(x); n[i]=Math.max(3,m%2 ? m : m+(x>m ? 1 : -1)); }
+    while(n[0]*n[1]*n[2]>N){
+      const i=n.indexOf(Math.max(...n));
+      if(n[i]<=3) break;
       n[i]-=2;
     }
     return n;
@@ -625,8 +672,9 @@ export function createConvolutionUI(deps){
     const first=res.find(Boolean);
     if(!first) throw new Error('No point of the map can be reached with this instrument setting.');
     const integ=gridMode
-      ? {mode:'grid',n:withinBudget('2D',sized ? n : DEFAULT_GRID)}
-      : {mode:'mc',samples:Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))};
+      ? {mode:'grid',n:sizeGrid('2D',sized ? n : DEFAULT_GRID)}
+      : {mode:'mc',samples:mcSamples('2D')};
+    if(integ.mode==='grid') showAutoNodes('2D',integ.n);
     R.broadcast({type:'setup',lattice:{a:lat.a,b:lat.b,e:lat.e,res,rough:roughCells(lat,covOfFinal)},UB:first.UB,UBinv:inverse(first.UB),integ,E});
 
     // Phase 2
@@ -926,6 +974,7 @@ export function createConvolutionUI(deps){
       let r={t:NaN};
       try{ if(interp) r=fn(); }catch(_e){ r={t:NaN}; }
       el.textContent=timeText(r.t);
+      if(r.n) showAutoNodes(id.endsWith('2D') ? '2D' : '1D',r.n);
     }
   }
   // Fraction of the given points that need the full grid (not skipped as
@@ -961,7 +1010,7 @@ export function createConvolutionUI(deps){
     };
     if(integrationMode('2D')==='mc'){
       const {frac,tCheck}=near();
-      per=tCheck+frac*Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))*b.tSample;
+      per=tCheck+frac*mcSamples('2D')*b.tSample;
     }
     else{
       const pick=arr=>[arr[0],arr[Math.floor(arr.length/2)],arr[arr.length-1]];
@@ -986,7 +1035,7 @@ export function createConvolutionUI(deps){
     const near=()=>nearFraction(base,[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1].map(t=>sc.pts[Math.round(t*m)]));
     if(integrationMode('1D')==='mc'){
       const {frac,tCheck}=near();
-      per=tCheck+frac*Math.min(20000,Math.max(50,Math.round(num('convSamples1D')||2000)))*b.tSample;
+      per=tCheck+frac*mcSamples('1D')*b.tSample;
     }
     else{
       const pts=[0,0.25,0.5,0.75,1].map(t=>sc.pts[Math.round(t*m)]).map(p=>({...p,res:resolutionAt(base,p.hkl,p.E,{})}));
@@ -1049,6 +1098,7 @@ export function createConvolutionUI(deps){
         if(performance.now()-t1>150){ t1=performance.now(); await yieldUI(); if(id!==run1D) return; }
       }
       const integ=integrationFor('1D',sc.pts.map((p,i)=>({...p,res:RES[i]})));
+      if(integ.mode==='grid') showAutoNodes('1D',integ.grid.n);
       // Radial 3rd collimator: its equivalent divergence (from the analyzer
       // angle, the same for every point with Ef fixed) for the legend.
       const r0=RES.find(Boolean);
@@ -1535,11 +1585,17 @@ export function createConvolutionUI(deps){
       catch(err){ message('convMessage1D',`${file.name}: ${err.message||err}`,true); }
     });
     // Estimated calculation time follows every input that changes it.
-    for(const id of ['convSamples2D','convSamples1D','convIntegration2D','convIntegration1D','convPoints1D','convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1',
+    for(const id of ['convSamples2D','convSamples1D','convNodes2D','convNodes1D','convIntegration2D','convIntegration1D','convPoints1D','convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1',
       ...['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]),'convMethod2D','convMethod1D','convFormat'])
       $(id)?.addEventListener('input',scheduleEstimates), $(id)?.addEventListener('change',scheduleEstimates);
     for(const id of INPUT_IDS){ $(id)?.addEventListener('input',saveInputs); $(id)?.addEventListener('change',saveInputs); }
     for(const dim of ['2D','1D']) $(`convIntegration${dim}`)?.addEventListener('change',showIntegration);
+    for(const dim of ['2D','1D']){
+      const el=$(`convNodes${dim}`); if(!el) continue;
+      // Typing leaves the automatic number; an empty field is automatic too
+      // but keeps showing its placeholder (the minimum).
+      el.addEventListener('input',()=>{ el.dataset.auto='0'; });
+    }
     $('convResetRanges')?.addEventListener('click',scheduleEstimates);
     $('convCalculate1D')?.addEventListener('click',calculate1D);
     $('convDownload')?.addEventListener('click',downloadScan);

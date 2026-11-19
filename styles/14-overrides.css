@@ -987,7 +987,11 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* 2D slice tab: display switches above the maps. */
 .convolution-show-row{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(12px * var(--tas-density));margin-bottom:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-show-row>*{flex:none}
-.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;font-size:inherit!important}
+.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;font-size:inherit!important;align-self:center}
+/* Labels inside the brackets on the same baseline as the others (the base
+   .checkbox-label rule aligns to the end of its line; the brackets used a
+   larger font). */
+.convolution-show-row .convolution-ell-kinds{font-size:inherit!important;align-self:center}
 .convolution-show-title{color:#444}
 /* Notes under Dispersion file: the blue information box of the app, black text. */
 .convolution-note{background:#eef6fb;border:calc(1px * var(--tas-density)) solid #b9d8ea;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(9px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
