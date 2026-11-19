@@ -882,6 +882,8 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #resolutionConvolutionPane .convolution-integration .convolution-field{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;color:#555}
 .convolution-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
 .convolution-integration .convolution-field input{width:calc(90px * var(--tas-density));flex:none}
+/* Grid spacing and Monte Carlo points: choices with their accuracy, shown in full. */
+.convolution-integration .convolution-field select{width:auto;flex:none}
 .convolution-range-table>button{justify-self:start;font-size:max(13px,calc(15px * var(--tas-density)))}
 #resolutionConvolutionPane .convolution-field{flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;white-space:nowrap}
 .convolution-field input{flex:1 1 auto;width:auto;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)))}
@@ -1045,7 +1047,8 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Calculate row: equal columns — approximation, integration, range / points,
    estimate, Calculate, progress bar, Keep (2D: empty).  The progress bar is
    always there (empty frame), so nothing moves when it fills. */
-#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
+#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) max-content max-content repeat(3,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
+/* (The third and fourth columns, Grid spacing / Monte Carlo points with their accuracy and the estimated time, take the width of their text.) */
 .convolution-box-head .convolution-integration{display:contents}
 .convolution-box-head>select,.convolution-box-head .convolution-integration>select,.convolution-box-head>button{width:100%;min-width:0}
 .convolution-box-head .convolution-integration-detail{min-width:0}
@@ -1061,7 +1064,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Narrow: the Calculate row in two lines (4 equal columns). */
 .convolution-tab-pane>.convolution-box{container-type:inline-size}
 @container (max-width:720px){
-  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(2,minmax(0,1fr)) max-content minmax(0,1fr)}
 }
 /* ".csv" at the same size as the CIF output ".cif". */
 #resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}

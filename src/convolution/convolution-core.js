@@ -57,7 +57,11 @@ export function parseDispersionTable(text,format='index'){
 // with a single value is taken as flat (no dispersion along it).  Other
 // tables use the nearest tabulated point.  Points outside the table give null.
 export function createDispersionInterpolator(data){
-  const pts=data.points, nB=data.nBranch;
+  // pts is let so that the grid branch can drop it: the closures below
+  // share one scope, and keeping the parsed rows alive would hold far more
+  // memory than the typed arrays (every worker of a 2D map has a copy).
+  let pts=data.points;
+  const nB=data.nBranch;
   const uniq=i=>[...new Set(pts.map(p=>Number(p.hkl[i].toFixed(6))))].sort((a,b)=>a-b);
   const axes=[uniq(0),uniq(1),uniq(2)];
   const n=axes.map(a=>a.length);
@@ -133,6 +137,7 @@ export function createDispersionInterpolator(data){
       }
       return bad ? null : result;
     }
+    pts=null;
     return {evaluate,grid:true,axes,n,ranges,flat,nBranch:nB};
   }
   // Nearest neighbour with a bucket hash.
