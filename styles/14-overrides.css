@@ -922,23 +922,33 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-scan-layout{flex:1 1 auto;min-height:0;display:flex;gap:calc(10px * var(--tas-density))}
 .convolution-scan-layout>.convolution-scan-plot{flex:1 1 0;min-width:0;height:auto}
 .convolution-curves{flex:1 1 0;min-width:0;overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e7ec;border-radius:calc(4px * var(--tas-density))}
-.convolution-curve-table{width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
-.convolution-curve-table th{position:sticky;top:0;z-index:1;background:#f4f6f8;font-weight:650;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #d8dde3;white-space:nowrap}
+/* Curves of the 1D cut: column chooser, then a table that is also the
+   legend.  Columns: Keep / Remove, colour, CSV, then the legend columns, one
+   line each; the first three stay in view when the table scrolls sideways. */
+.convolution-legend-columns{position:sticky;left:0;box-sizing:border-box;width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:calc(2px * var(--tas-density)) calc(10px * var(--tas-density));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e3e7ec;font-size:max(12px,calc(14px * var(--tas-density)))}
+.convolution-legend-columns>span{font-weight:650}
+.convolution-legend-columns .checkbox-label{display:inline-flex;align-items:center;gap:calc(3px * var(--tas-density));white-space:nowrap}
+.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));--c3:calc(70px * var(--tas-density));width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
+.convolution-curve-table :is(th,td){white-space:nowrap;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density))}
+.convolution-curve-table th{position:sticky;top:0;z-index:1;background:#f4f6f8;font-weight:650;border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
 .convolution-curve-table th span{margin-left:calc(2px * var(--tas-density));font-size:.9em}
 .convolution-curve-table th input{vertical-align:middle}
-.convolution-curve-table td{padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:top}
-.convolution-curve-table :is(th,td){white-space:nowrap}
-.convolution-curve-table td:nth-child(3){text-align:center}
-.convolution-curve-table td.convolution-curve-field{text-align:left;white-space:nowrap}
-.convolution-curve-name{line-height:1.35;overflow-wrap:break-word;width:auto}
-.convolution-curve-foot{display:flex;justify-content:flex-end;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
-.convolution-curve-foot button{font-size:max(12px,calc(14px * var(--tas-density)))}
-.convolution-curve-current{background:#f7f9fb}
-.convolution-curve-table th:nth-child(1){text-align:left}
-.convolution-curve-table th:nth-child(3){text-align:center}
+.convolution-curve-table td{border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:middle}
+.convolution-curve-table td.convolution-curve-field{min-width:3.2em}
 .convolution-curve-table button{font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
+.convolution-curve-current{background:#f7f9fb}
+.convolution-curve-table :is(th,td):nth-child(-n+3){position:sticky;z-index:1;background:#fff;box-sizing:border-box}
+.convolution-curve-table th:nth-child(-n+3){z-index:2;background:#f4f6f8}
+.convolution-curve-table .convolution-curve-current td:nth-child(-n+3){background:#f7f9fb}
+.convolution-curve-table :is(th,td):nth-child(1){left:0;width:var(--c1);min-width:var(--c1);max-width:var(--c1)}
+.convolution-curve-table :is(th,td):nth-child(2){left:var(--c1);width:var(--c2);min-width:var(--c2);max-width:var(--c2)}
+.convolution-curve-table :is(th,td):nth-child(3){left:calc(var(--c1) + var(--c2));width:var(--c3);min-width:var(--c3);max-width:var(--c3);text-align:center;box-shadow:inset -1px 0 #e3e7ec}
+/* Colour of a curve: a square colour picker (as in the CIF generator). */
+.convolution-color-pick{display:block;width:calc(30px * var(--tas-density));height:calc(22px * var(--tas-density));padding:calc(1px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #c8ced6;border-radius:calc(3px * var(--tas-density));background:#fff;cursor:pointer;box-sizing:border-box}
+.convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}
+.convolution-color-pick::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
+.convolution-color-pick::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
 .convolution-swatch{display:inline-block;position:relative;width:calc(30px * var(--tas-density));height:0;border-top:calc(4px * var(--tas-density)) solid;vertical-align:middle;margin-top:calc(9px * var(--tas-density));border-radius:2px}
-.convolution-curve-detail{display:block;color:#777;font-size:.88em}
 .convolution-swatch.dotted{border-top-style:dotted}
 .convolution-table-info{flex:0 0 auto;font-size:max(13px,calc(16px * var(--tas-density)));color:#555;margin-bottom:calc(4px * var(--tas-density))}
 .convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
@@ -1084,26 +1094,3 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .bragg-check-message{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
 .bragg-check-message[data-state="ok"]{color:#2a7a2a}
 .bragg-check-message[data-state="warn"]{color:#b4441f}
-
-/* Legend: column chooser above the curve table; the swatch is a colour picker. */
-.convolution-legend-columns{display:flex;flex-wrap:wrap;align-items:center;gap:calc(2px * var(--tas-density)) calc(10px * var(--tas-density));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e3e7ec;font-size:max(12px,calc(14px * var(--tas-density)))}
-.convolution-legend-columns>span{font-weight:650}
-.convolution-legend-columns .checkbox-label{display:inline-flex;align-items:center;gap:calc(3px * var(--tas-density));white-space:nowrap}
-.convolution-swatch-pick{position:relative;display:inline-block;cursor:pointer}
-.convolution-swatch-pick input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
-/* Colour, CSV and Keep / Remove stay in view when the legend columns are
-   wider than the panel (the table then scrolls under them). */
-.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));--c3:calc(70px * var(--tas-density))}
-.convolution-curve-table :is(th,td):nth-child(-n+3){position:sticky;background:#fff;z-index:1}
-.convolution-curve-table th:nth-child(-n+3){z-index:2;background:#f4f6f8}
-.convolution-curve-table .convolution-curve-current :is(td):nth-child(-n+3){background:#f7f9fb}
-.convolution-curve-table :is(th,td):nth-child(1){left:0;width:var(--c1);min-width:var(--c1);max-width:var(--c1);box-sizing:border-box}
-.convolution-curve-table :is(th,td):nth-child(2){left:var(--c1);width:var(--c2);min-width:var(--c2);max-width:var(--c2);box-sizing:border-box}
-.convolution-curve-table :is(th,td):nth-child(3){left:calc(var(--c1) + var(--c2));width:var(--c3);min-width:var(--c3);max-width:var(--c3);box-sizing:border-box;box-shadow:inset -1px 0 #e3e7ec}
-.convolution-curve-table td.convolution-curve-field{min-width:calc(3.2em)}
-.convolution-legend-columns{position:sticky;left:0;box-sizing:border-box;width:100%}
-.convolution-color-pick{display:block;width:calc(30px * var(--tas-density));height:calc(22px * var(--tas-density));padding:calc(1px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #c8ced6;border-radius:calc(3px * var(--tas-density));background:#fff;cursor:pointer;box-sizing:border-box}
-.convolution-curve-table td{vertical-align:middle}
-.convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}
-.convolution-color-pick::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
-.convolution-color-pick::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}

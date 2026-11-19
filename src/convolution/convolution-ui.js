@@ -8,6 +8,7 @@
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
 import {renamedInstrument} from '../app/instrument-renames.js';
+import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as legendValues, legendLine} from './convolution-legend.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
 const ROW_HEIGHT=22;
@@ -196,7 +197,6 @@ export function createConvolutionUI(deps){
   }
 
   const num=id=>{ const v=Number($(id)?.value); return Number.isFinite(v) ? v : NaN; };
-  const fmt=(x,d=4)=>{ const v=Number(Number(x).toFixed(d)); return String(Object.is(v,-0)?0:v); };
   const vec=v=>`(${v.map(x=>fmt(x)).join(', ')})`;
   const message=(id,t,error=false)=>{ const el=$(id); if(!el) return; el.textContent=t; el.title=t; el.classList.toggle('conv-error',!!error); el.classList.remove('convolution-progress-on'); el.style.setProperty('--conv-progress','0%'); };
   const yieldUI=()=>new Promise(r=>setTimeout(r,0));
@@ -1158,150 +1158,22 @@ export function createConvolutionUI(deps){
       marker:{size:current?6:5,color},line:{width:current?2.6:2.2,color},
       hovertemplate:`%{customdata}<br>I = %{y:.4g}<extra></extra>`};
   }
-  // Short legend text: "H=1.1, K=0, L=0, ħω=0~8 (Pop.)".
   // Curves of the 1D plot: the kept scans (numbered, coloured) and the
-  // current one.  Each has "show" (plot) and "selected" (Save CSV) flags.
+  // current one.  "selected": included in Save CSV.
   const curveList=()=>[...kept.map((k,i)=>({k,tag:String(i+1),title:`#${i+1}`,color:k.color,current:false})),
     ...(scan ? [{k:scan,tag:'current',title:'Current',color:scan.color||'#111',current:true}] : [])];
-  // Legend: Q (moving components as H, K, L: "(H, H, 1)"), ħω, then the
-  // conditions that are worth comparing: fixed Ef / Ei, horizontal
-  // collimation (blank = open), flat or focusing analyzer, approximation.
-  function qeText(pts){
-    const names=['H','K','L'], f0=pts[0], f1=pts[pts.length-1];
-    const d=[0,1,2].map(j=>f1.hkl[j]-f0.hkl[j]);
-    const moving=[0,1,2].filter(j=>Math.abs(d[j])>1e-9);
-    let q;
-    if(!moving.length) q=`(${f0.hkl.map(v=>fmt(v)).join(', ')})`;
-    else{
-      // Every moving component as r·X + c, X = the component that moves most.
-      const p=moving.reduce((a,b)=>Math.abs(d[b])>Math.abs(d[a])+1e-9 ? b : a,moving[0]), X=names[p];
-      q=`(${[0,1,2].map(j=>{
-        if(!moving.includes(j)) return fmt(f0.hkl[j]);
-        const r=d[j]/d[p], c=f0.hkl[j]-r*f0.hkl[p];
-        const mag=Math.abs(Math.abs(r)-1)<1e-9 ? X : `${fmt(Math.abs(r))}${X}`;
-        if(Math.abs(c)<1e-9) return r<0 ? `−${mag}` : mag;
-        // 1.3−H rather than −H+1.3.
-        return r<0 ? `${fmt(c)}−${mag}` : `${mag}${c<0 ? '−' : '+'}${fmt(Math.abs(c))}`;
-      }).join(', ')})`;
-    }
-    return q;
-  }
-  // ħω of a scan (meV): the value when constant, "e0~e1" when it moves.
-  function hwText(pts){
-    const e0=pts[0].E, e1=pts[pts.length-1].E;
-    return Math.abs(e1-e0)>1e-9 ? `${fmt(e0,3)}~${fmt(e1,3)}` : fmt(e0,3);
-  }
-  // Legend columns of a curve: position, instrument, Sense, geometry, fixed
-  // energy, horizontal collimation, analyzer, approximation.  Shown as a
-  // table next to the plot and under the saved figure; CSV keeps everything.
-  // Columns of the legend table; the ones shown are chosen above the table
-  // (kept in the browser).
-  const LEGEND_COLS=[
-    {id:'pos',head:'(H, K, L)',on:true},{id:'hw',head:'ħω',on:true},
-    {id:'inst',head:'Instrument',on:false},{id:'sense',head:'Sense',on:true},
-    {id:'geom',head:'Geom.',on:false},{id:'fixed',head:'Fixed',on:true},
-    {id:'mono',head:'Mono',on:false},{id:'ana',head:'Ana',on:false},
-    {id:'focus',head:'Ana HF',on:true},{id:'col',head:'Collimator',on:true},
-    {id:'approx',head:'Approx.',on:true},{id:'integ',head:'Integration',on:false}];
-  const LEGEND_KEY='plane-tas-convolution-legend-columns';
-  let legendShown=(()=>{
-    // Saved as {shown, known}: a column added later (not in known) starts
-    // with its default.  (A plain array: the first version, without ħω.)
-    try{
-      const v=JSON.parse(localStorage.getItem(LEGEND_KEY)||'null');
-      const shown=Array.isArray(v) ? v : v?.shown, known=Array.isArray(v) ? LEGEND_COLS.map(c=>c.id).filter(id=>id!=='hw') : v?.known;
-      // The former E column is now part of Fixed.
-      if(Array.isArray(shown) && Array.isArray(known))
-        return new Set(LEGEND_COLS.filter(c=>known.includes(c.id) ? shown.includes(c.id) : c.on).map(c=>c.id));
-    }catch(_e){}
-    return new Set(LEGEND_COLS.filter(c=>c.on).map(c=>c.id));
-  })();
+  // Legend (convolution-legend.js): the columns shown are chosen above the
+  // curve table and kept in the browser.
+  const legendShown=loadLegendColumns();
   const shownCols=()=>LEGEND_COLS.filter(c=>legendShown.has(c.id));
-  // Instrument: the name of the preset (its option text), with the setting
-  // when it is not the plain TAS one.
-  function instrumentName(si){
-    const v=String(si?.instrument??''); if(!v) return '';
-    const sel=$('instrument'), opt=[...(sel?.options||[])].find(o=>o.value===v);
-    // "HODACA/HER(C11)@JRR3" -> "HODACA/HER(C11)": the site is left out.
-    let name=(opt?.textContent?.trim() || v.replace(/\.json$/i,'').replace(/^\d+_/,'')).replace(/\s*@.*$/,'');
-    const t=String(si.instrumentType??'');
-    if(t && t!=='tas'){
-      const label=sel?.value===v ? [...($('instrumentType')?.options||[])].find(o=>o.value===t)?.textContent : '';
-      name+=` (${label||t})`;
-    }
-    return name;
-  }
-  // Radial 3rd collimator: equivalent Gaussian FWHM (arcmin) of the analyzer
-  // seen from the sample, as in calcResolution (needs Ef: at the first point
-  // of the scan when Ei is fixed).
-  function radialArcmin(si,E){
-    const d=Number(si.dAna), w=Number(si.anaWcm)/100, n=Number(si.anaHB), L2=Number(si.L2), e=Number(si.energy);
-    const Ef=si.energyMode==='Ei fixed' ? e-E : e;
-    if(!(d>0 && w>0 && n>0 && L2>0 && Ef>0)) return NaN;
-    const s=Math.PI/(d*Math.sqrt(Ef/2.072));
-    if(!(s<=1)) return NaN;
-    const af=2*Math.atan(w*n*s/2/L2)*180/Math.PI;
-    return af*60*Math.sqrt(8*Math.log(2)/12);
-  }
-  // Integration of a 1D curve: "Grid σ/3 (21³)" or "MC 3000".
-  function integrationText(cv){
-    if(!cv) return '';
-    const mode=String(cv.convIntegration1D??'');
-    const optText=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v))?.textContent?.replace(/\s*\(\d+(\.\d+)?[–-][\d.]+%\)\s*$/,'').replace(/\s+\d+(\.\d+)?[–-][\d.]+%$/,'').trim();
-    if(mode==='mc') return `MC ${optText('convSamples1D',cv.convSamples1D)||cv.convSamples1D||''}`.trim();
-    if(mode==='grid') return `Grid ${optText('convGrid1D',cv.convGrid1D)||cv.convGrid1D||''}`.trim();
-    return mode;
-  }
-  // Horizontal focusing (HF) of the analyzer: "on (7)" with the number of
-  // blades, or "off".
-  function hfText(si,part){
-    const on=v=>v===true || v==='true';
-    const t=String(si[`${part}HB`]??'').trim();
-    return on(si[`${part}HF`]) ? `on${t ? ` (${t})` : ''}` : 'off';
-  }
-  // Integration of a 1D curve: "Grid σ/3 (21³)" or "MC 3000".
-  function integrationText(cv){
-    if(!cv) return '';
-    const mode=String(cv.convIntegration1D??'');
-    const optText=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v))?.textContent?.replace(/\s*\(\d+(\.\d+)?[–-][\d.]+%\)\s*$/,'').replace(/\s+\d+(\.\d+)?[–-][\d.]+%$/,'').trim();
-    if(mode==='mc') return `MC ${optText('convSamples1D',cv.convSamples1D)||cv.convSamples1D||''}`.trim();
-    if(mode==='grid') return `Grid ${optText('convGrid1D',cv.convGrid1D)||cv.convGrid1D||''}`.trim();
-    return mode;
-  }
-  // Horizontal focusing of the analyzer: "on (7)" with the number of blades,
-  // or "off"; a horizontally focusing monochromator is added as "M on (n)".
-  function hFocusText(si){
-    const on=v=>v===true || v==='true';
-    const n=v=>{ const t=String(v??'').trim(); return t ? ` (${t})` : ''; };
-    const ana=on(si.anaHF) ? `on${n(si.anaHB)}` : 'off';
-    return on(si.monoHF) ? `M on${n(si.monoHB)}, A ${ana}` : ana;
-  }
-  // Legend values of a curve, by column id.
-  function legendFields(k){
-    const pts=k.pts||[];
-    const pos=pts.length ? qeText(pts) : (k.label||'');
-    const hw=pts.length ? hwText(pts) : '';
-    const si=k.settings?.instrument;
-    const m=si?.method||k.method||'';
-    if(!si) return {pos,hw,approx:m};
-    const e=Number(si.energy);
-    const col=['div1h','div2h','div3h','div4h'].map(id=>{ const v=String(si[id]??'').trim(); return v==='' ? 'open' : v; });
-    if(si.gm1===true || si.gm1==='true') col[0]=`SM(${String(si.div1m??'').trim()||'?'})`;
-    if(si.coll3Type==='radial'){
-      // As calculated (recorded with the curve and in Save CSV); from the
-      // analyzer size and Ef for files saved before it was recorded.
-      let a=k.settings?.derived?.radial3Arcmin;
-      if(!Number.isFinite(a)) a=radialArcmin(si,pts[0]?.E??0);
-      col[2]=Number.isFinite(a) ? `${Math.round(a)}(R)` : 'radial';
-    }
-    return {pos,hw,inst:instrumentName(si),sense:String(si.sense??''),geom:String(si.geometry??''),
-      mono:String(si.monoCrystal??''),ana:String(si.anaCrystal??''),
-      fixed:`${si.energyMode==='Ei fixed' ? 'Ei' : 'Ef'}${Number.isFinite(e) ? ` (${fmt(e,3)})` : ''}`,
-      col:col.join('-'),focus:hfText(si,'ana'),approx:m,
-      integ:integrationText(k.settings?.convolution)};
-  }
-  // One line (trace names, labels): the non-empty columns.
-  const legendText=k=>{ const f=legendFields(k); return shownCols().map(c=>f[c.id] && c.id==='hw' ? `ħω = ${f[c.id]}` : f[c.id]).filter(Boolean).join(', '); };
+  const optionOf=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v));
+  const LEGEND_LOOKUP={
+    instrumentName:v=>optionOf('instrument',v)?.textContent?.trim(),
+    // The type labels come from the instrument file: only for the selected one.
+    instrumentTypeName:(v,t)=>$('instrument')?.value===v ? optionOf('instrumentType',t)?.textContent : '',
+    optionText:(id,v)=>optionOf(id,v)?.textContent};
+  const legendFields=k=>legendValues(k,LEGEND_LOOKUP);
+  const legendText=k=>legendLine(legendFields(k),shownCols());
   // Traces and layout of the 1D plot.  On screen the curve list next to the
   // plot is the legend; Save figure adds it under the plot.
   function scanFigure(){
@@ -1321,8 +1193,8 @@ export function createConvolutionUI(deps){
     if(!curves.length){ try{ Plotly.purge('convScanPlot'); }catch(_e){} return; }
     Plotly.react('convScanPlot',traces,layout,{responsive:true,displaylogo:false});
   }
-  // Save figure: the plot as on screen (current zoom) with the legend, one
-  // line per curve, under it.  The legend is drawn with shapes and
+  // Save figure: the plot as on screen (current zoom) with the legend table
+  // (a head row and one row per curve, the columns shown on screen) under it.  The legend is drawn with shapes and
   // annotations in paper coordinates: a Plotly legend outside the plot would
   // push the margins and break the axes when the entries are long.
   async function saveScanFigure(){
@@ -1363,10 +1235,9 @@ export function createConvolutionUI(deps){
     document.body.appendChild(tmp);
     try{
       await Plotly.newPlot(tmp,traces,fig,{staticPlot:true});
-      // A fixed name, as structure-figure.png in the CIF generator.
-      const base='1d-cut-figure';
-      // Size from the figure's own layout (the page's density scaling applies to it).
-      await Plotly.downloadImage(tmp,{format:'png',filename:base,scale:2});
+      // A fixed name, as structure-figure.png in the CIF generator.  Size
+      // from the figure's own layout (the page's density scaling applies to it).
+      await Plotly.downloadImage(tmp,{format:'png',filename:'1d-cut-figure',scale:2});
     }finally{ try{ Plotly.purge(tmp); }catch(_e){} tmp.remove(); }
   }
 
@@ -1380,11 +1251,9 @@ export function createConvolutionUI(deps){
   }
   function keepScan(){
     if(!scan) return;
-    // A colour stays with its curve when others are removed: take the first
-    // palette colour not in use.
-    const used=new Set(kept.map(k=>k.color));
-    const color=scan.color||PALETTE.find(c=>!used.has(c))||PALETTE[kept.length%PALETTE.length];
-    kept.push({...scan,method:scan.method||$('method')?.value||'',color});
+    // The colour chosen for the current curve, else the first palette colour
+    // not in use (a colour stays with its curve when others are removed).
+    kept.push({...scan,method:scan.method||$('method')?.value||'',color:scan.color||nextColor()});
     scan=null;
     refreshKept();
   }
@@ -1408,7 +1277,7 @@ export function createConvolutionUI(deps){
         const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=legendShown.has(c.id);
         cb.addEventListener('change',()=>{
           if(cb.checked) legendShown.add(c.id); else legendShown.delete(c.id);
-          try{ localStorage.setItem(LEGEND_KEY,JSON.stringify({shown:[...legendShown],known:LEGEND_COLS.map(c=>c.id)})); }catch(_e){}
+          saveLegendColumns(legendShown);
           refreshKept();
         });
         lab.append(cb,document.createTextNode(c.head));
@@ -1418,7 +1287,6 @@ export function createConvolutionUI(deps){
   }
   // The side panel doubles as the legend and the keep list.
   function refreshKept(){
-    kept.forEach((k,i)=>{ k.name=`#${i+1} ${k.label} (${k.method})`; });
     const curves=curveList();
     legendHead();
     const body=$('convCurveList');
@@ -1427,8 +1295,8 @@ export function createConvolutionUI(deps){
         const tr=document.createElement('tr');
         if(c.current) tr.className='convolution-curve-current';
         const td=()=>{ const cell=document.createElement('td'); tr.appendChild(cell); return cell; };
-        // Order: Keep / Remove (under Clear all), colour, CSV, then the
-        // legend columns (all three stay in view when the table scrolls).
+        // Columns: Keep / Remove (under Clear all), colour, CSV, then the
+        // legend (the first three stay in view when the table scrolls).
         // Keep (also next to Save CSV) for the current scan, Remove for kept ones.
         const act=td();
         const btn=document.createElement('button'); btn.type='button';
@@ -1453,9 +1321,9 @@ export function createConvolutionUI(deps){
       }));
     }
     $('convCurveEmpty').hidden=curves.length>0;
-    for(const [id,flag] of [['convCsvAll','selected']]){
-      const all=$(id); if(!all) continue;
-      const n=curves.filter(c=>c.k[flag]!==false).length;
+    const all=$('convCsvAll');
+    if(all){
+      const n=curves.filter(c=>c.k.selected!==false).length;
       all.checked=curves.length>0 && n===curves.length;
       all.indeterminate=n>0 && n<curves.length;
       all.disabled=!curves.length;
@@ -1463,8 +1331,7 @@ export function createConvolutionUI(deps){
     updateKeepButtons(); drawScan();
     if(!restoringResults) store1D();
   }
-  // File name: the dispersion file name + _conv_1d / _conv_2d.
-  // File name: the entry next to Save CSV, or (empty) the dispersion file
+  // Save CSV file name: the entry next to Save CSV, or (empty) the dispersion file
   // name + _conv_1d / _conv_2d, shown there as the placeholder.
   const autoBase=(src,kind)=>{
     const base=String(src||'').replace(/\.[^.]*$/,'').replace(/[^\w.+-]+/g,'_').replace(/^_+|_+$/g,'');
@@ -1544,6 +1411,10 @@ export function createConvolutionUI(deps){
     if(!rows.length) throw new Error('No data rows found.');
     const header=rows[0].some(t=>!Number.isFinite(Number(t))) ? rows.shift().map(t=>t.toLowerCase()) : null;
     const added=[];
+    // Comment lines of one curve: "# curve 1: …", "# settings curve 1: …",
+    // "# color curve 1: #rrggbb".
+    const curveLine=(key,tag)=>new RegExp(`^\\s*#\\s*${key}\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`);
+    const curveComment=(key,tag)=>{ const re=curveLine(key,tag); return comments.find(l=>re.test(l))||''; };
     if(header && header[0]==='curve' && header.includes('hw_mev')){
       const col=n=>header.indexOf(n);
       const [cH,cK,cL,cE,cI]=['h','k','l','hw_mev','i_arb'].map(col);
@@ -1553,15 +1424,15 @@ export function createConvolutionUI(deps){
         groups.get(tag).push(r);
       }
       for(const [tag,rs] of groups){
-        const meta=(comments.find(l=>new RegExp(`^\\s*#\\s*curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`).test(l))||'').replace(/^\s*#\s*curve\s+\S+:\s*/,'');
+        const meta=curveComment('curve',tag).replace(/^\s*#\s*curve\s+\S+:\s*/,'');
         const val=(r,c)=>c>=0 && r[c]!==undefined && r[c]!=='' ? Number(r[c]) : NaN;
         const pts=rs.map(r=>({hkl:[val(r,cH),val(r,cK),val(r,cL)],E:val(r,cE)}));
         const I=rs.map(r=>val(r,cI));
         if(/^data\s/.test(meta)) continue;
         const m=meta.match(/\((Cooper-Nathans|Popovici)\)\s*$/);
         const axis=scanAxis(pts);
-        const settings=readSettings(comments,new RegExp(`^\\s*#\\s*settings curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`));
-        const cm=(comments.find(l=>new RegExp(`^\\s*#\\s*color curve\\s+${tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}:`).test(l))||'').match(/#[0-9a-f]{6}\s*$/i);
+        const settings=readSettings(comments,curveLine('settings curve',tag));
+        const cm=curveComment('color curve',tag).match(/#[0-9a-f]{6}\s*$/i);
         added.push({color:cm ? cm[0].trim().toLowerCase() : '',axis,pts,I,label:(meta.replace(/\s*\((Cooper-Nathans|Popovici)\)\s*$/,'')||`${name} ${tag}`),method:m?.[1]||'',inputs:[0,1,2,3].map(j=>varText(pts,j)),settings});
       }
     }else throw new Error('Not a 1D CSV saved with Save CSV.');
@@ -1757,8 +1628,7 @@ export function createConvolutionUI(deps){
     $('convKeep1D')?.addEventListener('click',keepScan);
     $('convSaveFigure1D')?.addEventListener('click',()=>saveScanFigure().catch(err=>message('convMessage1D',`Save figure: ${err.message||err}`,true)));
     $('convClearKept1D')?.addEventListener('click',()=>{ kept.length=0; refreshKept(); });
-    for(const [id,flag] of [['convCsvAll','selected']])
-      $(id)?.addEventListener('change',()=>{ const on=$(id).checked; for(const c of curveList()) c.k[flag]=on; refreshKept(); });
+    $('convCsvAll')?.addEventListener('change',()=>{ const on=$('convCsvAll').checked; for(const c of curveList()) c.k.selected=on; refreshKept(); });
     // Draw the empty panel without overwriting the stored results before
     // restoreFile() has read them back.
     restoringResults=true; try{ refreshKept(); }finally{ restoringResults=false; }
