@@ -76,9 +76,9 @@ function createPropagationVectorRow(index,values={}){
   row.className="propagation-row";
   row.dataset.qIndex=String(index);
   row.innerHTML=`<label class="checkbox-label propagation-enable"><input id="q_enable${index}" type="checkbox"><span>k${index}</span></label>`+
-    `<label>k${index}_h<input id="q${index}_h" type="text" inputmode="text" value="0"></label>`+
-    `<label>k${index}_k<input id="q${index}_k" type="text" inputmode="text" value="0"></label>`+
-    `<label>k${index}_l<input id="q${index}_l" type="text" inputmode="text" value="0"></label>`+
+    `<label>k${index}_h<input id="q${index}_h" type="text" inputmode="text" data-fraction="" value="0"></label>`+
+    `<label>k${index}_k<input id="q${index}_k" type="text" inputmode="text" data-fraction="" value="0"></label>`+
+    `<label>k${index}_l<input id="q${index}_l" type="text" inputmode="text" data-fraction="" value="0"></label>`+
     `<button type="button" class="remove-propagation-vector" data-q-index="${index}">Remove</button>`;
   row.querySelector(`#q_enable${index}`).checked=values.enabled!==undefined ? !!values.enabled : true;
   for(const c of ["h","k","l"]){

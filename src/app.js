@@ -45,7 +45,7 @@ import {createGeometryTargets} from './geometry/geometry-targets.js';
 import {createGeometrySliders} from './geometry/geometry-sliders.js';
 import {createPowderGeometrySliders} from './geometry/powder-sliders.js';
 import {createConvolutionUI} from './convolution/convolution-ui.js';
-import {installGeometryNumericInputs} from './app/numeric-inputs.js';
+import {installGeometryNumericInputs, installNumericInputGuard} from './app/numeric-inputs.js';
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
 import {formatHKL, hklToQ, isAllowedByCentering, maxArray} from './core/hkl-utils.js';
 import {createAppBootstrap} from './app/bootstrap.js';
@@ -556,6 +556,7 @@ try{
 
 bindDynamicSidebarUI();
 installGeometryNumericInputs($,parseNumericValue);
+installNumericInputGuard(parseNumericValue);
 
 
 // The Constant E map energy and the Angle calculation hbar-omega are one value.

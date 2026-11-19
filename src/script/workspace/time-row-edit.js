@@ -30,7 +30,7 @@ export function installTimeRowEdit(ctx){
       </div>
       <div class="time-scan-cell time-target-cell"><select data-time-target aria-label="Target">${fn.targetOptions(normalized.target,normalized.operation)}</select></div>
       <div class="time-scan-cell"><div class="time-range-inputs" data-time-range-host></div></div>
-      <div class="time-scan-cell"><span class="time-mcu-entry"><input type="text" inputmode="numeric" data-time-mcu value="${initialMcu}" placeholder="0"></span></div>
+      <div class="time-scan-cell"><span class="time-mcu-entry"><input type="text" inputmode="numeric" data-numeric="int" data-time-mcu value="${initialMcu}" placeholder="0"></span></div>
       <div class="time-scan-cell time-fix-cell"><input type="checkbox" data-time-fix aria-label="Fix time for this command"></div>`;
     const before=options?.before;
     if(before && before.parentElement===host) host.insertBefore(row,before); else host.appendChild(row);

@@ -187,7 +187,7 @@
 <label class="checkbox-label"><input checked="" id="showPropagation" type="checkbox"/><span>show</span></label>
 <input id="propagationCount" type="hidden" value="1"/>
 <div class="propagation-vectors" id="propagationVectors">
-<div class="propagation-row" data-q-index="1"><label class="checkbox-label propagation-enable"><input checked="" id="q_enable1" type="checkbox"/><span>k1</span></label><label>k1_h<input id="q1_h" inputmode="text" type="text" value="0"/></label><label>k1_k<input id="q1_k" inputmode="text" type="text" value="0"/></label><label>k1_l<input id="q1_l" inputmode="text" type="text" value="0"/></label><button class="remove-propagation-vector" data-q-index="1" type="button">Remove</button></div>
+<div class="propagation-row" data-q-index="1"><label class="checkbox-label propagation-enable"><input checked="" id="q_enable1" type="checkbox"/><span>k1</span></label><label>k1_h<input id="q1_h" data-fraction="" inputmode="text" type="text" value="0"/></label><label>k1_k<input id="q1_k" data-fraction="" inputmode="text" type="text" value="0"/></label><label>k1_l<input id="q1_l" data-fraction="" inputmode="text" type="text" value="0"/></label><button class="remove-propagation-vector" data-q-index="1" type="button">Remove</button></div>
 </div>
 <button class="dynamic-add-wide" id="addPropagationVector" type="button">+ Add propagation vector</button>
 <h3>Background scattering</h3>
@@ -252,7 +252,7 @@
     <button id="qePathPickToggle" class="qe-path-pick" type="button" aria-pressed="false">Select Path</button>
     <button id="qePathUndo" type="button" disabled>Undo</button>
     <button id="qePathClear" type="button" disabled>Clear</button>
-    <label class="qe-path-snap-label" for="qePathSnap">Snap 1/<input id="qePathSnap" type="text" inputmode="numeric" value="" placeholder="free" data-no-persist="" aria-label="Snap Q path points and the dragged Angle-calculation target to multiples of 1/n of U and V (empty = free)" title="Snap to multiples of 1/n of U and V. Default: 1/6 for hexagonal/trigonal (60° or 120°) lattices, otherwise 1/4. Clear the box (or enter 0) for free positioning."/></label>
+    <label class="qe-path-snap-label" for="qePathSnap">Snap 1/<input data-numeric="int" id="qePathSnap" type="text" inputmode="numeric" value="" placeholder="free" data-no-persist="" aria-label="Snap Q path points and the dragged Angle-calculation target to multiples of 1/n of U and V (empty = free)" title="Snap to multiples of 1/n of U and V. Default: 1/6 for hexagonal/trigonal (60° or 120°) lattices, otherwise 1/4. Clear the box (or enter 0) for free positioning."/></label>
   </div>
 </div>
 <div class="qe-vector-path-input qe-constant-path-input">
@@ -346,14 +346,14 @@
 <span class="time-datetime-title">Scan start</span>
 <span class="time-datetime-entry">
 <input aria-label="Scan start date" id="timeEstimateStartDate" type="date"/>
-<span class="time-clock-entry"><input aria-label="Scan start hour" id="timeEstimateStartHour" inputmode="numeric" maxlength="2" placeholder="HH" type="text"/><span>:</span><input aria-label="Scan start minute" id="timeEstimateStartMinute" inputmode="numeric" maxlength="2" placeholder="MM" type="text"/></span>
+<span class="time-clock-entry"><input data-numeric="int" aria-label="Scan start hour" id="timeEstimateStartHour" inputmode="numeric" maxlength="2" placeholder="HH" type="text"/><span>:</span><input data-numeric="int" aria-label="Scan start minute" id="timeEstimateStartMinute" inputmode="numeric" maxlength="2" placeholder="MM" type="text"/></span>
 </span>
 </label>
 <label class="time-datetime-label time-finish-row">
 <span class="time-datetime-title">Scan finish</span>
 <span class="time-datetime-entry">
 <input aria-label="Scan finish date" id="timeEstimateEndDate" type="date"/>
-<span class="time-clock-entry"><input aria-label="Scan finish hour" id="timeEstimateEndHour" inputmode="numeric" maxlength="2" placeholder="HH" type="text"/><span>:</span><input aria-label="Scan finish minute" id="timeEstimateEndMinute" inputmode="numeric" maxlength="2" placeholder="MM" type="text"/></span>
+<span class="time-clock-entry"><input data-numeric="int" aria-label="Scan finish hour" id="timeEstimateEndHour" inputmode="numeric" maxlength="2" placeholder="HH" type="text"/><span>:</span><input data-numeric="int" aria-label="Scan finish minute" id="timeEstimateEndMinute" inputmode="numeric" maxlength="2" placeholder="MM" type="text"/></span>
 </span>
 </label>
 </div>
@@ -595,7 +595,7 @@
 </select>
 </label>
 <label>X-ray wavelength (Å)<input id="s2ConvXrayLambda" min="0" step="0.000001" type="number" value="1.540593"/></label>
-<label>Observed X-ray S2 (deg)<input id="s2ConvXrayS2" inputmode="decimal" placeholder="e.g. 20 35.5 60" type="text" value="60"/></label>
+<label>Observed X-ray S2 (deg)<input data-numeric="list" id="s2ConvXrayS2" inputmode="decimal" placeholder="e.g. 20 35.5 60" type="text" value="60"/></label>
 <label>Neutron wavelength (Å)<input id="s2ConvNeutronLambda" readonly="" type="text"/></label>
 <label>Neutron S2 (deg)<input id="s2ConvNeutronS2" readonly="" type="text"/></label>
 <label>d (Å)<input id="s2ConvD" readonly="" type="text"/></label>
@@ -780,9 +780,9 @@
 <div class="structure-config-panel" data-structure-config-panel="spins" hidden="">
 <div class="structure-moment-axis-row structure-spin-mode-row">
 <div class="structure-entry-field structure-k1-field"><span class="structure-entry-label">Propagation vector</span><div class="structure-k1-fields">
-<input id="cifMomentK1H" type="text" inputmode="text" value="0" placeholder="k1_h" title="k1_h (r.l.u.)" aria-label="k1_h">
-<input id="cifMomentK1K" type="text" inputmode="text" value="0" placeholder="k1_k" title="k1_k (r.l.u.)" aria-label="k1_k">
-<input id="cifMomentK1L" type="text" inputmode="text" value="0" placeholder="k1_l" title="k1_l (r.l.u.)" aria-label="k1_l">
+<input id="cifMomentK1H" type="text" inputmode="text" data-fraction="" value="0" placeholder="k1_h" title="k1_h (r.l.u.)" aria-label="k1_h">
+<input id="cifMomentK1K" type="text" inputmode="text" data-fraction="" value="0" placeholder="k1_k" title="k1_k (r.l.u.)" aria-label="k1_k">
+<input id="cifMomentK1L" type="text" inputmode="text" data-fraction="" value="0" placeholder="k1_l" title="k1_l (r.l.u.)" aria-label="k1_l">
 </div><select id="cifMomentPropagationVector" class="structure-propagation-legacy-select" tabindex="-1" aria-hidden="true"></select></div>
 <label class="structure-entry-field"><span class="structure-entry-label">Structure type</span><select id="cifMomentStructureType">
 <option selected="" value="collinear">Collinear</option><option value="helical">Helical</option><option value="sinusoidal">Sinusoidal</option><option value="incommensurate">Incommensurate</option>
