@@ -73,31 +73,55 @@ export function createDispersionInterpolator(data){
       const base=at(ii,jj,kk);
       for(let b=0;b<nB;b++){ E[base+b]=p.E[b]; I[base+b]=p.I[b]; }
     }
-    // Locate x on an axis: index of the lower node and the fraction.
-    const locate=(a,x,isFlat)=>{
-      if(isFlat) return [0,0];
-      const m=a.length, eps=1e-9;
-      if(x<a[0]-eps || x>a[m-1]+eps) return null;
-      let lo=0, hi=m-1;
-      while(hi-lo>1){ const mid=(lo+hi)>>1; if(a[mid]<=x) lo=mid; else hi=mid; }
-      const t=Math.min(1,Math.max(0,(x-a[lo])/(a[hi]-a[lo])));
-      return [lo,t];
+    // Locate x on an axis: index of the lower node and the fraction (written
+    // to loIdx / loT, no allocation per call).  An evenly spaced axis gets
+    // the cell from one division, a non-uniform one by bisection; either way
+    // the cell is the one bisection gives (a[lo] <= x < a[lo+1]), so both
+    // give identical numbers.
+    const uniform=axes.map(a=>{
+      const m=a.length;
+      if(m<3) return m===2;
+      const step=(a[m-1]-a[0])/(m-1);
+      return a.every((v,i)=>Math.abs(v-(a[0]+i*step))<=1e-6+1e-9*Math.abs(v));
+    });
+    const inv=axes.map(a=>a.length>1 ? (a.length-1)/(a[a.length-1]-a[0]) : 0);
+    const loIdx=new Int32Array(3), loT=new Float64Array(3);
+    const locate=(ax,x)=>{
+      if(flat[ax]){ loIdx[ax]=0; loT[ax]=0; return true; }
+      const a=axes[ax], m=a.length, eps=1e-9;
+      if(!(x>=a[0]-eps && x<=a[m-1]+eps)) return false;
+      let lo, hi;
+      if(uniform[ax]){
+        lo=Math.floor((x-a[0])*inv[ax]);
+        if(lo<0) lo=0; else if(lo>m-2) lo=m-2;
+        // Rounding of the division can land one cell off: correct it.
+        while(lo<m-2 && a[lo+1]<=x) lo++;
+        while(lo>0 && a[lo]>x) lo--;
+        hi=lo+1;
+      }else{
+        lo=0; hi=m-1;
+        while(hi-lo>1){ const mid=(lo+hi)>>1; if(a[mid]<=x) lo=mid; else hi=mid; }
+      }
+      const t=(x-a[lo])/(a[hi]-a[lo]);
+      loIdx[ax]=lo; loT[ax]=t<0 ? 0 : t>1 ? 1 : t;
+      return true;
     };
-    const outE=new Float64Array(nB), outI=new Float64Array(nB);
+    // The result arrays (and object) are reused: callers copy what they keep.
+    const outE=new Float64Array(nB), outI=new Float64Array(nB), result={E:outE,I:outI};
     function evaluate(h,k,l){
-      const lh=locate(axes[0],h,flat[0]), lk=locate(axes[1],k,flat[1]), ll=locate(axes[2],l,flat[2]);
-      if(!lh || !lk || !ll) return null;
+      if(!locate(0,h) || !locate(1,k) || !locate(2,l)) return null;
+      const i0=loIdx[0], j0=loIdx[1], k0=loIdx[2], th=loT[0], tk=loT[1], tl=loT[2];
       outE.fill(0); outI.fill(0);
       let bad=false;
       for(let di=0;di<2;di++){
-        const wi=di?lh[1]:1-lh[1]; if(!wi) continue;
-        const i=Math.min(lh[0]+di,n[0]-1);
+        const wi=di?th:1-th; if(!wi) continue;
+        const i=Math.min(i0+di,n[0]-1);
         for(let dj=0;dj<2;dj++){
-          const wj=dj?lk[1]:1-lk[1]; if(!wj) continue;
-          const j=Math.min(lk[0]+dj,n[1]-1);
+          const wj=dj?tk:1-tk; if(!wj) continue;
+          const j=Math.min(j0+dj,n[1]-1);
           for(let dk=0;dk<2;dk++){
-            const wk=dk?ll[1]:1-ll[1]; if(!wk) continue;
-            const k2=Math.min(ll[0]+dk,n[2]-1);
+            const wk=dk?tl:1-tl; if(!wk) continue;
+            const k2=Math.min(k0+dk,n[2]-1);
             const w=wi*wj*wk, base=at(i,j,k2);
             for(let b=0;b<nB;b++){
               const e=E[base+b];
@@ -107,7 +131,7 @@ export function createDispersionInterpolator(data){
           }
         }
       }
-      return bad ? null : {E:outE,I:outI};
+      return bad ? null : result;
     }
     return {evaluate,grid:true,axes,n,ranges,flat,nBranch:nB};
   }
@@ -251,35 +275,45 @@ function localFrame(hkl0,res,opts){
 // to the grid edge (3.5 σ) along that axis.  The point is far when, for
 // every branch with intensity, |x − E0| at the centre exceeds that reach
 // plus 6 σ_E (about 2.5 FWHM in energy).  Not for the phonon model.
+// Work buffers reused from call to call (a worker or the page runs one
+// point at a time), so a map does not allocate new arrays per point.
+const scratch={};
+function buffer(name,size){
+  const buf=scratch[name];
+  if(buf && buf.length>=size) return buf;
+  return (scratch[name]=new Float64Array(Math.max(size,buf ? 2*buf.length : 0)));
+}
 function farFromDispersion(hkl0,E0,F,interp){
   const {L,m,mEE,varE,col}=F, nB=interp.nBranch, sd=Math.sqrt(varE);
-  const at=z=>{
-    const d0=L[0][0]*z[0], d1=L[1][0]*z[0]+L[1][1]*z[1], d2=L[2][0]*z[0]+L[2][1]*z[1]+L[2][2]*z[2];
+  // Samples: 0 = centre, then ±1, ±2 σ along each axis (13 in all).  For each
+  // sample: x = E_b − μ and I_b per branch.
+  const XS=buffer('farX',13*nB), IS=buffer('farI',13*nB);
+  const at=(s,z0,z1,z2)=>{
+    const d0=L[0][0]*z0, d1=L[1][0]*z0+L[1][1]*z1, d2=L[2][0]*z0+L[2][1]*z1+L[2][2]*z2;
     const v=interp.evaluate(hkl0[0]+col[0][0]*d0+col[1][0]*d1+col[2][0]*d2,
                             hkl0[1]+col[0][1]*d0+col[1][1]*d1+col[2][1]*d2,
                             hkl0[2]+col[0][2]*d0+col[1][2]*d1+col[2][2]*d2);
-    // evaluate() reuses its arrays: copy.
-    return v ? {E:Float64Array.from(v.E),I:Float64Array.from(v.I),mu:-(m[0]*d0+m[1]*d1+m[2]*d2)/mEE} : null;
+    if(!v) return false;
+    const mu=-(m[0]*d0+m[1]*d1+m[2]*d2)/mEE;
+    for(let b=0;b<nB;b++){ XS[s*nB+b]=v.E[b]-mu; IS[s*nB+b]=v.I[b]; }
+    return true;
   };
-  const c=at([0,0,0]);
-  if(!c) return false;
-  // Cheap first test at the centre only.
-  for(let b=0;b<nB;b++) if(c.I[b] && !(Math.abs(c.E[b]-E0)>6*sd)) return false;
-  const side=[];
+  if(!at(0,0,0,0)) return false;
+  // Cheap first test at the centre only (μ = 0 there, so x = E_b).
+  for(let b=0;b<nB;b++) if(IS[b] && !(Math.abs(XS[b]-E0)>6*sd)) return false;
+  let s=1;
   for(let a=0;a<3;a++) for(const t of [1,-1,2,-2]){
-    const z=[0,0,0]; z[a]=t; const p=at(z);
-    if(!p) return false;
-    side.push(p);
+    if(!at(s++,a===0?t:0,a===1?t:0,a===2?t:0)) return false;
   }
   for(let b=0;b<nB;b++){
-    const all=[c,...side];
-    if(!all.some(p=>p.I[b])) continue;               // no intensity on this branch here
-    const x=all.map(p=>p.E[b]-p.mu);
-    if(!x.every(Number.isFinite)) return false;
-    const x0=x[0];
+    let any=false, finite=true;
+    for(let q=0;q<13;q++){ if(IS[q*nB+b]) any=true; if(!Number.isFinite(XS[q*nB+b])) finite=false; }
+    if(!any) continue;                               // no intensity on this branch here
+    if(!finite) return false;
+    const x=q=>XS[q*nB+b], x0=x(0);
     let r2=0;
     for(let a=0;a<3;a++){
-      const [p1,m1,p2,m2]=x.slice(1+4*a,5+4*a);
+      const p1=x(1+4*a), m1=x(2+4*a), p2=x(3+4*a), m2=x(4+4*a);
       const g=Math.max(Math.abs(p1-m1)/2,Math.abs(p2-m2)/4);
       const k=Math.max(Math.abs(p1+m1-2*x0)/2,Math.abs(p2+m2-2*x0)/8);
       const reach=3.5*g+12.25*k;
@@ -305,7 +339,7 @@ export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
   // Quick exit: no branch comes near E0 inside the ellipsoid.
   if(!phonon && opts.skip!==false && farFromDispersion(hkl0,E0,F,interp)) return {intensity:0,outside:0};
   // Pass 1: E_b − μ (and I_b) at every node.
-  const X=new Float64Array(N*nB).fill(NaN), Iw=new Float64Array(N*nB), MU=new Float64Array(N);
+  const X=buffer('gridX',N*nB).fill(NaN,0,N*nB), Iw=buffer('gridI',N*nB).fill(0,0,N*nB), MU=buffer('gridMU',N);
   let outside=0;
   for(let s=0;s<N;s++){
     const z0=samples[3*s], z1=samples[3*s+1], z2=samples[3*s+2];
