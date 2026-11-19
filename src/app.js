@@ -192,7 +192,8 @@ const {
   getSingleCache:()=>singleCache, setSingleCache:(value)=>{ singleCache=value; },
   getPowderCache:()=>powderCache, setPowderCache:(value)=>{ powderCache=value; },
   targetHWMapIndex:(...args)=>targetHWMapIndex(...args),
-  syncQEPathSnapDefault:(...args)=>syncQEPathSnapDefault(...args)
+  syncQEPathSnapDefault:(...args)=>syncQEPathSnapDefault(...args),
+  updateBraggPeakCheck:()=>updateBraggPeakCheck()
 });
 
 const {
@@ -311,6 +312,7 @@ function updateOrientationReferenceUI(){
 // Reuse the same reciprocal-space plane test already used by Time estimate;
 // this does not alter TAS/Q-E/Resolution/Dark-angle calculations.
 function updateBraggOrientationPlaneWarning(){
+  updateBraggPeakCheck();
   const box=$('braggPlaneWarning');
   if(!box) return;
   const mode=$('orientationReference')?.value || 'bragg';
@@ -330,6 +332,67 @@ function updateBraggOrientationPlaneWarning(){
   box.textContent=result.error
     ? `Warning: ${result.error}`
     : `Warning: Bragg peak (${hkl.map(v=>Number(v.toPrecision(6))).join(', ')}) is outside the current U-V scattering plane.`;
+}
+
+// Sample orientation > Bragg peak position: peak 1 sets the orientation;
+// peak 2 is only checked.  Its S1 calculated with the current U, V (elastic,
+// as Angle calculation shows it; φ on a four-circle instrument) is compared
+// with the observed one.  About 180° apart means the U-V plane is mirrored
+// (e.g. (0,-1,0) was used as (0,1,0) when the UB matrix was made): swapping
+// U and V fixes it.  Nothing is changed automatically.
+const BRAGG_CHECK_TOL=5;   // deg: "agrees" and "about 180° apart"
+function updateBraggPeakCheck(){
+  const box=$('braggCheckMessage');
+  if(!box) return;
+  const show=(text,state='')=>{ box.textContent=text; if(state) box.dataset.state=state; else delete box.dataset.state; };
+  const s1Box=$('refs1');
+  if(s1Box) s1Box.placeholder='';
+  if(($('orientationReference')?.value || 'bragg')!=='bragg' || checkedValue('sampleMode')!=='single') return show('');
+  const elasticAngles=hkl=>{
+    const energyMode=$('energyMode')?.value, E=num('energy');
+    const cache=singleCache || {energyMode,Ei:E,Ef:E};
+    return qeGeometryAngles(cache,null,null,{h:hkl[0],k:hkl[1],l:hkl[2],hw:0}).angles;
+  };
+  if(String(s1Box?.value??'').trim()===''){
+    // Show (in grey) the S1 at which peak 1 sits with ki ⟂ U, the
+    // orientation used while the box is empty.
+    try{
+      const a=elasticAngles([num('refh'),num('refk'),num('refl')]);
+      const v=Number(currentInstrument()?.instrument_type==='four-circle' && a.fourCircle ? a.fourCircle.phi : a.s1);
+      if(Number.isFinite(v)) s1Box.placeholder=v.toFixed(2);
+    }catch(_e){}
+    return show('Peak 1 S1 empty: ki ⟂ U used','info');
+  }
+  const raw=['refh2','refk2','refl2','refs12'].map(id=>String($(id)?.value??'').trim());
+  if(raw.some(v=>v==='')) return show('');
+  const hkl=[num('refh2'),num('refk2'),num('refl2')], observed=num('refs12');
+  if(![...hkl,observed].every(Number.isFinite)) return show('');
+  const plane=hklInCurrentScatteringPlane(hkl);
+  if(!plane.ok) return show('Peak 2 is out of the U-V plane','warn');
+  let predicted=NaN, fourCircle=false;
+  try{
+    const a=elasticAngles(hkl);
+    fourCircle=currentInstrument()?.instrument_type==='four-circle' && !!a.fourCircle;
+    predicted=Number(fourCircle ? a.fourCircle.phi : a.s1);
+  }catch(_e){}
+  if(!Number.isFinite(predicted)) return show('Peak 2 cannot be reached','warn');
+  const diff=((observed-predicted)%360+540)%360-180, off=Math.abs(diff);
+  const name=fourCircle ? 'φ' : 'S1';
+  if(off<=BRAGG_CHECK_TOL) return show(`Peak 2 OK (Δ${name} = ${diff.toFixed(1)}°)`,'ok');
+  if(off>=180-BRAGG_CHECK_TOL) return show('Peak 2 off by 180°: flip U and V','warn');
+  return show(`Peak 2 off by ${off.toFixed(1)}°: check hkl or lattice`,'warn');
+}
+// Reset for a new experiment: peak 1 = U, peak 2 = V, both S1 empty (the
+// orientation is ki ⟂ U until the S1 of peak 1 is entered).
+function resetBraggPeaks(){
+  const U=['Uh','Uk','Ul'].map(id=>$(id)?.value??'0'), V=['Vh','Vk','Vl'].map(id=>$(id)?.value??'0');
+  const values={refh:U[0],refk:U[1],refl:U[2],refs1:'',refh2:V[0],refk2:V[1],refl2:V[2],refs12:''};
+  for(const [id,value] of Object.entries(values)){
+    const el=$(id); if(!el) continue;
+    el.value=value; el.dataset.lastValid=value;
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  updateBraggOrientationPlaneWarning();
 }
 
 function applyDarkAngleSlotColors(){
@@ -664,7 +727,9 @@ document.querySelectorAll("input,select").forEach(el=>{
     "scanSlider",
     // Display frame of the Resolution results: redraws, no recalculation.
     "resolutionCoordinates","resolutionUVView",
-    'qeVectorHKLPath','qePathHKLConstant','qePathSnap'
+    'qeVectorHKLPath','qePathHKLConstant','qePathSnap',
+    // Peak 2 of the Bragg-peak orientation is only checked (no recalculation).
+    'refh2','refk2','refl2','refs12'
   ].includes(el.id)) return;
 
   el.addEventListener("input",scheduleRecalc);
@@ -929,7 +994,7 @@ const {
   syncPowderLinkedInputs:(...args)=>syncPowderLinkedInputs(...args), syncQEPathSnapDefault,
   syncSfColorMaxControl:(...args)=>syncSfColorMaxControl(...args), syncSidebarCrystalSelectors,
   updateAutoW:(...args)=>updateAutoW(...args), updateBackgroundSelectAvailability,
-  updateBraggOrientationPlaneWarning, updateCalcMode:(...args)=>updateCalcMode(...args),
+  updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode:(...args)=>updateCalcMode(...args),
   updateCifUI:(...args)=>updateCifUI(...args), updateDarkReferenceUI, updateEnergyLabel,
   updateGeometryQuickTargetButtons, updateModeVisibility, updateOrientationReferenceUI,
   updatePropagationVectorLabels:(...args)=>updatePropagationVectorLabels(...args),

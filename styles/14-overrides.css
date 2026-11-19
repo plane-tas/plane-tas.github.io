@@ -1065,3 +1065,14 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Colour scale of the 2D maps, at the end of the Show row. */
 .convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
 .convolution-zrange input{width:calc(110px * var(--tas-density))}
+
+/* Sample orientation > Bragg peak position: peak 2 (check only) and the
+   Reset / check-message row.  The message always fits on one line. */
+.bragg-check-caption{margin-top:calc(6px * var(--tas-density))}
+.bragg-check-row{margin-top:calc(2px * var(--tas-density))}
+.bragg-check-row > input{width:100%;max-width:none;min-width:0}
+.bragg-reset-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density));margin-top:calc(6px * var(--tas-density))}
+.bragg-reset-row > button{flex:none}
+.bragg-check-message{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
+.bragg-check-message[data-state="ok"]{color:#2a7a2a}
+.bragg-check-message[data-state="warn"]{color:#b4441f}

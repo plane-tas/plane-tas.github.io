@@ -10,7 +10,11 @@ export function createTasAngleCalculation(deps){
 
 function canonicalOrientationMode(rl, rawMode=null){
   const mode=rawMode ?? ($('orientationReference')?.value || 'bragg');
-  if(mode==='bragg' || mode==='perpU' || mode==='perpV') return mode;
+  // Bragg peak position whose S1 is still empty (e.g. right after Reset):
+  // every calculation uses the standard orientation ki ⟂ U until an S1 is
+  // entered.
+  if(mode==='bragg') return String($('refs1')?.value??'').trim()==='' ? 'perpU' : 'bragg';
+  if(mode==='perpU' || mode==='perpV') return mode;
   if(mode!=='parallelU' && mode!=='parallelV') return mode;
 
   const U=[num('Uh'),num('Uk'),num('Ul')];

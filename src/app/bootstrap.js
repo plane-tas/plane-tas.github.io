@@ -43,7 +43,7 @@ export function createAppBootstrap(deps){
     setBackgroundCount, setDarkAssetCount, setGeometryTargetHKL, setPowderLinkDriver,
     setPropagationVectorCount, setQEMapTab, setTargetHWFromMap, syncGeometryTargetToOrientationReference,
     syncPowderLinkedInputs, syncQEPathSnapDefault, syncSfColorMaxControl, syncSidebarCrystalSelectors,
-    updateAutoW, updateBackgroundSelectAvailability, updateBraggOrientationPlaneWarning, updateCalcMode,
+    updateAutoW, updateBackgroundSelectAvailability, updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode,
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
@@ -246,10 +246,11 @@ async function initialize(){
   updateResolutionPlaneWarning();
   for(const id of ['a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl']) $(id).addEventListener('input',updateAutoW);
   // Keep the Bragg-reference plane warning live as lattice/plane/HKL inputs change.
-  for(const id of ['a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','refh','refk','refl']){
+  for(const id of ['a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','refh','refk','refl','refs1','refh2','refk2','refl2','refs12']){
     $(id)?.addEventListener('input',updateBraggOrientationPlaneWarning);
     $(id)?.addEventListener('change',updateBraggOrientationPlaneWarning);
   }
+  $('braggReset')?.addEventListener('click',resetBraggPeaks);
   $('flipUV')?.addEventListener('click',flipScatteringPlaneUV);
   updateOrientationReferenceUI(); applyDarkAngleSlotColors(); updateGeometryQuickTargetButtons();
   $('orientationReference')?.addEventListener('change',()=>{

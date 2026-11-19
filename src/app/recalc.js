@@ -5,7 +5,8 @@ export function createRecalc(deps){
     $, calculatePowder, calculateSingleCrystal, checkedValue, clearError, clearResolutionResults,
     doSingleResolution, instrumentIsDiffractometer, renderGeometry, renderSingle, showError, updateAutoW,
     updateEnergyLabel, updateModeVisibility, updateResolutionPlaneWarning, updateS2MaxDisplay,
-    getPowderCache, getSingleCache, setPowderCache, setSingleCache, targetHWMapIndex, syncQEPathSnapDefault
+    getPowderCache, getSingleCache, setPowderCache, setSingleCache, targetHWMapIndex, syncQEPathSnapDefault,
+    updateBraggPeakCheck
   }=deps;
 
 let timer=null;
@@ -20,6 +21,12 @@ function markResolutionScanDirty(){
   if(btn) btn.classList.add("needs-calc");
 }
 function runScheduledRecalc(){
+  try{ runScheduledRecalcNow(); }
+  // Energy, instrument and convention changes also move the peak-2 S1:
+  // checked after the recalculation, with its energies.
+  finally{ try{ updateBraggPeakCheck?.(); }catch(_e){} }
+}
+function runScheduledRecalcNow(){
   timer=null;
   // Resolution Single is inexpensive enough to update automatically, but only
   // while its panel is actually visible.  Resolution Scan stays explicit via
