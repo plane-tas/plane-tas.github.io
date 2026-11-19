@@ -7,7 +7,7 @@
 // file card (kf³ cot A1 at least).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize, dispersionAlong} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
-import {createEngine, initialLattice, newNodes, refineLattice, roughCells, LATTICE_MAX_NODES} from './convolution-lattice.js';
+import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
 const ROW_HEIGHT=22;
 const NOTE='kf³ cot A1 is always applied; for Ef fixed it is a constant and does not matter.';
@@ -327,12 +327,12 @@ export function createConvolutionUI(deps){
       return res;
     }catch(_e){ return null; }
   }
-  // integ: {mode:'mc',samples} or {mode:'grid',grid,slope} (see integrationFor).
+  // integ: {mode:'mc',samples} or {mode:'grid',grid} (see integrationFor).
   function intensityAt(base,hkl,E,integ,cache,stats,resIn){
     const res=resIn===undefined ? resolutionAt(base,hkl,E,cache) : resIn;
     if(!res){ stats.unreachable++; return NaN; }
     const r=integ.mode==='grid'
-      ? convolvePointGrid(hkl,E,res,interp,integ.grid,{model:'given',slope:integ.slope})
+      ? convolvePointGrid(hkl,E,res,interp,integ.grid,{model:'given'})
       : convolvePoint(hkl,E,res,interp,integ.samples,{model:'given'});
     stats.outside=Math.max(stats.outside,r.outside);
     return r.intensity*prefactor(res);
@@ -362,15 +362,17 @@ export function createConvolutionUI(deps){
     }
   }
   function gridSizeFor(dim,points){
-    const n=[1,1,1]; let slope=0;
+    const n=[1,1,1]; let sized=0;
     for(const {hkl,E,res} of points){
       if(!res) continue;
       const a=autoGridSize(hkl,E,res,interp,{budget:Infinity});
       for(let i=0;i<3;i++) n[i]=Math.max(n[i],a.n[i]);
-      slope=Math.max(slope,a.slope);
+      sized++;
     }
-    return {n:withinBudget(dim,n),slope};
+    return withinBudget(dim,sized ? n : DEFAULT_GRID);
   }
+  // Grid size when no resolution point could be checked.
+  const DEFAULT_GRID=[11,11,11];
   function withinBudget(dim,n){
     n=[...n];
     while(n[0]*n[1]*n[2]>GRID_BUDGET[dim]){
@@ -382,8 +384,7 @@ export function createConvolutionUI(deps){
   }
   function integrationFor(dim,points){
     if(integrationMode(dim)==='mc') return {mode:'mc',samples:samplesFrom(`convSamples${dim}`,dim==='2D' ? 300 : 2000)};
-    const {n,slope}=gridSizeFor(dim,points);
-    return {mode:'grid',grid:gaussianGrid(n),slope};
+    return {mode:'grid',grid:gaussianGrid(gridSizeFor(dim,points))};
   }
   const grid=(lo,hi,step,cap)=>{
     const n=step>0 ? Math.min(cap,Math.max(2,Math.round((hi-lo)/step)+1)) : 1;
@@ -413,8 +414,8 @@ export function createConvolutionUI(deps){
   const insideBox=(hkl,rg)=>['H','K','L'].every((n,i)=>hkl[i]>=rg[n].min-1e-6-rg[n].bin/2 && hkl[i]<=rg[n].max+1e-6+rg[n].bin/2);
 
   // --------------------------------------------------------------- 2D -----
-  // The (U, V, ħω) grid of the 2D calculation and the coarse grid of
-  // resolution nodes (shared with the time estimate).
+  // The (U, V, ħω) grid of the 2D calculation and the expected number of
+  // resolution matrices (shared with the time estimate).
   function prepare2D(){
     if(!interp) throw new Error('Load a dispersion file first.');
     const base=collectResolutionBase(), rg=ranges(), plane=planeBasis(base);
@@ -571,7 +572,7 @@ export function createConvolutionUI(deps){
   // A 2D map in two phases.  1: resolution matrices on the lattice of nodes,
   // refined round by round where they change too much (and the automatic
   // grid size from the nodes inside the range).  2: the points, a piece of a
-  // row per job.
+  // row per job (see convolution-lattice.js for how a point gets its matrix).
   async function run2DOn(id,R,P){
     const {base,rg,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
     const gridMode=integrationMode('2D')==='grid';
@@ -596,7 +597,8 @@ export function createConvolutionUI(deps){
 
     // Phase 1
     const key=(a,b,e)=>`${a},${b},${e}`, store=new Map(), cov=new Map();
-    let n=[1,1,1], slope=0, doneNodes=0;
+    const covOf=L=>newNodes(L,null).map(p=>cov.get(key(p.a,p.b,p.e)));
+    let n=[1,1,1], sized=0, doneNodes=0;
     for(let round=0;round<10;round++){
       const fresh=newNodes(lat,old).filter(p=>!store.has(key(p.a,p.b,p.e)));
       const chunk=Math.max(1,Math.min(64,Math.ceil(fresh.length/(4*R.size))));
@@ -609,26 +611,25 @@ export function createConvolutionUI(deps){
         m.out.forEach((o,i)=>{
           const p=job.part[i], k=key(p.a,p.b,p.e);
           store.set(k,o.r);
-          let c=null; if(o.r){ try{ c=inverse(o.r.RM); }catch(_e){} }
-          cov.set(k,c);
-          if(o.n){ for(let d=0;d<3;d++) n[d]=Math.max(n[d],o.n[d]); slope=Math.max(slope,o.slope); }
+          cov.set(k,covariance(o.r));
+          if(o.n){ for(let d=0;d<3;d++) n[d]=Math.max(n[d],o.n[d]); sized++; }
         });
         doneNodes+=job.part.length;
         show(shareA*Math.min(1,doneNodes/estNodes));
       });
       if(id!==run2D) return null;
-      const all=newNodes(lat,null);
-      const next=refineLattice(lat,all.map(p=>cov.get(key(p.a,p.b,p.e))),bins,LATTICE_MAX_NODES);
+      const next=refineLattice(lat,covOf(lat),bins,LATTICE_MAX_NODES);
       if(!next) break;
       old=lat; lat=next;
     }
+    const covOfFinal=covOf(lat);
     const res=newNodes(lat,null).map(p=>store.get(key(p.a,p.b,p.e))||null);
     const first=res.find(Boolean);
     if(!first) throw new Error('No point of the map can be reached with this instrument setting.');
     const integ=gridMode
-      ? {mode:'grid',n:withinBudget('2D',n),slope}
+      ? {mode:'grid',n:withinBudget('2D',sized ? n : DEFAULT_GRID)}
       : {mode:'mc',samples:Math.min(20000,Math.max(50,Math.round(num('convSamples2D')||300)))};
-    R.broadcast({type:'setup',lattice:{a:lat.a,b:lat.b,e:lat.e,res,rough:roughCells(lat,newNodes(lat,null).map(p=>cov.get(key(p.a,p.b,p.e))))},UB:first.UB,UBinv:inverse(first.UB),integ,E});
+    R.broadcast({type:'setup',lattice:{a:lat.a,b:lat.b,e:lat.e,res,rough:roughCells(lat,covOfFinal)},UB:first.UB,UBinv:inverse(first.UB),integ,E});
 
     // Phase 2
     const I=new Float64Array(nA*Bv.length*nE).fill(NaN);
@@ -956,7 +957,7 @@ export function createConvolutionUI(deps){
         const hkl=g.plane.hkl(a,bb);
         if(insideBox(hkl,g.rg)) pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
       }
-      n=gridSizeFor('2D',pts).n;
+      n=gridSizeFor('2D',pts);
       // Points far from the dispersion are skipped after a quick check: the
       // full cost applies to the fraction near it (sampled on a coarse
       // subset of the map).
@@ -981,7 +982,7 @@ export function createConvolutionUI(deps){
     else{
       const base=collectResolutionBase(), m=sc.pts.length-1;
       const pts=[0,0.25,0.5,0.75,1].map(t=>sc.pts[Math.round(t*m)]).map(p=>({...p,res:resolutionAt(base,p.hkl,p.E,{})}));
-      n=gridSizeFor('1D',pts).n;
+      n=gridSizeFor('1D',pts);
       const {frac,tCheck}=nearFraction(base,[0,0.125,0.25,0.375,0.5,0.625,0.75,0.875,1].map(t=>sc.pts[Math.round(t*m)]));
       per=tCheck+frac*n[0]*n[1]*n[2]*b.tNode;
     }

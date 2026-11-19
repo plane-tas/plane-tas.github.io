@@ -183,41 +183,23 @@ export function gaussianGrid(n,zmax=3.5){
   return {samples:z,weights:w,n:axes.map(a=>a.length)};
 }
 
+// Monte Carlo integration over the resolution ellipsoid: samples are
+// standard-normal points z (3 per point), each with weight 1/N.  The energy
+// Gaussian is integrated analytically at every point.
 export function convolvePoint(hkl0,E0,res,interp,samples,opts={}){
-  const RM=res.RM, UB=res.UB;
-  const qi=[0,1,3];
-  const MQQ=qi.map(i=>qi.map(j=>RM[i][j]));
-  const m=qi.map(i=>RM[i][2]), mEE=RM[2][2];
-  if(!(mEE>0)) throw new Error('Invalid resolution matrix.');
-  // Q marginal: precision P = MQQ - m m^T / mEE.
-  const P=MQQ.map((row,i)=>row.map((x,j)=>x-m[i]*m[j]/mEE));
-  const S=inverse(P);
-  const L=cholesky3(S);
-  if(!L) throw new Error('The resolution Q covariance is not positive definite.');
-  const sigInt=(Number(opts.intrinsicFwhm)||0)/2.354820045;
-  const varE=1/mEE+sigInt*sigInt, sigE=Math.sqrt(varE), norm=1/(Math.sqrt(TWO_PI)*sigE);
-  // Local frame of the resolution matrix in the UB (laboratory) frame.
-  const q0=matvec(UB,hkl0).map(x=>TWO_PI*x);
-  const eX=normalize([q0[0],q0[1],0]), eZ=[0,0,1], eY=cross(eZ,eX);
-  const UBinv=res.UBinv || inverse(UB);
-  // Columns: change of HKL per unit local dQ (1/Å⁻¹).
-  const col=[eX,eY,eZ].map(e=>matvec(UBinv,e).map(x=>x/TWO_PI));
+  const {L,m,mEE,varE,col}=localFrame(hkl0,res,opts);
+  const norm=1/Math.sqrt(TWO_PI*varE);
   const phonon=opts.model==='phonon', T=Number(opts.temperature)||0, eCut=Number(opts.minEnergy)||0.05;
-  // samples: standard-normal points z (3 per point).  Monte Carlo: equal
-  // weights 1/N.  Grid: opts.weights (normalised to a sum of 1).
-  const N=samples.length/3, W=opts.weights||null;
+  const N=samples.length/3;
   let sum=0, outside=0;
   for(let s=0;s<N;s++){
-    const ws=W ? W[s]*N : 1;
-    if(!ws) continue;
     const z0=samples[3*s], z1=samples[3*s+1], z2=samples[3*s+2];
     const d0=L[0][0]*z0, d1=L[1][0]*z0+L[1][1]*z1, d2=L[2][0]*z0+L[2][1]*z1+L[2][2]*z2;
     const mu=-(m[0]*d0+m[1]*d1+m[2]*d2)/mEE;
-    const h=hkl0[0]+col[0][0]*d0+col[1][0]*d1+col[2][0]*d2;
-    const k=hkl0[1]+col[0][1]*d0+col[1][1]*d1+col[2][1]*d2;
-    const l=hkl0[2]+col[0][2]*d0+col[1][2]*d1+col[2][2]*d2;
-    const v=interp.evaluate(h,k,l);
-    if(!v){ outside+=ws; continue; }
+    const v=interp.evaluate(hkl0[0]+col[0][0]*d0+col[1][0]*d1+col[2][0]*d2,
+                            hkl0[1]+col[0][1]*d0+col[1][1]*d1+col[2][1]*d2,
+                            hkl0[2]+col[0][2]*d0+col[1][2]*d1+col[2][2]*d2);
+    if(!v){ outside++; continue; }
     for(let b=0;b<v.E.length;b++){
       const e=v.E[b], w=v.I[b];
       if(!Number.isFinite(e) || !w) continue;
@@ -226,21 +208,16 @@ export function convolvePoint(hkl0,E0,res,interp,samples,opts={}){
         if(ea<eCut) continue;
         const n=bose(ea,T);
         const xs=ea-E0-mu, xa=-ea-E0-mu;
-        sum+=ws*w*((n+1)/ea*Math.exp(-xs*xs/(2*varE))+n/ea*Math.exp(-xa*xa/(2*varE)));
+        sum+=w*((n+1)/ea*Math.exp(-xs*xs/(2*varE))+n/ea*Math.exp(-xa*xa/(2*varE)));
       }else{
         const x=e-E0-mu;
-        sum+=ws*w*Math.exp(-x*x/(2*varE));
+        sum+=w*Math.exp(-x*x/(2*varE));
       }
     }
   }
   return {intensity:sum*norm/N,outside:outside/N};
 }
 
-// Grid integration with cell smoothing.  Each grid node stands for a cell of
-// width h on every z axis; across that cell E_b − μ changes by Δ_i (central
-// differences between neighbouring nodes).  The energy Gaussian at the node is
-// widened to σ² + ΣΔ_i²/12 (a box of width Δ_i convolved with it), so a
-// sharp dispersion surface is integrated smoothly with few nodes.
 // Standard normal cumulative distribution (erf: Abramowitz & Stegun 7.1.26,
 // |error| < 1.5e-7).
 function normalCdf(z){
@@ -317,6 +294,9 @@ export function nearDispersion(hkl0,E0,res,interp,opts={}){
   try{ return !farFromDispersion(hkl0,E0,localFrame(hkl0,res,opts),interp); }catch(_e){ return true; }
 }
 
+// Grid integration: a Gaussian-weighted tensor grid of z within ±3.5 σ (see
+// gaussianGrid), with cell smoothing in pass 2 so that a sharp dispersion
+// surface is integrated without ripples from few nodes.
 export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
   const F=localFrame(hkl0,res,opts);
   const {L,m,mEE,varE,col}=F;
@@ -396,35 +376,26 @@ export function convolvePointGrid(hkl0,E0,res,interp,grid,opts={}){
   return {intensity:sum,outside};
 }
 
-// Automatic grid size.  The slope of E_b − μ along each z axis at the centre
-// (largest over the branches, in units of σ_E) sets how finely that axis is
-// sampled: an axis along which nothing changes gets 1 node, the others nMin, steep ones up to nMax.  The total stays
-// within budget.  slope: the largest change of E_b − μ per unit z (meV).
+// Automatic grid size.  The change of E_b − μ along each z axis from the
+// centre (largest over the branches, in units of σ_E) sets how finely that
+// axis is sampled: an axis along which nothing changes gets 1 node, the
+// others nMin, steep ones up to nMax.  The total stays within budget.
 export function autoGridSize(hkl0,E0,res,interp,opts={}){
   const nMin=opts.nMin||9, nMax=opts.nMax||21, budget=opts.budget||3000;
-  const RM=res.RM, UB=res.UB, qi=[0,1,3];
-  const MQQ=qi.map(i=>qi.map(j=>RM[i][j]));
-  const m=qi.map(i=>RM[i][2]), mEE=RM[2][2];
-  const P=MQQ.map((row,i)=>row.map((x,j)=>x-m[i]*m[j]/mEE));
-  const L=cholesky3(inverse(P));
-  if(!L || !(mEE>0)) return {n:[11,11,11],slope:Infinity};
-  const sigE=Math.sqrt(1/mEE+((Number(opts.intrinsicFwhm)||0)/2.354820045)**2);
-  const q0=matvec(UB,hkl0).map(x=>TWO_PI*x);
-  const eX=normalize([q0[0],q0[1],0]), eZ=[0,0,1], eY=cross(eZ,eX);
-  const UBinv=res.UBinv || inverse(UB);
-  const col=[eX,eY,eZ].map(e=>matvec(UBinv,e).map(x=>x/TWO_PI));
+  let F;
+  try{ F=localFrame(hkl0,res,opts); }catch(_e){ return {n:[11,11,11]}; }
+  const {L,m,mEE,varE,col}=F, sigE=Math.sqrt(varE);
   const at=z=>{
     const d=[L[0][0]*z[0], L[1][0]*z[0]+L[1][1]*z[1], L[2][0]*z[0]+L[2][1]*z[1]+L[2][2]*z[2]];
     const v=interp.evaluate(...[0,1,2].map(i=>hkl0[i]+col[0][i]*d[0]+col[1][i]*d[1]+col[2][i]*d[2]));
     return {E:v ? Array.from(v.E) : null, mu:-(m[0]*d[0]+m[1]*d[1]+m[2]*d[2])/mEE};
   };
+  const c=at([0,0,0]);
   const n=[0,0,0];
-  let slope=0;
   for(let a=0;a<3;a++){
     let r=0;
     // Change of E_b − μ from the centre to ±1 and ±2 σ, per σ (one-sided, so a
     // band minimum or maximum at the centre is caught too).
-    const c=at([0,0,0]);
     for(const t of [1,-1,2,-2]){
       const z=[0,0,0]; z[a]=t;
       const p=at(z), dmu=p.mu-c.mu;
@@ -434,7 +405,6 @@ export function autoGridSize(hkl0,E0,res,interp,opts={}){
       }
       else r=Math.max(r,Math.abs(dmu)/Math.abs(t)/sigE);
     }
-    slope=Math.max(slope,r*sigE);
     n[a]=r<0.02 ? 1 : Math.max(nMin,Math.min(nMax,2*Math.round((5+3*Math.log2(1+r))/2)+1));
   }
   while(n[0]*n[1]*n[2]>budget){
@@ -442,7 +412,7 @@ export function autoGridSize(hkl0,E0,res,interp,opts={}){
     if(n[a]<=nMin) break;
     n[a]-=2;
   }
-  return {n,slope};
+  return {n};
 }
 
 function cholesky3(A){

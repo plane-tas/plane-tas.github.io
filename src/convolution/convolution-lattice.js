@@ -37,8 +37,9 @@ export function newNodes(lat,old){
   return out;
 }
 const idx=(lat,i,j,k)=>(i*lat.b.length+j)*lat.e.length+k;
-// Covariance (inverse of RM) of every node, for the refinement test.
-const covariance=r=>{ try{ return inverse(r.RM); }catch(_e){ return null; } };
+// Covariance (inverse of RM) of a node, for the refinement test (null when
+// the node cannot be reached).
+export const covariance=r=>{ if(!r) return null; try{ return inverse(r.RM); }catch(_e){ return null; } };
 // Relative change between two covariances: largest |ΔΣ_ij| / √(Σ_ii Σ_jj).
 function change(s1,s2){
   if(!s1 || !s2) return 0;   // unreachable node: nothing to compare
@@ -56,30 +57,31 @@ function change(s1,s2){
 // lattice, or null when nothing needs refining.
 export function refineLattice(lat,cov,bins,budget){
   const cand=[];
-  const axes=[['a',lat.a.length],['b',lat.b.length],['e',lat.e.length]];
-  for(const [ax,n] of axes){
-    for(let s=0;s+1<n;s++){
-      const lo=lat[ax][s], hi=lat[ax][s+1];
-      if(hi-lo<2*bins[ax]-1e-12) continue;
-      let d=0;
-      for(let i=0;i<lat.a.length;i++) for(let j=0;j<lat.b.length;j++) for(let k=0;k<lat.e.length;k++){
-        const p=ax==='a' ? i : ax==='b' ? j : k;
-        if(p!==s) continue;
-        const q=[i,j,k]; q[ax==='a' ? 0 : ax==='b' ? 1 : 2]++;
-        d=Math.max(d,change(cov[idx(lat,i,j,k)],cov[idx(lat,...q)]));
-      }
-      if(d>LATTICE_TOL) cand.push({ax,mid:(lo+hi)/2,d});
+  const na=lat.a.length, nb=lat.b.length, ne=lat.e.length;
+  const c=(i,j,k)=>cov[(i*nb+j)*ne+k];
+  // Largest change across interval s of one axis, over the other two.
+  const across={
+    a:s=>{ let d=0; for(let j=0;j<nb;j++) for(let k=0;k<ne;k++) d=Math.max(d,change(c(s,j,k),c(s+1,j,k))); return d; },
+    b:s=>{ let d=0; for(let i=0;i<na;i++) for(let k=0;k<ne;k++) d=Math.max(d,change(c(i,s,k),c(i,s+1,k))); return d; },
+    e:s=>{ let d=0; for(let i=0;i<na;i++) for(let j=0;j<nb;j++) d=Math.max(d,change(c(i,j,s),c(i,j,s+1))); return d; }
+  };
+  for(const ax of ['a','b','e']){
+    const v=lat[ax];
+    for(let s=0;s+1<v.length;s++){
+      if(v[s+1]-v[s]<2*bins[ax]-1e-12) continue;
+      const d=across[ax](s);
+      if(d>LATTICE_TOL) cand.push({ax,mid:(v[s]+v[s+1])/2,d});
     }
   }
   if(!cand.length) return null;
   cand.sort((x,y)=>y.d-x.d);
   const add={a:[],b:[],e:[]};
-  let total=lat.a.length*lat.b.length*lat.e.length;
-  for(const c of cand){
-    const na=lat.a.length+add.a.length, nb=lat.b.length+add.b.length, ne=lat.e.length+add.e.length;
-    const more=c.ax==='a' ? nb*ne : c.ax==='b' ? na*ne : na*nb;
+  let total=na*nb*ne;
+  for(const q of cand){
+    const ma=na+add.a.length, mb=nb+add.b.length, me=ne+add.e.length;
+    const more=q.ax==='a' ? mb*me : q.ax==='b' ? ma*me : ma*mb;
     if(total+more>budget) continue;
-    add[c.ax].push(c.mid); total+=more;
+    add[q.ax].push(q.mid); total+=more;
   }
   if(!add.a.length && !add.b.length && !add.e.length) return null;
   const merge=(x,y)=>[...x,...y].sort((p,q)=>p-q);
@@ -88,9 +90,9 @@ export function refineLattice(lat,cov,bins,budget){
 
 // Cells of the final lattice that are still rough (an edge changes by more
 // than LATTICE_ROUGH: the node budget ran out there, typically next to the
-// kinematic limit).  Their points get their
-// own resolution matrix.  Flat array over cells (i, j, k) < (na−1, nb−1, ne−1),
-// a single-node axis counting as one cell.
+// kinematic limit).  Their points get their own resolution matrix.  Flat
+// array over cells (i, j, k) < (na−1, nb−1, ne−1), a single-node axis
+// counting as one cell.
 export function roughCells(lat,cov){
   const na=lat.a.length, nb=lat.b.length, ne=lat.e.length;
   const ca=Math.max(1,na-1), cb=Math.max(1,nb-1), ce=Math.max(1,ne-1);
@@ -187,9 +189,8 @@ export function createEngine(calcResolution){
         // msg.pts: [{hkl,E,size}] (size: also the automatic grid size).
         const out=msg.pts.map(p=>{
           const r=resolutionAt(p.hkl,p.E);
-          let n=null, slope=0;
-          if(r && p.size){ const a=autoGridSize(p.hkl,p.E,{...r,UBinv},interp,{budget:Infinity}); n=a.n; slope=a.slope; }
-          return {r,n,slope};
+          const n=r && p.size ? autoGridSize(p.hkl,p.E,{...r,UBinv},interp,{budget:Infinity}).n : null;
+          return {r,n};
         });
         return {type:'nodes',id:msg.id,out};
       }
@@ -198,7 +199,7 @@ export function createEngine(calcResolution){
         lattice={...msg.lattice,UB:msg.UB,UBinv};
         integ=msg.integ.mode==='mc'
           ? {mode:'mc',samples:standardNormalSamples(msg.integ.samples)}
-          : {mode:'grid',grid:gaussianGrid(msg.integ.n),slope:msg.integ.slope};
+          : {mode:'grid',grid:gaussianGrid(msg.integ.n)};
         lattice.E=msg.E;
         return null;
       }
@@ -217,7 +218,7 @@ export function createEngine(calcResolution){
             if(!r){ unreachable++; continue; }
             if(!r.UBinv) r.UBinv=UBinv;
             const c=integ.mode==='grid'
-              ? convolvePointGrid(it.hkl,E[ie],r,interp,integ.grid,{model:'given',slope:integ.slope})
+              ? convolvePointGrid(it.hkl,E[ie],r,interp,integ.grid,{model:'given'})
               : convolvePoint(it.hkl,E[ie],r,interp,integ.samples,{model:'given'});
             if(c.outside>outside) outside=c.outside;
             I[k*nE+ie]=c.intensity*prefactorAt(cfg,E[ie]);
