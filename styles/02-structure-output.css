@@ -16,7 +16,7 @@
 .cif-reflection-table th:last-child,.cif-reflection-table td:last-child{border-right:0}
 .cif-reflection-table tbody tr:last-child td{border-bottom:0}
 .cif-reflection-table tbody tr:nth-child(even) td{background:#fafafa}
-.cif-reflection-empty{text-align:center!important;color:#777;padding:calc(20px * var(--tas-density))!important}
+.cif-reflection-empty{text-align:center!important;color:#222;padding:calc(20px * var(--tas-density))!important}
 
 /* The preview remains bounded by its output pane; long CIFs scroll instead of
    stretching the entire page. */
@@ -449,7 +449,6 @@
 }
 
 /* Uncertainty messages share the existing Cell Note typography. */
-#structurePanel #cifReflectionEstimateNotice{font-size:.85em;line-height:1.4;margin:4px 0 8px;}
 
 /* Reflections: Mode / Reflections / Lorentz / form-factor selectors in one equal-width row. */
 .magnetic-options{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:calc(10px * var(--tas-density));margin:0 0 calc(9px * var(--tas-density))}

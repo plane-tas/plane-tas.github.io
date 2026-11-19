@@ -33,7 +33,7 @@
   gap:calc(8px * var(--tas-density));
 }
 .structure-rows-empty{
-  color:#777;
+  color:#222;
   font-size:calc(13px * var(--tas-density));
   padding:calc(4px * var(--tas-density)) 0;
 }
@@ -111,7 +111,7 @@
   font-size:calc(12px * var(--tas-density));
 }
 .structure-moment-site span{
-  color:#666;
+  color:#222;
   font-size:calc(11px * var(--tas-density));
   overflow-wrap:anywhere;
 }
@@ -164,7 +164,7 @@
   font-size:calc(12px * var(--tas-density));
 }
 .structure-range-grid>span{
-  color:#666;
+  color:#222;
   text-align:center;
 }
 .structure-range-grid>label{

@@ -536,11 +536,13 @@
 </div>
 <div class="convolution-message" id="convMessage1D" aria-live="polite"></div>
 </section>
+<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Every curve divided by its own maximum (display and Save figure; Save CSV keeps the calculated values)"><input id="convNormalize1D" type="checkbox"/><span>normalized</span></label><span class="convolution-show-sep" aria-hidden="true"></span><span class="convolution-legend-columns" id="convLegendColumns" title="Columns of the legend (screen and Save figure)"></span></div>
 <div class="convolution-scan-layout">
+<div class="convolution-scan-plotbox">
 <button id="convSaveFigure1D" type="button" class="convolution-save-figure" disabled>Save figure</button>
 <div class="convolution-plot convolution-scan-plot" id="convScanPlot"></div>
+</div>
 <aside class="convolution-curves" aria-label="Curves">
-<div class="convolution-legend-columns" id="convLegendColumns" title="Columns of the legend (screen and Save figure)"></div>
 <table class="convolution-curve-table">
 <thead><tr><th><button id="convClearKept1D" type="button" disabled title="Remove all kept scans">Clear all</button></th><th></th><th title="Include in Save CSV"><input id="convCsvAll" type="checkbox" checked aria-label="Include all curves in Save CSV"/><span>CSV</span></th></tr></thead>
 <tbody id="convCurveList"></tbody>
@@ -708,7 +710,6 @@
 
 </div>
 <fieldset class="cif-cell-box cif-parent-cell-box"><legend>Crystallographic unit cell</legend>
-<p id="cifParentCellNotice" class="cif-cell-mapping-note" hidden></p>
 <div class="cif-generator-setup">
 <div class="cif-space-group-picker">
 <label class="cif-space-group-system-label">System
@@ -743,7 +744,7 @@
 </fieldset>
 <fieldset class="cif-cell-box cif-magnetic-cell-box" id="cifMagneticCellBox" hidden>
 <legend>Magnetic unit cell</legend>
-<p id="cifMagneticCellNotice" class="cif-cell-mapping-note" role="status" hidden></p>
+<p id="cifMagneticCellNotice" class="cif-release-note" role="status" hidden></p>
 <div class="cif-lattice-grid">
 <label>a (Å)<input id="cifMagA" type="number" min="0" step="0.001"/></label>
 <label>b (Å)<input id="cifMagB" type="number" min="0" step="0.001"/></label>
@@ -919,7 +920,7 @@
 </section>
 <p id="cifReflectionMessage" class="generator-reflections-notice" role="status" hidden></p>
 <div class="cif-reflection-table-wrap" id="cifReflectionTableWrap">
-<p id="cifReflectionEstimateNotice" class="cif-cell-mapping-note" role="status" hidden></p>
+<p id="cifReflectionEstimateNotice" class="cif-release-note" role="status" hidden></p>
 <table class="cif-reflection-table">
 <thead id="cifReflectionHead"></thead>
 <tbody id="cifReflectionRows"><tr><td class="cif-reflection-empty" colspan="9">No generated reflections yet.</td></tr></tbody>

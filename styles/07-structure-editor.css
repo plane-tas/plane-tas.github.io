@@ -251,7 +251,7 @@
 .cif-lattice-grid{display:grid;grid-template-columns:repeat(3,minmax(calc(85px * var(--tas-density)),1fr));gap:calc(8px * var(--tas-density))}
 .cif-lattice-grid input{width:100%;max-width:none}
 
-.cif-generator-message{font-size:calc(12px * var(--tas-density));min-height:calc(20px * var(--tas-density));margin-top:calc(8px * var(--tas-density));color:#555}
+.cif-generator-message{font-size:calc(12px * var(--tas-density));min-height:calc(20px * var(--tas-density));margin-top:calc(8px * var(--tas-density));color:#222}
 .cif-generator-input-pane label{font-size:calc(13.5px * var(--tas-density))}
 .cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
 .cif-generator-input-pane select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
@@ -512,7 +512,7 @@
 }
 #structurePanel .generator-reflections-notice{
   margin:calc(12px * var(--tas-density)) 0;
-  color:#646d76;
+  color:#222;
   font-size:calc(14px * var(--tas-density));
   line-height:1.5;
 }

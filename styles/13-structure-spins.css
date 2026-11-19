@@ -104,7 +104,7 @@
 
 /* Individual expanded-atom spin editing: keep long lists usable on mobile. */
 .structure-individual-selector{max-width:calc(340px * var(--tas-density));width:100%;min-width:0;margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
-#cifSpinIndividualInfo{font-size:.85em;line-height:1.4;margin:calc(4px * var(--tas-density)) 0 calc(8px * var(--tas-density));overflow-wrap:anywhere}
+#cifSpinIndividualInfo{line-height:1.45;margin:calc(4px * var(--tas-density)) 0 calc(8px * var(--tas-density));overflow-wrap:anywhere}
 #structurePanel .structure-spin-editor-toolbar select{
   width:100%;
   max-width:100%;
@@ -171,7 +171,7 @@
   box-sizing:border-box;min-width:0;
   padding:calc(7px * var(--tas-density)) calc(2px * var(--tas-density));
   background:#f7f7f7;
-  color:#41464c;
+  color:#222;
   font-size:calc(11px * var(--tas-density));font-weight:650;
   text-align:center;white-space:nowrap;
   position:sticky;top:0;z-index:3;
@@ -197,7 +197,7 @@
   display:flex;align-items:center;justify-content:center;
 }
 #structurePanel #cifSpinTable .structure-spin-index {
-  background:#fafafa;font-weight:650;font-size:calc(11px * var(--tas-density));color:#555;
+  background:#fafafa;font-weight:650;font-size:calc(11px * var(--tas-density));color:#222;
 }
 #structurePanel #cifSpinTable .structure-spin-atom {justify-content:flex-start;}
 #structurePanel #cifSpinTable .structure-moment-site {
@@ -222,7 +222,7 @@
 }
 #structurePanel #cifSpinTable .structure-spin-table-empty {
   grid-column:1/-1;background:#fff;padding:calc(10px * var(--tas-density));
-  font-size:calc(12px * var(--tas-density));color:#555;
+  font-size:calc(12px * var(--tas-density));color:#222;
 }
 /* Match the Atomic positions header exactly, rather than enlarging Atoms captions. */
 #structurePanel #cifSpinTable .structure-spin-table-header,
@@ -230,7 +230,7 @@
   box-sizing:border-box;
   font-size:calc(12px * var(--tas-density)) !important;
   font-weight:650 !important;
-  color:#41464c;
+  color:#222;
   line-height:1.35;
   padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));
   min-height:calc(33px * var(--tas-density));

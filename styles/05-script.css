@@ -59,7 +59,7 @@
 }
 .script-command-heading,.script-spice-heading{justify-content:space-between;flex-wrap:nowrap}
 .script-command-heading button,.script-actions button{width:auto;white-space:nowrap}
-.script-aset-help{font-size:calc(12px * var(--tas-density));line-height:1.35;color:#666;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
+.script-aset-help{font-size:calc(12px * var(--tas-density));line-height:1.35;color:#222;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
 .script-aset-list{display:flex;flex-direction:column;gap:calc(7px * var(--tas-density))}
 .script-aset-item{
   display:grid;
@@ -143,7 +143,7 @@
 .script-aset-table-header{
   font-size:calc(11px * var(--tas-density));
   font-weight:650;
-  color:#555;
+  color:#222;
   padding:0 calc(2px * var(--tas-density)) calc(3px * var(--tas-density));
   border-bottom:calc(1px * var(--tas-density)) solid #ddd;
   margin-bottom:calc(4px * var(--tas-density));
@@ -154,7 +154,7 @@
   padding:0;
   background:transparent;
 }
-.script-aset-index{font-size:calc(12px * var(--tas-density));text-align:center;color:#555;font-variant-numeric:tabular-nums}
+.script-aset-index{font-size:calc(12px * var(--tas-density));text-align:center;color:#222;font-variant-numeric:tabular-nums}
 .script-aset-item input{
   width:100%;min-width:0;
   font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
@@ -408,7 +408,7 @@
   border:calc(1px * var(--tas-density)) solid #d9dee5!important;
   border-radius:calc(6px * var(--tas-density))!important;
   background:#f8fafc!important;
-  color:#555!important;
+  color:#222!important;
   font-size:calc(14px * var(--tas-density))!important;
   line-height:1.5!important;
 }
@@ -421,7 +421,7 @@
 .structure-help-text,
 .cif-structure-status{
   font-size:calc(13px * var(--tas-density));
-  color:#555;
+  color:#222;
 }
 .harmonic-wrap{overflow-x:auto;margin-top:calc(14px * var(--tas-density))}
 /* Contain horizontal overflow in Script's Command pane; not the entire page. */

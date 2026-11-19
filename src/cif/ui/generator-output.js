@@ -56,7 +56,7 @@ function recalculateGeneratedReflections(){
   fn.setReflectionData({nuclear,magnetic,notes,wavelength:beam.wavelength,plotRange});
   if(estimateNotice && source?.estimatedParent){
     estimateNotice.hidden=false;
-    estimateNotice.textContent='Note: Nuclear reflections use an estimated crystallographic cell; verify the parent space group and cell transformation before quantitative use.';
+    estimateNotice.textContent='Note: Nuclear reflections use an estimated parent cell; check its space group before quantitative use.';
   }
 }
 

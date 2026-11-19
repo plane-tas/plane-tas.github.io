@@ -26,7 +26,7 @@
 .absorption-summary-card,
 .absorption-summary-subgrid>div{background:#fff!important;}
 .absorption-summary-label{font-size:calc(15px * var(--tas-density))!important;font-weight:700!important;color:#222!important;}
-.absorption-summary-subgrid span{font-size:calc(14px * var(--tas-density))!important;font-weight:700!important;color:#333!important;}
+.absorption-summary-subgrid span{font-size:calc(14px * var(--tas-density))!important;font-weight:700!important;color:#222!important;}
 .absorption-summary-value{font-size:calc(17px * var(--tas-density))!important;}
 .absorption-summary-subgrid strong{font-size:calc(15px * var(--tas-density))!important;}
 .absorption-thickness-control label:last-child{justify-self:end;width:100%;max-width:calc(180px * var(--tas-density));}
@@ -109,7 +109,7 @@
   font-weight:700;
   line-height:1.25;
   margin-bottom:calc(6px * var(--tas-density));
-  color:#444;
+  color:#222;
 }
 .absorption-summary-value{
   font-size:calc(16px * var(--tas-density));
@@ -136,7 +136,7 @@
   border-left:calc(1px * var(--tas-density)) solid #d6d6d6;
 }
 .absorption-summary-subgrid>div:first-child{border-left:0}
-.absorption-summary-subgrid span{font-size:calc(12.5px * var(--tas-density));color:#555;font-weight:600}
+.absorption-summary-subgrid span{font-size:calc(12.5px * var(--tas-density));color:#222;font-weight:600}
 .absorption-summary-subgrid strong{font-size:calc(14.5px * var(--tas-density));white-space:nowrap}
 .absorption-beam-controls{
   display:grid;
@@ -148,7 +148,7 @@
 .absorption-summary-card,
 .absorption-summary-subgrid>div{background:#fff!important;}
 .absorption-summary-label{font-size:calc(15px * var(--tas-density))!important;font-weight:700!important;color:#222!important;}
-.absorption-summary-subgrid span{font-size:calc(14px * var(--tas-density))!important;font-weight:700!important;color:#333!important;}
+.absorption-summary-subgrid span{font-size:calc(14px * var(--tas-density))!important;font-weight:700!important;color:#222!important;}
 .absorption-summary-value{font-size:calc(17px * var(--tas-density))!important;}
 .absorption-summary-subgrid strong{font-size:calc(15px * var(--tas-density))!important;}
 .absorption-thickness-control{grid-template-columns:minmax(calc(150px * var(--tas-density)),.7fr) minmax(calc(220px * var(--tas-density)),1.35fr) minmax(calc(150px * var(--tas-density)),.7fr);}
@@ -353,9 +353,9 @@
 .toolbox-subtab:focus-visible{outline:calc(2px * var(--tas-density)) solid #5073b3;outline-offset:calc(2px * var(--tas-density));}
 #toolboxPanel .toolbox-subpanel{min-width:0;max-width:100%;width:100%;margin-top:0;}
 #toolboxPanel .toolbox-subpanel.hidden{display:none!important;}
-.magff-info{margin-top:calc(9px * var(--tas-density));min-height:calc(18px * var(--tas-density));color:#555;font-size:calc(12px * var(--tas-density));}
+.magff-info{margin-top:calc(9px * var(--tas-density));min-height:calc(18px * var(--tas-density));color:#222;font-size:calc(12px * var(--tas-density));}
 .magff-plot{width:100%;min-width:0;min-height:calc(360px * var(--tas-density));}
-.magff-footer{display:flex;align-items:center;justify-content:space-between;gap:calc(12px * var(--tas-density));flex-wrap:wrap;color:#666;font-size:calc(12px * var(--tas-density));}
+.magff-footer{display:flex;align-items:center;justify-content:space-between;gap:calc(12px * var(--tas-density));flex-wrap:wrap;color:#222;font-size:calc(12px * var(--tas-density));}
 .magff-footer button{white-space:nowrap;}
 @container (max-width:700px){.toolbox-subtabs{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:700px){.toolbox-subtabs{grid-template-columns:repeat(2,minmax(0,1fr));}.magff-plot{min-height:calc(300px * var(--tas-density));}}
@@ -632,7 +632,7 @@
 #toolboxFormFactorPane .magff-ion-list.hidden{display:none}
 #toolboxFormFactorPane .magff-ion-option{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));cursor:pointer;white-space:nowrap}
 #toolboxFormFactorPane .magff-ion-option[aria-selected="true"]{background:#dbe9f6}
-#toolboxFormFactorPane .magff-ion-empty{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));color:#5f6b76}
+#toolboxFormFactorPane .magff-ion-empty{display:block;padding:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));color:#222}
 /* j0 / j2 explanation between the entry boxes and the plot. */
 .magff-model{margin:calc(6px * var(--tas-density)) 0 calc(2px * var(--tas-density));padding:calc(7px * var(--tas-density)) calc(10px * var(--tas-density));background:#f4f7fa;border:1px solid #d5dde5;border-radius:calc(6px * var(--tas-density));font-size:calc(18px * var(--tas-density));line-height:1.5;color:#26323d}
 .magff-model:empty{display:none}

@@ -104,21 +104,22 @@ function restoreSelectedCifLocal(){
   }
 }
 function updateImportedUnitCellPanels(parsed,text){
-  const box=$("cifMagneticCellBox"),notice=$("cifParentCellNotice");
+  const box=$("cifMagneticCellBox");
   // Malformed/unsupported multi-q input may have no moments after parsing,
   // but it is still a magnetic file whose limitation must be visible.
   const magneticTags=/(?:_atom_site_moment(?:[._]|\s)|_cell_wave_vector_[xyz]|_space_group_symop_magn_ssg_)/i.test(String(text||''));
   if(box)box.hidden=!(parsed?.magnetic||magneticTags);
   const magneticNotice=$('cifMagneticCellNotice');
-  if(notice)notice.hidden=true;
   if(magneticNotice){magneticNotice.hidden=true;magneticNotice.textContent='';}
   if(!parsed?.magnetic && !magneticTags)return;
+  // Incommensurate / superspace input: one short note (the parser's own
+  // remarks follow it).
   if(magneticNotice){
     const alerts=(parsed.warnings||[]).filter(w=>/incommensurate|superspace|single.q|fourier|wave vectors|modulat/i.test(String(w)));
     if(parsed.incommensurateSingleQ || alerts.length){
       magneticNotice.hidden=false;
       magneticNotice.textContent=(parsed.incommensurateSingleQ
-        ?'Note: Incommensurate single-q mCIF. No exact finite magnetic supercell; the displayed Fourier modulation is supported only for recognized operations.'
+        ?'Note: Incommensurate single-k mCIF: no finite magnetic supercell; the Fourier modulation is shown.'
         :'Note: Magnetic modulation/superspace symmetry may be incomplete.')
         +(alerts.length?' '+alerts.join(' '):'');
     }
@@ -127,16 +128,6 @@ function updateImportedUnitCellPanels(parsed,text){
   // reinterpret its parent IT number as a magnetic space-group selector.
   for(const [key,id] of Object.entries(cifState.CIF_MAG_LATTICE_FIELDS)){
     if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(Number(Number(parsed.lattice[key]).toPrecision(10))):'';
-  }
-  const crystallographic=fn.crystallographicStructureFromMcif(parsed,text);
-  if(notice){
-    if(crystallographic?.parentCellEstimated){
-      notice.hidden=false;
-      notice.textContent='Note: Estimated crystallographic unit cell from verified atomic translations and k. Parent space-group setting may be uncertain; nuclear peaks are calculated from an estimated structure.';
-    }else if(!crystallographic){
-      notice.hidden=false;
-      notice.textContent='Note: Crystallographic unit cell could not be determined reliably. BNS alone does not specify the parent cell setting; nuclear peaks are disabled.';
-    }
   }
 }
 function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){

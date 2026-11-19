@@ -205,7 +205,7 @@
   position:absolute;display:block;box-sizing:border-box;
   width:calc(58px * var(--tas-density));min-width:0;max-width:calc(58px * var(--tas-density));height:calc(26px * var(--tas-density));
   margin:0;padding:0 calc(2px * var(--tas-density));border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(3px * var(--tas-density));
-  background:transparent;color:#444;font:400 calc(14px * var(--tas-density)) Arial,sans-serif;
+  background:transparent;color:#222;font:400 calc(14px * var(--tas-density)) Arial,sans-serif;
   text-align:left;line-height:calc(24px * var(--tas-density));pointer-events:auto;cursor:text;
   -moz-appearance:textfield;appearance:textfield;
 }

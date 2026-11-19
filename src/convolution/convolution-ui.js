@@ -107,7 +107,7 @@ export function createConvolutionUI(deps){
     if(inst.instrument!==undefined && !put('instrument',inst.instrument)){
       const custom=[...($('instrument')?.options||[])].find(o=>/^zz_00_Custom$/.test(o.value));
       if(custom) put('instrument',custom.value);
-      notes.push(`Instrument "${inst.instrument}" is not in the list; its settings were applied to ${custom ? 'Custom' : ($('instrument')?.selectedOptions?.[0]?.textContent||'the current instrument')}.`);
+      notes.push(`Instrument "${inst.instrument}" not in the list: loaded as ${custom ? 'Custom' : ($('instrument')?.selectedOptions?.[0]?.textContent||'the current instrument')}.`);
     }
     put('instrumentType',inst.instrumentType);
     for(const id of INSTRUMENT_SETTING_IDS){
@@ -126,7 +126,7 @@ export function createConvolutionUI(deps){
     for(const [id,v] of Object.entries(set.convolution||{})) if(BOX_SETTING_IDS[dim].includes(id)) put(id,v);
     fixChoices(); showIntegration(); saveInputs(); bench=null; scheduleEstimates();
     const f=set.dispersion?.file;
-    if(f && f!==fileName) notes.push(`Calculated with the dispersion file ${f}${fileName ? ` (loaded: ${fileName})` : ''}.`);
+    if(f && f!==fileName) notes.push(`Calculated with ${f}${fileName ? ` (loaded: ${fileName})` : ''}.`);
     return notes;
   }
   // One comment line of id=value pairs separated by "; " (no commas, so a
@@ -161,7 +161,7 @@ export function createConvolutionUI(deps){
     return set;
   };
   const INPUTS_KEY='plane-tas-convolution-inputs-v1';
-  const CHECK_IDS=['convShowDispersion','convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE'];
+  const CHECK_IDS=['convShowDispersion','convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE','convNormalize1D'];
   const savedInputsComplete=ids=>ids.every(id=>String($(id)?.value??'').trim()!=='');
   function saveInputs(){
     try{ localStorage.setItem(INPUTS_KEY,JSON.stringify({...Object.fromEntries(INPUT_IDS.map(id=>[id,$(id)?.value??''])),zlim,
@@ -668,7 +668,7 @@ export function createConvolutionUI(deps){
     const covOfFinal=covOf(lat);
     const res=newNodes(lat,null).map(p=>store.get(key(p.a,p.b,p.e))||null);
     const first=res.find(Boolean);
-    if(!first) throw new Error('No point of the map can be reached with this instrument setting.');
+    if(!first) throw new Error('No point of the map is reachable.');
     const integ=gridMode
       ? {mode:'grid',n:sizeGrid('2D',sized ? n : DEFAULT_GRID)}
       : {mode:'mc',samples:mcSamples('2D')};
@@ -1080,7 +1080,7 @@ export function createConvolutionUI(deps){
     const n=Math.round(num('convPoints1D'));
     if(!(n>=2 && n<=2001)) throw new Error('Points must be between 2 and 2001.');
     const moving=ends.map(([a,b],j)=>Math.abs(b-a)>1e-12 ? j : -1).filter(j=>j>=0);
-    if(!moving.length) throw new Error('Initial and final points are the same: change at least one of H, K, L and ħω.');
+    if(!moving.length) throw new Error('Initial and final points are the same.');
     const pts=Array.from({length:n},(_,k)=>{
       const t=k/(n-1), v=ends.map(([a,b])=>a+(b-a)*t);
       return {hkl:v.slice(0,3),E:v[3]};
@@ -1140,9 +1140,10 @@ export function createConvolutionUI(deps){
       showConvTab('1d');
       refreshKept();
       const notes=[];
-      if(off.length) notes.push(`${off.length} of ${sc.pts.length} points are outside the table (${tableRangeText()}).`);
-      if(stats.unreachable) notes.push(`${stats.unreachable} points cannot be reached with this instrument setting (blank).`);
-      if(stats.outside>0.05) notes.push(`Up to ${Math.round(stats.outside*100)} % of the resolution volume is outside the table (no intensity there). Extend the table (see the note under Dispersion file).`);
+      // Short notes (one line together); the plot shows where.
+      if(off.length) notes.push(`${off.length}/${sc.pts.length} points outside the table.`);
+      if(stats.unreachable) notes.push(`${stats.unreachable} points unreachable.`);
+      if(stats.outside>0.05) notes.push(`Table smaller than the resolution (up to ${Math.round(stats.outside*100)} % outside).`);
       message('convMessage1D',notes.join(' '),stats.outside>0.05 || off.length>0);
       if(stopped) statusEnd('convStatus1D',`Stopped (${I.length} points)`,true);
       else{ message('convStatus1D','Completed'); setFill('convStatus1D',1); $('convStatus1D')?.classList.add('convolution-progress-on'); }
@@ -1150,11 +1151,17 @@ export function createConvolutionUI(deps){
   }
   const AXIS_NAMES=['H (r.l.u.)','K (r.l.u.)','L (r.l.u.)','ħω (meV)'];
   const PALETTE=['#1f77b4','#d62728','#2ca02c','#9467bd','#ff7f0e','#8c564b','#e377c2','#17becf','#7f7f7f','#bcbd22'];
+  // Normalize (check box under the 1D plot): every curve divided by its own
+  // maximum, for comparing shapes and positions (Save CSV keeps the values).
+  const normalized=()=>!!$('convNormalize1D')?.checked;
+  const curveMax=I=>I.reduce((m,v)=>Number.isFinite(v) && v>m ? v : m,0);
   function scanTrace(sc,name,color,current){
     const x=sc.pts.map(p=>sc.axis===3 ? p.E : p.hkl[sc.axis]);
+    const top=normalized() ? curveMax(sc.I) : 0;
+    const y=top>0 ? sc.I.map(v=>v/top) : sc.I;
     const custom=sc.pts.map(p=>`(${p.hkl.map(v=>fmt(v)).join(', ')}), ${fmt(p.E,3)} meV`);
     // Solid, fairly thick lines so the colours read well in the legend.
-    return {type:'scatter',mode:'lines+markers',name,x,y:sc.I,customdata:custom,
+    return {type:'scatter',mode:'lines+markers',name,x,y,customdata:custom,
       marker:{size:current?6:5,color},line:{width:current?2.6:2.2,color},
       hovertemplate:`%{customdata}<br>I = %{y:.4g}<extra></extra>`};
   }
@@ -1162,8 +1169,8 @@ export function createConvolutionUI(deps){
   // current one.  "selected": included in Save CSV.
   const curveList=()=>[...kept.map((k,i)=>({k,tag:String(i+1),title:`#${i+1}`,color:k.color,current:false})),
     ...(scan ? [{k:scan,tag:'current',title:'Current',color:scan.color||'#111',current:true}] : [])];
-  // Legend (convolution-legend.js): the columns shown are chosen above the
-  // curve table and kept in the browser.
+  // Legend (convolution-legend.js): the columns shown are chosen in the Show
+  // row above the plot and kept in the browser.
   const legendShown=loadLegendColumns();
   const shownCols=()=>LEGEND_COLS.filter(c=>legendShown.has(c.id));
   const optionOf=(id,v)=>[...($(id)?.options||[])].find(o=>o.value===String(v));
@@ -1184,7 +1191,7 @@ export function createConvolutionUI(deps){
     const frame={showline:true,ticks:'outside',linecolor:'#444',linewidth:1,zeroline:false,automargin:true};
     const layout={font:FONT,margin:{l:96,r:20,t:44,b:76},showlegend:false,
       xaxis:{...frame,mirror:true,title:{text:axes.map(i=>AXIS_NAMES[i]).join(' / '),font:AXIS_TITLE_FONT}},
-      yaxis:{...frame,mirror:true,title:{text:'I (arb.)',font:AXIS_TITLE_FONT},rangemode:'tozero'}};
+      yaxis:{...frame,mirror:true,title:{text:normalized() ? 'I (normalized)' : 'I (arb.)',font:AXIS_TITLE_FONT},rangemode:'tozero'}};
     return {curves,traces,layout};
   }
   function drawScan(){
@@ -1262,7 +1269,7 @@ export function createConvolutionUI(deps){
     const ctx=document.createElement('canvas').getContext('2d'); ctx.fillStyle='#000'; ctx.fillStyle=String(c||'#000');
     const v=ctx.fillStyle; return /^#[0-9a-f]{6}$/i.test(v) ? v : '#000000';
   }
-  // Head of the legend columns and the column chooser above the table.
+  // Head of the legend columns, and their chooser (in the Show row above the plot).
   function legendHead(){
     const tr=$('convCurveList')?.closest('table')?.querySelector('thead tr');
     if(tr){
@@ -1271,7 +1278,7 @@ export function createConvolutionUI(deps){
     }
     const box=$('convLegendColumns');
     if(box && !box.childElementCount){
-      const t=document.createElement('span'); t.textContent='Legend:'; box.appendChild(t);
+      const t=document.createElement('span'); t.className='convolution-show-title'; t.textContent='Legend:'; box.appendChild(t);
       for(const c of LEGEND_COLS){
         const lab=document.createElement('label'); lab.className='checkbox-label';
         const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=legendShown.has(c.id);
@@ -1626,6 +1633,7 @@ export function createConvolutionUI(deps){
     $('convCalculate1D')?.addEventListener('click',calculate1D);
     $('convDownload')?.addEventListener('click',downloadScan);
     $('convKeep1D')?.addEventListener('click',keepScan);
+    $('convNormalize1D')?.addEventListener('change',()=>{ saveInputs(); drawScan(); });
     $('convSaveFigure1D')?.addEventListener('click',()=>saveScanFigure().catch(err=>message('convMessage1D',`Save figure: ${err.message||err}`,true)));
     $('convClearKept1D')?.addEventListener('click',()=>{ kept.length=0; refreshKept(); });
     $('convCsvAll')?.addEventListener('change',()=>{ const on=$('convCsvAll').checked; for(const c of curveList()) c.k.selected=on; refreshKept(); });

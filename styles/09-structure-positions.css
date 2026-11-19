@@ -458,7 +458,7 @@
 }
 #cifGeneratorPanel .cif-thermal-index{
   background:#fafafa;
-  color:#555;
+  color:#222;
   font-weight:650;
   font-size:calc(13px * var(--tas-density));
 }

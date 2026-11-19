@@ -517,7 +517,7 @@
   cursor:pointer;
 }
 #structurePanel .structure-style-table .structure-style-index {
-  color:#555;background:#fafafa;font-weight:650;cursor:grab;user-select:none;touch-action:pan-y;
+  color:#222;background:#fafafa;font-weight:650;cursor:grab;user-select:none;touch-action:pan-y;
 }
 #structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]) {
   width:100%;height:auto;min-height:calc(29px * var(--tas-density));
@@ -639,7 +639,6 @@
   min-width:0;border:1px solid var(--tas-border-color,#b9c1cd);
   border-radius:8px;padding:10px 10px 12px;margin:9px 0 11px;
 }
-#structurePanel .cif-cell-mapping-note{font-size:.85em;margin:4px 0 8px;line-height:1.4;}
 #structurePanel .cif-heading-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 
 /* Structure plot control card: intrinsic width, not the full viewer width.

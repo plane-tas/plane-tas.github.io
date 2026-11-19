@@ -46,14 +46,14 @@
 .time-scan-header{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7;padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center}
 .time-scan-rows,.time-scan-row{display:contents}
 .time-scan-cell{padding:calc(5px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff;min-width:0}
-.time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#555;background:#fafafa}
+.time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#222;background:#fafafa}
 .time-scan-cell button{width:100%;white-space:nowrap}
 .time-range-inputs{display:grid;gap:calc(4px * var(--tas-density));grid-template-columns:repeat(var(--time-range-cols,1),minmax(0,1fr))}
 .time-range-field{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:calc(4px * var(--tas-density));align-items:center}
-.time-range-label{font-size:calc(11px * var(--tas-density));font-weight:650;color:#555;white-space:nowrap}
+.time-range-label{font-size:calc(11px * var(--tas-density));font-weight:650;color:#222;white-space:nowrap}
 .time-mcu-entry{display:block;min-width:0}
 .time-scan-actions button{width:auto;min-height:0;font-weight:400}
-.time-mcu-help{margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));font-size:calc(14px * var(--tas-density));line-height:1.4;color:#555;}
+.time-mcu-help{margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));font-size:calc(14px * var(--tas-density));line-height:1.4;color:#222;}
 .time-estimate-controls{display:grid;grid-template-columns:auto auto minmax(calc(310px * var(--tas-density)),1fr) minmax(calc(310px * var(--tas-density)),1fr);gap:calc(8px * var(--tas-density));align-items:end;margin-top:calc(12px * var(--tas-density))}
 .time-estimate-controls>button{min-height:0;padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));font-weight:400;white-space:nowrap}
 .time-datetime-label{min-width:0}
@@ -84,7 +84,7 @@
   margin-top:calc(6px * var(--tas-density));
   font-size:calc(12px * var(--tas-density));
   line-height:1.35;
-  color:#555;
+  color:#222;
 }
 .time-estimate-controls{
   grid-template-columns:auto auto minmax(0,1fr) minmax(0,1fr);
@@ -145,7 +145,7 @@
   font-size:calc(14px * var(--tas-density));
   line-height:1.4;
   font-weight:600;
-  color:#444;
+  color:#222;
 }
 .time-scan-table{grid-template-columns:calc(46px * var(--tas-density)) calc(96px * var(--tas-density)) minmax(0,1fr) calc(94px * var(--tas-density)) calc(48px * var(--tas-density)) calc(76px * var(--tas-density))}
 .time-fix-header{display:flex;align-items:center;justify-content:center;gap:calc(5px * var(--tas-density))}
