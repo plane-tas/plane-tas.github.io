@@ -384,7 +384,12 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   //   H = [D(S+T'FT)^-1 D']^-1 + G, Hmon = [d(s+t'ft)^-1 d']^-1 + g (Popovici).
   // The convolution uses the resolution function normalised to unit volume,
   // so the prefactor is R0/Rmon (2pi)^2/sqrt(det M); ki^3 cot(thetaM) cancels:
-  //   prefactor = kf (kf^3 cot thetaA) pi/(2 sin thetaA) sqrt(det F det Hmon / (det H det f)).
+  //   prefactor = 8 ln2 * kf (kf^3 cot thetaA) pi/(2 sin thetaA) sqrt(det F det Hmon / (det H det f)).
+  // The matrices here are built from standard deviations; the usual convention
+  // evaluates the determinants with FWHM values (G, F and S all scaled by
+  // 1/(8 ln2)), which multiplies R0/Rmon by 8 ln2 (8x8 H vs 4x4 F in R0, 4x4 Hmon
+  // vs 2x2 f in Rmon).  The factor is applied explicitly below; it is the same for
+  // Cooper-Nathans and Popovici and does not depend on Q or hw.
   let prefactor=null;
   try{
     const i4=[0,1,2,3], f2=submatrix(F,[0,1],[0,1]), c2=submatrix(C,[0,1],i4);
@@ -394,7 +399,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     }
     const lr=(logAbsDet(F)-lnH-logAbsDet(f2)+lnHmon)/2;
     const Ra=kf*kf*kf/Math.abs(tand(thetaA));
-    const v=Ra*PI/(2*Math.abs(sind(thetaA)))*Math.exp(lr)*kf;
+    const v=8*Math.LN2*Ra*PI/(2*Math.abs(sind(thetaA)))*Math.exp(lr)*kf;
     prefactor=Number.isFinite(v) ? v : null;
   }catch(_e){ prefactor=null; }
 
