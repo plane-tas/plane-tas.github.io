@@ -377,14 +377,14 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   } else throw new Error(`Unknown approximation: ${method}`);
 
   // Intensity prefactor, normalised to monitor counts: R0/Rmon with
-  //   R0   = (kf/ki) pi^2 (ki^3 cot thetaM)(kf^3 cot thetaA)/(16 sin thetaM sin thetaA)
+  //   R0   = (kf/ki) pi^2 (ki^3 cot thetaM)(kf^3 cot thetaA)/(4 sin thetaM sin thetaA)
   //          * sqrt(det F / det H) * (2pi)^-2 sqrt(det M)       (source flux)
   //   Rmon = (1/ki) pi (ki^3 cot thetaM)/(2 sin thetaM) * sqrt(det f / det Hmon)
   //   H = G + C'FC, Hmon = g + c'fc (Cooper-Nathans);
   //   H = [D(S+T'FT)^-1 D']^-1 + G, Hmon = [d(s+t'ft)^-1 d']^-1 + g (Popovici).
   // The convolution uses the resolution function normalised to unit volume,
   // so the prefactor is R0/Rmon (2pi)^2/sqrt(det M); ki^3 cot(thetaM) cancels:
-  //   prefactor = kf (kf^3 cot thetaA) pi/(8 sin thetaA) sqrt(det F det Hmon / (det H det f)).
+  //   prefactor = kf (kf^3 cot thetaA) pi/(2 sin thetaA) sqrt(det F det Hmon / (det H det f)).
   let prefactor=null;
   try{
     const i4=[0,1,2,3], f2=submatrix(F,[0,1],[0,1]), c2=submatrix(C,[0,1],i4);
@@ -394,7 +394,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     }
     const lr=(logAbsDet(F)-lnH-logAbsDet(f2)+lnHmon)/2;
     const Ra=kf*kf*kf/Math.abs(tand(thetaA));
-    const v=Ra*PI/(8*Math.abs(sind(thetaA)))*Math.exp(lr)*kf;
+    const v=Ra*PI/(2*Math.abs(sind(thetaA)))*Math.exp(lr)*kf;
     prefactor=Number.isFinite(v) ? v : null;
   }catch(_e){ prefactor=null; }
 
