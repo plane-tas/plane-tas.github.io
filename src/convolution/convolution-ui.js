@@ -197,6 +197,23 @@ export function createConvolutionUI(deps){
   const yieldUI=()=>new Promise(r=>setTimeout(r,0));
   const plotly=()=>typeof Plotly!=='undefined';
 
+  // Default number of points of the 1D scan: an energy step of about 1/8 of
+  // the energy resolution (FWHM of the projection, the finest over a few
+  // energies of the scan), 51 to 2001 points.  Without a resolution (the
+  // instrument cannot reach the scan) the step of the 2D map is used.
+  function defaultScanPoints(hkl,e0,e1,eb){
+    const fallback=eb>0 ? Math.max(51,Math.min(2001,Math.round((e1-e0)/eb)+1)) : 51;
+    if(!(e1>e0)) return fallback;
+    let base; try{ base=collectResolutionBase(); }catch(_e){ return fallback; }
+    let fw=Infinity;
+    for(let i=0;i<=6;i++){
+      const r=resolutionAt(base,hkl,e0+(e1-e0)*i/6,{});
+      const w=r?.widths?.E;
+      if(Number.isFinite(w) && w>0) fw=Math.min(fw,w);
+    }
+    if(!Number.isFinite(fw)) return fallback;
+    return Math.max(51,Math.min(2001,Math.round((e1-e0)/(fw/8))+1));
+  }
   // ------------------------------------------------------------ loading --
   function loadText(){
     if(!text) return;
@@ -231,7 +248,7 @@ export function createConvolutionUI(deps){
           // Constant-Q scan over the E range of the table by default.
           const e0=num('convEmin'), e1=num('convEmax'), eb=num('convEbin');
           $('convE0').value=fmt(e0,3); $('convE1').value=fmt(e1,3);
-          $('convPoints1D').value=String(eb>0 ? Math.min(2001,Math.round((e1-e0)/eb)+1) : 51);
+          $('convPoints1D').value=String(defaultScanPoints(c.map(Number),e0,e1,eb));
         }
       }
       message('convMessage2D',''); message('convMessage1D',''); message('convStatus1D','');
@@ -759,18 +776,39 @@ export function createConvolutionUI(deps){
     const all=$('convShowLine')?.checked!==false;
     const onU=all && $('convLineU')?.checked!==false, onV=all && $('convLineV')?.checked!==false, onE=all && $('convLineE')?.checked!==false;
     const dash=(x0,x1,y0,y1)=>({type:'line',x0,x1,y0,y1,line:{color:'rgba(255,255,255,0.8)',width:1,dash:'dash'}});
+    // Bare dispersion E_b(h, k, l) of every branch, whatever its intensity
+    // (only outside the table there is nothing to draw).
     const overlay=(xs,points)=>{
       if(!$('convShowDispersion')?.checked || !interp) return [];
       // evaluate() reuses its output buffers: copy every result.
-      const vals=points.map(p=>{ const v=interp.evaluate(...p); return v ? {E:Array.from(v.E),I:Array.from(v.I)} : null; });
-      let Imax=0; for(const v of vals) if(v) for(const x of v.I) Imax=Math.max(Imax,x);
+      const vals=points.map(p=>{ const v=interp.evaluate(...p); return v ? Array.from(v.E) : null; });
       const traces=[];
       for(let b=0;b<interp.nBranch;b++){
         traces.push({type:'scatter',mode:'lines',x:xs,
-          y:vals.map(v=>v && v.I[b]>0.02*Imax ? v.E[b] : null),
+          y:vals.map(v=>v && Number.isFinite(v[b]) ? v[b] : null),
           line:{color:'rgba(255,255,255,0.7)',width:1,dash:'dot'},hoverinfo:'skip',showlegend:false,connectgaps:false});
       }
       return traces;
+    };
+    // Constant-energy map: the contour E_b(a, b) = ħω of every branch.  The
+    // dispersion on a fine (a, b) grid does not depend on ħω, so it is kept
+    // for the volume and only the contour level follows the slider.
+    const overlayUV=Ec=>{
+      if(!$('convShowDispersion')?.checked || !interp) return [];
+      const key=`${A[0]},${A[nA-1]},${B[0]},${B[B.length-1]},${interp.nBranch}`;
+      if(!volume._dispUV || volume._dispUV.key!==key || volume._dispUV.interp!==interp){
+        const n=121, aG=Array.from({length:n},(_,i)=>A[0]+(A[nA-1]-A[0])*i/(n-1)), bG=Array.from({length:n},(_,i)=>B[0]+(B[B.length-1]-B[0])*i/(n-1));
+        const z=Array.from({length:interp.nBranch},()=>bG.map(()=>new Array(n).fill(null)));
+        bG.forEach((b,j)=>aG.forEach((a,i)=>{
+          const v=interp.evaluate(...volume.plane.hkl(a,b));
+          if(v) for(let br=0;br<interp.nBranch;br++) if(Number.isFinite(v.E[br])) z[br][j][i]=v.E[br];
+        }));
+        volume._dispUV={key,interp,aG,bG,z};
+      }
+      const {aG,bG,z}=volume._dispUV;
+      return z.map(zb=>({type:'contour',x:aG,y:bG,z:zb,showscale:false,hoverinfo:'skip',connectgaps:false,
+        contours:{start:Ec,end:Ec,size:1,coloring:'none',showlabels:false},
+        line:{color:'rgba(255,255,255,0.7)',width:1,dash:'dot',smoothing:0}}));
     };
     const fine=(arr)=>Array.from({length:201},(_,i)=>arr[0]+(arr[arr.length-1]-arr[0])*i/200);
     const aF=fine(A), bF=fine(B);
@@ -786,7 +824,7 @@ export function createConvolutionUI(deps){
     Plotly.react('convMapEV',[heat('EV',B,E,zEV,sym.v,'ħω'),...overlay(bF,bF.map(b=>volume.plane.hkl(A[ia],b))),...ell.EV],
       {...layout(`ħω–${sym.v} at ${sym.u} = ${fmt(A[ia],3)}`,lineV,'ħω (meV)',B,E),
        shapes:[onE&&dash(B[0],B[B.length-1],E[ie],E[ie]),onV&&dash(B[ib],B[ib],E[0],E[nE-1])].filter(Boolean)},cfg);
-    Plotly.react('convMapUV',[heat('UV',A,B,zUV,sym.u,sym.v),...ell.UV],
+    Plotly.react('convMapUV',[heat('UV',A,B,zUV,sym.u,sym.v),...overlayUV(E[ie]),...ell.UV],
       {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B),
        shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);

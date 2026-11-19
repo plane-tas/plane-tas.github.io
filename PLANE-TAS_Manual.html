@@ -170,12 +170,12 @@
 <ol>
 <li>Enter the h, k, l and ħω <b>min</b>, <b>max</b> and <b>bin</b>; <b>Default</b> takes them from the loaded table. The maps are drawn in the scattering plane (U, V) inside this range.</li>
 <li>Three maps are shown: ħω along U, ħω along V, and the U–V plane at one ħω. The sliders above them (with value boxes) choose the cut of each map.</li>
-<li><b>Show:</b> overlays the bare <b>dispersion</b>, resolution <b>ellipses</b> (coherent: a section through the ellipsoid; incoherent: its projection) and the <b>lines</b> of the current slider positions (U, V, ħω).</li>
+<li><b>Show:</b> overlays the bare <b>dispersion</b> of every branch in the table, whatever its intensity (dotted; on the U–V map, the constant-energy contour at the ħω of the slider), resolution <b>ellipses</b> (coherent: a section through the ellipsoid; incoherent: its projection) and the <b>lines</b> of the current slider positions (U, V, ħω).</li>
 <li><b>Color scale</b> at the end of the Show row sets the minimum and maximum of the color bars, the same for the three maps. After a calculation (or Load CSV) the boxes show the range of the whole result, so the colors keep their meaning while the sliders move; type a value to change an end, or clear a box to go back to the automatic value. The color bars are labelled at both ends, also in saved images. Drag to zoom; double-click to return to the calculated range.</li>
 </ol>
 <h3>1D cut</h3>
 <ol>
-<li>Enter the <b>initial</b> and <b>final</b> H, K, L and ħω and the number of <b>Points</b>. A variable with the same initial and final value is fixed: for example a constant-Q scan changes only ħω, a constant-ħω scan only H, K and L. Stop keeps the points calculated so far.</li>
+<li>Enter the <b>initial</b> and <b>final</b> H, K, L and ħω and the number of <b>Points</b>. A variable with the same initial and final value is fixed: for example a constant-Q scan changes only ħω, a constant-ħω scan only H, K and L. When a dispersion file is loaded, the scan is set to a constant-Q scan at the centre of the table over the ħω range of the 2D slice, with an energy step of about one eighth of the energy resolution (FWHM) there (51 to 2001 points); a finer step only takes longer, a coarser one can miss the line shape. Stop keeps the points calculated so far.</li>
 <li><b>+ Keep this result</b> keeps the current curve for comparison. The list next to the plot is the legend: the CSV box includes a curve in Save CSV, <b>Remove</b> and <b>Clear all</b> delete kept curves.</li>
 <li>The legend gives Q (moving components as H, K, L, e.g. (H, H, 1)), ħω, the fixed Ef or Ei, the horizontal collimation (SM(m=…) for a supermirror guide, the equivalent divergence with (R) for a radial collimator), flat or focusing analyzer, and the approximation.</li>
 <li><b>Save figure</b> (top left of the plot) saves the plot as PNG with the legend under it.</li>
