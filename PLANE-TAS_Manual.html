@@ -139,11 +139,11 @@
 <h3>Dispersion file</h3>
 <ol>
 <li>Press <b>Select file</b> and choose a text table (.txt, .dat or .csv; columns separated by spaces, tabs or commas; lines starting with # are comments). Choose its <b>Format</b>: with or without an index column, and the energies and intensities either as blocks (E1 … En, I1 … In) or as pairs (E1, I1, … En, In). The file is kept in the browser for the next visit.</li>
-<li>Each row gives h, k, l (r.l.u.), the energy of every branch (meV) and its intensity. The intensities are used as they are: include the polarization factor (Q·e)², the Bose factor, 1/E, form factors and so on in the table as needed.</li>
+<li>Each row gives h, k, l (r.l.u.), the energy of every branch (meV) and its intensity. The intensity is S(Q, ω): include the polarization factor (Q·e)², the Bose factor, 1/E, form factors and so on in the table as needed, but not kf/ki or other instrument factors.</li>
 <li>A table on a regular h, k, l grid is interpolated (trilinear); scattered points use the nearest point. When h, k or l takes a single value, the dispersion is taken to be the same for every value of that index.</li>
 <li><b>Preview file</b> shows the table as read.</li>
 </ol>
-<p>The blue box summarises two rules. The intensity always includes the analyzer factor kf³ cot A1 (A1: analyzer Bragg angle, A2/2); with Ef fixed it is a constant. The table should cover the calculation range by at least ±1.5 FWHM of the resolution, with a step of at most FWHM/6. Parts of the resolution ellipsoid outside the table contribute no intensity; a message says how much of it was outside.</p>
+<p>The blue box summarises two rules. The intensity is the table S(Q, ω) multiplied by kf⁴ cot A1 (A1: analyzer Bragg angle, A2/2): the analyzer factor kf³ cot A1 and the kf/ki of the cross-section, whose 1/ki is cancelled by the monitor (normalisation to monitor counts). With Ef fixed it is a constant; with Ei fixed it lowers the intensity at large ħω. The table should cover the calculation range by at least ±1.5 FWHM of the resolution, with a step of at most FWHM/6. Parts of the resolution ellipsoid outside the table contribute no intensity; a message says how much of it was outside.</p>
 <h3>Calculation settings</h3>
 <p>The <b>2D slice</b> and <b>1D cut</b> tabs have the same layout: <b>Load CSV</b> on the first row, the range table, a calculation row and <b>Save CSV</b>.</p>
 <ol>

@@ -120,11 +120,12 @@ export function reachable(cfg,qnorm,E){
   const c=(ki*ki+kf*kf-qnorm*qnorm)/(2*ki*kf);
   return c>=-1-1e-10 && c<=1+1e-10;
 }
-// Monitor normalisation kf³ cot A1 at ħω (A1: analyzer Bragg angle).
+// Monitor normalisation of an S(Q,ω) table, kf⁴ cot A1 at ħω (A1: analyzer
+// Bragg angle): kf³ cot A1 times the kf of the cross-section (as ResLib).
 export function prefactorAt(cfg,E){
   const Ef=cfg.energyMode==='Ei fixed' ? cfg.Ei-E : cfg.Ef;
   const kf=Math.sqrt(Ef/E2K2), th=Math.asin(Math.min(1,Math.PI/(cfg.dAna*kf)));
-  return kf*kf*kf/Math.tan(th);
+  return kf*kf*kf*kf/Math.tan(th);
 }
 export const latticeConfig=base=>({
   energyMode:base.config.energy_mode, Ei:Number(base.config.Ei), Ef:Number(base.config.Ef),
