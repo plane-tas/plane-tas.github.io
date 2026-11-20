@@ -2,6 +2,7 @@
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
+import {saveQEFigure} from '../qe/qe-save-figure.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 // Sidebar: a fade at the bottom while more settings lie below (overlay
 // scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
@@ -169,6 +170,9 @@ async function initialize(){
   $('qeWSlider')?.addEventListener('input',()=>{const w=Number($('qeWSlider').value);$('qeWEntry').value=String(Number(w.toFixed(4)));applyMapW(w);});
   $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
   $('displayS2Ring').addEventListener('change',()=>{if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));saveRightPanelState();});
+  // Constant E map: Save figure (plot with its colour bars, and the legend).
+  $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'singlePlot',legendId:'qePlotLegend',filename:'constant-e-map.png'})
+    .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);
     field?.addEventListener('focus',()=>field.select());

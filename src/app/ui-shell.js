@@ -1,4 +1,4 @@
-import {renamedInstrument} from './instrument-renames.js';
+import {movedInstrument} from './instrument-renames.js';
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
 export function createUIShell(deps){
@@ -183,11 +183,13 @@ function syncQEViewportHeight(){
 function gridColumnCount(el){
   return getComputedStyle(el).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
 }
-// Resolution tab: the same idea for the four ellipse plots.  Only the plots are
-// fitted into the visible height; the matrices below them still scroll.
+// Resolution tab: the same idea for the four ellipse plots of the open view
+// (Individual / Comparison): they are fitted into the visible height, and
+// the page scrolls only when even the smallest plots do not fit.  In
+// Comparison the fit is for one table row; more rows make the page scroll.
 const RES_FIT_MIN_PLOT=200;
 function syncResolutionViewportHeight(){
-  const panel=$('resolutionPanel'), plots=document.querySelector('#result .plots'), main=panel?.closest('main');
+  const panel=$('resolutionPanel'), plots=[...document.querySelectorAll('#result .plots')].find(visibleElement), main=panel?.closest('main');
   const workspace=panel?.querySelector('.resolution-workspace');
   if(!panel || !plots || !main) return;
   const prev=panel.style.getPropertyValue('--res-fit-plot');
@@ -198,7 +200,11 @@ function syncResolutionViewportHeight(){
     const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
     const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
     const bottom=plots.getBoundingClientRect().bottom-mainRect.top+main.scrollTop;
-    const over=bottom-available;
+    // Comparison: the plots are sized for a table with one row; further
+    // rows lengthen the page (it scrolls) instead of shrinking the plots.
+    const extraRows=plots.closest('#resolutionComparisonView')
+      ? [...document.querySelectorAll('#resolutionCompareRows tr')].slice(1).reduce((sum,tr)=>sum+tr.offsetHeight,0) : 0;
+    const over=bottom-available-extraRows;
     if(over>1){
       const rows=Math.ceil(plots.children.length/Math.max(1,gridColumnCount(plots)));
       const height=Math.max(RES_FIT_MIN_PLOT,Math.floor(first.offsetHeight-over/rows));
@@ -594,8 +600,8 @@ function restoreLeftPanelState(){
     v.instrument=poplarKey;
     v.instrumentType=poplarType;
   }
-  // HODACA's file renamed 11_HODACA.json -> 11_C11.json.
-  { const key=renamedInstrument(v.instrument,[...($('instrument')?.options||[])].map(o=>o.value)); if(key) v.instrument=key; }
+  // HODACA / HER files renamed and split (instrument-renames.js).
+  { const m=movedInstrument(v.instrument,v.instrumentType,[...($('instrument')?.options||[])].map(o=>o.value)); if(m){ v.instrument=m.key; v.instrumentType=m.type; } }
   restoringLeftPanel=true;
   try{
     // 1) The instrument must exist before its dependent defaults can be applied.

@@ -1,4 +1,4 @@
-import {renamedInstrument} from './instrument-renames.js';
+import {movedInstrument} from './instrument-renames.js';
 // Instrument JSON: Save (current instrument with the sidebar / Resolution
 // settings), Load (adds an instrument file to the Instrument list; the last
 // loaded one is kept in this browser) and the built-in "Custom" instrument (every type and crystal).
@@ -200,7 +200,7 @@ export function createInstrumentJsonIO(deps){
   function selectInstrument(key){
     const select=$('instrument');
     refreshSelect(instruments,select,null);
-    if(!instruments.has(key)) key=renamedInstrument(key,instruments.keys())??key;
+    if(!instruments.has(key)) key=movedInstrument(key,'',instruments.keys())?.key??key;
     if(instruments.has(key)) select.value=key; else select.selectedIndex=0;
     select.dispatchEvent(new Event('change',{bubbles:true}));
   }

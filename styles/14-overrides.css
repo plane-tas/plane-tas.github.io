@@ -932,26 +932,28 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-scan-plotbox>.convolution-scan-plot{flex:1 1 auto;min-width:0;height:auto}
 .convolution-curves{flex:1 1 0;min-width:0;overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e7ec;border-radius:calc(4px * var(--tas-density))}
 /* Curves of the 1D cut: a table that is also the legend (its columns are
-   chosen in the Show row above the plot).  Columns: Keep / Remove, colour, CSV, then the legend columns, one
-   line each; the first three stay in view when the table scrolls sideways. */
+   chosen in the Show row above the plot).  Columns: Keep / Remove, colour,
+   then the legend columns, one line each; the first two stay in view when
+   the table scrolls sideways.  Click a row to highlight its curve. */
 /* The legend column boxes take part in the Show row's wrapping. */
 .convolution-legend-columns{display:contents}
 .convolution-show-sep{align-self:stretch;width:0;border-left:calc(1px * var(--tas-density)) solid #c8ced6;margin:0 calc(2px * var(--tas-density))}
-.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));--c3:calc(80px * var(--tas-density));width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
+.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
 .convolution-curve-table :is(th,td){white-space:nowrap;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density))}
 .convolution-curve-table th{position:sticky;top:0;z-index:1;background:#f4f6f8;font-weight:650;border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
-.convolution-curve-table th span{margin-left:calc(2px * var(--tas-density));vertical-align:middle}
-.convolution-curve-table th input{vertical-align:middle}
 .convolution-curve-table td{border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:middle}
 .convolution-curve-table td.convolution-curve-field{min-width:3.2em}
 .convolution-curve-table button{font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
-.convolution-curve-current{background:#f7f9fb}
-.convolution-curve-table :is(th,td):nth-child(-n+3){position:sticky;z-index:1;background:#fff;box-sizing:border-box}
-.convolution-curve-table th:nth-child(-n+3){z-index:2;background:#f4f6f8}
-.convolution-curve-table .convolution-curve-current td:nth-child(-n+3){background:#f7f9fb}
+.convolution-curve-table tbody tr{cursor:pointer}
+.convolution-curve-table tbody tr:hover td{background:#f6f9fc}
+.convolution-curve-current td{background:#f7f9fb}
+.convolution-curve-table tbody tr.selected td{background:#e3eefb}
+.convolution-curve-table :is(th,td):nth-child(-n+2){position:sticky;z-index:1;background:#fff;box-sizing:border-box}
+.convolution-curve-table th:nth-child(-n+2){z-index:2;background:#f4f6f8}
+.convolution-curve-table .convolution-curve-current td:nth-child(-n+2){background:#f7f9fb}
+.convolution-curve-table tbody tr.selected td:nth-child(-n+2){background:#e3eefb}
 .convolution-curve-table :is(th,td):nth-child(1){left:0;width:var(--c1);min-width:var(--c1);max-width:var(--c1)}
-.convolution-curve-table :is(th,td):nth-child(2){left:var(--c1);width:var(--c2);min-width:var(--c2);max-width:var(--c2)}
-.convolution-curve-table :is(th,td):nth-child(3){left:calc(var(--c1) + var(--c2));width:var(--c3);min-width:var(--c3);max-width:var(--c3);text-align:center;box-shadow:inset -1px 0 #e3e7ec}
+.convolution-curve-table :is(th,td):nth-child(2){left:var(--c1);width:var(--c2);min-width:var(--c2);max-width:var(--c2);box-shadow:inset -1px 0 #e3e7ec}
 /* Colour of a curve: a square colour picker (as in the CIF generator). */
 .convolution-color-pick{display:block;width:calc(30px * var(--tas-density));height:calc(22px * var(--tas-density));padding:calc(1px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #c8ced6;border-radius:calc(3px * var(--tas-density));background:#fff;cursor:pointer;box-sizing:border-box}
 .convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}

@@ -59,6 +59,7 @@ function clearResolutionResults(){
   $('scanNav')?.classList.add('hidden');
   if($('summary')) $('summary').textContent='';
   if($('matrix')) $('matrix').textContent='';
+  if($('resolutionAngleWarning')) $('resolutionAngleWarning').hidden=true;
   $('calcScanResolution')?.classList.remove('needs-calc');
 }
 function formatAutoHKL(v){return v.map(x=>{if(Math.abs(x)<1e-10)return '0';const r=Math.round(x);if(Math.abs(x-r)<1e-10)return String(r);return Number(x.toPrecision(6)).toString();}).join(', ');}
@@ -177,7 +178,8 @@ function traceEllipse(p,name,dash='solid'){
     // Report the curve's coordinates, with floating-point noise near zero
     // suppressed only in the displayed values, not in the plotted points.
     customdata:p.x.map((x,i)=>[formatResolutionCoordinate(x),formatResolutionCoordinate(p.y[i])]),
-    hovertemplate:'X: %{customdata[0]}<br>Y: %{customdata[1]}<extra></extra>'
+    // First hover line: the curve's name (e.g. "#1 coherent").
+    hovertemplate:`${name}<br>X: %{customdata[0]}<br>Y: %{customdata[1]}<extra></extra>`
   };
 }
 }

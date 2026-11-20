@@ -524,6 +524,8 @@ function updateModeVisibility(){
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
+  // The F_N / F_M scale row belongs to the single-crystal map.
+  if(!single) $('sfColorbarRange')?.classList.add('hidden');
   // Powder has its own clickable legend below the Q–E plot.
   $('qePowderLegend')?.classList.toggle('hidden',single);
   if(!single) syncPowderLinkedInputs();

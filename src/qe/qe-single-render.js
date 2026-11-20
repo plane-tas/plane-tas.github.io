@@ -543,7 +543,9 @@ function renderSingle(cache,index=0){
     ...(rluGrid?{shapes:rluGrid.shapes,annotations:rluGrid.annotations}:{}),
     // The legend now lives below the display controls, outside this Plotly canvas.
     margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
-  },{responsive:true,doubleClick:false});
+  // Plotly's download button saves the plot without the legend and scales:
+  // Save figure (top left) replaces it.
+  },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
   if(plotNode) plotNode.dataset.qeUnit=unit;
   Promise.resolve(singleDraw).then(()=>{
     if(plotNode?.__tasMapDrawToken!==drawToken) return;

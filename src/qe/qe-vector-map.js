@@ -406,11 +406,12 @@ function renderQEVectorMap(cache){
     const traces=[{
       type:'heatmap',x:xVals,y:cache.hwList,z,
       zmin:0,zmax:1,showscale:false,hoverinfo:'text',text:hover,
-      colorscale:[[0,'rgba(255,255,255,0)'],[0.499,'rgba(255,255,255,0)'],[0.5,'rgba(255,222,105,0.72)'],[1,'rgba(255,222,105,0.72)']],
+      // Same colours as the Constant E map (same transparency on white).
+      colorscale:[[0,'rgba(255,255,255,0)'],[0.499,'rgba(255,255,255,0)'],[0.5,'rgba(255,215,0,0.20)'],[1,'rgba(255,215,0,0.20)']],
       name:'Accessible Q–E',showlegend:false
     },{
       type:'scatter',mode:'markers',x:[null],y:[null],hoverinfo:'skip',
-      marker:{size:11,symbol:'square',color:'rgba(255,222,105,0.90)',line:{color:'#c7a62c',width:1}},
+      marker:{size:11,symbol:'square',color:'rgba(255,215,0,0.20)',line:{color:'#c7a62c',width:1}},
       name:'Accessible Q',showlegend:true,legendrank:0
     }];
     const addDarkOverlay=(mask,name,color,legendrank)=>{
@@ -472,9 +473,9 @@ function renderQEVectorMap(cache){
       }
     }
 
-    addDarkOverlay(darkKiZ,'Dark angle (ki side)','rgba(75,190,105,0.55)',20);
-    addDarkOverlay(darkKfZ,'Dark angle (kf side)','rgba(75,170,235,0.55)',21);
-    addDarkOverlay(darkFixedZ,'Dark angle (fixed)','rgba(95,105,220,0.50)',22);
+    addDarkOverlay(darkKiZ,'Dark angle (ki side)','rgba(0,255,0,0.15)',20);
+    addDarkOverlay(darkKfZ,'Dark angle (kf side)','rgba(80,190,255,0.25)',21);
+    addDarkOverlay(darkFixedZ,'Dark angle (fixed)','rgba(0,0,255,0.15)',22);
 
     // Plotly's native axis grid is rendered behind data traces, so colored
     // heatmap overlays can obscure it.  Build a matching set of grid lines as

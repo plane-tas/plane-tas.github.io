@@ -23,6 +23,15 @@ const RESOLUTION_PLOT_FONTS={title:22,axis:20,tick:21};
 // Major grid darker, minor grid lighter.
 const RESOLUTION_MAJOR_GRID={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1};
 const RESOLUTION_MINOR_GRID={showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''};
+// Result: one colour, the colour of #1 in Comparison (there the colour is
+// the result and the line style the kind): solid = incoherent (projection),
+// dashed = coherent (slice).
+const RESULT_COLOR='#1f77b4';
+function resultEllipses(proj,slice){
+  return [['incoherent',proj,'solid'],['coherent',slice,'dash']].map(([name,p,dash])=>{
+    const t=fn.traceEllipse(p,name,dash); t.line={dash,color:RESULT_COLOR}; return t;
+  });
+}
 // Q axes: only three labelled ticks (-a, 0, a) with a round a, so the small
 // δQ numbers are never crowded or rotated.  Minor grid lines subdivide a.
 function resolutionQTicks(lim){
@@ -123,7 +132,7 @@ function installResolutionDoubleClick(gd){
   gd.on('plotly_doubleclick',gd.__tasResolutionDoubleClick);
 }
 shared.RESOLUTION_PLOT_IDS={UE:'plotUE',VE:'plotVE',UV:'plotUV',WE:'plotWE'};
-// Draw the four projection/slice ellipse plots into the given plot elements.
+// Draw the four ellipse plots (incoherent = projection, coherent = slice).
 function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_IDS,fonts=RESOLUTION_PLOT_FONTS){
   const qUnit=unitMode==='rlu'?'r.l.u.':'Å⁻¹';
   const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
@@ -131,19 +140,19 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_I
   const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δħω`;
   reactResolutionPlot(
     ids.UE,
-    [fn.traceEllipse(el.projUE,'projection'),fn.traceEllipse(el.sliceUE,'slice','dash')],
+    resultEllipses(el.projUE,el.sliceUE),
     baseLayout(qeTitle(ax.U),`δQ ∥ ${fmtAxis(ax.U)} (${qUnit})`,'δħω (meV)',limits.U,limits.E,false,ids.UE,fonts),
   );
 
   reactResolutionPlot(
     ids.VE,
-    [fn.traceEllipse(el.projVE,'projection'),fn.traceEllipse(el.sliceVE,'slice','dash')],
+    resultEllipses(el.projVE,el.sliceVE),
     baseLayout(qeTitle(ax.V),`δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,'δħω (meV)',limits.V,limits.E,false,ids.VE,fonts),
   );
 
   reactResolutionPlot(
     ids.WE,
-    [fn.traceEllipse(el.projWE,'projection'),fn.traceEllipse(el.sliceWE,'slice','dash')],
+    resultEllipses(el.projWE,el.sliceWE),
     baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,false,ids.WE,fonts),
   );
 
@@ -167,7 +176,7 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_I
     `δQ ∥ ${fmtAxis(ax.V)} (${qUnit})`,
     uLim,vLim,uvEqual,ids.UV,fonts,true
   );
-  reactResolutionPlot(ids.UV,[fn.traceEllipse(el.projUV,'projection'),fn.traceEllipse(el.sliceUV,'slice','dash')],layout);
+  reactResolutionPlot(ids.UV,resultEllipses(el.projUV,el.sliceUV),layout);
 }
 // Round step for resolution axes: the largest 1, 2, 2.5 or 5 x 10^n that
 // still fits inside 90 % of the half range, so the labelled ticks sit near
@@ -247,7 +256,7 @@ function renderObliqueUVPlot(r,unitMode,ax,id,fonts,limits){
   const toAB=(x,y)=>{const b=y/sin, a=x-b*cos; return [fn.formatResolutionCoordinate(a/nU),fn.formatResolutionCoordinate(b/nV)];};
   const trace=(p,name,dash,color)=>({x:p.x,y:p.y,mode:'lines',name,line:{dash,color},
     customdata:p.x.map((x,i)=>toAB(x,p.y[i])),
-    hovertemplate:`U: %{customdata[0]}<br>V: %{customdata[1]} (${qUnit})<extra></extra>`});
+    hovertemplate:`${name}<br>U: %{customdata[0]}<br>V: %{customdata[1]} (${qUnit})<extra></extra>`});
   // Same ranges as the U–V view: U over ±limits.U and V over ±limits.V
   // (the V range maps to y through the V component normal to U).  In r.l.u.
   // and Å⁻¹ alike the two axes keep their own scales, as in the U–V
@@ -273,7 +282,7 @@ function renderObliqueUVPlot(r,unitMode,ax,id,fonts,limits){
   };
   const gd=$(id);
   if(gd) gd.__tasObliqueGrid={basis};
-  reactResolutionPlot(id,[trace(proj,'projection','solid','#1f77b4'),trace(slice,'slice','dash','#ff7f0e')],layout,refreshObliqueGrid);
+  reactResolutionPlot(id,[trace(proj,'incoherent','solid',RESULT_COLOR),trace(slice,'coherent','dash',RESULT_COLOR)],layout,refreshObliqueGrid);
   // Re-label the oblique grid after zooming, panning or resizing.
   if(gd && !gd.__tasObliqueRelayout && typeof gd.on==='function'){
     gd.__tasObliqueRelayout=true;
@@ -303,8 +312,10 @@ function syncResolutionUVHead(show){
   const select=$('resolutionUVView');
   if(!select) return;
   if(select.value!==shared.resolutionUVView) select.value=shared.resolutionUVView;
-  select.disabled=!show;
-  select.title=show?'':'Only for U, V, E, W with U not perpendicular to V';
+  // Locked while results are kept (Comparison: Clear all frees it).
+  const locked=!!shared.resolutionFrameLocked;
+  select.disabled=!show || locked;
+  select.title=locked ? 'Fixed while results are kept in Comparison (Clear all to change)' : show?'':'Only for U, V, E, W with U not perpendicular to V';
 }
 function bindResolutionUVView(){
   const select=$('resolutionUVView');

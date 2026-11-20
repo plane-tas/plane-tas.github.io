@@ -197,27 +197,20 @@
 .qe-external-legend .qe-legend-item[aria-pressed=false]{opacity:.45;text-decoration:line-through}
 .qe-external-legend .qe-legend-marker{display:block;flex:0 0 calc(19px * var(--tas-density))}
 
-/* Constant E map: edit the two colorbar endpoint values in-place. */
+/* Constant E map: Save figure at the top left of the plot (as in the 1D cut
+   and Comparison). */
 #singlePlotFrame{position:relative;min-width:0;background:#fff}
-#sfColorbarRange{position:absolute;inset:0;pointer-events:none;z-index:5}
+#singlePlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+/* Scale row under the legend: F_N and F_M colour scales (min / max, labels
+   above the entries as elsewhere) and the Lorentz factor of the peak shading. */
+#sfColorbarRange{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));padding:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
 #sfColorbarRange.hidden{display:none!important}
-#sfColorbarRange .qe-colorbar-value{
-  position:absolute;display:block;box-sizing:border-box;
-  width:calc(58px * var(--tas-density));min-width:0;max-width:calc(58px * var(--tas-density));height:calc(26px * var(--tas-density));
-  margin:0;padding:0 calc(2px * var(--tas-density));border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(3px * var(--tas-density));
-  background:transparent;color:#222;font:400 calc(14px * var(--tas-density)) Arial,sans-serif;
-  text-align:left;line-height:calc(24px * var(--tas-density));pointer-events:auto;cursor:text;
-  -moz-appearance:textfield;appearance:textfield;
-}
+#sfColorbarRange .qe-colorbar-value{width:calc(76px * var(--tas-density));box-sizing:border-box;-moz-appearance:textfield;appearance:textfield}
 #sfColorbarRange .qe-colorbar-value::-webkit-inner-spin-button,
-#sfColorbarRange .qe-colorbar-value::-webkit-outer-spin-button{
-  -webkit-appearance:none;margin:0;
-}
-#sfColorbarRange .qe-colorbar-value:hover{border-bottom-color:#7991a7}
-#sfColorbarRange .qe-colorbar-value:focus{
-  outline:calc(2px * var(--tas-density)) solid #477db0;outline-offset:0;
-  border-color:#7b97b2;background:#fff;
-}
+#sfColorbarRange .qe-colorbar-value::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#sfColorbarRange .qe-magnetic-ratio{white-space:nowrap;color:#7a1010;font-size:var(--plane-tab-label-font);line-height:1.35;padding-bottom:calc(6px * var(--tas-density))}
+#sfColorbarRange select.qe-lorentz-select{width:auto!important;min-width:calc(120px * var(--tas-density))}
+#sfColorbarRange .qe-scale-lorentz{align-items:stretch}
 /* Input descriptions in Toolbox, and Q-E display checkboxes. */
 #toolboxPanel .toolbox-subpanel label,
 #qeDisplayControls .checkbox-label,
@@ -720,15 +713,6 @@
   }
 }
 
-/* Magnetic colorbar endpoints only for a single-k magnetic structure. */
+/* Magnetic scale only for a single-k magnetic structure. */
 #sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry{display:none}
-
-/* Lorentz factor of the peak shading, above the nuclear colorbar. */
-#singlePlotFrame #sfColorbarRange select.qe-lorentz-select{position:absolute;pointer-events:auto;box-sizing:border-box;
-  width:max(98px,calc(100px * var(--tas-density)))!important;min-width:0!important;max-width:none!important;height:max(22px,calc(24px * var(--tas-density)))!important;
-  min-height:0!important;padding:0 2px!important;font:400 max(12px,calc(13px * var(--tas-density))) Arial,sans-serif!important}
-
-/* Strongest magnetic peak relative to the strongest nuclear peak, above the
-   magnetic colorbar. */
-#sfColorbarRange .qe-magnetic-ratio{position:absolute;white-space:nowrap;pointer-events:none;
-  font:400 max(12px,calc(13px * var(--tas-density))) Arial,sans-serif;color:#7a1010}
+#sfColorbarRange label{font-size:var(--plane-tab-label-font)!important;line-height:1.35}

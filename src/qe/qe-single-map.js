@@ -219,55 +219,15 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
   handler();
 }
 
-function positionSingleColorbarEntries(){
-  const frame=$('singlePlotFrame'),gd=$('singlePlot'),controls=$('sfColorbarRange');
-  if(!frame || !gd || !controls || controls.classList.contains('hidden')) return;
-  // Place editable text at the exact endpoints of Plotly's colorbars (nuclear
-  // above, magnetic below for a single k). The native endpoint labels are
-  // omitted via colorbar.ticktext.
-  const bars=[...gd.querySelectorAll('.colorbar .cbfill, .cbfill')].filter((el,i,all)=>all.indexOf(el)===i)
-    .map(el=>el.getBoundingClientRect()).filter(r=>r.height>=1).sort((p,q)=>p.top-q.top);
-  const outer=frame.getBoundingClientRect();
-  if(!bars.length || !outer.width) return;
-  const density=window.tasUIDensity?.() || 1;
-  const entryWidth=58*density;
-  const width=outer.width, height=outer.height;
-  const place=(entry,rect,cy)=>{
-    if(!entry) return;
-    entry.style.left=`${Math.max(0,Math.min(width-entryWidth,rect.right-outer.left+7*density))}px`;
-    const entryHeight=entry.getBoundingClientRect().height;
-    entry.style.top=`${Math.max(0,Math.min(height-entryHeight,cy-entryHeight/2))}px`;
-  };
-  const nuclear=bars[0], magnetic=controls.classList.contains('qe-magnetic-colorbar') ? bars[1] : null;
-  place($('sfColorMaxEntry'),nuclear,nuclear.top-outer.top);
-  place($('sfColorMinEntry'),nuclear,nuclear.bottom-outer.top);
-  if(magnetic){
-    place($('mfColorMaxEntry'),magnetic,magnetic.top-outer.top);
-    place($('mfColorMinEntry'),magnetic,magnetic.bottom-outer.top);
-    // M = r N just above the magnetic maximum.
-    const ratio=$('mfMaxRatio'), maxEntry=$('mfColorMaxEntry')?.getBoundingClientRect();
-    if(ratio && maxEntry){
-      const r=ratio.getBoundingClientRect();
-      ratio.style.left=`${Math.max(0,Math.min(width-r.width-3*density,magnetic.left-outer.left-4*density))}px`;
-      ratio.style.top=`${Math.max(0,maxEntry.top-outer.top-r.height)}px`;
-    }
-  }
-  // Lorentz-factor selector just above the nuclear maximum.
-  const lorentz=$('qeLorentz');
-  if(lorentz){
-    const r=lorentz.getBoundingClientRect();
-    const maxEntry=$('sfColorMaxEntry')?.getBoundingClientRect();
-    const top=(maxEntry ? maxEntry.top-outer.top : nuclear.top-outer.top)-r.height-2*density;
-    lorentz.style.left=`${Math.max(0,Math.min(width-r.width-2*density,nuclear.left-outer.left-4*density))}px`;
-    lorentz.style.top=`${Math.max(0,top)}px`;
-  }
-}
+// The colour-scale entries now sit in the Scale row under the legend (they
+// used to be placed over the colorbar ends); kept for its callers.
+function positionSingleColorbarEntries(){}
 
-// Intermediate tick marks remain Plotly-native; only the end labels become
-// editable HTML numbers directly over the position of those tick labels.
+// Five labelled ticks, the minimum and maximum included (they are set in the
+// Scale row and appear in Save figure).
 function singleColorbarTicks(min,max){
   const values=Array.from({length:5},(_,i)=>min+(max-min)*i/4);
-  const text=values.map((v,i)=>i===0||i===4?'':String(Number(v.toPrecision(3))));
+  const text=values.map(v=>String(Number(v.toPrecision(3))));
   return {tickmode:'array',tickvals:values,ticktext:text};
 }
 

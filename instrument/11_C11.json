@@ -1,5 +1,5 @@
 {
-  "name": "HODACA/HER@JRR3",
+  "name": "HER@JRR3",
   "approximation": {
     "method": "Popovici"
   },
@@ -141,10 +141,6 @@
     }
   ],
   "instrument_type": "tas",
-  "instrument_setting": [
-    "tas",
-    "multiplexing"
-  ],
   "available_crystals": {
     "monochromator": [
       "PG002"
@@ -152,18 +148,5 @@
     "analyzer": [
       "PG002"
     ]
-  },
-  "multiplexing": {
-    "label": "Multiplexing",
-    "instrument_type": "tas",
-    "configuration": {
-      "Ef": 3.635
-    },
-    "analyzer": {
-      "hfocus": false,
-      "blade_h": 1
-    },
-    "A2_min": 90,
-    "A2_max": 90
   }
 }

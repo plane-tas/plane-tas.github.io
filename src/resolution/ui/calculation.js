@@ -1,11 +1,9 @@
 // Resolution: single / scan calculation, warnings and results.
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
-import {displayedMotorAngles} from '../../core/tas-conventions.js';
 export function installResolutionCalculation(ctx){
   const {deps:{
-    $, clearError, hklInCurrentScatteringPlane, linspace, markResolutionScanDirty, num,
-    propagationVectorIndices, scatteringPlaneWarningMessage, setScatteringPlaneWarning,
-    userFacingTasMessage
+    $, clearError, linspace, markResolutionScanDirty, num,
+    propagationVectorIndices, userFacingTasMessage
   }, state:shared, fn}=ctx;
   Object.assign(fn,{
     bindResolutionManualCalculation, doScanResolution, doSingleResolution, renderResolution,
@@ -20,26 +18,23 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   const {result:r,calc,unitMode,lc,angles}=entry;
   const limits=plotLimits || fn.resolutionFrame(r).lim;
   shared.lastResolutionRender={entry,indexInfo,scan:indexInfo.startsWith('| scan')};
-  const ax=fn.resolutionDisplayAxes(r,lc), axisNames=fn.resolutionAxisNames(r);
-  const fmtAxis=fn.formatResolutionAxis;
 
   $('result').classList.remove('hidden');
-
-  // Show the motor angles exactly as Angle calculation does (same signs).
-  const shown=displayedMotorAngles(angles);
+  $('resolutionCalculationView')?.classList.remove('resolution-failed');
+  if($('resolutionFailNote')) $('resolutionFailNote').hidden=true;
 
   // Use the energies returned by the resolution calculation itself.  This
   // works for both fixed-Ei and fixed-Ef modes without recomputing energies.
+  // Numbers without trailing zeros: "(0, 1, 0), ħω=3 meV, Ei=7.5 meV".
   const {Ei,Ef}=r.energies;
+  const g=v=>{ const x=Number(Number(v).toFixed(3)); return String(Object.is(x,-0)?0:x); };
   $('summary').innerHTML=
-    `<div><b>Calculation point</b> Ei=${Ei.toFixed(3)} meV, Ef=${Ef.toFixed(3)} meV, `+
-    `ħω=${calc.hw.toFixed(3)} meV, (h,k,l)=(${calc.h.toFixed(3)}, ${calc.k.toFixed(3)}, ${calc.l.toFixed(3)}) ${indexInfo}</div>`+
-    `<div>${fn.resolutionWidthsHtml(r,unitMode,lc)}</div>`+
-    `<div><b>Resolution axes</b> ${axisNames[0]}=${fmtAxis(ax.U)}, ${axisNames[1]}=${fmtAxis(ax.V)}, ${axisNames[2]}=${fmtAxis(ax.W)}</div>`+
-    `<div><b>Angles (deg)</b> M1=${fn.formatAngle(shown.m1)}, M2=${fn.formatAngle(shown.m2)}, `+
-    `S1=${fn.formatAngle(shown.s1)}, S2=${fn.formatAngle(shown.s2)}, `+
-    `A1=${fn.formatAngle(shown.a1)}, A2=${fn.formatAngle(shown.a2)}`+
-    `${angles.warning ? ` &nbsp;⚠ ${angles.warning}` : ''}</div>`;
+    `<div><b>Calculation point</b> (${g(calc.h)}, ${g(calc.k)}, ${g(calc.l)}), ħω=${g(calc.hw)} meV, `+
+    `Ei=${g(Ei)} meV, Ef=${g(Ef)} meV ${indexInfo}</div>`+
+    `<div>${fn.resolutionWidthsHtml(r,unitMode,lc)}</div>`;
+  // Motor angles are in the Angle calculation; only a failure is shown here.
+  const angleWarning=$('resolutionAngleWarning');
+  if(angleWarning){ angleWarning.textContent=angles.warning ? `Warning: ${angles.warning}` : ''; angleWarning.hidden=!angles.warning; }
 
   // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
   // RM_U is the same matrix rotated to the U-based orthogonal frame.
@@ -56,61 +51,60 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
       shown.value=radial && Number.isFinite(r.collimation3.fwhmArcmin) ? `${Math.round(r.collimation3.fwhmArcmin)}′ (radial)` : 'radial'; } }
   fn.bindResolutionUVView();
   fn.renderResolutionPlots(r,unitMode,lc,limits);
-  fn.updateResolutionKeepState?.();
-}
-function resolutionScanPoints(){
-  const nRaw=Math.round(num('npts'));
-  const n=Number.isFinite(nRaw)?Math.max(2,nRaw):2;
-  const hs=linspace(num('h0'),num('h1'),n), ks=linspace(num('k0'),num('k1'),n), ls=linspace(num('l0'),num('l1'),n);
-  return Array.from({length:n},(_,i)=>[hs[i],ks[i],ls[i]]);
+  // The Comparison table shows the new result as its current row.
+  fn.renderResolutionComparison?.();
 }
 
-function updateResolutionPlaneWarning(){
-  if(fn.resolutionIsUnavailable()){
-    setScatteringPlaneWarning('resolutionPlaneWarning','');
-    return;
-  }
-  const scan=$('calcMode')?.value==='scan';
-  if(!scan){
-    setScatteringPlaneWarning('resolutionPlaneWarning',scatteringPlaneWarningMessage([num('h'),num('k'),num('l')]));
-    return;
-  }
-  const points=resolutionScanPoints();
-  let outside=0, firstError='';
-  for(const hkl of points){
-    const result=hklInCurrentScatteringPlane(hkl);
-    if(!result.ok){ outside++; if(result.error && !firstError) firstError=result.error; }
-  }
-  const message=firstError
-    ? `Warning: ${firstError}`
-    : (outside ? `Warning: ${outside} of ${points.length} scan point(s) are outside the current U-V scattering plane.` : '');
-  setScatteringPlaneWarning('resolutionPlaneWarning',message);
-}
+// Calculation point shows no warnings: a point outside the scattering plane
+// (or otherwise not calculable) is reported in Individual and Comparison.
+// Kept as a no-op for the callers that refresh it on input changes.
+function updateResolutionPlaneWarning(){}
 
-// Resolution diagnostics belong to Calculation point, not the global error
-// banner above the main tabs.  The live HKL plane warning is already shown
-// there; keep that precise message instead of duplicating the core exception.
-function showResolutionCalculationWarning(error){
+// Why a point cannot be calculated, in a few words (the full text is the
+// note's tooltip).
+function shortResolutionReason(message){
+  const m=String(message||'').replace(/^Warning:\s*/i,'');
+  const known=[
+    [/out of plane/i,'Q is outside the scattering plane.'],
+    [/kinematically inaccessible/i,'Q and ħω cannot be reached (the scattering triangle does not close).'],
+    [/Bragg condition is inaccessible/i,'Bragg angle not reachable at this energy.'],
+    [/Ei and Ef must be positive/i,'Ei or Ef is not positive.'],
+    [/Q = 0/i,'Q = 0.'],
+    [/must be non-zero|positive definite/i,'Collimation or mosaic values are zero.']];
+  for(const [re,text] of known) if(re.test(m)) return text;
+  const first=m.split(/(?<=\.)\s/)[0]||m;
+  return first.length>90 ? `${first.slice(0,87)}…` : first;
+}
+const pointText=calc=>{
+  const g=v=>{ const x=Number(Number(v).toFixed(3)); return String(Object.is(x,-0)?0:x); };
+  return calc ? `(${g(calc.h)}, ${g(calc.k)}, ${g(calc.l)}), ħω=${g(calc.hw)} meV` : '';
+};
+// A point that cannot be calculated: the reason goes into a yellow note in
+// Individual (the point, widths, Figure and Matrices are hidden) and into the
+// current row of Comparison; kept results stay.
+function showResolutionCalculationWarning(error,calc=null){
   const message=userFacingTasMessage(error instanceof Error ? error.message : String(error));
-  const livePlaneWarning=$('resolutionPlaneWarning')?.textContent?.trim()||'';
-  const outOfPlane=/Calculation Q is out of plane/i.test(message);
-  setScatteringPlaneWarning('resolutionPlaneWarning',
-    outOfPlane && livePlaneWarning ? livePlaneWarning : `Warning: ${message.replace(/^Warning:\s*/i,'')}`);
-  fn.clearResolutionResults();
+  if(!calc && $('calcMode')?.value!=='scan') calc={hw:num('hw'),h:num('h'),k:num('k'),l:num('l')};
+  if($('calcMode')?.value!=='scan') shared.lastResolutionRender={entry:{calc,failed:true,message:shortResolutionReason(message)},indexInfo:'',scan:false};
+  showResolutionNotCalculable(message,calc);
 }
-
-// Results box for a point (or a whole scan) that cannot be calculated: the
-// reason replaces the widths, plots and matrices.
-function showResolutionNotCalculable(text,calc=null,indexInfo=''){
+function showResolutionNotCalculable(message,calc=null,indexInfo=''){
   $('result')?.classList.remove('hidden');
-  const f=v=>Number.isFinite(Number(v))?Number(v).toFixed(3):'';
-  const point=calc ? `<div><b>Calculation point</b> ħω=${f(calc.hw)} meV, (h,k,l)=(${f(calc.h)}, ${f(calc.k)}, ${f(calc.l)}) ${indexInfo}</div>` : '';
-  const div=document.createElement('div'); div.className='resolution-not-calculable'; div.textContent=text;
-  if($('summary')){ $('summary').innerHTML=point; $('summary').appendChild(div); }
+  $('resolutionCalculationView')?.classList.add('resolution-failed');
+  const note=$('resolutionFailNote');
+  if(note){
+    const point=pointText(calc);
+    note.textContent=`${point ? `${point} ${indexInfo ? `${indexInfo} ` : ''}— ` : ''}Not calculable: ${shortResolutionReason(message)}`;
+    note.title=String(message||'');
+    note.hidden=false;
+  }
+  if($('summary')) $('summary').textContent='';
   if($('matrix')) $('matrix').textContent='';
+  if($('resolutionAngleWarning')) $('resolutionAngleWarning').hidden=true;
   for(const id of Object.values(shared.RESOLUTION_PLOT_IDS)){
     const gd=$(id); if(gd && window.Plotly){ try{ Plotly.purge(gd); }catch(_e){} }
   }
+  fn.renderResolutionComparison?.();
 }
 function doSingleResolution(){
   if(fn.resolutionIsUnavailable()){
@@ -125,7 +119,7 @@ function doSingleResolution(){
     $('scanNav').classList.add('hidden');
     // Single-point Calc: always fit to this calculation's resolution ellipse.
     renderResolution(e,'',fn.resolutionFrame(e.result).lim);
-  }catch(e){showResolutionCalculationWarning(e);}
+  }catch(e){showResolutionCalculationWarning(e,{hw:num('hw'),h:num('h'),k:num('k'),l:num('l')});}
 }
 function doScanResolution(){
   if(fn.resolutionIsUnavailable()){
@@ -149,7 +143,7 @@ function doScanResolution(){
     if(!valid.length){
       $('scanNav')?.classList.add('hidden');
       shared.scanResolutionPlotLimits=null;
-      showResolutionNotCalculable(`No point of this scan can be calculated: ${shared.scanResults[0].message}`);
+      showResolutionNotCalculable(`No point of this scan can be calculated: ${shared.scanResults[0].message}`,shared.scanResults[0].calc,'(no point of the scan)');
       return;
     }
     // Use the largest required extent across the complete scan.  This is
@@ -180,7 +174,7 @@ function renderResolutionScan(i){
   const entry=shared.scanResults[i-1];
   if(entry.failed){
     shared.lastResolutionRender={entry,indexInfo:info,scan:true};
-    showResolutionNotCalculable(`Not calculable: ${entry.message}`,entry.calc,info);
+    showResolutionNotCalculable(entry.message,entry.calc,info);
     return;
   }
   renderResolution(entry,info,shared.scanResolutionPlotLimits || fn.resolutionFrame(entry.result).lim);

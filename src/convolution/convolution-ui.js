@@ -7,7 +7,7 @@
 // file card (R0/Rmon, normalisation to monitor counts).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {inverse, matvec} from '../core/matrix.js';
-import {renamedInstrument} from '../app/instrument-renames.js';
+import {movedInstrument} from '../app/instrument-renames.js';
 import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as legendValues, legendLine} from './convolution-legend.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 
@@ -101,7 +101,7 @@ export function createConvolutionUI(deps){
       el.value=String(v); fire(el); return true;
     };
     const inst={...(set.instrument||{})};
-    { const key=renamedInstrument(inst.instrument,[...($('instrument')?.options||[])].map(o=>o.value)); if(key) inst.instrument=key; }
+    { const m=movedInstrument(inst.instrument,inst.instrumentType,[...($('instrument')?.options||[])].map(o=>o.value)); if(m){ inst.instrument=m.key; inst.instrumentType=m.type; } }
     // An instrument that is not in the list (loaded from a JSON file in
     // another browser): Custom (every type and crystal) takes its settings.
     if(inst.instrument!==undefined && !put('instrument',inst.instrument)){
@@ -1155,18 +1155,22 @@ export function createConvolutionUI(deps){
   // maximum, for comparing shapes and positions (Save CSV keeps the values).
   const normalized=()=>!!$('convNormalize1D')?.checked;
   const curveMax=I=>I.reduce((m,v)=>Number.isFinite(v) && v>m ? v : m,0);
+  // Highlight (click a row of the curve table): that curve thick on top, the
+  // others thin and faint; click it again to show all equally.
+  let highlighted=null;
   function scanTrace(sc,name,color,current){
     const x=sc.pts.map(p=>sc.axis===3 ? p.E : p.hkl[sc.axis]);
     const top=normalized() ? curveMax(sc.I) : 0;
     const y=top>0 ? sc.I.map(v=>v/top) : sc.I;
     const custom=sc.pts.map(p=>`(${p.hkl.map(v=>fmt(v)).join(', ')}), ${fmt(p.E,3)} meV`);
     // Solid, fairly thick lines so the colours read well in the legend.
-    return {type:'scatter',mode:'lines+markers',name,x,y,customdata:custom,
-      marker:{size:current?6:5,color},line:{width:current?2.6:2.2,color},
+    const on=highlighted===sc, dim=highlighted && !on;
+    return {type:'scatter',mode:'lines+markers',name,x,y,customdata:custom,opacity:dim ? 0.3 : 1,
+      marker:{size:on ? 7 : dim ? 4 : current?6:5,color},line:{width:on ? 3.4 : dim ? 1.2 : current?2.6:2.2,color},
       hovertemplate:`%{customdata}<br>I = %{y:.4g}<extra></extra>`};
   }
   // Curves of the 1D plot: the kept scans (numbered, coloured) and the
-  // current one.  "selected": included in Save CSV.
+  // current one (all of them go into Save CSV).
   const curveList=()=>[...kept.map((k,i)=>({k,tag:String(i+1),title:`#${i+1}`,color:k.color,current:false})),
     ...(scan ? [{k:scan,tag:'current',title:'Current',color:scan.color||'#111',current:true}] : [])];
   // Legend (convolution-legend.js): the columns shown are chosen in the Show
@@ -1185,7 +1189,9 @@ export function createConvolutionUI(deps){
   // plot is the legend; Save figure adds it under the plot.
   function scanFigure(){
     const curves=curveList();
-    const traces=curves.map(c=>({...scanTrace(c.k,legendText(c.k),c.color,c.current),legendgroup:c.tag,name:legendText(c.k)}));
+    // The highlighted curve is drawn last (on top).
+    const order=[...curves].sort((a,b)=>(a.k===highlighted)-(b.k===highlighted));
+    const traces=order.map(c=>({...scanTrace(c.k,legendText(c.k),c.color,c.current),legendgroup:c.tag,name:legendText(c.k)}));
     // Horizontal axis title: every scanned variable shown (kept scans may differ).
     const axes=[...new Set(curves.map(c=>c.k.axis))];
     const frame={showline:true,ticks:'outside',linecolor:'#444',linewidth:1,zeroline:false,automargin:true};
@@ -1251,9 +1257,8 @@ export function createConvolutionUI(deps){
 
   function updateKeepButtons(){
     $('convClearKept1D').disabled=!kept.length;
-    if($('convKeep1D')) $('convKeep1D').disabled=!scan;
     updateNamePlaceholders();
-    $('convDownload').disabled=!curveList().some(c=>c.k.selected!==false);
+    $('convDownload').disabled=!curveList().length;
     if($('convSaveFigure1D')) $('convSaveFigure1D').disabled=!curveList().length;
   }
   function keepScan(){
@@ -1300,27 +1305,27 @@ export function createConvolutionUI(deps){
     if(body){
       body.replaceChildren(...curves.map(c=>{
         const tr=document.createElement('tr');
-        if(c.current) tr.className='convolution-curve-current';
+        tr.className=[c.current ? 'convolution-curve-current' : '',c.k===highlighted ? 'selected' : ''].filter(Boolean).join(' ');
+        tr.addEventListener('click',event=>{
+          if(event.target.closest('button,input')) return;   // buttons and the colour picker
+          highlighted=highlighted===c.k ? null : c.k; refreshKept();
+        });
         const td=()=>{ const cell=document.createElement('td'); tr.appendChild(cell); return cell; };
-        // Columns: Keep / Remove (under Clear all), colour, CSV, then the
-        // legend (the first three stay in view when the table scrolls).
-        // Keep (also next to Save CSV) for the current scan, Remove for kept ones.
+        // Columns: Keep / Remove (under Clear all), colour, then the legend
+        // (the first two stay in view when the table scrolls).
+        // Keep for the current scan, Remove for kept ones.
         const act=td();
         const btn=document.createElement('button'); btn.type='button';
         if(c.current){ btn.textContent='+ Keep'; btn.addEventListener('click',keepScan); }
-        else{ btn.textContent='Remove'; btn.addEventListener('click',()=>{ kept.splice(Number(c.tag)-1,1); refreshKept(); }); }
+        else{ btn.textContent='Remove'; btn.addEventListener('click',()=>{ if(highlighted===c.k) highlighted=null; kept.splice(Number(c.tag)-1,1); refreshKept(); }); }
         act.appendChild(btn);
         // Colour: a square colour picker (as in the CIF generator).
         const pick=document.createElement('input'); pick.type='color'; pick.value=hexColor(c.color);
-        pick.className='convolution-color-pick'; pick.title='Change the colour';
+        pick.className='convolution-color-pick';
         pick.setAttribute('aria-label','Curve colour');
         pick.addEventListener('input',()=>{ c.k.color=pick.value; drawScan(); });
         pick.addEventListener('change',()=>{ c.k.color=pick.value; refreshKept(); });
         td().appendChild(pick);
-        const box=document.createElement('input'); box.type='checkbox'; box.checked=c.k.selected!==false;
-        box.setAttribute('aria-label',`Include in Save CSV: ${legendText(c.k)}`);
-        box.addEventListener('change',()=>{ c.k.selected=box.checked; refreshKept(); });
-        td().appendChild(box);
         // Legend columns (their heads: legendHead).
         const f=legendFields(c.k);
         for(const col of shownCols()){ const cell=td(); cell.className='convolution-curve-field'; cell.textContent=f[col.id]||''; }
@@ -1328,13 +1333,7 @@ export function createConvolutionUI(deps){
       }));
     }
     $('convCurveEmpty').hidden=curves.length>0;
-    const all=$('convCsvAll');
-    if(all){
-      const n=curves.filter(c=>c.k.selected!==false).length;
-      all.checked=curves.length>0 && n===curves.length;
-      all.indeterminate=n>0 && n<curves.length;
-      all.disabled=!curves.length;
-    }
+    if(highlighted && !curves.some(c=>c.k===highlighted)) highlighted=null;
     updateKeepButtons(); drawScan();
     if(!restoringResults) store1D();
   }
@@ -1357,7 +1356,7 @@ export function createConvolutionUI(deps){
   // CSV: the current scan and every kept scan, one block per curve.
   function downloadScan(){
     // Curve tags are plain numbers (a leading # would read as a comment).
-    const curves=curveList().filter(c=>c.k.selected!==false).map(c=>({...c.k,tag:c.tag,color:c.color}));
+    const curves=curveList().map(c=>({...c.k,tag:c.tag,color:c.color}));
     if(!curves.length) return;
     const lines=['# PLANE-TAS convolution: 1D cut',`# dispersion file: ${fileName}`,'# intensity: S(Q,w) table x R0/Rmon (normalisation to monitor counts; monitor half way between monochromator and sample, taking the whole beam)',
       ...curves.map(c=>`# curve ${c.tag}: ${c.label} (${c.method})`),
@@ -1632,11 +1631,12 @@ export function createConvolutionUI(deps){
     $('convResetRanges')?.addEventListener('click',scheduleEstimates);
     $('convCalculate1D')?.addEventListener('click',calculate1D);
     $('convDownload')?.addEventListener('click',downloadScan);
-    $('convKeep1D')?.addEventListener('click',keepScan);
     $('convNormalize1D')?.addEventListener('change',()=>{ saveInputs(); drawScan(); });
     $('convSaveFigure1D')?.addEventListener('click',()=>saveScanFigure().catch(err=>message('convMessage1D',`Save figure: ${err.message||err}`,true)));
     $('convClearKept1D')?.addEventListener('click',()=>{ kept.length=0; refreshKept(); });
-    $('convCsvAll')?.addEventListener('change',()=>{ const on=$('convCsvAll').checked; for(const c of curveList()) c.k.selected=on; refreshKept(); });
+    // Pressing a button in the curve table must not move focus: focusing it
+    // scrolls the table sideways under the pointer and the click is lost.
+    $('convCurveList')?.closest('table')?.addEventListener('mousedown',event=>{ if(event.target.closest?.('button')) event.preventDefault(); });
     // Draw the empty panel without overwriting the stored results before
     // restoreFile() has read them back.
     restoringResults=true; try{ refreshKept(); }finally{ restoringResults=false; }
