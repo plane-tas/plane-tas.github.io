@@ -226,8 +226,10 @@ export function createConvolutionUI(deps){
       data=parseDispersionTable(text,$('convFormat')?.value||'index');
       interp=createDispersionInterpolator(data);
       tableKey++;
-      volume=null; scan=null;
-      $('convDownload2D').disabled=true; updateKeepButtons();
+      // A 2D result or 1D scan already shown (calculated or loaded from a CSV)
+      // stays, with its sliders: it carries its own settings.  Only the
+      // dispersion overlay follows the new table.
+      updateKeepButtons();
       // After a reload the saved entries win over the table defaults.
       if(!(restoring && savedInputsComplete(RANGE_IDS))) fillRanges();
       $('convResetRanges').disabled=false;
@@ -258,6 +260,7 @@ export function createConvolutionUI(deps){
       }
       message('convMessage2D',''); message('convMessage1D',''); message('convStatus1D','');
       bench=null; scheduleEstimates();
+      if(volume) drawMaps();
       // Save CSV file names: the dispersion file name + _conv_2d / _conv_1d
       // when a new file is read (editable; a name kept from the last visit
       // stays on a reload).
