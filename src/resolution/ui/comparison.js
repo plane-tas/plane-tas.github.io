@@ -61,6 +61,8 @@ export function installResolutionComparison(ctx){
     return `${m}′, ${$(check)?.checked ? 'focusing' : 'flat'} (${n})`;
   };
   const pointCell=calc=>{ const f=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(4))) : String(v); }; return calc ? `(${f(calc.h)},${f(calc.k)},${f(calc.l)})\nħω=${f(calc.hw)} meV` : ''; };
+  const senseText=()=>$('sense')?.selectedOptions?.[0]?.text || $('sense')?.value || '';
+  const geometryText=()=>$('geometry')?.selectedOptions?.[0]?.text || $('geometry')?.value || '';
   const crystalText=id=>{ const el=$(id); return el?.selectedOptions?.[0]?.text || el?.value || '?'; };
   const energyText=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(3))) : '?'; };
   const currentCondition=(entry)=>{
@@ -72,6 +74,8 @@ export function installResolutionComparison(ctx){
     const f=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(4))) : String(v); };
     const calc=entry?.calc||{};
     return {
+      // Inst.: name, sense and geometry (W / anti-W) on three lines.
+      inst:`${currentInstrumentName()}\n${senseText()}\n${geometryText()}`,
       point:`(${f(calc.h)},${f(calc.k)},${f(calc.l)})\nħω=${f(calc.hw)} meV`,
       mono:`${crystalText('monoCrystal')}, Ei=${energyText(en.Ei)} meV\nH: ${focusText('monoHF','monoHB','mosMonoH')}\nV: ${focusText('monoVF','monoVB','mosMonoV')}`,
       ana:`${crystalText('anaCrystal')}, Ef=${energyText(en.Ef)} meV\nH: ${focusText('anaHF','anaHB','mosAnaH')}\nV: ${focusText('anaVF','anaVB','mosAnaV')}`,
@@ -87,7 +91,7 @@ export function installResolutionComparison(ctx){
       ? `${Number.isFinite(entry.result.collimation3.fwhmArcmin) ? Math.round(entry.result.collimation3.fwhmArcmin) : '?'}(R)` : raw('div3h');
     const en=entry?.result?.energies||{};
     return {
-      instrument:currentInstrumentName(), approximation:$('method')?.value||'',
+      instrument:currentInstrumentName(), sense:senseText(), geometry:geometryText(), approximation:$('method')?.value||'',
       h:entry.calc.h, k:entry.calc.k, l:entry.calc.l, hw:entry.calc.hw, Ei:en.Ei, Ef:en.Ef,
       mono:{crystal:crystalText('monoCrystal'),H:focus('monoHF','monoHB','mosMonoH'),V:focus('monoVF','monoVB','mosMonoV')},
       ana:{crystal:crystalText('anaCrystal'),H:focus('anaHF','anaHB','mosAnaH'),V:focus('anaVF','anaVB','mosAnaV')},
@@ -418,7 +422,7 @@ export function installResolutionComparison(ctx){
       if(nPos) tr.appendChild(td(k.condition.point,'cmp-cond cmp-col cmp-position'));
       }
       if(nCond){
-        tr.appendChild(td(k.instrumentName,'cmp-cond'));
+        tr.appendChild(td(k.condition.inst||k.instrumentName,'cmp-cond cmp-col'));
         for(const key of ['mono','ana','col']) tr.appendChild(td(k.condition[key],'cmp-cond cmp-col'));
       }
       if(nRes){
@@ -674,7 +678,7 @@ export function installResolutionComparison(ctx){
       `# widths: FWHM; unit ${unitName(k0.unit)} (energy meV); coordinates ${COORD_NAMES[k0.coords]}; ${ax[0]} ${dir(dirs.U)}, ${ax[1]} ${dir(dirs.V)}, ${ax[2]} ${dir(dirs.W)}; *_proj = projection (incoherent), *_slice = slice (coherent)`,
       '# R matrix: Q∥, Q⊥in, E, Q⊥out in Å⁻¹ and meV (R11 … R44, row by row); collimations in arcmin, (R) radial 3rd collimator (equivalent divergence), SM(m) supermirror guide; mosaic in arcmin'
     ];
-    const head=['no','color','instrument','approximation','h','k','l','hw_meV','Ei_meV','Ef_meV'];
+    const head=['no','color','instrument','sense','geometry','approximation','h','k','l','hw_meV','Ei_meV','Ef_meV'];
     for(const c of ['mono','ana']) head.push(`${c}_crystal`,`${c}_H_mosaic`,`${c}_H_focus`,`${c}_H_blades`,`${c}_V_mosaic`,`${c}_V_focus`,`${c}_V_blades`);
     head.push('col_H1','col_H2','col_H3','col_H4','col_V1','col_V2','col_V3','col_V4');
     for(const a of [ax[0],ax[1],'E',ax[2]]) head.push(`d${a}_proj`,`d${a}_slice`);
@@ -684,12 +688,12 @@ export function installResolutionComparison(ctx){
     kept.forEach((k,n)=>{
       if(k.failed){
         const row=new Array(head.length).fill('');
-        row[0]=n+1; row[1]=k.color; row[2]=k.instrumentName; row[4]=num(k.calc?.h); row[5]=num(k.calc?.k); row[6]=num(k.calc?.l); row[7]=num(k.calc?.hw);
+        row[0]=n+1; row[1]=k.color; row[2]=k.instrumentName; row[6]=num(k.calc?.h); row[7]=num(k.calc?.k); row[8]=num(k.calc?.l); row[9]=num(k.calc?.hw);
         row[head.length-1]=k.sentence||k.message;
         lines.push(row.map(q).join(',')); return;
       }
       const f=k.fields||{}, d=frameFor(k.entry.result,k.coords).display, M=matrixFor(k.entry.result);
-      const row=[n+1,k.color,f.instrument??k.instrumentName,f.approximation,num(f.h),num(f.k),num(f.l),num(f.hw),num(f.Ei),num(f.Ef)];
+      const row=[n+1,k.color,f.instrument??k.instrumentName,f.sense??'',f.geometry??'',f.approximation,num(f.h),num(f.k),num(f.l),num(f.hw),num(f.Ei),num(f.Ef)];
       for(const c of ['mono','ana']){ const x=f[c]||{}; row.push(x.crystal,x.H?.mosaic,x.H?.focus,x.H?.blades,x.V?.mosaic,x.V?.focus,x.V?.blades); }
       row.push(...(f.colH||['','','','']),...(f.colV||['','','','']));
       row.push(num(d.U),num(d.Ucoh),num(d.V),num(d.Vcoh),num(d.E),num(d.Ecoh),num(d.W),num(d.Wcoh));
