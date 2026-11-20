@@ -19,7 +19,8 @@ export function installResolutionPlots(ctx){
 // contaminated by changing plot scales.
 // fonts: {title, axis, tick} sizes.  The Resolution tab keeps its large tick
 // labels; the compact Angle calculation view passes smaller sizes.
-const RESOLUTION_PLOT_FONTS={title:22,axis:20,tick:21};
+// Same sizes as the Convolution maps (title 21, axis titles 20, ticks 19).
+const RESOLUTION_PLOT_FONTS={title:21,axis:20,tick:19};
 // Major grid darker, minor grid lighter.
 const RESOLUTION_MAJOR_GRID={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1};
 const RESOLUTION_MINOR_GRID={showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''};
@@ -32,18 +33,25 @@ function resultEllipses(proj,slice){
     const t=fn.traceEllipse(p,name,dash); t.line={dash,color:RESULT_COLOR}; return t;
   });
 }
-// Q axes: only three labelled ticks (-a, 0, a) with a round a, so the small
-// δQ numbers are never crowded or rotated.  Minor grid lines subdivide a.
-function resolutionQTicks(lim){
-  // Largest round step within 90 % of the half range (0.05 rather than 0.025
-  // for a 0.06 half range), so the labels match the ellipse size.
-  const raw=0.9*Number(lim);
-  if(!(raw>0) || !Number.isFinite(raw)) return {minor:{...RESOLUTION_MINOR_GRID}};
-  const decade=Math.pow(10,Math.floor(Math.log10(raw)));
-  const mantissa=[1,2,2.5,5,10].filter(m=>m*decade<=raw*(1+1e-9)).pop()||1;
-  const a=Number((mantissa*decade).toPrecision(6));
-  const divisions=Math.abs(mantissa-2)<1e-9 ? 4 : 5;
-  return {tickmode:'array',tickvals:[-a,0,a],minor:{...RESOLUTION_MINOR_GRID,tickmode:'linear',tick0:0,dtick:a/divisions}};
+// Ticks chosen by Plotly (as in the Convolution maps), with a lighter minor
+// grid between them.
+const RESOLUTION_AUTO_TICKS={minor:{...RESOLUTION_MINOR_GRID}};
+// x axis (δQ): Plotly's own choice can leave only the 0 tick on a small plot
+// (a step wider than the half range), or crowd and rotate the small numbers.
+// A round step a within the half range L (0.5 L < a ≤ 0.9 L when there is
+// one) gives the labels -a, 0, a; minor grid lines subdivide a.
+function resolutionXTicks(lim){
+  const L=Number(lim);
+  if(!(L>0) || !Number.isFinite(L)) return {...RESOLUTION_AUTO_TICKS,nticks:4};
+  const decade=Math.pow(10,Math.floor(Math.log10(0.9*L)));
+  const steps=[];
+  for(const d of [decade/10,decade,decade*10]) for(const m of [1,2,2.5,5]) steps.push(Number((m*d).toPrecision(6)));
+  const fit=steps.filter(a=>a<=0.9*L*(1+1e-9));
+  const a=fit.filter(x=>x>0.5*L).pop() ?? fit.pop();
+  const m=Number((a/Math.pow(10,Math.floor(Math.log10(a)))).toPrecision(3));
+  // (When 2a is within the range, only -a, 0, a are labelled.)
+  const major=2*a<=L*(1+1e-9) ? {tickmode:'array',tickvals:[-a,0,a]} : {tickmode:'linear',tick0:0,dtick:a};
+  return {...major,minor:{...RESOLUTION_MINOR_GRID,tickmode:'linear',tick0:0,dtick:a/(Math.abs(m-2)<1e-9 ? 4 : 5)}};
 }
 function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null,fonts=RESOLUTION_PLOT_FONTS,yIsQ=false){
   const safe=(v,fallback=1)=>Number.isFinite(Number(v))&&Number(v)>0?Number(v):fallback;
@@ -56,8 +64,8 @@ function baseLayout(title,xlabel,ylabel,xlim,ylim,equal=false,plotId=null,fonts=
     margin:fonts.margin || {l:88,r:22,t:52,b:94,autoexpand:true},
     // The card border and the plot axes serve different purposes: the plot
     // frame is confined to the data area; the card encloses each full chart.
-    xaxis:{title:{text:xlabel,standoff:13,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-xl,xl],zeroline:true,...RESOLUTION_MAJOR_GRID,...resolutionQTicks(xl),showline:true,mirror:true,linecolor:'#586472',linewidth:1},
-    yaxis:{title:{text:ylabel,standoff:12,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-yl,yl],zeroline:true,...RESOLUTION_MAJOR_GRID,...(yIsQ?resolutionQTicks(yl):{minor:{...RESOLUTION_MINOR_GRID}}),showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
+    xaxis:{title:{text:xlabel,standoff:13,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-xl,xl],zeroline:true,...RESOLUTION_MAJOR_GRID,...resolutionXTicks(xl),showline:true,mirror:true,linecolor:'#586472',linewidth:1},
+    yaxis:{title:{text:ylabel,standoff:12,font:{size:fonts.axis}},automargin:true,tickfont:{size:fonts.tick},range:[-yl,yl],zeroline:true,...RESOLUTION_MAJOR_GRID,...RESOLUTION_AUTO_TICKS,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...(equal?{scaleanchor:'x',scaleratio:1}:{})},
     hovermode:'closest',hoverdistance:18,
     showlegend:false
   };
@@ -304,10 +312,10 @@ function refreshObliqueGrid(gd){
     'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText}))
     .catch(()=>{}).finally(()=>{gd.__tasObliqueBusy=false;});
 }
-// The U–V view selector (Calculation point toolbar) applies only to the
+// The U–V view selector (calculation card toolbar) applies only to the
 // lattice frame with non-orthogonal U and V.
 function syncResolutionUVHead(show){
-  // The selector sits in the Calculation point toolbar, so toggling it never
+  // The selector sits in the calculation card toolbar, so toggling it never
   // changes the plot sizes; it is enabled only when it has an effect.
   const select=$('resolutionUVView');
   if(!select) return;

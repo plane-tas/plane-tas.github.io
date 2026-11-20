@@ -7,7 +7,7 @@ export function installResolutionCalculation(ctx){
   }, state:shared, fn}=ctx;
   Object.assign(fn,{
     bindResolutionManualCalculation, doScanResolution, doSingleResolution, renderResolution,
-    renderResolutionScan, updatePropagationVectorLabels, updateResolutionPlaneWarning
+    renderResolutionScan, resolutionFailText, shortResolutionReason, updatePropagationVectorLabels, updateResolutionPlaneWarning
   });
 
 function renderResolution(entry,indexInfo='',plotLimits=null){
@@ -34,7 +34,8 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     `<div>${fn.resolutionWidthsHtml(r,unitMode,lc)}</div>`;
   // Motor angles are in the Angle calculation; only a failure is shown here.
   const angleWarning=$('resolutionAngleWarning');
-  if(angleWarning){ angleWarning.textContent=angles.warning ? `Warning: ${angles.warning}` : ''; angleWarning.hidden=!angles.warning; }
+  // (Shown in the line under the point entries instead.)
+  if(angleWarning){ angleWarning.textContent=''; angleWarning.hidden=true; }
 
   // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
   // RM_U is the same matrix rotated to the U-based orthogonal frame.
@@ -55,37 +56,40 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   fn.renderResolutionComparison?.();
 }
 
-// Calculation point shows no warnings: a point outside the scattering plane
-// (or otherwise not calculable) is reported in Individual and Comparison.
+// The calculation card shows no warnings: a point outside the scattering plane
+// (or otherwise not calculable) is reported in the results (single: the
+// black row of the table; scan: a yellow note).
 // Kept as a no-op for the callers that refresh it on input changes.
 function updateResolutionPlaneWarning(){}
 
-// Why a point cannot be calculated, in a few words (the full text is the
-// note's tooltip).
-function shortResolutionReason(message){
+// Why a point cannot be calculated: a sentence (under the point entries) and
+// a few words (a row of the scan table).
+var FAIL_REASONS=[
+  [/out of plane/i,'Not reachable: Q is out of the scattering plane.','out of the scattering plane'],
+  [/kinematically inaccessible/i,'Not reachable: the scattering triangle does not close.','not reachable (triangle does not close)'],
+  [/Bragg condition is inaccessible/i,'Not reachable: the Bragg angle of the monochromator or analyzer.','Bragg angle not reachable (mono/ana)'],
+  [/Ei and Ef must be positive/i,'Not calculable: Ei or Ef is not positive.','Ei or Ef not positive'],
+  [/Q = 0/i,'Not calculable: Q = 0.','Q = 0'],
+  [/must be non-zero|positive definite/i,'Not calculable: a collimation or mosaic value is zero.','collimation or mosaic is zero']];
+function resolutionFailText(message){
   const m=String(message||'').replace(/^Warning:\s*/i,'');
-  const known=[
-    [/out of plane/i,'Q is outside the scattering plane.'],
-    [/kinematically inaccessible/i,'Q and ħω cannot be reached (the scattering triangle does not close).'],
-    [/Bragg condition is inaccessible/i,'Bragg angle not reachable at this energy.'],
-    [/Ei and Ef must be positive/i,'Ei or Ef is not positive.'],
-    [/Q = 0/i,'Q = 0.'],
-    [/must be non-zero|positive definite/i,'Collimation or mosaic values are zero.']];
-  for(const [re,text] of known) if(re.test(m)) return text;
+  for(const [re,sentence,row] of FAIL_REASONS) if(re.test(m)) return {sentence,row};
   const first=m.split(/(?<=\.)\s/)[0]||m;
-  return first.length>90 ? `${first.slice(0,87)}…` : first;
+  const short=first.length>90 ? `${first.slice(0,87)}…` : first;
+  return {sentence:`Not calculable: ${short}`,row:short};
 }
+function shortResolutionReason(message){ return resolutionFailText(message).sentence; }
 const pointText=calc=>{
   const g=v=>{ const x=Number(Number(v).toFixed(3)); return String(Object.is(x,-0)?0:x); };
   return calc ? `(${g(calc.h)}, ${g(calc.k)}, ${g(calc.l)}), ħω=${g(calc.hw)} meV` : '';
 };
-// A point that cannot be calculated: the reason goes into a yellow note in
-// Individual (the point, widths, Figure and Matrices are hidden) and into the
-// current row of Comparison; kept results stay.
+// A point that cannot be calculated: the reason goes into the black row of
+// the table (single; kept results stay) or into a yellow note in the scan
+// view (the point, widths, Figure and Matrices are hidden).
 function showResolutionCalculationWarning(error,calc=null){
   const message=userFacingTasMessage(error instanceof Error ? error.message : String(error));
   if(!calc && $('calcMode')?.value!=='scan') calc={hw:num('hw'),h:num('h'),k:num('k'),l:num('l')};
-  if($('calcMode')?.value!=='scan') shared.lastResolutionRender={entry:{calc,failed:true,message:shortResolutionReason(message)},indexInfo:'',scan:false};
+  if($('calcMode')?.value!=='scan') shared.lastResolutionRender={entry:{calc,failed:true,message:shortResolutionReason(message),fullMessage:message},indexInfo:'',scan:false};
   showResolutionNotCalculable(message,calc);
 }
 function showResolutionNotCalculable(message,calc=null,indexInfo=''){
@@ -94,7 +98,7 @@ function showResolutionNotCalculable(message,calc=null,indexInfo=''){
   const note=$('resolutionFailNote');
   if(note){
     const point=pointText(calc);
-    note.textContent=`${point ? `${point} ${indexInfo ? `${indexInfo} ` : ''}— ` : ''}Not calculable: ${shortResolutionReason(message)}`;
+    note.textContent=`${point ? `${point} ${indexInfo ? `${indexInfo} ` : ''}— ` : ''}${shortResolutionReason(message)}`;
     note.title=String(message||'');
     note.hidden=false;
   }
@@ -167,6 +171,7 @@ function renderResolutionScan(i){
   }
   if(!shared.scanResults.length) return;
   i=Math.max(1,Math.min(shared.scanResults.length,Number(i)));
+  shared.scanIndex=i;
   $('scanSlider').value=i;
   $('scanIndex').textContent=`${i} / ${shared.scanResults.length}`;
   const failedCount=shared.scanResults.filter(e=>e.failed).length;
@@ -188,7 +193,9 @@ function bindResolutionManualCalculation(){
   $('resolutionCoordinates')?.addEventListener('change',fn.rerenderResolution);
   for(const control of panel.querySelectorAll('input, select')){
     // The scan slider and the display frame do not change the calculation.
-    if(control.id==='scanSlider' || control.id==='resolutionCoordinates' || control.id==='resolutionUVView') continue;
+    if(control.id==='scanSlider' || control.id==='resolutionCoordinates' || control.id==='resolutionUVView' || control.id==='resolutionScanGraph') continue;
+    // Nor do the display controls of the results (Show, Graph, colours).
+    if(control.closest('#result')) continue;
     const markCurrent=()=>{
       if($("calcMode")?.value==="scan") markResolutionScanDirty();
     };

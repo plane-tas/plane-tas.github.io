@@ -14,9 +14,11 @@ function resolutionPanelIsVisible(){
   const panel=$("resolutionPanel");
   return !!panel && !panel.classList.contains("hidden");
 }
+// Scan inputs changed: the last scan stays shown (or, before the first one,
+// the empty table and plots), and Calculate is marked.
 function markResolutionScanDirty(){
   if(!resolutionPanelIsVisible() || $("calcMode")?.value!=="scan") return;
-  $("result")?.classList.add("hidden");
+  if(!instrumentIsDiffractometer()) $("result")?.classList.remove("hidden");
   const btn=$("calcScanResolution");
   if(btn) btn.classList.add("needs-calc");
 }

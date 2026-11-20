@@ -721,6 +721,9 @@ $('S2maxEffective')?.addEventListener('change',syncS2DeltaFromEffective);
 
 document.querySelectorAll("input,select").forEach(el=>{
   if(el.closest?.('.time-estimate-pane')) return;
+  // Display controls of the Resolution results (Show, Graph, colours, the
+  // scan slider): they redraw, no recalculation.
+  if(el.closest?.('#result')) return;
   if([
     "instrument",
     "seSelect","seSelect2","seSelect3",
@@ -728,7 +731,7 @@ document.querySelectorAll("input,select").forEach(el=>{
     "hwSlider",
     "scanSlider",
     // Display frame of the Resolution results: redraws, no recalculation.
-    "resolutionCoordinates","resolutionUVView",
+    "resolutionCoordinates","resolutionUVView","resolutionScanGraph",
     'qeVectorHKLPath','qePathHKLConstant','qePathSnap',
     // Peak 2 of the Bragg-peak orientation is only checked (no recalculation).
     'refh2','refk2','refl2','refs12'

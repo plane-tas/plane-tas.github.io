@@ -184,30 +184,46 @@ function gridColumnCount(el){
   return getComputedStyle(el).gridTemplateColumns.split(/\s+/).filter(Boolean).length;
 }
 // Resolution tab: the same idea for the four ellipse plots of the open view
-// (Individual / Comparison): they are fitted into the visible height, and
-// the page scrolls only when even the smallest plots do not fit.  In
-// Comparison the fit is for one table row; more rows make the page scroll.
-const RES_FIT_MIN_PLOT=200;
+// (single: Comparison, scan: the scan view): they are fitted into the visible
+// height, and the page scrolls only when even the smallest plots do not fit.
+// With the table above the plots the fit is for one table row; more rows
+// make the page scroll.  Beside the table the plots keep their aspect and
+// are only made lower when they do not fit (the table scrolls inside).
+const RES_FIT_MIN_PLOT=200, RES_FIT_MIN_SIDE=150;
 function syncResolutionViewportHeight(){
   const panel=$('resolutionPanel'), plots=[...document.querySelectorAll('#result .plots')].find(visibleElement), main=panel?.closest('main');
   const workspace=panel?.querySelector('.resolution-workspace');
+  // Instrument details scroll on their own within the visible height.
+  if(panel && main){
+    const ms=getComputedStyle(main);
+    // Below the tabs above it (the visible height of the main area less what
+    // is above the workspace), so that it never lengthens the page.
+    const ws=panel.querySelector('.resolution-workspace');
+    const above=ws ? ws.getBoundingClientRect().top-main.getBoundingClientRect().top+main.scrollTop : 0;
+    const h=main.clientHeight-(parseFloat(ms.paddingBottom)||0)-above;
+    if(h>0) panel.style.setProperty('--res-details-max',`${Math.floor(h)}px`);
+  }
   if(!panel || !plots || !main) return;
   const prev=panel.style.getPropertyValue('--res-fit-plot');
   panel.classList.remove('res-fit');
   panel.style.removeProperty('--res-fit-plot');
   const first=plots.firstElementChild;
+  const side=plots.closest('.resolution-compare-body');
+  const besideTable=!!side && getComputedStyle(side).display==='grid' && gridColumnCount(side)>=2;
   if(visibleElement(panel) && visibleElement(first) && (!workspace || gridColumnCount(workspace)>=2)){
     const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
     const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
     const bottom=plots.getBoundingClientRect().bottom-mainRect.top+main.scrollTop;
     // Comparison: the plots are sized for a table with one row; further
     // rows lengthen the page (it scrolls) instead of shrinking the plots.
-    const extraRows=plots.closest('#resolutionComparisonView')
+    const extraRows=!besideTable && plots.closest('#resolutionComparisonView')
       ? [...document.querySelectorAll('#resolutionCompareRows tr')].slice(1).reduce((sum,tr)=>sum+tr.offsetHeight,0) : 0;
-    const over=bottom-available-extraRows;
+    // Everything below the plots (card padding, the end of the workspace,
+    // the padding of the main area) counts too: what the main area scrolls.
+    const over=Math.max(bottom-available,main.scrollHeight-main.clientHeight)-extraRows;
     if(over>1){
       const rows=Math.ceil(plots.children.length/Math.max(1,gridColumnCount(plots)));
-      const height=Math.max(RES_FIT_MIN_PLOT,Math.floor(first.offsetHeight-over/rows));
+      const height=Math.max(besideTable ? RES_FIT_MIN_SIDE : RES_FIT_MIN_PLOT,Math.floor(first.offsetHeight-over/rows));
       if(height<first.offsetHeight){ panel.style.setProperty('--res-fit-plot',`${height}px`); panel.classList.add('res-fit'); }
     }
   }

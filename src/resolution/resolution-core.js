@@ -532,7 +532,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     }
   }catch(_e){ lattice=null; }
 
-  // Q frame (Q∥, Q⊥, E, W): Q∥ along the calculation Q, Q⊥ = W × Q∥ in the
+  // Q frame (Q∥, Q⊥in, E, Q⊥out): Q∥ along the calculation Q, Q⊥ = W × Q∥ in the
   // scattering plane (same handedness as U, U⊥, W), W out of plane.  This is
   // the local TAS matrix RM with W taken along the entered out-of-plane axis.
   let qframe=null;

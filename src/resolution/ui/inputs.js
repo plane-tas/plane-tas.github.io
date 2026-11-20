@@ -15,7 +15,7 @@ export function installResolutionInputs(ctx){
 shared.scanResults=[];
 shared.scanResolutionPlotLimits=null;
 shared.lastResolutionRender=null;
-// Display frame: 'q' (Q∥, Q⊥, E, W), 'orthogonal' (U, U⊥in, E, U⊥out) or
+// Display frame: 'q' (Q∥, Q⊥in, E, Q⊥out), 'orthogonal' (U, U⊥in, E, U⊥out) or
 // 'lattice' (U, V, E, W).
 function resolutionCoordinates(){
   const v=$('resolutionCoordinates')?.value;
