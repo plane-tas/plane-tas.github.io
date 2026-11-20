@@ -142,9 +142,11 @@ function requestQEViewportHeightSync(){
   if(qeViewportFrame) return;
   qeViewportFrame=requestAnimationFrame(()=>{ qeViewportFrame=0; syncQEViewportHeight(); syncScriptViewportHeight(); syncResolutionViewportHeight(); });
 }
+// The area that scrolls below the main tabs (desktop), else main.
+function scrollAreaOf(el){ return el?.closest('.main-scroll') || el?.closest('main') || null; }
 function visibleElement(el){ return !!(el && el.getClientRects().length); }
 function syncQEViewportHeight(){
-  const panel=$('qePanel'), grid=document.querySelector('#singleMain .chart-grid'), main=panel?.closest('main');
+  const panel=$('qePanel'), grid=document.querySelector('#singleMain .chart-grid'), main=scrollAreaOf(panel);
   if(!panel || !grid || !main) return;
   const fitVars=['--qe-fit-left','--qe-fit-right'];
   const prev=fitVars.map(name=>panel.style.getPropertyValue(name)).join('|');
@@ -191,13 +193,12 @@ function gridColumnCount(el){
 // are only made lower when they do not fit (the table scrolls inside).
 const RES_FIT_MIN_PLOT=200, RES_FIT_MIN_SIDE=150;
 function syncResolutionViewportHeight(){
-  const panel=$('resolutionPanel'), plots=[...document.querySelectorAll('#result .plots')].find(visibleElement), main=panel?.closest('main');
+  const panel=$('resolutionPanel'), plots=[...document.querySelectorAll('#result .plots')].find(visibleElement), main=scrollAreaOf(panel);
   const workspace=panel?.querySelector('.resolution-workspace');
-  // Instrument details scroll on their own within the visible height.
-  if(panel && main){
+  // Instrument details scroll on their own within the visible height, below
+  // what is above the workspace (the Simulation / Convolution tabs).
+  if(panel && main && visibleElement(panel)){
     const ms=getComputedStyle(main);
-    // Below the tabs above it (the visible height of the main area less what
-    // is above the workspace), so that it never lengthens the page.
     const ws=panel.querySelector('.resolution-workspace');
     const above=ws ? ws.getBoundingClientRect().top-main.getBoundingClientRect().top+main.scrollTop : 0;
     const h=main.clientHeight-(parseFloat(ms.paddingBottom)||0)-above;
@@ -219,8 +220,12 @@ function syncResolutionViewportHeight(){
     const extraRows=!besideTable && plots.closest('#resolutionComparisonView')
       ? [...document.querySelectorAll('#resolutionCompareRows tr')].slice(1).reduce((sum,tr)=>sum+tr.offsetHeight,0) : 0;
     // Everything below the plots (card padding, the end of the workspace,
-    // the padding of the main area) counts too: what the main area scrolls.
-    const over=Math.max(bottom-available,main.scrollHeight-main.clientHeight)-extraRows;
+    // the padding of the main area) counts too, but not Instrument details
+    // beside them: opened sections may make the area scroll, the plots stay.
+    const col=panel.querySelector('.resolution-main-column')||plots;
+    const abs=el=>el.getBoundingClientRect().bottom-mainRect.top+main.scrollTop;
+    const tail=Math.max(0,main.scrollHeight-(workspace ? abs(workspace) : abs(col)));
+    const over=Math.max(bottom-available,abs(col)+tail-main.clientHeight)-extraRows;
     if(over>1){
       const rows=Math.ceil(plots.children.length/Math.max(1,gridColumnCount(plots)));
       const height=Math.max(besideTable ? RES_FIT_MIN_SIDE : RES_FIT_MIN_PLOT,Math.floor(first.offsetHeight-over/rows));
@@ -235,7 +240,7 @@ function syncResolutionViewportHeight(){
 const SCRIPT_FIT_MIN=360;
 function syncScriptViewportHeight(){
   const panel=$('scriptPanel'), ws=panel?.querySelector('.script-workspace'), card=panel?.querySelector('.script-card');
-  const main=panel?.closest('main');
+  const main=scrollAreaOf(panel);
   if(!panel || !ws || !card || !main) return;
   panel.classList.remove('script-height-limited');
   panel.style.removeProperty('--script-fit-height');
@@ -258,7 +263,7 @@ function initializeQEViewportHeightSync(){
   if(typeof ResizeObserver!=='undefined'){
     // Pane sizes change on tab switches, Single/Powder, warnings and wrapping.
     const observer=new ResizeObserver(requestQEViewportHeightSync);
-    for(const el of [document.querySelector('main'),$('qePanel'),$('qeConstantMapPane'),$('qeVectorMapPane'),
+    for(const el of [document.querySelector('main'),$('mainScroll'),$('qePanel'),$('qeConstantMapPane'),$('qeVectorMapPane'),
       $('geometryAnglesPane'),$('geometryTimePane'),$('scriptPanel'),$('resolutionPanel'),$('result')]) if(el) observer.observe(el);
   }
   requestQEViewportHeightSync();

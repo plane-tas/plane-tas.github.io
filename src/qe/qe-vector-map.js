@@ -545,7 +545,7 @@ function renderQEVectorMap(cache){
       ],
       margin:{l:sideMargin,r:sideMargin,t:multiple?52:45,
         b:multiple?80+21*pathLabelLayout.rowCount:158}
-    },{responsive:true,doubleClick:false});
+    },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
     Promise.resolve(renderPromise).then(()=>{
       if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
       installQEVectorDoubleClickReset(plot);

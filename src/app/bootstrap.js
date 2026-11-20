@@ -6,8 +6,12 @@ import {saveQEFigure} from '../qe/qe-save-figure.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 // Sidebar: a fade at the bottom while more settings lie below (overlay
 // scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
+// The same for Instrument details of the Resolution tab (it scrolls on its own).
 function initializeSidebarMoreHint(){
-  const sidebar=document.querySelector('.shell > .sidebar');
+  bindMoreHint(document.querySelector('.shell > .sidebar'));
+  bindMoreHint(document.getElementById('resolutionInstrumentDetails'));
+}
+function bindMoreHint(sidebar){
   if(!sidebar || sidebar.dataset.moreHintBound) return;
   sidebar.dataset.moreHintBound='1';
   let frame=0;
@@ -172,6 +176,9 @@ async function initialize(){
   $('displayS2Ring').addEventListener('change',()=>{if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));saveRightPanelState();});
   // Constant E map: Save figure (plot with its colour bars, and the legend).
   $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'singlePlot',legendId:'qePlotLegend',filename:'constant-e-map.png'})
+    .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
+  // Q vector–E map: the same (plot and its legend).
+  $('qeVectorSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'qeVectorPlot',legendId:'qeVectorLegend',filename:'q-vector-e-map.png'})
     .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);

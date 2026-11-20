@@ -833,7 +833,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 
 /* Sidebar: fade and a small chevron at the bottom while more settings lie
    below (set by bootstrap.js; overlay scrollbars are often hidden). */
-.shell > .sidebar.sidebar-has-more::after{
+:is(.shell > .sidebar,#resolutionInstrumentDetails).sidebar-has-more::after{
   content:"⌄";position:sticky;bottom:calc(-10px * var(--tas-density));display:block;
   height:calc(46px * var(--tas-density));margin-top:calc(-46px * var(--tas-density));
   pointer-events:none;text-align:center;color:#7d8794;font-size:calc(22px * var(--tas-density));
@@ -1146,13 +1146,26 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #resolutionPanel .resolution-scan-graph[hidden]{display:none}
 #resolutionPanel #resolutionComparisonView .scan-nav.scan-nav-off{display:none}
 #resolutionPanel #resolutionComparisonView .scan-nav{margin:0 0 calc(8px * var(--tas-density))}
+/* Desktop: the main tabs stay; only the area below them (#mainScroll)
+   scrolls, and only when its content is taller than the window. */
+@media (min-width:761px){
+  body > .shell > main{display:flex;flex-direction:column;overflow:hidden;padding-bottom:0;scrollbar-gutter:auto}
+  body > .shell > main > *{flex:0 0 auto}
+  body > .shell > main > .main-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;
+    padding-bottom:calc(12px * var(--tas-density))}
+}
 /* Instrument details (beside the calculation and results): it scrolls on its
-   own, as the left sidebar does, so opening its sections does not lengthen
-   the page. */
+   own within the visible height (ui-shell.js), as the left sidebar does. */
 @media(min-width:1251px){
-  #resolutionPanel #resolutionInstrumentDetails{position:sticky;top:0;scrollbar-gutter:stable;max-height:var(--res-details-max,calc(100vh - calc(62px * var(--tas-density))));overflow-y:auto;overscroll-behavior:contain}
+  #resolutionPanel #resolutionInstrumentDetails{position:sticky;top:0;scrollbar-gutter:stable;max-height:var(--res-details-max,calc(100vh - calc(120px * var(--tas-density))));overflow-y:auto}
 }
 #resolutionPanel #resolutionScanGraph{width:auto}
 #resolutionPanel .resolution-csv-name{flex:0 1 13em;min-width:8em}
 #resolutionPanel .resolution-csv-name input{width:100%}
 #resolutionPanel .resolution-csv-name .cif-filename-suffix{font-size:12px;font-size:max(12px,calc(13px * var(--tas-density)));color:inherit;white-space:nowrap}
+/* Toolbox, unit conversion: a row is highlighted by a click (the table is
+   wide); the λ multiple column stays in view when it scrolls sideways. */
+#toolboxUnitPane .harmonic-table > *{cursor:pointer}
+#toolboxUnitPane .harmonic-table > .harmonic-row-label{position:sticky;left:0;z-index:2;background:#f7f7f7}
+#toolboxUnitPane .harmonic-table > .harmonic-row-hover{background:#f6f9fc}
+#toolboxUnitPane .harmonic-table > .harmonic-row-selected{background:#e3eefb}

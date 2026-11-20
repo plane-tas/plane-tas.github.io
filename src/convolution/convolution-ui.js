@@ -1540,7 +1540,7 @@ export function createConvolutionUI(deps){
     if(!box || !pane || pane.hidden) return;
     if(window.innerWidth<=1100){ box.style.height=''; return; }
     // Position in the scrolled content (the main column scrolls, not the window).
-    const top=box.getBoundingClientRect().top+(box.closest('main')?.scrollTop||0)+window.scrollY;
+    const top=box.getBoundingClientRect().top+((box.closest('.main-scroll')||box.closest('main'))?.scrollTop||0)+window.scrollY;
     // Never shorter than what the controls plus a usable plot need: on a
     // short window the page scrolls instead of cutting the plots off.
     const d=window.tasUIDensity?.() || 1;

@@ -124,11 +124,33 @@ export function createToolbox({
       table.style.gridTemplateColumns='max-content repeat(11,minmax(105px,1fr))';
       table.style.minWidth='1450px';
     }
+    bindHarmonicRowSelection();
     ensureFlexibleS2Controls();
     const note=document.querySelector('#toolboxPanel .tool-note');
     if(note) note.textContent='Editing any one of λ, E, k, THz, K, cm⁻¹, velocity, mass, magnetic field, J, or cal updates all other values and the wavelength-multiple table.';
   }
 
+  // Wavelength-multiple table: a click highlights the row (the table is wide,
+  // so the row is easily lost); the λ multiple column stays in view.
+  function bindHarmonicRowSelection(){
+    const table=document.querySelector('#toolboxPanel .harmonic-table');
+    if(!table || table.dataset.rowSelectBound) return;
+    table.dataset.rowSelectBound='1';
+    // Columns: the cells before the first row label (<strong>), the title row.
+    const cols=()=>Math.max(1,[...table.children].findIndex(el=>el.tagName==='STRONG'));
+    const cells=()=>[...table.children];
+    for(const [i,el] of cells().entries()) if(i%cols()===0) el.classList.add('harmonic-row-label');
+    const rowOf=el=>{ const i=cells().indexOf(el?.closest?.('.harmonic-table > *')); return i<0 ? -1 : Math.floor(i/cols()); };
+    const mark=(row,cls,on)=>{ const n=cols(); cells().forEach((el,i)=>el.classList.toggle(cls,on && Math.floor(i/n)===row)); };
+    let selected=-1;
+    table.addEventListener('click',event=>{
+      const row=rowOf(event.target); if(row<1) return;   // row 0: the column titles
+      selected=selected===row ? -1 : row;
+      mark(selected,'harmonic-row-selected',selected>0);
+    });
+    table.addEventListener('pointerover',event=>{ const row=rowOf(event.target); mark(row,'harmonic-row-hover',row>0); });
+    table.addEventListener('pointerleave',()=>mark(-1,'harmonic-row-hover',false));
+  }
   function toolboxValues(lambda){
     const E=NEUTRON_E_LAMBDA/(lambda*lambda);
     const joule=E*J_PER_MEV;

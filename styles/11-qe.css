@@ -200,7 +200,13 @@
 /* Constant E map: Save figure at the top left of the plot (as in the 1D cut
    and Comparison). */
 #singlePlotFrame{position:relative;min-width:0;background:#fff}
-#singlePlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+/* Save figure at the top right (not over the axis ticks, which the range
+   tools use); Plotly's tool bar moves to its left. */
+#singlePlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+#singlePlotFrame #singlePlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
+#qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
+#qeVectorPlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+#qeVectorPlotFrame #qeVectorPlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
 /* Scale row under the legend: F_N and F_M colour scales (min / max, labels
    above the entries as elsewhere) and the Lorentz factor of the peak shading. */
 #sfColorbarRange{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));padding:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}

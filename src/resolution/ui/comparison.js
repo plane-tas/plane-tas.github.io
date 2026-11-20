@@ -246,7 +246,7 @@ export function installResolutionComparison(ctx){
   // Show: which column groups of the table (and of Save figure), kept in
   // the browser.  The buttons and colours are always there.
   const SHOW_KEY='plane-tas-resolution-compare-show';
-  const SHOW_IDS={condition:'resolutionShowCondition',widths:'resolutionShowWidths',matrix:'resolutionShowMatrix'};
+  const SHOW_IDS={position:'resolutionShowPosition',condition:'resolutionShowCondition',widths:'resolutionShowWidths',matrix:'resolutionShowMatrix'};
   const shown=()=>Object.fromEntries(Object.entries(SHOW_IDS).map(([k,id])=>[k,!!$(id)?.checked]));
   { let saved=null; try{ saved=JSON.parse(localStorage.getItem(SHOW_KEY)||'null'); }catch(_e){}
     if(saved && typeof saved==='object') for(const [k,id] of Object.entries(SHOW_IDS)) if(typeof saved[k]==='boolean' && $(id)) $(id).checked=saved[k]; }
@@ -330,9 +330,9 @@ export function installResolutionComparison(ctx){
     const show=shown();
     // The position (h, k, l, ħω) is always shown, right of the colour; the
     // groups condition / resolution / R matrix as chosen in Show.
-    const nCond=show.condition ? 4 : 0, nRes=show.widths ? 4 : 0, nMat=show.matrix ? 1 : 0, nData=nCond+nRes+nMat;
+    const nPos=show.position ? 1 : 0, nCond=show.condition ? 4 : 0, nRes=show.widths ? 4 : 0, nMat=show.matrix ? 1 : 0, nData=nCond+nRes+nMat;
     // Columns after the button and colour, for Save figure: [group, label, monospace].
-    tableColumns=[['','position',false]];
+    tableColumns=nPos ? [['','position',false]] : [];
     {
       // Axis names from the first calculated row (none: generic names).  The
       // header is shown before there is any result (as in the Convolution tab).
@@ -341,7 +341,7 @@ export function installResolutionComparison(ctx){
       const ax=ref?.coords==='q' ? Q_FRAME_AXES : ref ? (fr.displayAxes || ref.entry.result.displayAxes || {U:ref.entry.lc.sv1,V:ref.entry.lc.sv2,W:ref.entry.lc.sv3}) : predictedAxes();
       const axis=(v,name)=>typeof v==='string' ? v : v ? `δQ//(${v.map(x=>{ const y=Number(x); return Math.abs(y-Math.round(y))<1e-10 ? String(Math.round(y)) : Number(y.toPrecision(4)); }).join(',')})` : `δQ ${name}`;
       const r1=document.createElement('tr'), r2=document.createElement('tr');
-      const span=nData ? '2' : '1';
+      const span=nData ? '2' : '1';  // (position spans both header rows)
       // The buttons come first (as in the 1D cut), so they stay in view when
       // the table is wider than the panel.
       // (Scan: no buttons.)
@@ -351,7 +351,8 @@ export function installResolutionComparison(ctx){
         all.disabled=!shared.keptResolutions.length;
         allTh.appendChild(all); r1.appendChild(allTh);
       }
-      r1.append(cell('th','',{rowspan:span,class:'cmp-index'}),cell('th','position',{rowspan:span,class:'cmp-position'}));
+      r1.appendChild(cell('th','',{rowspan:span,class:'cmp-index'}));
+      if(nPos) r1.appendChild(cell('th','position',{rowspan:span,class:'cmp-position'}));
       if(nCond){
         r1.appendChild(cell('th','condition',{colspan:'4',class:'cmp-group'}));
         for(const name of ['Inst.','monochromator','analyzer','collimator']){ r2.appendChild(cell('th',name)); tableColumns.push(['condition',name,false]); }
@@ -381,9 +382,11 @@ export function installResolutionComparison(ctx){
         tr.className=k.scanIndex===scanSelectedIndex() ? 'selected' : '';
         const idx=document.createElement('td'); idx.className='cmp-index';
         idx.innerHTML=`<span class="resolution-compare-chip" style="background:${k.color}"></span>`;
-        tr.append(idx,td(k.condition.point,'cmp-cond cmp-col cmp-position'));
+        tr.appendChild(idx);
+        if(nPos) tr.appendChild(td(k.condition.point,'cmp-cond cmp-col cmp-position'));
         if(k.failed){
-          const msg=td(k.message,'cmp-fail'); msg.colSpan=Math.max(1,nData); tr.appendChild(msg);
+          // (Without the position column the reason says which point.)
+          const msg=td(nPos ? k.message : `${k.condition.point.replace('\n',', ')}: ${k.message}`,'cmp-fail'); msg.colSpan=Math.max(1,nData); tr.appendChild(msg);
           body.appendChild(tr); continue;
         }
       }else{
@@ -412,7 +415,7 @@ export function installResolutionComparison(ctx){
         idx.append(pick);
       }
       tr.appendChild(idx);
-      tr.appendChild(td(k.condition.point,'cmp-cond cmp-col cmp-position'));
+      if(nPos) tr.appendChild(td(k.condition.point,'cmp-cond cmp-col cmp-position'));
       }
       if(nCond){
         tr.appendChild(td(k.instrumentName,'cmp-cond'));
@@ -620,10 +623,10 @@ export function installResolutionComparison(ctx){
     cv.width=W*S; cv.height=H*S; ctx.scale(S,S);
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
     // Table.
-    const x0=gap+plotsW+2*gap, y0=gap; ctx.strokeStyle='#c9d2db'; ctx.lineWidth=1; ctx.textBaseline='top';
+    const x0=gap+plotsW+2*gap, y0=gap; ctx.strokeStyle='#d8dde3'; ctx.lineWidth=1; ctx.textBaseline='top';
     const colX=[x0+sw+2*pad]; for(const w of colW) colX.push(colX[colX.length-1]+w);
     const line=(x1,y1,x2,y2)=>{ ctx.beginPath(); ctx.moveTo(x1+.5,y1+.5); ctx.lineTo(x2+.5,y2+.5); ctx.stroke(); };
-    ctx.fillStyle='#f3f6f9'; ctx.fillRect(x0,y0,tableW,2*headH);
+    ctx.fillStyle='#f4f6f8'; ctx.fillRect(x0,y0,tableW,2*headH);
     ctx.fillStyle='#222'; ctx.font=font(true);
     let gx=colX[0];
     for(const g of groups){ let w=0; for(let k=0;k<g.span;k++) w+=colW[(colX.indexOf(gx))+k]||0; ctx.fillText(g.text,gx+(w-ctx.measureText(g.text).width)/2,y0+pad); line(gx,y0,gx,y0+2*headH); gx+=w; }

@@ -116,7 +116,7 @@ function requestGeneratorViewportHeightSync(){
     const desktop=active && columns.length>=2;
     // Extremely short viewports cannot safely contain the editor controls;
     // preserve ordinary scrolling in that exceptional case.
-    const main=card.closest('main');
+    const main=card.closest('.main-scroll')||card.closest('main');
     const viewportBottom=Math.min(window.innerHeight,main?.getBoundingClientRect().bottom||window.innerHeight);
     // 12 px bottom gap; one more pixel absorbs sub-pixel rounding, which
     // otherwise left a 1 px page scroll (and its scrollbar) on this tab.
@@ -145,7 +145,7 @@ function prepareGeneratorViewportHeightSync(){
   }
   if(typeof ResizeObserver==='function'){
     const card=document.querySelector('#structurePanel .generator-unified-card');
-    const main=card?.closest('main');
+    const main=card?.closest('.main-scroll')||card?.closest('main');
     const observer=new ResizeObserver(requestGeneratorViewportHeightSync);
     if(main) observer.observe(main);
     if(card) observer.observe(card);

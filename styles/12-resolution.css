@@ -302,8 +302,8 @@
 #resolutionPanel .resolution-compare-table{border-collapse:separate;border-spacing:0;width:100%;font-size:calc(13px * var(--tas-density));font-variant-numeric:tabular-nums}
 /* Separate borders (right and bottom of each cell): with collapsed borders the
    sticky first columns shift by a pixel against the rest when scrolled. */
-#resolutionPanel .resolution-compare-table th,#resolutionPanel .resolution-compare-table td{border:0;border-right:1px solid #c9d2db;border-bottom:1px solid #c9d2db;padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));white-space:nowrap;text-align:left;vertical-align:middle}
-#resolutionPanel .resolution-compare-table thead th{background:#f3f6f9;font-weight:600}
+#resolutionPanel .resolution-compare-table th,#resolutionPanel .resolution-compare-table td{border:0;border-right:1px solid #d8dde3;border-bottom:1px solid #d8dde3;padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));white-space:nowrap;text-align:left;vertical-align:middle}
+#resolutionPanel .resolution-compare-table thead th{background:#f4f6f8;font-weight:600}
 #resolutionPanel .resolution-compare-table thead th.cmp-group{text-align:center}
 #resolutionPanel .resolution-compare-table .cmp-num{text-align:right}
 #resolutionPanel .resolution-compare-table td.cmp-cond{white-space:nowrap}
@@ -322,10 +322,10 @@
 #resolutionPanel .resolution-compare-table td.cmp-fail{color:#9a3b00;font-weight:600;white-space:normal}
 /* As in the 1D cut: Keep / Remove, then the colour (with the number), both
    of fixed width and staying in view when the table scrolls sideways. */
-#resolutionPanel .resolution-compare-table{--cmp-a:calc(96px * var(--tas-density));--cmp-i:calc(44px * var(--tas-density));border-top:1px solid #c9d2db;border-left:1px solid #c9d2db}
+#resolutionPanel .resolution-compare-table{--cmp-a:calc(96px * var(--tas-density));--cmp-i:calc(44px * var(--tas-density));border-top:1px solid #d8dde3;border-left:1px solid #d8dde3}
 #resolutionPanel .resolution-compare-table :is(th,td).cmp-action{position:sticky;left:0;z-index:2;background:#fff;width:var(--cmp-a);min-width:var(--cmp-a);max-width:var(--cmp-a);box-sizing:border-box;text-align:center}
 #resolutionPanel .resolution-compare-table :is(th,td).cmp-index{position:sticky;left:var(--cmp-a);z-index:2;background:#fff;width:var(--cmp-i);min-width:var(--cmp-i);max-width:var(--cmp-i);box-sizing:border-box;text-align:center;font-weight:600}
-#resolutionPanel .resolution-compare-table thead th:is(.cmp-action,.cmp-index){background:#f3f6f9;z-index:3}
+#resolutionPanel .resolution-compare-table thead th:is(.cmp-action,.cmp-index){background:#f4f6f8;z-index:3}
 #resolutionPanel .resolution-compare-table tr.cmp-current td:is(.cmp-action,.cmp-index){background:#f7f9fb}
 #resolutionPanel .resolution-compare-keep,#resolutionPanel .resolution-compare-remove,#resolutionPanel .resolution-compare-clear{padding:0 5px;line-height:1.6;font-size:inherit}
 #resolutionPanel .resolution-compare-empty{color:#222}
