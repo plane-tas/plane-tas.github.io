@@ -158,7 +158,10 @@ function applyAngleRangeDefaults(key,inst=currentInstrument()){
   if(!lo || !hi) return;
   const {side,enc}=pageMotorSide(key);
   const range=fileAngleRange(inst,key);
-  const [a,b]=sideRangeFields(range,side,enc);
+  // M2: no small-angle limit in the file (a range crossing the beam) is
+  // shown as MIN_CRYSTAL_TWO_THETA, the value the Ei range uses.
+  const r=range && key==='M2' && range.near===0 ? {...range,near:side*enc*MIN_CRYSTAL_TWO_THETA} : range;
+  const [a,b]=sideRangeFields(r,side,enc);
   setAngleField(m.lo,a); setAngleField(m.hi,b);
   lo.dataset.side=angleSideKey(key);
   lo.dataset.unreachable=range ? '' : '1';
@@ -274,10 +277,24 @@ function angleLimit(inst,key,end){
   const v=inst?.[`${key}_${end}`];
   return v===undefined || v===null || v==='' ? NaN : Number(v);
 }
+// 2θ range (magnitudes).  Each end counts on its own: a small-angle end that
+// is blank or 0 (a range crossing the beam) is taken as MIN_CRYSTAL_TWO_THETA,
+// a large-angle end that is blank or 180 as backscattering (180).  null when
+// neither end is given.
+const MIN_CRYSTAL_TWO_THETA=10;
 function angleRange(inst,key){
   const lo=Math.abs(angleLimit(inst,key,'min')), hi=Math.abs(angleLimit(inst,key,'max'));
-  if(!Number.isFinite(lo) || !Number.isFinite(hi) || lo<=0 || hi<=0 || lo>=180 || hi>=180) return null;
-  return {min:Math.min(lo,hi),max:Math.max(lo,hi)};
+  const ends=[lo,hi].filter(Number.isFinite);
+  if(!ends.length) return null;
+  const given=ends.filter(v=>v>0 && v<180);
+  let a=ends.length===2 ? Math.min(lo,hi) : NaN, b=ends.length===2 ? Math.max(lo,hi) : (given[0] ?? NaN);
+  if(!(a>0)) a=MIN_CRYSTAL_TWO_THETA;
+  if(!(b<180) || !(b>0)) b=180;
+  // Smaller angles reach very high energies (and slow maps, e.g. while a
+  // value is being typed): the range is used from MIN_CRYSTAL_TWO_THETA.
+  a=Math.max(a,MIN_CRYSTAL_TWO_THETA); b=Math.max(b,MIN_CRYSTAL_TWO_THETA);
+  if(b<a) a=b;
+  return {min:a,max:b};
 }
 // Analyzer 2θ_A range -> magnitudes.  maxAbs: largest |2θ_A| (lowest Ef);
 // minAbs: smallest |2θ_A| on a range that does not reach 0° (null when the
@@ -286,10 +303,13 @@ function analyzerAngleRange(inst){
   const lo=angleLimit(inst,'A2','min'), hi=angleLimit(inst,'A2','max');
   const ends=[lo,hi].filter(Number.isFinite);
   if(!ends.length) return null;
-  const maxAbs=Math.max(...ends.map(Math.abs));
-  if(!(maxAbs>0 && maxAbs<180)) return null;
+  let maxAbs=Math.max(...ends.map(Math.abs));
+  if(!(maxAbs>0)) return null;
+  // No large-angle limit: backscattering; nothing below MIN_CRYSTAL_TWO_THETA.
+  if(maxAbs>180) maxAbs=180;
+  maxAbs=Math.max(maxAbs,MIN_CRYSTAL_TWO_THETA);
   let minAbs=null;
-  if(ends.length===2 && Math.sign(lo)===Math.sign(hi) && lo!==0) minAbs=Math.min(Math.abs(lo),Math.abs(hi));
+  if(ends.length===2 && Math.sign(lo)===Math.sign(hi) && lo!==0) minAbs=Math.max(MIN_CRYSTAL_TWO_THETA,Math.min(Math.abs(lo),Math.abs(hi)));
   return {maxAbs,minAbs};
 }
 function energyAtTwoTheta(d,twoTheta){
@@ -338,7 +358,7 @@ const HW_GRID_MAX_SLICES=500;
 function energyTransferGrid(range,{energyMode,Ei,Ef},step=null){
   if(!(step>0)){
     const span=Math.max(0,range.hwMax-range.hwMin);
-    step=[0.1,0.2,0.25,0.5,1,2,5].find(v=>span/v<=HW_GRID_MAX_SLICES) ?? 5;
+    step=[0.1,0.2,0.25,0.5,1,2,5,10,20,25,50,100,200,500].find(v=>span/v<=HW_GRID_MAX_SLICES) ?? 500;
   }
   const out=[];
   const n0=Math.ceil(range.hwMin/step-1e-9), n1=Math.floor(range.hwMax/step+1e-9);

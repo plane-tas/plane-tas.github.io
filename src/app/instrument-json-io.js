@@ -27,11 +27,12 @@ function customInstrumentTemplate(crystalNames){
     configuration:{energy_mode:'Ef fixed',Ef:3.635,sense:'+-+',m_sign:'ccw',s_sign:'ccw',a_sign:'ccw'},
     distance:{L0:1,L1:1.6,L2:0.8,L3:0.6},
     beam:{width:7,height:14,shape:'rectangle'},
-    // Any arrangement and energy: every motor over its full turn.
-    M2_min:-180,
-    M2_max:180,
-    A2_min:-180,
-    A2_max:180,
+    // Any arrangement and energy: M2 / A2 on either side up to 145 deg (the
+    // small-angle end is 10 deg for M2), S1 / S2 over the full turn.
+    M2_min:-145,
+    M2_max:145,
+    A2_min:-145,
+    A2_max:145,
     S1_min:-180,
     S1_max:180,
     S2_min:-180,

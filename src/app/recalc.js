@@ -57,7 +57,9 @@ function scheduleRecalc(delayOrEvent=50){
   }else if(delayOrEvent?.type){
     const el=delayOrEvent.target;
     if(delayOrEvent.type==="change") delay=0;
-    else if(el?.tagName==="INPUT" && !["range","checkbox","radio","button"].includes(String(el.type||"").toLowerCase())) delay=180;
+    // Typed values: wait until typing pauses (a partial number, e.g. "1" of
+    // "120", is not calculated).
+    else if(el?.tagName==="INPUT" && !["range","checkbox","radio","button"].includes(String(el.type||"").toLowerCase())) delay=500;
     else delay=60;
   }
   clearTimeout(timer);

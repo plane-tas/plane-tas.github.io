@@ -305,7 +305,8 @@ function removeDarkAsset(slot){
 function bindDynamicSidebarUI(){
   const propagationHost=$("propagationVectors");
   if(propagationHost && !propagationHost.dataset.bound){
-    const recalc=()=>scheduleRecalc();
+    // The event sets the delay (typing: after a pause; change: at once).
+    const recalc=ev=>scheduleRecalc(ev);
     propagationHost.addEventListener("input",recalc);
     propagationHost.addEventListener("change",recalc);
     propagationHost.addEventListener("click",ev=>{
@@ -344,7 +345,7 @@ function bindDynamicSidebarUI(){
   const darkHost=$("darkAssets");
   if(darkHost && !darkHost.dataset.bound){
     darkHost.addEventListener("input",ev=>{
-      if(ev.target.matches("input,select")) scheduleRecalc();
+      if(ev.target.matches("input,select")) scheduleRecalc(ev);
     });
     darkHost.addEventListener("change",ev=>{
       const asset=ev.target.closest(".dark-asset[data-dark-slot]");
