@@ -354,28 +354,23 @@ function energyTransferRange(inst,{energyMode,Ei,Ef}){
 // Ei and Ef stay positive.  The step is 0.1 meV, coarsened for wide ranges
 // (TAX, PTAX: 0.25-0.5 meV) so that a map has at most ~500 energy slices;
 // every slice costs start-up and recalculation time.
-// ħω slices of the Q-E maps: 0.1 meV for |ħω| <= 100 meV, and beyond that
-// the finest of 0.5, 1, 2, 5 ... meV that keeps those outer slices <= 500.
-const HW_FINE_STEP=0.1, HW_FINE_LIMIT=100, HW_OUTER_MAX_SLICES=500;
+// ħω slices of the Q-E maps: one step over the whole range, the finest of
+// 0.1, 0.25, 0.5, 1, 2, 5 ... meV that keeps the slices <= 200 (e.g. CTAX
+// 0.1, PTAX 0.25, TAX 1 meV).  The Angle calculation takes any ħω.
+const HW_GRID_MAX_SLICES=200;
+const HW_GRID_STEPS=[0.1,0.25,0.5,1,2,5,10,20,50,100];
 function energyTransferGrid(range,{energyMode,Ei,Ef},step=null){
-  const lo=range.hwMin, hi=range.hwMax;
-  const values=[];
-  const add=(from,to,st)=>{
-    const n0=Math.ceil(from/st-1e-9), n1=Math.floor(to/st+1e-9);
-    for(let n=n0;n<=n1;n++) values.push(Number((n*st).toFixed(10)));
-  };
-  if(step>0) add(lo,hi,step);
-  else{
-    add(Math.max(lo,-HW_FINE_LIMIT),Math.min(hi,HW_FINE_LIMIT),HW_FINE_STEP);
-    const outerSpan=Math.max(0,hi-HW_FINE_LIMIT)+Math.max(0,-HW_FINE_LIMIT-lo);
-    const outer=[0.5,1,2,5,10,20,50,100,200,500].find(v=>outerSpan/v<=HW_OUTER_MAX_SLICES) ?? 500;
-    if(hi>HW_FINE_LIMIT) add(HW_FINE_LIMIT+outer,hi,outer);
-    if(lo<-HW_FINE_LIMIT) add(lo,-HW_FINE_LIMIT-outer,outer);
+  if(!(step>0)){
+    const span=Math.max(0,range.hwMax-range.hwMin);
+    step=HW_GRID_STEPS.find(v=>span/v<=HW_GRID_MAX_SLICES) ?? HW_GRID_STEPS[HW_GRID_STEPS.length-1];
   }
-  const out=[...new Set(values)].sort((p,q)=>p-q).filter(hw=>{
+  const out=[];
+  const n0=Math.ceil(range.hwMin/step-1e-9), n1=Math.floor(range.hwMax/step+1e-9);
+  for(let n=n0;n<=n1;n++){
+    const hw=Number((n*step).toFixed(10));
     const EiHw=energyMode==='Ef fixed'?Ef+hw:Ei, EfHw=energyMode==='Ef fixed'?Ef:Ei-hw;
-    return EiHw>1e-6 && EfHw>1e-6;
-  });
+    if(EiHw>1e-6 && EfHw>1e-6) out.push(hw);
+  }
   return out;
 }
 // S2 maximum: table "S2_limits" of (M2, S2limit) rows in the instrument file,

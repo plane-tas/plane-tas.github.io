@@ -1174,3 +1174,10 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    analyzer). */
 #tasConventionRow{grid-template-columns:1fr}
 .sense-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(4px * var(--tas-density))}
+
+/* Display (scan): in the row of Save figure / Show / Save CSV. */
+.resolution-compare-tools .resolution-display-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));align-self:center;min-height:0}
+.resolution-compare-tools .resolution-display-label select{width:auto}
+.resolution-compare-tools .resolution-display-label.hidden+.resolution-display-sep{display:none}
+#resolutionPanel .resolution-compare-tools.convolution-show-row{flex-wrap:nowrap}
+#resolutionPanel .resolution-compare-tools .resolution-csv-name{min-width:6em}

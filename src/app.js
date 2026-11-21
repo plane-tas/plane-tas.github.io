@@ -578,9 +578,13 @@ function qeGeometryAngles(cache, senseOverride=null, uiSenseOverride=null, calcO
 
 
 
+// Instrument, Type and Set default keep the Resolution scan shown (the table
+// gives the conditions of each point); Calculate is marked for the new
+// settings.  A diffractometer has no Resolution: its results are cleared
+// when the Resolution panel recalculates.
+function markResolutionScanStale(){ $("calcScanResolution")?.classList.add("needs-calc"); }
 $("instrument").addEventListener("change",()=>{
-  // Do not carry resolution plots or scan points across instruments.
-  clearResolutionResults?.();
+  markResolutionScanStale();
   applyInstrumentDefaults();
   updateInstrumentTypeRows();
   scheduleRecalc();
@@ -595,13 +599,13 @@ function saveAfterInstrumentReset(){
   scheduleRecalc();
 }
 $("instrumentSetDefault")?.addEventListener("click",()=>{
-  clearResolutionResults?.();
+  markResolutionScanStale();
   applyInstrumentConfigurationDefaults();
   updateInstrumentTypeRows();
   saveAfterInstrumentReset();
 });
 $("instrumentDetailsSetDefault")?.addEventListener("click",()=>{
-  clearResolutionResults?.();
+  markResolutionScanStale();
   applyInstrumentDetailDefaults();
   saveAfterInstrumentReset();
 });
@@ -611,7 +615,7 @@ $('s1sign')?.addEventListener('change',updateS2SignDisplay);
 for(const id of ['sense','s1sign']) $(id)?.addEventListener('change',()=>syncS2FieldSigns());
 for(const id of ['msign','asign']) $(id)?.addEventListener('change',()=>syncM2FieldSigns());
 $("instrumentType")?.addEventListener("change",()=>{
-  clearResolutionResults?.();
+  markResolutionScanStale();
   applyInstrumentTypeChange();
   updateInstrumentTypeRows();
   scheduleRecalc();

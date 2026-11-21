@@ -180,7 +180,8 @@ export function installResolutionComparison(ctx){
     if(view!=='comparison') setView('comparison');
     if($('resolutionCsvName')) $('resolutionCsvName').placeholder=csvDefault();
     if($('resolutionSingleNote')) $('resolutionSingleNote').hidden=!singleMode();
-    if($('resolutionScanGraph')) $('resolutionScanGraph').disabled=singleMode();
+    // Display (slider / overwrite): scan only, shown with the results.
+    $('resolutionScanGraphWrap')?.classList.toggle('hidden',singleMode());
     // Scan, Display: slider: the slider is there from the start (disabled
     // until a scan is calculated), so nothing moves when the results come.
     const nav=$('scanNav');
@@ -220,8 +221,12 @@ export function installResolutionComparison(ctx){
     el.textContent=text; el.title=full && full!==text ? full : (text.length>60 ? text : '');
   }
   // Why the current result cannot be kept ('' when it can).
+  // Kept results (single): at most MAX_KEPT (the plots are hard to read
+  // long before that).
+  const MAX_KEPT=51;
   function keepBlock(){
     if(!currentInfo) return 'no result';
+    if(shared.keptResolutions.length>=MAX_KEPT) return `Up to ${MAX_KEPT} kept results: remove one to keep this.`;
     const setting=keptSetting();
     if(setting && (setting.unit!==currentInfo.unit || setting.coords!==currentInfo.coords))
       return `Different unit or coordinates (kept: ${unitName(setting.unit)}, ${COORD_NAMES[setting.coords]}).`;

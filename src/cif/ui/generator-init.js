@@ -357,8 +357,10 @@ async function initializeCifGenerator(){
     $("cifReflectionWavevector")?.addEventListener("change",()=>fn.syncCifReflectionBeamFrom("wavevector"));
     // Instrument configuration supplies the default Generator beam condition.
     const syncGeneratorBeam=()=>{ fn.syncCifReflectionBeamFromInstrument(); fn.recalculateGeneratedReflections(); };
-    $("energy")?.addEventListener("input",syncGeneratorBeam);
-    $("energy")?.addEventListener("change",syncGeneratorBeam);
+    // Typed energies: after a pause (as the Q-E maps), not on every key.
+    let generatorBeamTimer=null;
+    $("energy")?.addEventListener("input",()=>{ clearTimeout(generatorBeamTimer); generatorBeamTimer=setTimeout(syncGeneratorBeam,500); });
+    $("energy")?.addEventListener("change",()=>{ clearTimeout(generatorBeamTimer); syncGeneratorBeam(); });
     $("energyMode")?.addEventListener("change",syncGeneratorBeam);
     $("instrument")?.addEventListener("change",syncGeneratorBeam);
     $("S2maxEffective")?.addEventListener("change",fn.recalculateGeneratedReflections);

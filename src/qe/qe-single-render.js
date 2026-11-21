@@ -22,6 +22,11 @@ const QE_NUCLEAR_LABELS_KEY='tas-qe-nuclear-labels-v1';
 let qeNuclearLabelsOn=(()=>{ try{ return localStorage.getItem(QE_NUCLEAR_LABELS_KEY)!=='off'; }catch(_e){ return true; } })();
 // Plotly visibility of one trace from its legend entry (and, for the nuclear
 // hkl labels, the labels checkbox).
+// ħω of a map slice: one decimal, two for the 0.25 meV steps (12.25, 12.75).
+function formatHwSlice(v){
+  const x=Math.round(Number(v)*100)/100;
+  return Math.abs(x*10-Math.round(x*10))<1e-9 ? x.toFixed(1) : x.toFixed(2);
+}
 function qeTraceVisible(trace,visibility){
   if(visibility.get(qeLegendKey(trace))===false) return 'legendonly';
   if(trace.meta==='nuclear-labels' && !qeNuclearLabelsOn) return 'legendonly';
@@ -557,9 +562,9 @@ function renderSingle(cache,index=0){
   }).catch(err=>console.warn('Constant E map drawing warning:',err));
 
   const hwDisplay=$("hwValue");
-  if(hwDisplay) hwDisplay.textContent=`${cache.hwList[i].toFixed(1)} meV`;
+  if(hwDisplay) hwDisplay.textContent=`${formatHwSlice(cache.hwList[i])} meV`;
   const hwEntry=$("hwEntry");
-  if(hwEntry && document.activeElement!==hwEntry) hwEntry.value=cache.hwList[i].toFixed(1);
+  if(hwEntry && document.activeElement!==hwEntry) hwEntry.value=formatHwSlice(cache.hwList[i]);
   updateQESpurionWarning(cache,i);
   updateS2MaxDisplayForQERange(cache,i);
   renderGeometry(cache,i);
@@ -626,8 +631,8 @@ function nearestHWIndex(cache,value){
 function syncSingleNavigation(cache,index){
   const i=Math.max(0,Math.min(index,cache.hwList.length-1));
   if($('hwSlider')) $('hwSlider').value=i;
-  if($('hwEntry')) $('hwEntry').value=cache.hwList[i].toFixed(1);
-  if($('hwValue')) $('hwValue').textContent=`${cache.hwList[i].toFixed(1)} meV`;
+  if($('hwEntry')) $('hwEntry').value=formatHwSlice(cache.hwList[i]);
+  if($('hwValue')) $('hwValue').textContent=`${formatHwSlice(cache.hwList[i])} meV`;
   const lo=0, hi=180;
   const slider=$('s2Slider'), entry=$('s2Entry');
   if(slider){ slider.min=lo; slider.max=hi; slider.step=0.1; }
