@@ -273,6 +273,9 @@ function initializeQEViewportHeightSync(){
 function initializeResponsivePlotResize(){
   initializeQEViewportHeightSync();
   window.addEventListener('resize',scheduleVisiblePlotResize,{passive:true});
+  // The UI density changed: draw the visible Q-E / Resolution figures again
+  // (fonts and margins are scaled when a figure is drawn).
+  window.addEventListener('tas-density-change',scheduleVisiblePrimaryPlotRecovery);
   if(typeof ResizeObserver!=="undefined"){
     const main=document.querySelector('main');
     if(main){

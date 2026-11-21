@@ -1,6 +1,7 @@
 // Magnetic form factors ported from FormFactor.jl (Sunny dipole approximation).
 // Q is |momentum transfer| in Å^-1; the plot shows f(Q) and |f(Q)|², not full magnetic intensity.
 import { MAGNETIC_ION_DATA } from './magnetic-form-factor-data.js';
+import {PLOT_FONTS} from '../core/plot-fonts.js';
 
 const FOUR_PI=4*Math.PI;
 const ORBITALS='SPDFGHIKLMNOQRTUVWXYZ';
@@ -217,10 +218,10 @@ export function initializeMagneticFormFactorUI(){
            line:{color:'#000000',width:2.5},hovertemplate:hover},
           {x:[q,q],y:[fSquared,f],customdata:[[f,fSquared],[f,fSquared]],type:'scatter',mode:'markers',name:'Selected Q',
            marker:{size:10,color:['#1f77b4','#000000']},hovertemplate:hover,showlegend:false}
-        ],{autosize:true,margin:{l:65,r:22,t:18,b:57},
-            xaxis:{title:'Q (Å⁻¹)',range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            yaxis:{title:'f(Q), |f(Q)|²',range:[yLow,1],autorange:false,zeroline:yLow<0,zerolinecolor:'#b8c0c8',showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-            showlegend:true,legend:{x:0.99,y:0.99,xanchor:'right',yanchor:'top',bgcolor:'rgba(255,255,255,0.85)',bordercolor:'#d5dde5',borderwidth:1,font:{size:18}},
+        ],{autosize:true,margin:{l:65,r:22,t:40,b:57}, // t: room for Save figure
+            xaxis:{title:{text:'Q (Å⁻¹)',font:{size:PLOT_FONTS.axis}},range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
+            yaxis:{title:{text:'f(Q), |f(Q)|²',font:{size:PLOT_FONTS.axis}},range:[yLow,1],autorange:false,zeroline:yLow<0,zerolinecolor:'#b8c0c8',showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
+            showlegend:true,legend:{x:0.99,y:0.99,xanchor:'right',yanchor:'top',bgcolor:'rgba(255,255,255,0.85)',bordercolor:'#d5dde5',borderwidth:1,font:{size:PLOT_FONTS.tick}},
             uirevision:`magff-v42-${yLow}`
         },{responsive:true,displaylogo:false});
       }

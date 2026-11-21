@@ -2,6 +2,7 @@
 // DOM behavior is preserved; app.js injects the small UI/state boundary.
 
 import {deg2rad, rad2deg, clamp} from "../core/tas-core.js";
+import {PLOT_FONTS} from "../core/plot-fonts.js";
 import {initializeMagneticFormFactorUI} from "../magnetic/magnetic-form-factor.js";
 import {neutronAbsorptionSummary, absorptionCrossSectionBarn, scatteringCrossSectionBarn, coherentCrossSectionBarn, incoherentCrossSectionBarn, neutronDataRecord} from "../cif/cif-structure.js";
 
@@ -751,9 +752,9 @@ export function createToolbox({
           {x,y,mode:'lines',name:'Overall transmission',hovertemplate:'Thickness %{x:.3f} mm<br>Transmission %{y:.3f}%<extra></extra>'},
           {x:[thicknessMm],y:[overallTransPct],mode:'markers',name:'Selected thickness',marker:{size:10},hovertemplate:'Thickness %{x:.3f} mm<br>Transmission %{y:.3f}%<extra></extra>'}
         ],{
-          margin:{l:68,r:20,t:28,b:58},
-          xaxis:{title:'Sample thickness (mm)',range:[0,sliderMax],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
-          yaxis:{title:'Transmission (%)',range:[0,100],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:20}},
+          margin:{l:68,r:20,t:40,b:58}, // t: room for Save figure
+          xaxis:{title:{text:'Sample thickness (mm)',font:{size:PLOT_FONTS.axis}},range:[0,sliderMax],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
+          yaxis:{title:{text:'Transmission (%)',font:{size:PLOT_FONTS.axis}},range:[0,100],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
           showlegend:false,
           uirevision:'absorptionPlot'
         },{responsive:true,displaylogo:false});

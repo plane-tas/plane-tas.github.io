@@ -11,11 +11,16 @@ import {inverse, matvec} from '../core/matrix.js';
 import {movedInstrument} from '../app/instrument-renames.js';
 import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as legendValues, legendLine} from './convolution-legend.js';
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
+import {PLOT_FONTS} from '../core/plot-fonts.js';
+import {qeMapTitle} from '../qe/qe-plot-title.js';
+
 
 const ROW_HEIGHT=22;
 const NOTE='Intensities are S(Q,ω); R0/Rmon (normalisation to monitor counts) is applied automatically.';
 // Plotly sizes are scaled by the UI density (about 0.67 on a laptop).
-const FONT={size:19}, TITLE_FONT={size:21}, AXIS_TITLE_FONT={size:20};
+const FONT={size:PLOT_FONTS.tick}, TITLE_FONT={size:PLOT_FONTS.title}, AXIS_TITLE_FONT={size:PLOT_FONTS.axis};
+// 2D map titles: one fixed size for every condition (see drawMaps).
+const CONV_TITLE_SIZE=18;
 const MAX_TABLE_RANGE_POINTS={ab:101,E:301};
 
 export function createConvolutionUI(deps){
@@ -779,7 +784,7 @@ export function createConvolutionUI(deps){
       // Five labelled ticks including both ends (kept in saved images).
       const vals=Array.from({length:5},(_,i)=>zmin+(zmax-zmin)*i/4);
       return {type:'heatmap',x,y,z,colorscale:'Viridis',zauto:false,zmin,zmax,showscale:true,
-        colorbar:{thickness:14,len:0.9,outlinewidth:0,tickfont:{size:16},tickmode:'array',tickvals:vals,
+        colorbar:{thickness:14,len:0.9,outlinewidth:0,tickfont:{size:PLOT_FONTS.tick},tickmode:'array',tickvals:vals,
           ticktext:vals.map(v=>String(Number(v.toPrecision(3))))},
         hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{z:.4g}<extra></extra>`};
     };
@@ -823,20 +828,41 @@ export function createConvolutionUI(deps){
     };
     const fine=(arr)=>Array.from({length:201},(_,i)=>arr[0]+(arr[arr.length-1]-arr[0])*i/200);
     const aF=fine(A), bF=fine(B);
-    const layout=(title,xl,yl,x,y)=>({font:FONT,title:{text:title,font:TITLE_FONT},margin:{l:84,r:24,t:50,b:70},
-      xaxis:{title:{text:xl,font:AXIS_TITLE_FONT},range:[x[0],x[x.length-1]]},yaxis:{title:{text:yl,font:AXIS_TITLE_FONT},range:[y[0],y[y.length-1]]},showlegend:false});
+    // Titles on two lines: the instrument and fixed energy of the calculation
+    // (as in the Q-E map titles), then the slice:
+    //   "CTAX, Ef = 4.8 meV" / "ħω–H at K = 0".
+    // One fixed size (CONV_TITLE_SIZE) for every condition.
+    const head=(()=>{
+      const ins=volume.settings?.instrument||{};
+      const key=ins.instrument ?? $('instrument')?.value;
+      const name=[...($('instrument')?.options||[])].find(o=>o.value===key)?.textContent||key||'';
+      const mode=ins.energyMode ?? $('energyMode')?.value, E=Number(ins.energy ?? $('energy')?.value);
+      return qeMapTitle({inst:{name},energyMode:mode,Ei:E,Ef:E});
+    })();
+    const withHead=t=>head ? `${head}<br>${t}` : t;
+    // A frame on all four sides (as on the Q-E maps).
+    const frameAxis={showline:true,mirror:true,linecolor:'#555',linewidth:1.2,ticks:'outside'};
+    const layout=(title,xl,yl,x,y,id)=>{
+      const text=withHead(title);
+      return {font:FONT,
+        // Plotly places a two-line title in the middle of the top margin.
+        title:{text,font:{size:CONV_TITLE_SIZE},x:0.5,xanchor:'center'},
+        margin:{l:70,r:10,t:head?62:40,b:60},
+        xaxis:{...frameAxis,title:{text:xl,font:AXIS_TITLE_FONT},range:[x[0],x[x.length-1]]},
+        yaxis:{...frameAxis,title:{text:yl,font:AXIS_TITLE_FONT},range:[y[0],y[y.length-1]]},showlegend:false};
+    };
     // Double-click: back to the calculated min–max range (Plotly would
     // otherwise autorange to the heatmap cell edges and the overlays).
     const cfg={responsive:true,displaylogo:false,doubleClick:'autosize'};
     const ell=$('convShowEllipse')?.checked ? ellipseTraces(A,B,E,ia,ib,ie) : {EU:[],EV:[],UV:[]};
     Plotly.react('convMapEU',[heat('EU',A,E,zEU,sym.u,'ħω'),...overlay(aF,aF.map(a=>volume.plane.hkl(a,B[ib]))),...ell.EU],
-      {...layout(`ħω–${sym.u} at ${sym.v} = ${fmt(B[ib],3)}`,lineU,'ħω (meV)',A,E),
+      {...layout(`ħω–${sym.u} at ${sym.v} = ${fmt(B[ib],3)}`,lineU,'ħω (meV)',A,E,'convMapEU'),
        shapes:[onE&&dash(A[0],A[nA-1],E[ie],E[ie]),onU&&dash(A[ia],A[ia],E[0],E[nE-1])].filter(Boolean)},cfg);
     Plotly.react('convMapEV',[heat('EV',B,E,zEV,sym.v,'ħω'),...overlay(bF,bF.map(b=>volume.plane.hkl(A[ia],b))),...ell.EV],
-      {...layout(`ħω–${sym.v} at ${sym.u} = ${fmt(A[ia],3)}`,lineV,'ħω (meV)',B,E),
+      {...layout(`ħω–${sym.v} at ${sym.u} = ${fmt(A[ia],3)}`,lineV,'ħω (meV)',B,E,'convMapEV'),
        shapes:[onE&&dash(B[0],B[B.length-1],E[ie],E[ie]),onV&&dash(B[ib],B[ib],E[0],E[nE-1])].filter(Boolean)},cfg);
     Plotly.react('convMapUV',[heat('UV',A,B,zUV,sym.u,sym.v),...overlayUV(E[ie]),...ell.UV],
-      {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B),
+      {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B,'convMapUV'),
        shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);
     // Entries: the range in use (automatic: the whole calculation); a value
@@ -1640,6 +1666,9 @@ export function createConvolutionUI(deps){
     $('convNormalize1D')?.addEventListener('change',()=>{ saveInputs(); drawScan(); });
     $('convSaveFigure1D')?.addEventListener('click',()=>saveScanFigure().catch(err=>message('convMessage1D',`Save figure: ${err.message||err}`,true)));
     $('convClearKept1D')?.addEventListener('click',()=>{ kept.length=0; refreshKept(); });
+    // The UI density changed (window width breakpoint): draw the figures
+    // again so their fonts and margins follow it.
+    window.addEventListener('tas-density-change',()=>{ try{ if(volume) drawMaps(); drawScan(); }catch(_e){} });
     // Pressing a button in the curve table must not move focus: focusing it
     // scrolls the table sideways under the pointer and the click is lost.
     $('convCurveList')?.closest('table')?.addEventListener('mousedown',event=>{ if(event.target.closest?.('button')) event.preventDefault(); });

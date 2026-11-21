@@ -129,14 +129,12 @@
   }
 }
 
-/* Constant E map: controls are discoverable before scrolling into the plot. */
+/* Constant E map: controls are discoverable before scrolling into the plot.
+   No frame around them (like the 2D Convolution sliders). */
 #qeConstantMapPane > .qe-range-control-grid{
   grid-template-columns:repeat(auto-fit,minmax(calc(210px * var(--tas-density)),1fr));
-  border:calc(1px * var(--tas-density)) solid #e3e7ed;
-  border-radius:calc(6px * var(--tas-density));
-  background:#fff;
-  padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
-  margin:calc(10px * var(--tas-density)) 0;
+  padding:calc(4px * var(--tas-density)) 0;
+  margin:calc(6px * var(--tas-density)) 0;
   align-items:start;
 }
 #qeConstantMapPane .qe-spurion-warning:empty{display:none}
@@ -182,7 +180,7 @@
 #qePlotLegend .qe-legend-line{height:0;border:0;border-top:calc(3px * var(--tas-density)) solid var(--legend-color);border-radius:0;background:transparent}
 @media(max-width:1050px){#singlePlot{height:calc(670px * var(--tas-density));min-height:calc(670px * var(--tas-density))}}
 @media(max-width:760px){
-  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density))}
+  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}
   #singlePlot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
   #qeDisplayControls{gap:calc(8px * var(--tas-density)) calc(16px * var(--tas-density))}
 }
@@ -202,13 +200,9 @@
 #singlePlotFrame{position:relative;min-width:0;background:#fff}
 /* Save figure at the top right (not over the axis ticks, which the range
    tools use); Plotly's tool bar moves to its left. */
-#singlePlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
-#singlePlotFrame #singlePlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
-/* Powder: Save figure (in the frame just above) sits over the powder plot. */
-#powderPlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
+#singlePlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
-#qeVectorPlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
-#qeVectorPlotFrame #qeVectorPlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
+#qeVectorPlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 /* Scale row under the legend: F_N and F_M colour scales (min / max, labels
    above the entries as elsewhere) and the Lorentz factor of the peak shading. */
 #sfColorbarRange{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));padding:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
@@ -512,18 +506,9 @@
   margin:0;
   flex:0 0 auto;
 }
-#qeConstantMapPane .qe-s2-control-entry #s2Entry{
-  justify-self:end;
-  width:calc(82px * var(--tas-density));
-  min-width:0;
-  box-sizing:border-box;
-}
 @media(max-width:460px){
   #qeConstantMapPane .qe-range-control .qe-s2-control-entry{
     grid-template-columns:max-content minmax(0,1fr) calc(73px * var(--tas-density));
-  }
-  #qeConstantMapPane .qe-s2-control-entry #s2Entry{
-    width:calc(73px * var(--tas-density));
   }
 }
 
@@ -697,3 +682,10 @@
 /* Magnetic scale only for a single-k magnetic structure. */
 #sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry{display:none}
 #sfColorbarRange label{font-size:var(--plane-tab-label-font)!important;line-height:1.35}
+
+/* Save figure at the top left of every figure (the Q–E maps and the 1D cut
+   have their own buttons in the same place). */
+.plot-save-host{position:relative}
+.plot-save-host>.plot-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+/* No button over an empty (not yet drawn) figure. */
+.plot-save-host:not(.js-plotly-plot)>.plot-save-figure{display:none}

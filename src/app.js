@@ -154,7 +154,7 @@ const {
 
 const {
   ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
-  renderSingle, updateGeometryTargetMarker
+  renderSingle, singleMapBraggHoverAngles, updateGeometryTargetMarker
 }=createQESingleRender({
   $, backgroundColor, bindSingleRluGrid:(...args)=>bindSingleRluGrid(...args),
   bindSingleZoomPeakScaling, collectResolutionBase:(...args)=>collectResolutionBase(...args),
@@ -178,7 +178,7 @@ const {
   scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args), selectedBackgrounds,
   setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
   getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
-  hklToQ:(...args)=>hklToQ(...args), singleColorbarTicks
+  hklToQ:(...args)=>hklToQ(...args), singleColorbarTicks, singleMapBraggHoverAngles
 });
 
 const {

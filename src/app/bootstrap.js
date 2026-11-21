@@ -3,6 +3,7 @@
 import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {saveQEFigure} from '../qe/qe-save-figure.js';
+import {initializePlotSaveButtons} from './plot-save-buttons.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 // Sidebar: a fade at the bottom while more settings lie below (overlay
 // scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
@@ -166,15 +167,14 @@ async function initialize(){
     if(checkedValue('sampleMode')==='powder') syncPowderLinkedInputs();
   });
   $('hwEntry').addEventListener('change',()=>{if(getSingleCache()){const i=nearestHWIndex(getSingleCache(),Number($('hwEntry').value));setTargetHWFromMap(i);renderSingle(getSingleCache(),i);saveRightPanelState();}});
-  $('s2Slider').addEventListener('input',()=>{$('s2Entry').value=Number($('s2Slider').value).toFixed(1);if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));});
-  $('s2Entry').addEventListener('change',()=>{if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));});
   // Four-circle: W layer of the Constant E map (recalculates the map).
   // The Angle calculation target follows the map's W layer (and vice versa).
   const applyMapW=w=>{ getGeometrySliders()?.setTargetW(w); recalculate(); };
   $('qeWSlider')?.addEventListener('input',()=>{const w=Number($('qeWSlider').value);$('qeWEntry').value=String(Number(w.toFixed(4)));applyMapW(w);});
   $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
-  $('displayS2Ring').addEventListener('change',()=>{if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));saveRightPanelState();});
   // Constant E map: Save figure (plot with its colour bars, and the legend).
+  // Save figure (top left) of the other figures.
+  initializePlotSaveButtons(msg=>showError?.(msg));
   // Powder: the same button saves the powder Q–E map and its legend.
   $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure($('sampleMode')?.value==='powder'
       ? {plotId:'powderPlot',legendId:'qePowderLegend',filename:'powder-qe-map.png'}

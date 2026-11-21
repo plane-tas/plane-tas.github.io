@@ -994,7 +994,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-swatch.marker{width:calc(11px * var(--tas-density));height:calc(11px * var(--tas-density));border:calc(2.5px * var(--tas-density)) solid;border-radius:50%;margin:calc(4px * var(--tas-density)) calc(9px * var(--tas-density)) 0;box-sizing:border-box;background:transparent!important}
 .convolution-box-foot .checkbox-label{white-space:nowrap}
 /* 2D maps: colour-bar end values edited in place (as in the Q-E map). */
-.convolution-plot-frame{position:relative;min-width:0;min-height:calc(300px * var(--tas-density))}
+.convolution-plot-frame{position:relative;min-width:0;min-height:calc(340px * var(--tas-density))}
 .convolution-plot-frame>.convolution-plot{height:100%}
 .convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-ell-kinds .checkbox-label{min-height:0}

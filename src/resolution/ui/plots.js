@@ -1,5 +1,6 @@
 // Resolution: ellipse plots, axes, U-V oblique view and widths.
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
+import {PLOT_FONTS} from '../../core/plot-fonts.js';
 export function installResolutionPlots(ctx){
   const {deps:{
     $
@@ -19,8 +20,8 @@ export function installResolutionPlots(ctx){
 // contaminated by changing plot scales.
 // fonts: {title, axis, tick} sizes.  The Resolution tab keeps its large tick
 // labels; the compact Angle calculation view passes smaller sizes.
-// Same sizes as the Convolution maps (title 21, axis titles 20, ticks 19).
-const RESOLUTION_PLOT_FONTS={title:21,axis:20,tick:19};
+// The figure font sizes shared by every plot (title 21, axis titles 20, ticks 19).
+const RESOLUTION_PLOT_FONTS=PLOT_FONTS;
 // Major grid darker, minor grid lighter.
 const RESOLUTION_MAJOR_GRID={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1};
 const RESOLUTION_MINOR_GRID={showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''};

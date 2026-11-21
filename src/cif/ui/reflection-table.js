@@ -4,6 +4,7 @@
 //          I = Mult·|F|^2 / (sinθ sin2θ) — the powder Lorentz factor is always applied.
 // Unpolarized neutrons: nuclear and magnetic intensities add without interference.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {PLOT_FONTS} from '../../core/plot-fonts.js';
 export function installReflectionTable(ctx){
   const {deps:{$, RL_calc, canonicalReflectionHkl, clamp, compareHkl, getSelectedCifFileName, hklKey, hklToQ, norm, rad2deg},
     state:cifState, fn}=ctx;
@@ -395,13 +396,13 @@ function renderReflectionPowderPlot(){
   plot.__tasPowderView={x:xView,y:yView};
   // Major grid darker, minor grid lighter (shared look).
   const grid={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1,minor:{showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''}};
-  // Same font size for both axis titles, tick labels and the legend.
-  const FONT=18;
+  // Shared figure font sizes: tick labels and the legend, axis titles.
+  const FONT=PLOT_FONTS.tick, AXIS_FONT=PLOT_FONTS.axis;
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},
     // d has no finite value at 2θ = 0: autorange.
-    xaxis:{title:{text:xTitle,font:{size:FONT},standoff:10},tickfont:{size:FONT},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
+    xaxis:{title:{text:xTitle,font:{size:AXIS_FONT},standoff:10},tickfont:{size:FONT},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
       anchor:'y2',...(xView ? {range:xView.slice()} : {autorange:true})},
-    yaxis:{domain:[0.13,1],tickfont:{size:FONT},title:{text:'Intensity (arb. units)',font:{size:FONT},standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
+    yaxis:{domain:[0.13,1],tickfont:{size:FONT},title:{text:'Intensity (arb. units)',font:{size:AXIS_FONT},standoff:14},automargin:true,zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
       type:log?'log':'linear',range:yView.slice(),...(log?{exponentformat:'power'}:{})},
     yaxis2:{domain:[0,0.1],range:[0,1],showticklabels:false,showgrid:false,zeroline:false,fixedrange:true,showline:true,mirror:true,linecolor:'#586472',linewidth:1},
     // Legend above the frame (top right); peak width and Log sit at the same height, top left.

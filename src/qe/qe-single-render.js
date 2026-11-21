@@ -2,6 +2,8 @@
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {PI, deg2rad, dot, linspace} from '../core/tas-core.js';
 import {tasConvention} from '../core/tas-conventions.js';
+import {qeMapTitle, qeDomainTitleAnnotation} from './qe-plot-title.js';
+import {PLOT_FONTS} from '../core/plot-fonts.js';
 
 export function createQESingleRender(deps){
   const {
@@ -377,7 +379,7 @@ function renderSingle(cache,index=0){
         colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
-        colorbar:{title:{text:`|F_N|${iSymbol} / max`,side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:nuclearBar.len,x:1.01,xanchor:"left",y:nuclearBar.y,
+        colorbar:{title:{text:`|F_N|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:nuclearBar.len,x:1.01,xanchor:"left",y:nuclearBar.y,
           ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
         // A dark rim keeps weak (near-white) peaks visible on any background
@@ -433,7 +435,7 @@ function renderSingle(cache,index=0){
         marker:{color:pts.map(magneticRelative),
           colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(255,200,200)"],[0.5,"rgb(250,130,130)"],[0.75,"rgb(225,55,55)"],[1,"rgb(180,0,0)"]],
           cmin:Number($("mfColorMinEntry")?.value ?? 0),cmax:Number($("mfColorMaxEntry")?.value ?? 1),showscale:true,
-          colorbar:{title:{text:`|F_M|${iSymbol} / max`,side:"right",font:{size:18}},tickfont:{size:17},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
+          colorbar:{title:{text:`|F_M|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
             ...singleColorbarTicks(Number($("mfColorMinEntry")?.value ?? 0),Number($("mfColorMaxEntry")?.value ?? 1))},
           size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol,
           line:{color:"rgb(110,0,0)",width:1.3}},
@@ -452,20 +454,32 @@ function renderSingle(cache,index=0){
       zorder:10
     });
   }
-  const selectedS2=syncSingleNavigation(cache,i);
-  const selectedQ=selectedQAtS2(cache,i,selectedS2);
+  syncSingleNavigation(cache,i);
   syncQEWControl(cache);
-  if(!cache.fourCircle && $('displayS2Ring')?.checked && Number.isFinite(selectedQ)){
-    const phi=linspace(0,2*PI,361);
-    const ringPts=phi.map(t=>T([selectedQ*Math.cos(t),selectedQ*Math.sin(t)]));
-    traces.push({x:ringPts.map(p=>p[0]),y:ringPts.map(p=>p[1]),mode:"lines",name:`S2 = ${selectedS2.toFixed(1)}°`,showlegend:false,line:{color:"black",width:1.2,dash:"solid"},hovertemplate:`S2 = ${selectedS2.toFixed(1)}°<br>Q = ${selectedQ.toFixed(3)} Å⁻¹<extra></extra>`});
-  }
+  // BG rings: S2 of the ring |Q| at the ħω of this slice (like the S2 of the
+  // Bragg peaks), with the same sign convention as the Angle calculation.
+  const ringS2Text=(()=>{
+    const hw=cache.hwList[i];
+    const Ei=cache.energyMode==='Ef fixed' ? cache.Ef+hw : cache.Ei;
+    const Ef=cache.energyMode==='Ef fixed' ? cache.Ef : cache.Ei-hw;
+    let sign=1;
+    try{ sign=tasConvention(selectedTasSense(),selectedS1Sign()).s2EncoderSign||1; }catch(_e){}
+    return q=>{
+      if(!(Ei>0 && Ef>0)) return 'S2 = —';
+      const ki=0.6947*Math.sqrt(Ei), kf=0.6947*Math.sqrt(Ef);
+      const c=(ki*ki+kf*kf-q*q)/(2*ki*kf);
+      if(!(c>=-1-1e-10 && c<=1+1e-10)) return 'S2 = —';
+      const s2=sign*Math.acos(Math.max(-1,Math.min(1,c)))*180/Math.PI;
+      return `S2 = ${(Math.abs(s2)<0.005?0:s2).toFixed(2)}°`;
+    };
+  })();
   for(const ring of cache.ringData){
     const pts=ring.x.map((x,j)=>T([x,ring.y[j]]));
+    const hover=`${ring.hoverHead}<br>${ringS2Text(ring.q)}<br>${ring.hoverTail}`;
     traces.push({
       x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),mode:"lines",showlegend:false,
-      name:(String(ring.hover||'').match(/^BG\d+: [^<]*/)||[''])[0]||undefined,
-      line:{color:ring.color,width:1.5},hovertemplate:ring.hover+"<extra></extra>"
+      name:ring.name||undefined,
+      line:{color:ring.color,width:1.5},hovertemplate:hover+"<extra></extra>"
     });
   }
   // Match the Powder view: show one legend entry for each selected BG slot
@@ -541,15 +555,19 @@ function renderSingle(cache,index=0){
   if(plotNode) plotNode.__tasSingleMapDefaultView={
     unit,x:[-QplotX,QplotX],y:[-QplotY,QplotY]
   };
+  const titleAnnotation=qeDomainTitleAnnotation(qeMapTitle({inst:cache.inst,energyMode:cache.energyMode,Ei:cache.Ei,Ef:cache.Ef,
+    hw:cache.hwList[i],W:(cache.fourCircle && cache.Whkl) ? cache.layerW : null}));
   const singleDraw=Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
+
     showlegend:false,
-    xaxis:{title:{text:unit==='rlu'?`U ${planeVectorText(cache.U)} (r.l.u.)`:'Qx (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
-    yaxis:{title:{text:unit==='rlu'?`V ${planeVectorText(cache.V)} (r.l.u.)`:'Qy (Å⁻¹)',font:{size:16}},tickfont:{size:17},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
-    ...(rluGrid?{shapes:rluGrid.shapes,annotations:rluGrid.annotations}:{}),
+    xaxis:{title:{text:unit==='rlu'?`U ${planeVectorText(cache.U)} (r.l.u.)`:'Qx (Å⁻¹)',font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},range:keptView.x||[-QplotX,QplotX],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.xTickVals:undefined,ticktext:unit==='rlu'?rluGrid.xTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,constrain:'domain'},
+    yaxis:{title:{text:unit==='rlu'?`V ${planeVectorText(cache.V)} (r.l.u.)`:'Qy (Å⁻¹)',font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},range:keptView.y||[-QplotY,QplotY],tickmode:unit==='rlu'?'array':'auto',tickvals:unit==='rlu'?rluGrid.yTickVals:undefined,ticktext:unit==='rlu'?rluGrid.yTickText:undefined,nticks:10,showgrid:unit!=='rlu',minor:{showgrid:unit!=='rlu',gridcolor:'#e8ebee',gridwidth:1,ticks:''},showticklabels:true,ticks:unit==='rlu'?'outside':'',gridcolor:'#c3c9cf',gridwidth:1,zeroline:unit!=='rlu',zerolinecolor:'#777',showline:true,linecolor:'#555',linewidth:1.2,mirror:true,scaleanchor:'x',scaleratio:1,constrain:'domain'},
+    ...(rluGrid?{shapes:rluGrid.shapes}:{}),
+    annotations:[...(rluGrid?rluGrid.annotations:[]),titleAnnotation],
     // The legend now lives below the display controls, outside this Plotly canvas.
-    margin:{l:60,r:cache.cifStructure?88:20,t:28,b:67}
+    margin:{l:66,r:cache.cifStructure?92:20,t:38,b:72}
   // Plotly's download button saves the plot without the legend and scales:
   // Save figure (top left) replaces it.
   },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
@@ -593,18 +611,13 @@ function ensureQESliderControls(){
       hwCard.appendChild($('hwSlider'));
       const hwOut=$('hwValue'); if(hwOut) hwOut.classList.add('hidden');
 
-      const s2Card=document.createElement('div');
-      s2Card.className='qe-range-control';
-      s2Card.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span>S2 (deg)</span><label class="checkbox-label qe-s2-ring-toggle" title="Show S2 ring on Constant E map"><input id="displayS2Ring" type="checkbox"><span>Show S2 ring</span></label><input id="s2Entry" aria-label="S2 (deg)" type="number" step="0.1" value="0.0"></div><input id="s2Slider" type="range" min="0" max="180" step="0.1" value="0">';
-
-      s2Card.id='qeS2Card';
-      // Four-circle instruments: the S2 card is replaced by the W layer card.
+      // Four-circle instruments: the W layer card (the Constant E map is one W layer).
       const wCard=document.createElement('div');
       wCard.className='qe-range-control hidden';
       wCard.id='qeWCard';
       wCard.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0">';
 
-      grid.append(hwCard,s2Card,wCard);
+      grid.append(hwCard,wCard);
       parent.insertBefore(grid,row);
       row.remove();
     }
@@ -635,19 +648,12 @@ function syncSingleNavigation(cache,index){
   if($('hwSlider')) $('hwSlider').value=i;
   if($('hwEntry')) $('hwEntry').value=formatHwSlice(cache.hwList[i]);
   if($('hwValue')) $('hwValue').textContent=`${formatHwSlice(cache.hwList[i])} meV`;
-  const lo=0, hi=180;
-  const slider=$('s2Slider'), entry=$('s2Entry');
-  if(slider){ slider.min=lo; slider.max=hi; slider.step=0.1; }
-  let v=Number(entry?.value); if(!Number.isFinite(v)) v=Math.max(0,Math.abs(num('S2min'))); v=Math.max(lo,Math.min(hi,v));
-  if(slider) slider.value=v; if(entry) entry.value=v.toFixed(1);
-  return v;
 }
 function qeWVectorText(v){
   return v.map(x=>{const n=Number(x);return Math.abs(n-Math.round(n))<1e-9?String(Math.round(n)):String(Number(n.toFixed(3)));}).join(', ');
 }
 function syncQEWControl(cache){
   const fc=!!(cache.fourCircle && cache.Whkl);
-  $('qeS2Card')?.classList.toggle('hidden',fc);
   $('qeWCard')?.classList.toggle('hidden',!fc);
   if(!fc) return;
   const label=$('qeWLabel');
@@ -659,16 +665,9 @@ function syncQEWControl(cache){
   if(slider){ slider.min=-hi; slider.max=hi; slider.step=0.01; slider.value=cache.layerW; }
   if(entry && document.activeElement!==entry) entry.value=String(Number(Number(cache.layerW).toFixed(4)));
 }
-function selectedQAtS2(cache,index,s2){
-  const hw=cache.hwList[index]; let Ei,Ef;
-  if(cache.energyMode==='Ef fixed'){Ef=cache.Ef;Ei=Ef+hw;} else {Ei=cache.Ei;Ef=Ei-hw;}
-  if(!(Ei>0&&Ef>0)) return NaN;
-  const ki=0.6947*Math.sqrt(Ei), kf=0.6947*Math.sqrt(Ef);
-  return Math.sqrt(Math.max(0,ki*ki+kf*kf-2*ki*kf*Math.cos(deg2rad(s2))));
-}
 
   return {
     ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
-    renderSingle, updateGeometryTargetMarker
+    renderSingle, singleMapBraggHoverAngles, updateGeometryTargetMarker
   };
 }

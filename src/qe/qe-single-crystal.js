@@ -426,7 +426,10 @@ export function createQESingleCrystal(deps){
         ringData.push({
           x:phi.map(t=>cx+rr*Math.cos(t)), y:phi.map(t=>cy+rr*Math.sin(t)),
           color:backgroundColor(bg.slot,0.20+0.75*ratio),
-          hover:`BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>Q = ${p.q.toFixed(3)} Å⁻¹<br>S2(elastic) = ${p.elasticS2.toFixed(3)}°<br>I/Imax = ${ratio.toFixed(3)}`
+          // S2 is evaluated at the ħω of the displayed slice (renderSingle).
+          q:p.q,name:`BG${bg.index+1}: ${bg.key}`,
+          hoverHead:`BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>|Q| = ${p.q.toFixed(3)} Å⁻¹`,
+          hoverTail:p.intensityHover
         });
       }
     }

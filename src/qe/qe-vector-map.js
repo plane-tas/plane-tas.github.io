@@ -1,3 +1,5 @@
+import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
+import {PLOT_FONTS} from '../core/plot-fonts.js';
 // Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 export function createQEVectorMap(deps){
@@ -6,7 +8,8 @@ export function createQEVectorMap(deps){
     powderS2ForQAtHW, qeFormatPathNumber, qePathAxisCoordinateLabel, qePathPointXY,
     qePhysicalRluCoordinates, qePlaneRluBasis, qeSelectedPathHKL, renderQEExternalLegend, renderSingle,
     representativePowderHklText, safeResizePlot, scatteringPlaneWarningMessage, selectedBackgrounds,
-    setScatteringPlaneWarning, getPowderCache, getSingleCache, hklToQ, singleColorbarTicks
+    setScatteringPlaneWarning, getPowderCache, getSingleCache, hklToQ, singleColorbarTicks,
+    singleMapBraggHoverAngles
   }=deps;
 
 let qeVectorMeasureCanvas=null;
@@ -129,7 +132,9 @@ function bindSingleRluGrid(cache){
       updating=true;
       const grid=qeObliqueRluGrid(cache,xr,yr);
       Promise.resolve(Plotly.relayout(gd,{
-        shapes:grid.shapes,annotations:grid.annotations,
+        // Keep the map title (an annotation, as drawn: its font is already
+        // scaled to the UI density) when the grid is rebuilt.
+        shapes:grid.shapes,annotations:[...grid.annotations,...(gd.layout?.annotations||[]).filter(a=>a?.meta==='qe-map-title')],
         'xaxis.tickvals':grid.xTickVals,'xaxis.ticktext':grid.xTickText,
         'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText
       })).catch(err=>console.warn('Oblique RLU grid refresh warning:',err))
@@ -230,9 +235,12 @@ function addPathBraggTraces(cache,traces,paths,xScale){
   const entry=(id,fallback)=>{ const v=Number($(id)?.value); return Number.isFinite(v)?v:fallback; };
   const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
   const magneticBar={len:0.34,y:0.23};
-  const colorbar=(title,bar,min,max)=>({title:{text:title,side:'right',font:{size:18}},tickfont:{size:17},
+  const colorbar=(title,bar,min,max)=>({title:{text:title,side:'right',font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},
     thickness:16,len:bar.len,x:1.01,xanchor:'left',y:bar.y,...singleColorbarTicks(min,max)});
   const sizes={nuclear:12,magnetic:7,star:9};
+  // |Q|, S1 and S2 (and χ, φ for 4-circle) of each peak at ħω = 0, with the
+  // same calibration and sign conventions as the Constant E map hover.
+  const peakAngles=typeof singleMapBraggHoverAngles==='function' ? singleMapBraggHoverAngles(cache,0) : ()=>'';
   const legendTraces=[], dataTraces=[];
 
   // Nuclear: black circles without a CIF; |F_N|² shading and colorbar with one.
@@ -255,7 +263,9 @@ function addPathBraggTraces(cache,traces,paths,xScale){
         size:sizes.nuclear,line:{color:'rgb(25,25,25)',width:1.3}
       } : {color:'black',size:sizes.nuclear},
       hovertext:onlyBar?['']:nuclear.map(({p})=>{
-        const lines=[p.label||'(0 0 0)','ħω = 0 meV (elastic)'];
+        // The origin has no label and no hover text (as on the Constant E map).
+        if(!p.label) return '';
+        const lines=[p.label,'ħω = 0 meV',peakAngles(p)];
         if(hasCif){
           const raw=Number.isFinite(p.sf2)?p.sf2:0;
           lines.push(`|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn`,lorentzText(p),`|F<sub>N</sub>|${iSymbol} / max = ${nuclearRelative(p).toFixed(4)}`);
@@ -279,7 +289,7 @@ function addPathBraggTraces(cache,traces,paths,xScale){
     const size=symbol==='star'?sizes.star:sizes.magnetic;
     const onlyBar=!pts.length;
     const hovertext=onlyBar?['']:pts.map(({p})=>{
-      const lines=[p.label,'ħω = 0 meV (elastic)'];
+      const lines=[p.label,'ħω = 0 meV',peakAngles(p)];
       if(magneticIntensity) lines.push(`|F<sub>M</sub>|² = ${(Number(p.fm2)||0).toPrecision(6)} barn`,lorentzText(p),`|F<sub>M</sub>|${iSymbol} / max = ${magneticRelative(p).toFixed(4)}`);
       return lines.filter(Boolean).join('<br>');
     });
@@ -459,11 +469,11 @@ function renderQEVectorMap(cache){
       const t=String(text);
       try{
         const ctx=(qeVectorMeasureCanvas||(qeVectorMeasureCanvas=document.createElement('canvas'))).getContext('2d');
-        ctx.font=`${17*uiDensity}px ${plot._fullLayout?.font?.family||'"Open Sans", verdana, arial, sans-serif'}`;
+        ctx.font=`${PLOT_FONTS.tick*uiDensity}px ${plot._fullLayout?.font?.family||'"Open Sans", verdana, arial, sans-serif'}`;
         const w=ctx.measureText(t).width;
         if(w>0) return w;
       }catch(_e){}
-      return Math.max(0,t.length*17*uiDensity*0.56);
+      return Math.max(0,t.length*PLOT_FONTS.tick*uiDensity*0.56);
     };
     const longestVertexLabel=Math.max(...pathPoints.map((_,i)=>labelPixelWidth(qePathAxisCoordinateLabel(i))));
     const sideMargin=Math.ceil(Math.max(88,longestVertexLabel/2+24));
@@ -479,15 +489,17 @@ function renderQEVectorMap(cache){
         const width=labelPixelWidth(tickText[i]);
         const center=(x-r0)/span*usableWidth;
         const visible=x>=r0-span*1e-6 && x<=r1+span*1e-6;
-        if(!visible) return {x,xref:'x',y:0,yref:'paper',yshift:-11,
-          text:tickText[i],showarrow:false,xanchor:'center',yanchor:'top',font:{size:17}};
+        // yshift is not scaled by the density adapter: scale it here, like
+        // the fonts and the bottom margin.
+        if(!visible) return {x,xref:'x',y:0,yref:'paper',yshift:-11*uiDensity,
+          text:tickText[i],showarrow:false,xanchor:'center',yanchor:'top',font:{size:PLOT_FONTS.tick}};
         const left=center-width/2;
         let row=lastRight.findIndex(right=>left>=right+9*uiDensity);
         if(row<0){row=lastRight.length;lastRight.push(-Infinity);}
         lastRight[row]=center+width/2;
-        return {x,xref:'x',y:0,yref:'paper',yshift:-11-21*row,
+        return {x,xref:'x',y:0,yref:'paper',yshift:(-11-24*row)*uiDensity,
           text:tickText[i],showarrow:false,xanchor:'center',yanchor:'top',
-          font:{size:17}};
+          font:{size:PLOT_FONTS.tick}};
       });
       return {annotations,rowCount:lastRight.length};
     };
@@ -592,7 +604,7 @@ function renderQEVectorMap(cache){
               const hkl=path.a.map((v,k)=>v+t*(path.b[k]-v));
               x.push((path.start+sv)*xScale);y.push(w);
               customdata.push([
-                `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(peak)}<br>I/Imax = ${peak.relativeIntensity.toFixed(3)}<br>HKL path = (${hkl.map(v=>v.toFixed(3)).join(', ')})`,
+                `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(peak)}<br>${peak.intensityHover}<br>HKL path = (${hkl.map(v=>v.toFixed(3)).join(', ')})`,
                 peak.q,`${s2.toFixed(3)}°`
               ]);
               open=true;
@@ -639,8 +651,10 @@ function renderQEVectorMap(cache){
     const yGridStep=niceGridStep(hwMax-hwMin);
     const yGridVals=[];
     for(let n=Math.ceil(hwMin/yGridStep-1e-9);n*yGridStep<=hwMax+1e-9;n++) yGridVals.push(Number((n*yGridStep).toFixed(12)));
-    if(hwMax>0 && !yGridVals.some(y=>Math.abs(y-hwMax)<1e-9)) yGridVals.push(hwMax);
-    if(hwMin<0 && !yGridVals.some(y=>Math.abs(y-hwMin)<1e-9)) yGridVals.unshift(hwMin);
+    // The range ends get their own tick only when they are not next to a
+    // grid tick (14.5 next to 14 would overlap).
+    if(hwMax>0 && !yGridVals.some(y=>Math.abs(y-hwMax)<0.4*yGridStep)) yGridVals.push(hwMax);
+    if(hwMin<0 && !yGridVals.some(y=>Math.abs(y-hwMin)<0.4*yGridStep)) yGridVals.unshift(hwMin);
     const yMinorStep=yGridStep/qeMinorDivisions(yGridStep);
     const yMinorVals=[];
     for(let n=Math.ceil(hwMin/yMinorStep-1e-9);n<Math.ceil(hwMin/yMinorStep)+400;n++){
@@ -660,27 +674,28 @@ function renderQEVectorMap(cache){
     const defaultView={x:[hMin,hMax],y:[hwMin,hwMax]};
     plot.__tasQEVectorDefaultView=defaultView;
     const renderPromise=Plotly.react(plot,traces,{
-      uirevision:`qeVector-${currentPathKey}`, 
+      uirevision:`qeVector-${currentPathKey}`,
+      title:qeTitleLayout(qeMapTitle({inst:cache.inst,energyMode:cache.energyMode,Ei:cache.Ei,Ef:cache.Ef})),
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
       showlegend:false,
-      xaxis:{title:{text:''},tickfont:{size:17},tickmode:'array',
+      xaxis:{title:{text:''},tickfont:{size:PLOT_FONTS.tick},tickmode:'array',
         tickvals:knots,ticktext:knots.map(()=>''),
         range:[hMin,hMax],tickangle:0,automargin:false,zeroline:false,
         ticks:'outside',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
-      yaxis:{title:{text:'ħω (meV)',font:{size:15}},tickfont:{size:17},range:[hwMin,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+      yaxis:{title:{text:'ħω (meV)',font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},range:[hwMin,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
         ...knots.map(x=>({type:'line',x0:x,x1:x,y0:0,y1:1,yref:'paper',layer:'above',line:{color:'black',width:1,dash:'dot'}}))
       ],
       annotations:[
         {x:0.5,xref:'paper',y:0,yref:'paper',
-          yshift:-(48+21*pathLabelLayout.rowCount),
-          text:axisTitle,showarrow:false,xanchor:'center',yanchor:'top',font:{size:15}},
+          yshift:-(52+24*pathLabelLayout.rowCount)*uiDensity,
+          text:axisTitle,showarrow:false,xanchor:'center',yanchor:'top',font:{size:PLOT_FONTS.axis}},
         ...pathLabelLayout.annotations
       ],
       // sideMargin (>= 88 px, as in the Constant E map) also holds the |F|² colorbars.
       margin:{l:sideMargin,r:sideMargin,t:52,
-        b:80+21*pathLabelLayout.rowCount}
+        b:88+24*pathLabelLayout.rowCount}
     },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
     Promise.resolve(renderPromise).then(()=>{
       if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
@@ -708,19 +723,19 @@ function renderQEVectorMap(cache){
       const rows=fresh.annotations.map(a=>a.yshift).join(',');
       if(rows===appliedRows) return;
       appliedRows=rows;
+      const d=(()=>{const v=Number(window.tasUIDensity?.());return v>0?v:1;})();
       const axisAnnotations=[
         {x:0.5,xref:'paper',y:0,yref:'paper',
-          yshift:-(48+21*fresh.rowCount),text:axisTitle,showarrow:false,
-          xanchor:'center',yanchor:'top',font:{size:15}},
+          yshift:-(52+24*fresh.rowCount)*d,text:axisTitle,showarrow:false,
+          xanchor:'center',yanchor:'top',font:{size:PLOT_FONTS.axis}},
         ...fresh.annotations
       ];
       // Plotly.relayout bypasses the density adapter (tas-plot-density.js
       // wraps newPlot/react only): scale fonts and the margin here, otherwise
       // a resize/zoom would enlarge the labels and the bottom margin.
-      const d=(()=>{const v=Number(window.tasUIDensity?.());return v>0?v:1;})();
       Plotly.relayout(plot,{
         annotations:axisAnnotations.map(a=>({...a,font:{...a.font,size:a.font.size*d}})),
-        'margin.b':(80+21*fresh.rowCount)*d
+        'margin.b':(88+24*fresh.rowCount)*d
       }).catch(err=>console.warn('Q path label resize:',err));
     };
     plot.__tasPathRefreshAxisLabels=()=>{

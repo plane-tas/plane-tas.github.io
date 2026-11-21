@@ -96,18 +96,65 @@
     if(!Array.isArray(data)) return data;
     return data.map(trace=>paintOptions(trace,factor,''));
   }
+  // Every figure follows the size of its own box: a ResizeObserver on each
+  // plotted element calls Plots.resize when the box changes size (window,
+  // side panels, tabs, wrapped controls), not only on window resize events.
+  // The figure's own size changes (Plotly redrawing inside) do not change
+  // the box, so this cannot loop.
+  const pendingResize=new Set();
+  let resizeFrame=0;
+  const flushResize=()=>{
+    resizeFrame=0;
+    for(const gd of pendingResize){
+      pendingResize.delete(gd);
+      if(!gd.isConnected || !gd._fullLayout || !(gd.offsetWidth>0) || !(gd.offsetHeight>0)) continue;
+      try{ const r=plotly.Plots?.resize?.(gd); if(r && typeof r.catch==='function') r.catch(()=>{}); }catch(_e){}
+    }
+  };
+  const sizeObserver=typeof ResizeObserver==='function' ? new ResizeObserver(entries=>{
+    for(const entry of entries){
+      const gd=entry.target, fl=gd._fullLayout;
+      const w=entry.contentRect.width, h=entry.contentRect.height;
+      if(!fl || !(w>0) || !(h>0)) continue;
+      // Already drawn at this size (or a fixed-size export figure).
+      if(Math.abs((fl.width||0)-w)<1 && Math.abs((fl.height||0)-h)<1) continue;
+      pendingResize.add(gd);
+    }
+    if(pendingResize.size && !resizeFrame) resizeFrame=requestAnimationFrame(flushResize);
+  }) : null;
+  const observeSize=gd=>{
+    const el=typeof gd==='string' ? document.getElementById(gd) : gd;
+    if(!sizeObserver || !el || el.__tasSizeObserved) return;
+    el.__tasSizeObserved=true;
+    sizeObserver.observe(el);
+  };
+  // The UI density changes with the window width (a CSS breakpoint).  Fonts
+  // and margins are scaled when a figure is drawn, so tell the app to draw
+  // the visible figures again ('tas-density-change').
+  let drawnDensity=null;
+  window.addEventListener('resize',()=>{
+    cachedDensity=null;
+    const d=density();
+    if(drawnDensity!==null && Math.abs(d-drawnDensity)>1e-6){
+      drawnDensity=d;
+      window.dispatchEvent(new CustomEvent('tas-density-change',{detail:{density:d}}));
+    }
+  },{passive:true});
   for(const method of ['newPlot','react']){
     if(typeof plotly[method]!=='function') continue;
     const old=plotly[method].bind(plotly);
     plotly[method]=function(gd,data,layout,config){
       const factor=density();
+      drawnDensity=factor;
       const compactLayout=paintOptions(layout,factor,'layout');
       if(compactLayout && typeof compactLayout==='object'){
         // Axis fonts without explicit sizes inherit this Plotly default.
         compactLayout.font={...compactLayout.font,size:(compactLayout.font?.size??12*factor)};
         readableAxisTitles(compactLayout,factor);
       }
-      return old(gd,adaptTraces(data,factor),compactLayout,config);
+      const result=old(gd,adaptTraces(data,factor),compactLayout,config);
+      observeSize(gd);
+      return result;
     };
   }
   if(typeof plotly.restyle==='function'){

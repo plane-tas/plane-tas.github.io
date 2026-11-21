@@ -2,6 +2,8 @@
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {PI, add, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '../core/tas-core.js';
 import {nuclearExtinctionThreshold, nuclearStructureFactorSquared} from '../cif/cif-structure.js';
+import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
+import {PLOT_FONTS} from '../core/plot-fonts.js';
 
 export function createPowder(deps){
   const {
@@ -136,7 +138,12 @@ function backgroundPowderPeaks(material,qLimit,normLimit=qLimit){
   }
 
   const maxIntensity=Math.max(0,...corrected.filter(g=>g.q<=normLimit+1e-10).map(g=>g.intensity));
-  for(const g of corrected) g.relativeIntensity=maxIntensity>0 ? Math.min(1,g.intensity/maxIntensity) : 0;
+  for(const g of corrected){
+    g.relativeIntensity=maxIntensity>0 ? Math.min(1,g.intensity/maxIntensity) : 0;
+    // Hover lines in the same form as the sample Bragg peaks: |F|², L and
+    // the relative intensity (barn per cell of the BG material).
+    g.intensityHover=`Mult = ${g.entries.length}, Σ|F<sub>N</sub>|² = ${barnText(g.sf2Sum/100)} barn<br>L = 1/(2 sin²θ cosθ) = ${g.lorentzDebye.toPrecision(4)}<br>Σ|F<sub>N</sub>|²L / max = ${g.relativeIntensity.toFixed(4)}`;
+  }
 
   return corrected.filter(g=>g.q<=qLimit+1e-10);
 }
@@ -227,7 +234,7 @@ const scaleColor=(scale,value,cmin,cmax)=>{
   }
   return `rgb(${scale.at(-1)[1].join(',')})`;
 };
-const colorbarFor=(title,bar,cmin,cmax)=>({title:{text:title,side:"right",font:{size:18}},tickfont:{size:17},
+const colorbarFor=(title,bar,cmin,cmax)=>({title:{text:title,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},
   thickness:16,len:bar.len,x:1.01,xanchor:"left",y:bar.y,...singleColorbarTicks(cmin,cmax)});
 const braggHover=kind=>`${kind}<br>%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`;
 
@@ -258,7 +265,7 @@ function drawPowder(state){
       if(!group.line){
         // With a CIF: the summed |F_N|² (barn) of the merged reflections.
         let details=`${representativePowderHklText(group)}${nuclearShaded?'':`<br>${powderSfText(group.entries[0]?.sf2)}`}`;
-        if(nuclearShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F_N|² = ${barnText(group.sf2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>I / max = ${relative.toFixed(4)}`;
+        if(nuclearShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F<sub>N</sub>|² = ${barnText(group.sf2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>Σ|F<sub>N</sub>|²L / max = ${relative.toFixed(4)}`;
         group.line={x:[],y:[],customdata:[]};
         appendPowderBraggLine(group.line,group.q,hw,details);
       }
@@ -290,7 +297,7 @@ function drawPowder(state){
         const rep=entries[0];
         const suffix=entries.length>1 ? " & equivalent" : "";
         let details=rep ? `k${rep.qIndex}: (${formatHKL(rep.hkl)})${suffix}` : "N/A";
-        if(magneticShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F_M|² = ${barnText(group.fm2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>I / max = ${relative.toFixed(4)}`;
+        if(magneticShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F<sub>M</sub>|² = ${barnText(group.fm2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>Σ|F<sub>M</sub>|²L / max = ${relative.toFixed(4)}`;
         group.line={x:[],y:[],customdata:[]};
         appendPowderBraggLine(group.line,group.q,hw,details);
       }
@@ -329,22 +336,23 @@ function drawPowder(state){
   renderQEExternalLegend('qePowderLegend','powderPlot',traces);
   Plotly.react("powderPlot",traces,{
     uirevision:"powderPlot-q",
+    title:qeTitleLayout(state.title),
     showlegend:false,
     xaxis:{
-      title:"Q (Å⁻¹)",
+      title:{text:"Q (Å⁻¹)",font:{size:PLOT_FONTS.axis}},
       // Powder Q is non-negative by definition.  Always anchor the displayed
       // x-axis at Q = 0; preserve only a previously zoomed positive upper edge.
       range:[0,(keptPowderView.x && keptPowderView.x[1]>0) ? keptPowderView.x[1] : Qdraw],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:PLOT_FONTS.tick},
       // Use the same thin frame as the Q vector–E map.
       showline:false,ticks:"outside",automargin:true
     },
     yaxis:{
-      title:"ħω (meV)",
+      title:{text:"ħω (meV)",font:{size:PLOT_FONTS.axis}},
       // Keep the displayed hbar-omega range exactly on the generated
       // accessible-range endpoints; no extra top/bottom padding.
       range:[hwmin,hwmax],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:PLOT_FONTS.tick},
       // Match the Q vector–E map on all four sides.
       showline:false,ticks:"outside",automargin:true
     },
@@ -359,7 +367,7 @@ function drawPowder(state){
     }],
     plot_bgcolor:"white",paper_bgcolor:"white",
     // Room for the colorbars on the right (as in the Constant E map).
-    margin:{l:66,r:nuclearShaded?88:34,t:30,b:65},
+    margin:{l:66,r:nuclearShaded?88:34,t:56,b:65},
     hovermode:"closest"
   },{responsive:true,doubleClick:"reset"});
 }
@@ -490,7 +498,7 @@ function calculatePowder(){
       if(!bins.has(level)) bins.set(level,{x:[],y:[],customdata:[]});
       appendPowderBackgroundCurve(
         bins.get(level),p.q,hw,
-        `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>I/Imax = ${ratio.toFixed(3)}`
+        `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>${p.intensityHover}`
       );
     }
     let first=true;
@@ -599,7 +607,7 @@ function calculatePowder(){
     const fmt=v=>v>=0.01 ? String(Number(v.toPrecision(2))) : v.toExponential(1).replace(/e([+-])(\d+)/,(m,sg,d)=>`×10${sg==='-'?'⁻':''}${[...d].map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')}`);
     ratioBox.textContent=Number.isFinite(ratio) ? `M = ${fmt(ratio)} N` : '';
   }
-  lastPowderState={traces,hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,
+  lastPowderState={title:qeMapTitle({inst,energyMode,Ei:E,Ef:E}),traces,hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,
     nuclearShaded,magneticShaded,nuclearMax,magneticMax};
   drawPowder(lastPowderState);
 
