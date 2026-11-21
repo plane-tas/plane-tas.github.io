@@ -428,35 +428,8 @@
 /* Match the visual shape of Snap and Q unit comboboxes. */
 #qeDisplayControls .qe-path-snap-label{font-weight:600;}
 
-/* Q vector–E map: full-width HKL editor, matching the earlier one-line UI. */
-#qeVectorMapPane .qe-vector-path-input{
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  align-items:center;
-  gap:calc(10px * var(--tas-density));
-  padding:calc(8px * var(--tas-density));
-  border:calc(1px * var(--tas-density)) solid #ddd;
-  border-top:0;
-  background:#fff;
-  box-sizing:border-box;
-  min-width:0;
-  width:100%;
-}
-#qeVectorMapPane .qe-vector-path-input label{
-  font-size:max(13px,calc(17px * var(--tas-density)));
-  font-weight:600;
-  white-space:nowrap;
-  margin:0;
-}
-#qeVectorMapPane #qeVectorHKLPath{
-  display:block;
-  width:100%;
-  min-width:0;
-  box-sizing:border-box;
-  padding:calc(6px * var(--tas-density)) calc(9px * var(--tas-density));
-  font-size:max(13px,calc(16px * var(--tas-density)));
-  font-variant-numeric:tabular-nums;
-}
+/* Q vector–E map: the HKL box sits below the plot, legend and Scale row,
+   styled like the Constant E map one (.qe-constant-path-input). */
 #qeVectorMapPane #qeVectorHKLPath[aria-invalid="true"]{border-color:#c44;}
 #qeVectorMessage:empty{display:none;}
 

@@ -6,7 +6,7 @@ export function createQEVectorMap(deps){
     powderS2ForQAtHW, qeFormatPathNumber, qePathAxisCoordinateLabel, qePathPointXY,
     qePhysicalRluCoordinates, qePlaneRluBasis, qeSelectedPathHKL, renderQEExternalLegend, renderSingle,
     representativePowderHklText, safeResizePlot, scatteringPlaneWarningMessage, selectedBackgrounds,
-    setScatteringPlaneWarning, getPowderCache, getSingleCache, hklToQ
+    setScatteringPlaneWarning, getPowderCache, getSingleCache, hklToQ, singleColorbarTicks
   }=deps;
 
 let qeVectorMeasureCanvas=null;
@@ -171,6 +171,146 @@ function installQEVectorDoubleClickReset(plot){
   plot.on('plotly_doubleclick',handler);
 }
 
+// A Bragg peak is shown on the Q vector–E map only when it lies exactly on
+// the HKL path.  "Exactly" allows 0.005 r.l.u. in every index (about a
+// two-decimal rounding), so an incommensurate satellite such as k = 0.1234 is
+// still found on a path typed with 0.12.
+const QE_PATH_PEAK_TOLERANCE=0.005;
+
+// Peaks of `points` on the path legs; one entry per (peak, x position).
+function pathBraggPositions(points,paths,xScale){
+  const out=[];
+  for(const p of points){
+    const hkl=p?.hkl;
+    if(!Array.isArray(hkl) || hkl.length!==3 || !hkl.every(Number.isFinite)) continue;
+    for(const path of paths){
+      const d=path.b.map((v,k)=>v-path.a[k]);
+      const dd=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];
+      if(!(dd>1e-20)) continue;
+      const r=hkl.map((v,k)=>v-path.a[k]);
+      const t=Math.min(1,Math.max(0,(r[0]*d[0]+r[1]*d[1]+r[2]*d[2])/dd));
+      const off=Math.max(...r.map((v,k)=>Math.abs(v-t*d[k])));
+      if(off>QE_PATH_PEAK_TOLERANCE) continue;
+      const x=(path.start+t*path.length)*xScale;
+      // A peak at a shared vertex belongs to two legs: draw it once.
+      // So is a satellite listed twice (G + k and G' - k, or k = 0).
+      if(out.some(o=>Math.abs(o.x-x)<1e-9 && o.p.hkl.every((v,k)=>Math.abs(v-hkl[k])<1e-9))) continue;
+      out.push({p,x});
+    }
+  }
+  return out;
+}
+
+function addPathBraggTraces(cache,traces,paths,xScale){
+  const nuclear=pathBraggPositions(cache.Gpoints||[],paths,xScale);
+  const magnetic=pathBraggPositions(cache.magPoints||[],paths,xScale);
+  // Same intensity definition and normalization as the Constant E map:
+  // I = |F|^2 L (L = 1/sin 2θ at the elastic wave vector, or 1), each
+  // relative to its maximum over ALL peaks of the map, not only the path.
+  const hasCif=!!cache.cifStructure;
+  const magneticIntensity=!!cache.magneticIntensity && hasCif;
+  const braggK=Number(cache.braggK);
+  const lorentzOn=$('qeLorentz')?.value!=='off';
+  const lorentz=p=>{
+    if(!lorentzOn) return 1;
+    const s=Number(p.q)/(2*braggK);
+    if(!(braggK>0) || !Number.isFinite(s) || s>1) return null;
+    return 1/Math.max(1e-3,Math.sin(2*Math.asin(s)));
+  };
+  const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
+  const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
+  const nuclearMax=Math.max(0,...(cache.Gpoints||[]).map(nuclearI));
+  const magneticMax=magneticIntensity ? Math.max(0,...(cache.magPoints||[]).map(magneticI)) : 0;
+  const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
+  const magneticRelative=p=>magneticMax>0 ? magneticI(p)/magneticMax : 0;
+  const lorentzText=p=>{ if(!lorentzOn) return null; const L=lorentz(p); return L ? `L = 1/sin 2θ = ${L.toPrecision(4)}` : 'not reachable elastically'; };
+  const iSymbol=lorentzOn?'²L':'²';
+  const entry=(id,fallback)=>{ const v=Number($(id)?.value); return Number.isFinite(v)?v:fallback; };
+  const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
+  const magneticBar={len:0.34,y:0.23};
+  const colorbar=(title,bar,min,max)=>({title:{text:title,side:'right',font:{size:18}},tickfont:{size:17},
+    thickness:16,len:bar.len,x:1.01,xanchor:'left',y:bar.y,...singleColorbarTicks(min,max)});
+  const sizes={nuclear:12,magnetic:7,star:9};
+  const legendTraces=[], dataTraces=[];
+
+  // Nuclear: black circles without a CIF; |F_N|² shading and colorbar with one.
+  // With a CIF the colorbar stays even when no peak is on the path (Plotly
+  // drops the colorbar of an empty trace, so carry one unplotted point).
+  if(nuclear.length || hasCif){
+    const onlyBar=!nuclear.length;
+    legendTraces.push({x:[null],y:[null],mode:'markers',name:'Nuclear Bragg peaks',
+      marker:{color:'black',size:sizes.nuclear},hoverinfo:'skip',meta:'nuclear-legend'});
+    const sfMin=entry('sfColorMinEntry',0), sfMax=entry('sfColorMaxEntry',1);
+    dataTraces.push({
+      type:'scatter',mode:'markers',name:'Nuclear Bragg peaks',showlegend:false,meta:'nuclear-data',
+      x:onlyBar?[null]:nuclear.map(o=>o.x), y:onlyBar?[null]:nuclear.map(()=>0),
+      cliponaxis:false,
+      marker:hasCif ? {
+        color:onlyBar?[0]:nuclear.map(o=>nuclearRelative(o.p)),
+        colorscale:[[0,'rgb(255,255,255)'],[0.25,'rgb(205,205,205)'],[0.5,'rgb(150,150,150)'],[0.75,'rgb(85,85,85)'],[1,'rgb(0,0,0)']],
+        cmin:sfMin,cmax:sfMax,showscale:true,
+        colorbar:colorbar(`|F_N|${iSymbol} / max`,nuclearBar,sfMin,sfMax),
+        size:sizes.nuclear,line:{color:'rgb(25,25,25)',width:1.3}
+      } : {color:'black',size:sizes.nuclear},
+      hovertext:onlyBar?['']:nuclear.map(({p})=>{
+        const lines=[p.label||'(0 0 0)','ħω = 0 meV (elastic)'];
+        if(hasCif){
+          const raw=Number.isFinite(p.sf2)?p.sf2:0;
+          lines.push(`|F<sub>N</sub>|² = ${(raw/100).toPrecision(6)} barn`,lorentzText(p),`|F<sub>N</sub>|${iSymbol} / max = ${nuclearRelative(p).toFixed(4)}`);
+        }
+        return lines.filter(Boolean).join('<br>');
+      }),
+      hovertemplate:'%{hovertext}<extra></extra>'
+    });
+  }
+
+  // Magnetic: one red marker shape per propagation vector (as in the Constant
+  // E map); single k also gets the white-to-red |F_M|² colorbar.
+  const magneticSymbols=['circle','x','star','diamond','cross','triangle-up','square','diamond-open','triangle-down','pentagon'];
+  const allIndices=[...new Set((cache.magPoints||[]).map(p=>Number(p.qIndex)).filter(Number.isFinite))].sort((a,b)=>a-b);
+  for(const qIndex of allIndices){
+    const pts=magnetic.filter(o=>o.p.qIndex===qIndex);
+    // Keep the single-k colorbar even with no satellite on the path.
+    if(!pts.length && !magneticIntensity) continue;
+    const symbol=magneticSymbols[(qIndex-1)%magneticSymbols.length];
+    const name=`Magnetic Bragg peaks: k${qIndex}`;
+    const size=symbol==='star'?sizes.star:sizes.magnetic;
+    const onlyBar=!pts.length;
+    const hovertext=onlyBar?['']:pts.map(({p})=>{
+      const lines=[p.label,'ħω = 0 meV (elastic)'];
+      if(magneticIntensity) lines.push(`|F<sub>M</sub>|² = ${(Number(p.fm2)||0).toPrecision(6)} barn`,lorentzText(p),`|F<sub>M</sub>|${iSymbol} / max = ${magneticRelative(p).toFixed(4)}`);
+      return lines.filter(Boolean).join('<br>');
+    });
+    if(magneticIntensity){
+      const mfMin=entry('mfColorMinEntry',0), mfMax=entry('mfColorMaxEntry',1);
+      legendTraces.push({x:[null],y:[null],mode:'markers',name,marker:{color:'red',size,symbol},hoverinfo:'skip',meta:'magnetic-legend'});
+      dataTraces.push({
+        type:'scatter',mode:'markers',name,showlegend:false,meta:'magnetic-data',
+        x:onlyBar?[null]:pts.map(o=>o.x), y:onlyBar?[null]:pts.map(()=>0), cliponaxis:false,
+        marker:{color:onlyBar?[0]:pts.map(o=>magneticRelative(o.p)),
+          colorscale:[[0,'rgb(255,255,255)'],[0.25,'rgb(255,200,200)'],[0.5,'rgb(250,130,130)'],[0.75,'rgb(225,55,55)'],[1,'rgb(180,0,0)']],
+          cmin:mfMin,cmax:mfMax,showscale:true,
+          colorbar:colorbar(`|F_M|${iSymbol} / max`,magneticBar,mfMin,mfMax),
+          size,symbol,line:{color:'rgb(110,0,0)',width:1.3}},
+        hovertext,hovertemplate:'%{hovertext}<extra></extra>'
+      });
+    }else{
+      legendTraces.push({x:[null],y:[null],mode:'markers',name,marker:{color:'red',size,symbol},hoverinfo:'skip'});
+      dataTraces.push({
+        type:'scatter',mode:'markers',name,showlegend:false,cliponaxis:false,
+        x:pts.map(o=>o.x), y:pts.map(()=>0),
+        marker:{color:'red',size,symbol},
+        hovertext,hovertemplate:'%{hovertext}<extra></extra>'
+      });
+    }
+  }
+  // Legend order as in the Constant E map: Accessible Q, Bragg peaks, BG,
+  // dark angles.  The markers themselves are drawn on top of every layer.
+  const accessibleIndex=traces.findIndex(tr=>tr.name==='Accessible Q' && tr.type==='scatter');
+  traces.splice(accessibleIndex>=0?accessibleIndex+1:traces.length,0,...legendTraces);
+  traces.push(...dataTraces);
+}
+
 function renderQEVectorMap(cache){
   const plot=$('qeVectorPlot'), msg=$('qeVectorMessage');
   if(!plot || !cache || cache.powder) return;
@@ -229,10 +369,10 @@ function renderQEVectorMap(cache){
     let axisTitle='HKL path';
     // Two points: when the path can be written with one index as the
     // variable -- only one of h, k, l changes, or the changing ones are equal
-    // or opposite to it, e.g. (h, h, 0) or (h, -h, 1) -- the x axis is
-    // labelled with the actual value of that index (l from 3 to -3, say).
-    // Otherwise (e.g. (0,0,0) -> (0,1,2)) no single number describes a point:
-    // the ticks carry no numbers and the end points are given as HKL.
+    // or opposite to it, e.g. (h, h, 0) or (h, -h, 1) -- the axis title is
+    // that form and the grid lines fall on round values of that index.
+    // The ticks never carry numbers: like 3+ vertices, only the end points
+    // are given as HKL right below the axis.
     const varyingIndices=dh.map((d,i)=>Math.abs(d)>1e-10?i:-1).filter(i=>i>=0);
     let singleIndex=-1;
     const ratios=[0,0,0];
@@ -303,14 +443,11 @@ function renderQEVectorMap(cache){
       }
       tickVals.sort((a,b)=>a-b);
     }
-    // Keep every vertex as an x-axis tick, but draw the HKL coordinates as
-    // horizontal annotations.  Plotly's native tickangle rotates *all* labels;
-    // stagger individual labels into rows when their bounding boxes overlap.
-    const tickText=multiple
-      ?pathPoints.map((_,i)=>qePathAxisCoordinateLabel(i))
-      :singleIndex>=0
-        ?tickVals.map(x=>axisNumber(first[singleIndex]+singleSign*x))
-        :tickVals.map(()=>'');
+    // Every vertex (two points included) is an x-axis tick without a number;
+    // its HKL coordinates are drawn as horizontal annotations right below the
+    // axis.  Plotly's native tickangle rotates *all* labels; stagger
+    // individual labels into rows when their bounding boxes overlap.
+    const tickText=pathPoints.map((_,i)=>qePathAxisCoordinateLabel(i));
     // Measure the real rendered width (canvas, same font as the annotations).
     // A per-character estimate overstates labels such as "(0.5, 0, 1)".
     // tas-plot-density.js scales every Plotly font (and margin) by the UI
@@ -332,7 +469,6 @@ function renderQEVectorMap(cache){
     // Rows are assigned from the ACTUAL plot-area width and the CURRENT x range
     // (after zoom). Labels outside the range are not drawn and never force a row.
     const staggeredPathLabels=(width=plotPixelWidth,{areaWidth=null,range=null}={})=>{
-      if(!multiple) return {annotations:[],rowCount:0};
       const usableWidth=Math.max(60,Number(areaWidth)>0?Number(areaWidth):width-2*sideMargin*uiDensity);
       const [r0,r1]=Array.isArray(range)&&range.length===2&&Number(range[1])>Number(range[0]) ? range.map(Number) : [hMin,hMax];
       const span=Math.max(r1-r0,1e-9);
@@ -477,6 +613,10 @@ function renderQEVectorMap(cache){
     addDarkOverlay(darkKfZ,'Dark angle (kf side)','rgba(80,190,255,0.25)',21);
     addDarkOverlay(darkFixedZ,'Dark angle (fixed)','rgba(0,0,255,0.15)',22);
 
+    // Bragg peaks on the path, drawn at ħω = 0 like the Constant E map
+    // (same marker shapes, colours, colorbars and scale entries).
+    addPathBraggTraces(cache,traces,paths,xScale);
+
     // Plotly's native axis grid is rendered behind data traces, so colored
     // heatmap overlays can obscure it.  Build a matching set of grid lines as
     // top-layer shapes so the grid stays readable over Accessible-Q, BG and
@@ -520,10 +660,10 @@ function renderQEVectorMap(cache){
       uirevision:`qeVector-${currentPathKey}`, 
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
       showlegend:false,
-      xaxis:{title:{text:''},tickfont:{size:17},tickmode:'array',tickvals:tickVals,
-        ticktext:multiple?tickVals.map(()=>''):tickText,
+      xaxis:{title:{text:''},tickfont:{size:17},tickmode:'array',
+        tickvals:knots,ticktext:knots.map(()=>''),
         range:[hMin,hMax],tickangle:0,automargin:false,zeroline:false,
-        ticks:multiple?'outside':'',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
+        ticks:'outside',showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       yaxis:{title:{text:'ħω (meV)',font:{size:15}},tickfont:{size:17},range:[hwMin,hwMax],tickmode:'array',tickvals:yGridVals,zeroline:false,showgrid:false,showline:true,linecolor:'#555',linewidth:1.2,mirror:true},
       shapes:[
         ...frontGridShapes,
@@ -531,20 +671,13 @@ function renderQEVectorMap(cache){
       ],
       annotations:[
         {x:0.5,xref:'paper',y:0,yref:'paper',
-          yshift:multiple?-(48+21*pathLabelLayout.rowCount):-123,
+          yshift:-(48+21*pathLabelLayout.rowCount),
           text:axisTitle,showarrow:false,xanchor:'center',yanchor:'top',font:{size:15}},
-        ...pathLabelLayout.annotations,
-        ...multiple?[]:[
-          {x:hMin,xref:'x',y:0,yref:'paper',yshift:-60,
-            text:qePathAxisCoordinateLabel(0),showarrow:false,
-            xanchor:'center',yanchor:'top',font:{size:17}},
-          {x:hMax,xref:'x',y:0,yref:'paper',yshift:-60,
-            text:qePathAxisCoordinateLabel(pathPoints.length-1),showarrow:false,
-            xanchor:'center',yanchor:'top',font:{size:17}}
-        ]
+        ...pathLabelLayout.annotations
       ],
-      margin:{l:sideMargin,r:sideMargin,t:multiple?52:45,
-        b:multiple?80+21*pathLabelLayout.rowCount:158}
+      // sideMargin (>= 88 px, as in the Constant E map) also holds the |F|² colorbars.
+      margin:{l:sideMargin,r:sideMargin,t:52,
+        b:80+21*pathLabelLayout.rowCount}
     },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
     Promise.resolve(renderPromise).then(()=>{
       if(!plot.isConnected || plot.__tasQEVectorRenderToken!==renderToken) return;
@@ -564,7 +697,7 @@ function renderQEVectorMap(cache){
     // (for example when a tablet rotates or the browser becomes narrower).
     let appliedRows=pathLabelLayout.annotations.map(a=>a.yshift).join(',');
     plot.__tasPathUpdateAxisLabels=width=>{
-      if(!multiple || !plot.isConnected || $('qeVectorMapPane')?.classList.contains('hidden')) return;
+      if(!plot.isConnected || $('qeVectorMapPane')?.classList.contains('hidden')) return;
       const size=plot._fullLayout?._size;
       const fresh=staggeredPathLabels(width,{
         // The plot-area width is unaffected by the bottom margin we change here.
@@ -629,6 +762,11 @@ function setQEMapTab(name){
   $('qeMapTabVector')?.setAttribute('aria-selected',String(vector));
   $('qeConstantMapPane')?.classList.toggle('hidden',vector);
   $('qeVectorMapPane')?.classList.toggle('hidden',!vector);
+  // One Scale row (Lorentz factor, F_N / F_M min and max, M = x N) serves
+  // both maps: it sits under the legend of whichever map is open, so its
+  // entries, listeners and saved values stay shared.
+  const scaleRow=$('sfColorbarRange'), scaleAnchor=$(vector?'qeVectorLegend':'qePlotLegend');
+  if(scaleRow && scaleAnchor && scaleAnchor.nextElementSibling!==scaleRow) scaleAnchor.after(scaleRow);
   try{localStorage.setItem('tas-qe-map-tab-v1',vector?'vector':'constant');}catch(_e){}
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     // Re-render the newly visible Q-E plot rather than relying on resize.

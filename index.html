@@ -268,7 +268,14 @@
 </div>
 </div>
 <div aria-labelledby="qeMapTabVector" class="qe-map-pane hidden" id="qeVectorMapPane" role="tabpanel">
-<div class="qe-vector-path-input">
+<div aria-live="polite" class="orientation-plane-warning hidden" id="qeVectorPlaneWarning"></div>
+<div class="qe-plot-frame" id="qeVectorPlotFrame">
+  <button id="qeVectorSaveFigure" class="qe-save-figure" type="button">Save figure</button>
+  <div class="qe-plot" id="qeVectorPlot"></div>
+</div>
+<div class="qe-external-legend" id="qeVectorLegend" aria-label="Q vector–E map legend"></div>
+<!-- The peak Scale row (#sfColorbarRange) is moved here while this tab is open. -->
+<div class="qe-vector-path-input qe-constant-path-input">
   <label for="qeVectorHKLPath">HKL</label>
   <input id="qeVectorHKLPath" type="text" spellcheck="false" autocomplete="off"
     value=""
@@ -276,12 +283,6 @@
     aria-label="HKL path as comma-separated H K L coordinates"
     aria-describedby="qeVectorMessage"/>
 </div>
-<div aria-live="polite" class="orientation-plane-warning hidden" id="qeVectorPlaneWarning"></div>
-<div class="qe-plot-frame" id="qeVectorPlotFrame">
-  <button id="qeVectorSaveFigure" class="qe-save-figure" type="button">Save figure</button>
-  <div class="qe-plot" id="qeVectorPlot"></div>
-</div>
-<div class="qe-external-legend" id="qeVectorLegend" aria-label="Q vector–E map legend"></div>
 <div aria-live="polite" class="time-estimate-message" id="qeVectorMessage"></div>
 </div>
 </div><div class="geometry-card">

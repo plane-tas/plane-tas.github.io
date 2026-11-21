@@ -177,7 +177,7 @@ const {
   scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args), selectedBackgrounds,
   setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
   getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
-  hklToQ:(...args)=>hklToQ(...args)
+  hklToQ:(...args)=>hklToQ(...args), singleColorbarTicks
 });
 
 const {
