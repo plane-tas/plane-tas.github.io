@@ -71,14 +71,24 @@ function qeSpurionWarnings(cache, hw){
   return hits;
 }
 
+// Spurion warning of the current ħω slice, at the right end of the control
+// row above the Constant E map (empty: nothing shown).
 function updateQESpurionWarning(cache,index){
   const box=$("qeSpurionWarning");
-  if(!box || !cache?.hwList?.length) return;
+  if(!box) return;
+  if(!cache?.hwList?.length){ box.textContent=""; return; }
   const i=Math.max(0,Math.min(Number(index)||0,cache.hwList.length-1));
-  const hw=Number(cache.hwList[i]);
-  const hits=qeSpurionWarnings(cache,hw);
-  box.textContent=hits.length ? `Spurion warning: ${hits.map(x=>x.label).join(", ")}` : "";
-  box.classList.toggle("active",hits.length>0);
+  const hits=qeSpurionWarnings(cache,Number(cache.hwList[i]));
+  box.textContent="";
+  if(!hits.length) return;
+  // Each condition stays on one line when the text wraps ("2ki-3kf").
+  box.append("Spurion warning: ");
+  hits.forEach((x,k)=>{
+    if(k) box.append(", ");
+    const span=document.createElement("span");
+    span.className="qe-spurion-term"; span.textContent=x.label;
+    box.append(span);
+  });
 }
 
 function currentQEMapUnit(){

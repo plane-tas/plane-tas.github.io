@@ -115,11 +115,6 @@
 <label id="senseAnalyzerPart">Sense A<select data-sense-part="2" aria-label="Sense: analyzer"><option>+</option><option selected="">-</option></select></label>
 <input id="sense" type="hidden" value="-+-"/></div>
 </div>
-<!-- λ/2 is moved next to ħω of the Q-E map at start-up (qe-single-render.js); hidden here so that it does not flash in the sidebar while the page loads. -->
-<div class="grid2" style="display:none">
-<label class="checkbox-label"><input id="lambdaHalf" type="checkbox"/><span>λ/2 (only elastic)</span></label>
-<span></span>
-</div>
 <!-- Motor sign and limits: one row per motor (φ / χ rows for 4-circle only). -->
 <div class="motor-limit-table" id="motorLimitTable">
 <span class="motor-limit-head"></span><span class="motor-limit-head">sign</span><span class="motor-limit-head">min (deg)</span><span class="motor-limit-head">max (deg)</span>
@@ -241,12 +236,16 @@
 <button aria-controls="qeVectorMapPane" aria-selected="false" class="geometry-card-tab" id="qeMapTabVector" role="tab" type="button">Q vector–E map</button>
 </div>
 <div aria-labelledby="qeMapTabConstant" class="qe-map-pane" id="qeConstantMapPane" role="tabpanel">
-<div class="energy-slider-row"><label>ħω<input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></label><output id="hwValue">0.0 meV</output></div>
+<!-- Control row of the Constant E map, written here (not built at start-up) so that it has its final layout while the page loads: Save figure | slider (ħω + λ/2 for TAS, W for 4-circle) | spurion warning, widths 1 : 2 : 1. -->
+<div class="qe-range-control-grid" id="qeRangeControlGrid">
+<div class="qe-save-cell"><button id="qeSaveFigure" class="qe-save-figure" type="button">Save figure</button></div>
+<div class="qe-range-control"><div class="qe-control-entry qe-hw-control-entry"><span>ħω (meV)</span><label class="checkbox-label qe-lambda-half-toggle qe-s2-ring-toggle"><input id="lambdaHalf" type="checkbox"/><span>λ/2 (only elastic)</span></label><input id="hwEntry" type="number" step="0.1" value="0.0"/></div><input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></div>
+<div class="qe-range-control hidden" id="qeWCard"><div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"/></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0"/></div>
+<div class="qe-spurion-cell"><span id="qeSpurionWarning" class="qe-spurion-warning" role="status" aria-live="polite"></span></div>
+</div>
 <div class="qe-plot-frame" id="singlePlotFrame">
-  <button id="qeSaveFigure" class="qe-save-figure" type="button">Save figure</button>
   <div class="qe-plot" id="singlePlot"></div>
   <div id="qePathHitLayer" class="qe-path-hit-layer" aria-label="Tap points in the Q-E map to select a reciprocal-space path"></div>
-  <div id="qeSpurionWarning" class="qe-spurion-warning qe-spurion-plot-warning" role="status" aria-live="polite"></div>
 </div><div class="qe-plot powder hidden" id="powderPlot"></div>
 <div class="qe-external-legend hidden" id="qePowderLegend" aria-label="Powder Q–E map legend"></div>
 <div class="qe-external-legend" id="qePlotLegend" aria-label="Constant E map legend"></div>
@@ -908,8 +907,6 @@
 <label class="cif-reflection-plane-toggle"><input checked="" id="cifReflectionAlongV" type="checkbox"/> along V</label>
 <label class="cif-reflection-plane-toggle"><input checked="" id="cifReflectionWithinS2Max" type="checkbox"/> within instrument 2θ max</label>
 <label class="cif-reflection-plane-toggle"><input id="cifReflectionLambdaHalf" type="checkbox"/> λ/2</label>
-<button disabled="" id="cifDownloadTable" type="button">Save table</button>
-<button class="hidden" disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Save pattern</button>
 </div>
 <div class="magnetic-options reflection-options">
 <label class="hidden"><span>Mode</span><select id="reflectionMode" title="Table: one row per hkl (single crystal). Graph: powder pattern."><option value="table">Table</option><option value="graph">Graph</option></select></label>
@@ -920,10 +917,12 @@
 <section class="reflection-powder-section" id="reflectionPowderSection" hidden>
 <div class="reflection-powder-plot-wrap">
 <div class="reflection-plot-controls"><label class="reflection-plot-log" title="Logarithmic intensity axis"><input id="reflectionPlotLog" type="checkbox"/> Log I</label><span class="reflection-plot-fwhm reflection-plot-uvw" title="Gaussian peak width in 2θ (deg²), as in FullProf: FWHM² = U tan²θ + V tanθ + W">FWHM² =<input id="reflectionPlotU" type="number" step="0.05" value="0.44" aria-label="U (deg²)"/>tan²θ +<input id="reflectionPlotV" type="number" step="0.05" value="-0.33" aria-label="V (deg²)"/>tanθ +<input id="reflectionPlotW" type="number" step="0.05" value="0.17" aria-label="W (deg²)"/><button id="reflectionPlotUVWDefault" type="button" title="U = 0.44, V = −0.33, W = 0.17">Default</button></span><label class="reflection-plot-xaxis-label">X axis<select class="reflection-plot-xaxis" id="reflectionPlotXAxis" aria-label="Horizontal axis"><option value="twoTheta">2θ (deg)</option><option value="q">Q (Å⁻¹)</option><option value="d">d (Å)</option></select></label></div>
+<div class="reflection-save-row"><button disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Save CSV</button><span class="cif-filename-entry reflection-csv-name"><input id="cifPatternCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
 <div class="reflection-powder-plot" id="reflectionPowderPlot"></div>
 </div>
 </section>
 <p id="cifReflectionMessage" class="generator-reflections-notice" role="status" hidden></p>
+<div class="reflection-save-row" id="cifReflectionTableSaveRow"><button disabled="" id="cifDownloadTable" type="button" title="The reflection table as CSV">Save CSV</button><span class="cif-filename-entry reflection-csv-name"><input id="cifTableCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
 <div class="cif-reflection-table-wrap" id="cifReflectionTableWrap">
 <p id="cifReflectionEstimateNotice" class="cif-release-note" role="status" hidden></p>
 <table class="cif-reflection-table">

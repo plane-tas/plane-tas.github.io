@@ -116,18 +116,49 @@
       const gd=entry.target, fl=gd._fullLayout;
       const w=entry.contentRect.width, h=entry.contentRect.height;
       if(!fl || !(w>0) || !(h>0)) continue;
+      // Hidden when the density changed: draw it again now that it shows.
+      if(gd.__tasDensityDirty){ redrawFromSource(gd); continue; }
       // Already drawn at this size (or a fixed-size export figure).
       if(Math.abs((fl.width||0)-w)<1 && Math.abs((fl.height||0)-h)<1) continue;
       pendingResize.add(gd);
     }
     if(pendingResize.size && !resizeFrame) resizeFrame=requestAnimationFrame(flushResize);
   }) : null;
+  const tracked=new Set();
   const observeSize=gd=>{
     const el=typeof gd==='string' ? document.getElementById(gd) : gd;
-    if(!sizeObserver || !el || el.__tasSizeObserved) return;
+    if(!el) return;
+    tracked.add(el);
+    if(!sizeObserver || el.__tasSizeObserved) return;
     el.__tasSizeObserved=true;
     sizeObserver.observe(el);
   };
+  // Every figure is drawn again from the arguments of its last
+  // newPlot/react (kept unscaled) when the density changes, so its fonts,
+  // markers and margins follow.  A uirevision in the layout keeps the
+  // user's zoom; a 3-D scene keeps its current camera.  The app's own
+  // redraws ('tas-density-change') follow for figures with extra state.
+  function redrawFromSource(el){
+    el.__tasDensityDirty=false;
+    const src=el.__tasSource;
+    if(!src || !el.isConnected) return;
+    let layout=src.layout;
+    const camera=el._fullLayout?.scene?.camera;
+    if(camera && layout && typeof layout==='object' && layout.scene)
+      layout={...layout,scene:{...layout.scene,camera}};
+    try{
+      const r=plotly.react(el,src.data,layout,src.config);
+      if(r && typeof r.catch==='function') r.catch(()=>{});
+    }catch(_e){}
+  }
+  function redrawAllForDensity(){
+    for(const el of [...tracked]){
+      if(!el.isConnected){ tracked.delete(el); continue; }
+      if(!el._fullLayout || !el.__tasSource) continue;
+      if(el.offsetWidth>0 && el.offsetHeight>0) redrawFromSource(el);
+      else el.__tasDensityDirty=true;
+    }
+  }
   // The UI density changes with the window width (a CSS breakpoint).  Fonts
   // and margins are scaled when a figure is drawn, so tell the app to draw
   // the visible figures again ('tas-density-change').
@@ -137,6 +168,7 @@
     const d=density();
     if(drawnDensity!==null && Math.abs(d-drawnDensity)>1e-6){
       drawnDensity=d;
+      redrawAllForDensity();
       window.dispatchEvent(new CustomEvent('tas-density-change',{detail:{density:d}}));
     }
   },{passive:true});
@@ -153,6 +185,9 @@
         readableAxisTitles(compactLayout,factor);
       }
       const result=old(gd,adaptTraces(data,factor),compactLayout,config);
+      const el=typeof gd==='string' ? document.getElementById(gd) : gd;
+      if(el){ el.__tasSource={data,layout,config}; el.__tasDensityDirty=false; }
+      try{ window.__tasEnsurePlotSaveButton?.(el); }catch(_e){}
       observeSize(gd);
       return result;
     };

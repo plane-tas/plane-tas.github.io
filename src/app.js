@@ -291,6 +291,38 @@ function updateInstrumentTypeRows(){
     note.classList.toggle("hidden",!fourCircle);
   }
   updateGeometryQuickTargetButtons?.();
+  syncAnalyzerFreeUI();
+}
+// Diffractometer and 4-circle have no analyzer: only elastic scattering
+// (ħω = 0) is measured.  Their ħω controls (Constant E map, Angle
+// calculation, Powder target), the λ/2 option and the Q vector–E map are not
+// shown, and ħω is set to 0.  The control row above the map keeps Save
+// figure (a 4-circle also its W slider).
+function syncAnalyzerFreeUI(){
+  let type='tas';
+  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
+  const analyzerFree=type==='diffractometer' || type==='four-circle';
+  const single=checkedValue("sampleMode")==="single";
+  // Control row: Save figure always; the ħω card for TAS single crystal,
+  // the W card (syncQEWControl) and the spurion warning for single crystal.
+  $('hwEntry')?.closest('.qe-range-control')?.classList.toggle('hidden',analyzerFree || !single);
+  if(!single) $('qeWCard')?.classList.add('hidden');
+  document.querySelector('#qeRangeControlGrid .qe-spurion-cell')?.classList.toggle('hidden',!single);
+  for(const id of ['geomHW','powderGeomHW']) $(id)?.closest('label')?.classList.toggle('hidden',analyzerFree);
+  for(const id of ['geomSliderHW','powderSliderHW']) $(id)?.closest('.geometry-slider-row')?.classList.toggle('hidden',analyzerFree);
+  $('geomHW')?.closest('.grid4')?.classList.toggle('geometry-target-no-hw',analyzerFree);
+  $('powderGeometryTarget')?.classList.toggle('powder-target-no-hw',analyzerFree);
+  $('qeMapTabVector')?.classList.toggle('hidden',!single || analyzerFree);
+  if((!single || analyzerFree) && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
+  if(!analyzerFree) return;
+  const lambdaHalf=$('lambdaHalf');
+  if(lambdaHalf?.checked){ lambdaHalf.checked=false; lambdaHalf.dispatchEvent(new Event('change',{bubbles:true})); }
+  for(const id of ['geomHW','powderGeomHW']){
+    const el=$(id);
+    if(el && Number(el.value)!==0){ el.value='0'; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }
+  }
+  const hwEntry=$('hwEntry');
+  if(hwEntry && Number(hwEntry.value)!==0){ hwEntry.value='0'; hwEntry.dispatchEvent(new Event('change',{bubbles:true})); }
 }
 setupTasConventionUI();
 
@@ -523,7 +555,6 @@ function updateModeVisibility(){
   // Only the left plot and the Angle-calculation target controls change with mode;
   // Time estimate and the TAS-geometry card remain in the same place and size.
   $("singlePlot")?.classList.toggle("hidden",!single);
-  $("qeSpurionWarning")?.classList.toggle("hidden",!single);
   $("powderPlot")?.classList.toggle("hidden",single);
   $("qeMapTabVector")?.classList.toggle("hidden",!single);
   // Powder has a single map and no HKL path: hide the map tabs and the
@@ -532,7 +563,8 @@ function updateModeVisibility(){
   document.querySelector('#qeConstantMapPane .qe-constant-path-input')?.classList.toggle("hidden",!single);
   if(!single && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
   updateGeometryTargetVisibility();
-  $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
+  // Control row, map tabs, ħω controls: also by instrument type.
+  syncAnalyzerFreeUI();
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
   // The F_N / F_M scale row serves both maps (visibility follows the CIF).

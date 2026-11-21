@@ -556,7 +556,9 @@ function renderSingle(cache,index=0){
     unit,x:[-QplotX,QplotX],y:[-QplotY,QplotY]
   };
   const titleAnnotation=qeDomainTitleAnnotation(qeMapTitle({inst:cache.inst,energyMode:cache.energyMode,Ei:cache.Ei,Ef:cache.Ef,
-    hw:cache.hwList[i],W:(cache.fourCircle && cache.Whkl) ? cache.layerW : null}));
+    // Diffractometer / 4-circle: elastic only, no ħω in the title.
+    hw:['diffractometer','four-circle'].includes(cache.inst?.instrument_type) ? null : cache.hwList[i],
+    W:(cache.fourCircle && cache.Whkl) ? cache.layerW : null}));
   const singleDraw=Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.
     uirevision:`singlePlot-${unit}`,
@@ -617,7 +619,11 @@ function ensureQESliderControls(){
       wCard.id='qeWCard';
       wCard.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0">';
 
-      grid.append(hwCard,wCard);
+      // Spurion warning of the current slice at the right end of the row.
+      const spurionCell=document.createElement('div');
+      spurionCell.className='qe-spurion-cell';
+      spurionCell.innerHTML='<span id="qeSpurionWarning" class="qe-spurion-warning" role="status" aria-live="polite"></span>';
+      grid.append(hwCard,wCard,spurionCell);
       parent.insertBefore(grid,row);
       row.remove();
     }

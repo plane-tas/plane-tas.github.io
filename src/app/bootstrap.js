@@ -173,6 +173,9 @@ async function initialize(){
   $('qeWSlider')?.addEventListener('input',()=>{const w=Number($('qeWSlider').value);$('qeWEntry').value=String(Number(w.toFixed(4)));applyMapW(w);});
   $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
   // Constant E map: Save figure (plot with its colour bars, and the legend).
+  // The UI density changed: the Powder map is drawn again from its last
+  // calculation (keeps its legend choices; ui-shell redraws the others).
+  window.addEventListener('tas-density-change',()=>{ if($('sampleMode')?.value==='powder') redrawPowder?.(); });
   // Save figure (top left) of the other figures.
   initializePlotSaveButtons(msg=>showError?.(msg));
   // Powder: the same button saves the powder Q–E map and its legend.

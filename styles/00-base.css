@@ -120,14 +120,6 @@ textarea:disabled {
 /* Q-E readability refinements. */
 .qe-range-control .qe-control-entry{font-size:calc(14px * var(--tas-density));font-weight:600}
 
-/* Q-E higher-order contamination warning above the hbar-omega control. */
-.qe-spurion-warning{
-  min-height:calc(20px * var(--tas-density));
-  font-size:calc(13px * var(--tas-density));
-  font-weight:700;
-  color:#b00020;
-  line-height:1.3;
-}
 
 /* CIF generator */
 

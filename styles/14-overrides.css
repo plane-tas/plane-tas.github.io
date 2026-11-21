@@ -417,7 +417,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .generator-reflections-notice,
 .tab-panel .cif-release-note,
 .tab-panel .s2-conversion-info.warning,
-.tab-panel .qe-spurion-warning,
 .tab-panel .time-estimate-message,
 .tab-panel #cifSpinIndividualInfo {
   font-size: var(--plane-tab-warning-font) !important;

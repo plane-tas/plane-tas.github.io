@@ -15,22 +15,28 @@ const FIGURES=[
   ['absorptionPlot','absorption-transmission']
 ];
 
+function attachSaveButton(id,filename,onError){
+  const plot=document.getElementById(id);
+  if(!plot || plot.querySelector(':scope > .plot-save-figure')) return;
+  plot.classList.add('plot-save-host');
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='plot-save-figure';
+  button.textContent='Save figure';
+  button.title='Save this figure as a PNG';
+  button.addEventListener('click',()=>{
+    if(!plot._fullLayout || !Array.isArray(plot.data)) return;
+    saveQEFigure({plotId:id,legendId:null,filename:`${filename}.png`})
+      .catch(err=>onError(`Save figure: ${err?.message||err}`));
+  });
+  // After Plotly's own container, so Plotly never replaces it.
+  plot.appendChild(button);
+}
+
 export function initializePlotSaveButtons(onError=()=>{}){
-  for(const [id,filename] of FIGURES){
-    const plot=document.getElementById(id);
-    if(!plot || plot.querySelector(':scope > .plot-save-figure')) continue;
-    plot.classList.add('plot-save-host');
-    const button=document.createElement('button');
-    button.type='button';
-    button.className='plot-save-figure';
-    button.textContent='Save figure';
-    button.title='Save this figure as a PNG';
-    button.addEventListener('click',()=>{
-      if(!plot._fullLayout || !Array.isArray(plot.data)) return;
-      saveQEFigure({plotId:id,legendId:null,filename:`${filename}.png`})
-        .catch(err=>onError(`Save figure: ${err?.message||err}`));
-    });
-    // After Plotly's own container, so Plotly never replaces it.
-    plot.appendChild(button);
-  }
+  for(const [id,filename] of FIGURES) attachSaveButton(id,filename,onError);
+  // A figure whose content was replaced (e.g. a "nothing to plot" message)
+  // gets its button back when it is drawn again (tas-plot-density.js).
+  const names=new Map(FIGURES);
+  window.__tasEnsurePlotSaveButton=el=>{ if(el?.id && names.has(el.id)) attachSaveButton(el.id,names.get(el.id),onError); };
 }

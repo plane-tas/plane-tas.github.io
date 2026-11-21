@@ -90,7 +90,8 @@
     {"M2": 89.981, "S2": 129},
     {"M2": 97.791, "S2": 131}
   ],
-  "instrument_type": "tas",
+  "instrument_type": "multiplexing",
+  "instrument_setting": ["multiplexing"],
   "available_crystals": {
     "monochromator": [
       "PG002"

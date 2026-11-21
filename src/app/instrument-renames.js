@@ -9,11 +9,11 @@ const MOVED=[
   {from:'11_HODACA',to:'11_C11'}];
 const stem=v=>String(v??'').replace(/\.json$/i,'');
 // {key, type} of the new file among `available` (values with or without
-// .json), or null when nothing moved or the new file is not loaded.  The type
-// becomes 'tas' when it was a setting that is now a file of its own.
+// .json), or null when nothing moved or the new file is not loaded.  The
+// "multiplexing" setting keeps its type in the new file (HODACA).
 export function movedInstrument(key,type,available){
   const m=MOVED.find(r=>r.from===stem(key) && (!r.type || r.type===String(type??'')));
   if(!m) return null;
   const to=[...available].find(v=>stem(v)===m.to);
-  return to===undefined ? null : {key:to,type:m.type ? 'tas' : type};
+  return to===undefined ? null : {key:to,type};
 }

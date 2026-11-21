@@ -227,8 +227,9 @@ function updateOptionLabels(){
   }
   // along U / V and Save table belong to the single-crystal table only.
   for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('hidden',graph); }
-  $('cifDownloadTable')?.classList.toggle('hidden',graph);
-  $('cifDownloadPattern')?.classList.toggle('hidden',!graph);
+  // Save CSV of the table: with the table (Graph has its own, above the plot).
+  $('cifReflectionTableSaveRow')?.classList.toggle('hidden',graph);
+  syncReflectionCsvNames();
   // Incommensurate mCIF: only nuclear reflections can be calculated.
   const filter=$('reflectionCodeFilter'),inc=!!cifState.reflectionData?.incommensurate;
   if(filter){
@@ -398,7 +399,12 @@ function renderReflectionPowderPlot(){
   const grid={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1,minor:{showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''}};
   // Shared figure font sizes: tick labels and the legend, axis titles.
   const FONT=PLOT_FONTS.tick, AXIS_FONT=PLOT_FONTS.axis;
+  // Title: the structure file and "diffraction pattern", at the height of the
+  // Save figure button (top left).
+  const titleText=`${reflectionSourceFileName()||'Structure'} diffraction pattern`;
+  syncReflectionCsvNames();
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},
+    title:{text:titleText,font:{size:PLOT_FONTS.title},x:0.5,xanchor:'center'},
     // d has no finite value at 2θ = 0: autorange.
     xaxis:{title:{text:xTitle,font:{size:AXIS_FONT},standoff:10},tickfont:{size:FONT},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
       anchor:'y2',...(xView ? {range:xView.slice()} : {autorange:true})},
@@ -465,6 +471,27 @@ function reflectionCsvColumns({powder,prefix='',part='all'}){
 // Calculated powder pattern (as drawn in Graph): the profile (2θ, Q, d and
 // total / nuclear / magnetic intensity) followed by the nuclear and magnetic
 // peak lists in the Download table layout (N_..., M_...), one peak per row.
+// Save CSV file names: "<structure>_reflections_single_crystal" and
+// "<structure>_powder_pattern" are written into the name boxes when a new
+// structure is read (as Save CSV of the Convolution: a name typed by hand is
+// kept until then; an empty box uses the automatic name).
+let csvNamesFor=null;
+function reflectionSourceFileName(){
+  return fn.nuclearReflectionSource?.()?.fileName||getSelectedCifFileName?.()||'';
+}
+function reflectionCsvBase(){ return fn.cleanCifBaseName(reflectionSourceFileName()||'selected_structure.cif'); }
+function syncReflectionCsvNames(){
+  const base=reflectionCsvBase();
+  if(base===csvNamesFor) return;
+  csvNamesFor=base;
+  const table=$('cifTableCsvName'), pattern=$('cifPatternCsvName');
+  if(table) table.value=`${base}_reflections_single_crystal`;
+  if(pattern) pattern.value=`${base}_powder_pattern`;
+}
+function csvFileName(id,auto){
+  const typed=String($(id)?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');
+  return `${typed||auto}.csv`;
+}
 function downloadPowderPattern(){
   const p=cifState.powderPattern;
   if(!p || !p.tth?.length) throw new Error('No powder pattern is available to download.');
@@ -478,9 +505,7 @@ function downloadPowderPattern(){
     const profile=t===undefined ? ['','','','','',''] : [csvFixed4(t),csvFixed4(4*Math.PI*s(t)/p.lambda),csvFixed4(p.lambda/(2*s(t))),csvSig5(p.yT[i]),csvSig5(p.yN[i]),csvSig5(p.yM[i])];
     lines.push([...profile,...colN.cells(p.peaksN?.[i]),...colM.cells(p.peaksM?.[i])].join(','));
   }
-  const source=fn.nuclearReflectionSource?.();
-  const base=fn.cleanCifBaseName(source?.fileName||getSelectedCifFileName?.()||'selected_structure.cif');
-  fn.downloadGeneratedCif(lines.join('\n'),`${base}_powder_pattern.csv`);
+  fn.downloadGeneratedCif(lines.join('\n'),csvFileName('cifPatternCsvName',`${reflectionCsvBase()}_powder_pattern`));
 }
 function downloadCifReflectionTable(){
   const rows=sortedRows(displayRows());
@@ -488,9 +513,9 @@ function downloadCifReflectionTable(){
   const powder=mode()==='graph';
   const col=reflectionCsvColumns({powder});
   const lines=[col.header.join(','),...rows.map(r=>col.cells(r).join(','))];
-  const source=fn.nuclearReflectionSource?.();
-  const base=fn.cleanCifBaseName(source?.fileName||getSelectedCifFileName?.()||'selected_structure.cif');
-  fn.downloadGeneratedCif(lines.join('\n'),`${base}_reflections_${powder?'powder':'single_crystal'}.csv`);
+  fn.downloadGeneratedCif(lines.join('\n'),powder
+    ? `${reflectionCsvBase()}_reflections_powder.csv`
+    : csvFileName('cifTableCsvName',`${reflectionCsvBase()}_reflections_single_crystal`));
 }
 
 function initializeReflectionTable(){

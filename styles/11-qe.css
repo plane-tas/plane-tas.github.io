@@ -11,7 +11,6 @@
 #sfColorMaxEntry{width:calc(88px * var(--tas-density))}
 .qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density))}
 .qe-range-control .qe-control-entry input[type=number]{font-size:calc(14px * var(--tas-density))}
-.qe-spurion-warning:not(.active){visibility:hidden}
 .qe-range-control .qe-control-entry input[type=number]{font-size:calc(14px * var(--tas-density));min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
 
 /* Time estimate: widen the geometry card only while this tab is active. */
@@ -137,7 +136,6 @@
   margin:calc(6px * var(--tas-density)) 0;
   align-items:start;
 }
-#qeConstantMapPane .qe-spurion-warning:empty{display:none}
 #qeConstantMapPane .qe-range-control{justify-content:start}
 #qeConstantMapPane .qe-range-control input[type=range]{accent-color:var(--tas-accent)}
 #singlePlot{height:calc(760px * var(--tas-density));min-height:calc(760px * var(--tas-density))}
@@ -198,9 +196,8 @@
 /* Constant E map: Save figure at the top left of the plot (as in the 1D cut
    and Comparison). */
 #singlePlotFrame{position:relative;min-width:0;background:#fff}
-/* Save figure at the top right (not over the axis ticks, which the range
-   tools use); Plotly's tool bar moves to its left. */
-#singlePlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
+/* Constant E map / Powder: Save figure is in the control row above the map
+   (left end), so Plotly's tool bar keeps its usual place. */
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
 #qeVectorPlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 /* Scale row under the legend: F_N and F_M colour scales (min / max, labels
@@ -290,31 +287,6 @@
   font-size:max(13px,calc(16px * var(--tas-density)));
   font-weight:600;
   line-height:1.4;
-}
-
-/* Spurion notices: no longer consume a row or resize the Q-E workspace. */
-#singlePlotFrame .qe-spurion-plot-warning{
-  position:absolute;
-  top:calc(12px * var(--tas-density));
-  left:calc(70px * var(--tas-density));
-  z-index:7;
-  margin:0;
-  padding:calc(3px * var(--tas-density)) calc(7px * var(--tas-density));
-  max-width:calc(100% - 90px * var(--tas-density));
-  min-height:0;
-  border-radius:calc(4px * var(--tas-density));
-  background:rgba(255,255,255,.88);
-  box-shadow:0 0 0 1px rgba(176,0,32,.12);
-  pointer-events:none;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-#singlePlotFrame .qe-spurion-plot-warning:not(.active){visibility:hidden}
-
-/* Plot overlay: match the Constant E legend text without changing plot layout. */
-#singlePlotFrame .qe-spurion-plot-warning{
-  font-size:calc(14px * var(--tas-density));
 }
 
 /* Q path snap preferences share the Constant E map toolbar without
@@ -689,3 +661,34 @@
 .plot-save-host>.plot-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 /* No button over an empty (not yet drawn) figure. */
 .plot-save-host:not(.js-plotly-plot)>.plot-save-figure{display:none}
+
+/* Reflections: Save CSV, file name and ".csv" in one row filling the width,
+   right above the table / the powder graph. */
+.reflection-save-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density));margin:calc(6px * var(--tas-density)) 0}
+.reflection-save-row.hidden{display:none}
+.reflection-save-row>.reflection-csv-name{flex:1 1 0;min-width:0}
+.reflection-csv-name input{width:100%;min-width:0}
+
+/* Control row above the Constant E map, three fixed columns 1 : 2 : 1:
+   Save figure (left end) | the slider and its check box (ħω and λ/2 for TAS,
+   W for 4-circle) | the spurion warning of the current slice (right end).
+   The columns do not depend on what they hold, so the slider never changes
+   width (nothing is drawn over the map). */
+#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center}
+#qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1;grid-row:1;justify-self:start;min-width:0}
+#qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:2;grid-row:1}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:3;grid-row:1}
+.qe-spurion-cell{align-self:center;justify-self:end;min-width:0;max-width:100%;text-align:right}
+/* The warning wraps within its column (at most two lines, the height of
+   the slider card), so the row keeps its height. */
+.qe-spurion-warning{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;color:#b00020;font-weight:700;overflow:hidden}
+.qe-spurion-term{white-space:nowrap}
+.qe-spurion-warning:empty{display:none}
+/* Diffractometer / 4-circle: no ħω in the Angle calculation target rows. */
+#singleMain .geometry-card .geometry-target .grid4.geometry-target-no-hw{grid-template-columns:repeat(3,minmax(0,1fr))}
+.powder-geometry-target.powder-target-no-hw{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:760px){
+  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr}
+  #qeConstantMapPane > .qe-range-control-grid > *{grid-column:1 !important;grid-row:auto !important}
+  .qe-spurion-cell{justify-self:start;text-align:left}
+}

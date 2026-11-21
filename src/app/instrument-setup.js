@@ -16,13 +16,15 @@ export function createInstrumentSetup(deps){
 // next to Instrument picks one.  Settings that differ by type live in a
 // section named after it ("four_circle", "tas", "standard", "larmor", ...)
 // and override the top-level values.  currentInstrument() returns that
-// merged view.  Types: "tas", "four-circle", "diffractometer" and
-// "larmor-diffractometer" (calculated as a diffractometer; the type is kept
-// in instrument_mode).  A section may also set "instrument_type" (the
+// merged view.  Types: "tas", "multiplexing" (calculated as a TAS),
+// "four-circle", "diffractometer" and "larmor-diffractometer" (calculated as
+// a diffractometer; the type is kept in instrument_mode).  A section may also set "instrument_type" (the
 // calculation type) and "label" for a custom named configuration.
-const INSTRUMENT_TYPE_LABELS={tas:'TAS','four-circle':'4-circle',diffractometer:'Diffractometer',
+const INSTRUMENT_TYPE_LABELS={tas:'TAS',multiplexing:'Multiplexing','four-circle':'4-circle',diffractometer:'Diffractometer',
   'larmor-diffractometer':'Larmor diffractometer'};
-const INSTRUMENT_CALCULATION_TYPES={'larmor-diffractometer':'diffractometer'};
+// "multiplexing" (HODACA) is calculated as a TAS; the type is kept in
+// instrument_mode.
+const INSTRUMENT_CALCULATION_TYPES={'larmor-diffractometer':'diffractometer',multiplexing:'tas'};
 function instrumentTypes(inst){
   // "instrument_setting" (older files: "instrument_types").
   const listed=Array.isArray(inst?.instrument_setting) ? inst.instrument_setting : inst?.instrument_types;

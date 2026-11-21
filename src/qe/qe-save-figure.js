@@ -34,9 +34,7 @@ async function legendItems(legend){
   return items;
 }
 
-// An optional title is drawn in a band above the plot, so the plot keeps
-// its on-screen size.
-export async function saveQEFigure({plotId,legendId,filename,title=''}){
+export async function saveQEFigure({plotId,legendId,filename}){
   const gd=document.getElementById(plotId);
   if(!gd?.data || !window.Plotly) return;
   const S=2, w=Math.round(gd.clientWidth), h=Math.round(gd.clientHeight);
@@ -54,20 +52,13 @@ export async function saveQEFigure({plotId,legendId,filename,title=''}){
   }
   if(row.length) rows.push({row,rowW});
   const legendH=rows.length ? rows.length*lineH+12 : 0;
-  const titleH=title ? Math.round(fs*2.4) : 0;
-  const cv=document.createElement('canvas'); cv.width=w*S; cv.height=(titleH+h+legendH)*S;
+  const cv=document.createElement('canvas'); cv.width=w*S; cv.height=(h+legendH)*S;
   const ctx=cv.getContext('2d'); ctx.scale(S,S);
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,titleH+h+legendH);
-  if(title){
-    ctx.font=`600 ${fs+2}px system-ui, -apple-system, "Segoe UI", sans-serif`;
-    ctx.textBaseline='middle'; ctx.textAlign='center'; ctx.fillStyle='#222';
-    ctx.fillText(title,w/2,titleH/2+2);
-    ctx.textAlign='left';
-  }
-  ctx.drawImage(plot,0,titleH,w,h);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h+legendH);
+  ctx.drawImage(plot,0,0,w,h);
   ctx.font=font; ctx.textBaseline='middle'; ctx.fillStyle='#222';
   rows.forEach(({row,rowW},r)=>{
-    let x=(w-rowW)/2; const y=titleH+h+6+r*lineH+lineH/2;
+    let x=(w-rowW)/2; const y=h+6+r*lineH+lineH/2;
     for(const it of row){ it.draw(ctx,x,y); ctx.fillStyle='#222'; ctx.fillText(it.text,x+sw,y); x+=it.iw+gap; }
   });
   const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
