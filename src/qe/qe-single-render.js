@@ -319,8 +319,10 @@ function renderSingle(cache,index=0){
   };
   const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
   const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
-  const nuclearMax=Math.max(0,...cache.Gpoints.map(nuclearI));
-  const magneticMax=magneticIntensity ? Math.max(0,...cache.magPoints.map(magneticI)) : 0;
+  // Normalized to the strongest peak drawn on the map (out to 1.1 times the
+  // largest reachable Q, as in the Powder map).
+  const nuclearMax=Math.max(0,...(cache.Gpoints||[]).map(nuclearI));
+  const magneticMax=magneticIntensity ? Math.max(0,...(cache.magPoints||[]).map(magneticI)) : 0;
   const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
   // Strongest magnetic peak relative to the strongest nuclear peak (same
   // units: barn per crystallographic cell, same Lorentz factor).

@@ -219,6 +219,8 @@ function addPathBraggTraces(cache,traces,paths,xScale){
   };
   const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
   const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
+  // Normalized to the strongest peak drawn on the map (out to 1.1 times the
+  // largest reachable Q, as in the Powder map).
   const nuclearMax=Math.max(0,...(cache.Gpoints||[]).map(nuclearI));
   const magneticMax=magneticIntensity ? Math.max(0,...(cache.magPoints||[]).map(magneticI)) : 0;
   const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
@@ -564,7 +566,8 @@ function renderQEVectorMap(cache){
     // (p0/p1 carry z = 0 in the scattering plane, so these are 3D |Q|.)
     for(const bg of selectedBackgrounds()){
       const material=backgroundMaterials.get(bg.key);
-      const visiblePeaks=backgroundPowderPeaks(material,qVectorLimit);
+      // Same normalization as the Constant E map: its Q range, not the path's.
+      const visiblePeaks=backgroundPowderPeaks(material,qVectorLimit,1.1*Math.max(...cache.QmaxList));
       let bgLegendShown=false;
       for(const peak of visiblePeaks){
         for(const path of paths){

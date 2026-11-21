@@ -141,14 +141,15 @@ const {
 });
 
 const {
-  backgroundPowderPeaks, calculatePowder, powderS2ForQAtHW, representativePowderHklText
+  backgroundPowderPeaks, calculatePowder, powderS2ForQAtHW, redrawPowder, representativePowderHklText
 }=createPowder({
   backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
   effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
   latticeParams, num, powderWavevectors:(...args)=>powderWavevectors(...args), rangeTable, energyTransferRange, energyTransferGrid,
   renderQEExternalLegend:(...args)=>renderQEExternalLegend(...args), selectedBackgrounds,
   selectedSampleCentering:(...args)=>selectedSampleCentering(...args), validateEffectiveS2Max,
-  getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null
+  getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null,
+  $, getMagneticPeakIntensities:qMax=>magneticPeakIntensities?.(qMax) ?? null, singleColorbarTicks
 });
 
 const {
@@ -534,8 +535,19 @@ function updateModeVisibility(){
   $("qeRangeControlGrid")?.classList.toggle("hidden",!single);
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
-  // The F_N / F_M scale row belongs to the single-crystal map.
-  if(!single) $('sfColorbarRange')?.classList.add('hidden');
+  // The F_N / F_M scale row serves both maps (visibility follows the CIF).
+  // Powder has one fixed Lorentz factor: like the Reflection graph, the
+  // selector shows it and cannot be edited; the single-crystal choice comes
+  // back on return.
+  const qeLorentz=$('qeLorentz');
+  if(qeLorentz){
+    qeLorentz.disabled=!single;
+    const on=qeLorentz.querySelector('option[value="on"]');
+    if(on) on.textContent=single?'1/sin 2θ':'1/(2 sin²θ cosθ)';
+    if(!single){ if(qeLorentz.dataset.singleValue===undefined) qeLorentz.dataset.singleValue=qeLorentz.value; qeLorentz.value='on'; }
+    else if(qeLorentz.dataset.singleValue!==undefined){ qeLorentz.value=qeLorentz.dataset.singleValue; delete qeLorentz.dataset.singleValue; }
+    qeLorentz.title=single?'Single crystal ω scan: L = 1/sin 2θ (or 1 = none)':'Powder: L = 1/(2 sin²θ cosθ), always applied';
+  }
   // Powder has its own clickable legend below the Q–E plot.
   $('qePowderLegend')?.classList.toggle('hidden',single);
   if(!single) syncPowderLinkedInputs();
@@ -979,6 +991,7 @@ createConvolutionUI({
 const {
   initialize
 }=createAppBootstrap({
+  redrawPowder,
   applyDarkAngleSlotColors, applyInstrumentCrystalAvailability, applyInstrumentDefaults,
   applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
   bindResolutionManualCalculation:(...args)=>bindResolutionManualCalculation(...args),

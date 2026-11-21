@@ -8,7 +8,8 @@ export function createPowder(deps){
     backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
     effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
     latticeParams, num, powderWavevectors, energyTransferRange, energyTransferGrid, renderQEExternalLegend, selectedBackgrounds,
-    selectedSampleCentering, validateEffectiveS2Max, getNuclearCifStructure
+    selectedSampleCentering, validateEffectiveS2Max, getNuclearCifStructure,
+    $, getMagneticPeakIntensities, singleColorbarTicks
   }=deps;
 
 function powderS2ForQAtHW(q,hw){
@@ -71,17 +72,19 @@ function backgroundPowderCorrectionAtElasticQ(q){
   };
 }
 
-function backgroundPowderPeaks(material,qLimit){
+// Relative intensities are normalized to the strongest BG line with
+// Q <= normLimit (the Q range of the map, like the sample Bragg peaks);
+// lines with Q <= qLimit are returned.
+function backgroundPowderPeaks(material,qLimit,normLimit=qLimit){
   const structure=material?.structure;
   const lc=structure?.lattice;
   if(!lc) return [];
   const vals=[lc.a,lc.b,lc.c,lc.alpha,lc.beta,lc.gamma].map(Number);
   if(!vals.every(Number.isFinite)) return [];
 
-  // Build/normalize the BG powder pattern over the complete elastic
-  // backscattering interval S2 = 0..180 deg, irrespective of the current
-  // instrument S2 limit.  Rendering is still clipped to the current plot Q
-  // window below.
+  // Build the BG powder pattern over the complete elastic backscattering
+  // interval S2 = 0..180 deg; it is normalized and clipped to the Q range of
+  // the map below.
   const E=num("energy");
   if(!(E>0)) return [];
   const kElastic=Math.sqrt(E/2.072);
@@ -132,11 +135,9 @@ function backgroundPowderPeaks(material,qLimit){
     corrected.push(g);
   }
 
-  const maxIntensity=Math.max(0,...corrected.map(g=>g.intensity));
-  for(const g of corrected) g.relativeIntensity=maxIntensity>0 ? g.intensity/maxIntensity : 0;
+  const maxIntensity=Math.max(0,...corrected.filter(g=>g.q<=normLimit+1e-10).map(g=>g.intensity));
+  for(const g of corrected) g.relativeIntensity=maxIntensity>0 ? Math.min(1,g.intensity/maxIntensity) : 0;
 
-  // Keep the full 0..180-deg calculation for normalization, but only return
-  // peaks that lie inside the Q range currently being drawn.
   return corrected.filter(g=>g.q<=qLimit+1e-10);
 }
 
@@ -188,6 +189,179 @@ function appendPowderBraggLine(target,q,hwList,detailHtml){
   target.x.push(null);
   target.y.push(null);
   target.customdata.push(null);
+}
+
+const peakScale=(id,fallback)=>{ const v=Number($?.(id)?.value); return Number.isFinite(v)?v:fallback; };
+const powderLorentz=q=>backgroundPowderCorrectionAtElasticQ(q)?.lorentzDebye ?? null;
+const lorentzHover=L=>L ? `L = 1/(2 sin²θ cosθ) = ${L.toPrecision(4)}` : 'not reachable elastically';
+const barnText=v=>{ const a=Math.abs(v); return (a!==0 && (a>=1e5 || a<1e-3)) ? v.toExponential(4) : String(Number(v.toPrecision(6))); };
+// Bragg lines are coloured here from the same scale as their colorbar.  The
+// scales start at a light grey / light red (not white) so weak lines stay
+// visible.
+const NUCLEAR_LINE_SCALE=[[0,[220,220,220]],[0.25,[175,175,175]],[0.5,[125,125,125]],[0.75,[65,65,65]],[1,[0,0,0]]];
+const MAGNETIC_LINE_SCALE=[[0,[255,215,215]],[0.25,[250,160,160]],[0.5,[238,100,100]],[0.75,[212,40,40]],[1,[170,0,0]]];
+const plotlyScale=scale=>scale.map(([t,c])=>[t,`rgb(${c.join(',')})`]);
+// Line colours cannot vary inside one Plotly line trace.  Rounding the
+// colour position to LINE_COLOR_LEVELS steps (invisible on screen) lets all
+// lines of one colour share a trace, so dense patterns stay light.
+const LINE_COLOR_LEVELS=64;
+class LineBins{
+  constructor(){ this.bins=new Map(); }
+  add(color,dash,line){
+    const key=`${color}|${dash}`;
+    if(!this.bins.has(key)) this.bins.set(key,{color,dash,data:{x:[],y:[],customdata:[]}});
+    const d=this.bins.get(key).data;
+    // Each line ends with a null point, so lines stay separate.
+    for(let i=0;i<line.x.length;i++){ d.x.push(line.x[i]); d.y.push(line.y[i]); d.customdata.push(line.customdata[i]); }
+  }
+  list(){ return [...this.bins.values()]; }
+}
+const scaleColor=(scale,value,cmin,cmax)=>{
+  const t=Math.round((cmax>cmin ? clamp((value-cmin)/(cmax-cmin),0,1) : 1)*(LINE_COLOR_LEVELS-1))/(LINE_COLOR_LEVELS-1);
+  for(let j=1;j<scale.length;j++){
+    const [t0,c0]=scale[j-1],[t1,c1]=scale[j];
+    if(t<=t1+1e-12){
+      const f=t1>t0 ? (t-t0)/(t1-t0) : 0;
+      return `rgb(${c0.map((v,k)=>Math.round(v+f*(c1[k]-v))).join(',')})`;
+    }
+  }
+  return `rgb(${scale.at(-1)[1].join(',')})`;
+};
+const colorbarFor=(title,bar,cmin,cmax)=>({title:{text:title,side:"right",font:{size:18}},tickfont:{size:17},
+  thickness:16,len:bar.len,x:1.01,xanchor:"left",y:bar.y,...singleColorbarTicks(cmin,cmax)});
+const braggHover=kind=>`${kind}<br>%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`;
+
+
+// Bragg lines, colorbars and the plot from the last calculation.  The F_N /
+// F_M scale entries only redraw (no recalculation).
+let lastPowderState=null;
+function redrawPowder(){
+  if(!lastPowderState) return false;
+  drawPowder(lastPowderState);
+  return true;
+}
+function drawPowder(state){
+  const {hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,nuclearShaded,magneticShaded,nuclearMax,magneticMax}=state;
+  const traces=state.traces.slice();
+  const nuclearBar=magneticShaded ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
+  const magneticBar={len:0.34,y:0.23};
+
+  if(nuclearGroups.length){
+    const cmin=peakScale('sfColorMinEntry',0), cmax=peakScale('sfColorMaxEntry',1);
+    traces.push({x:[null],y:[null],mode:"lines",name:"Nuclear Bragg peaks",legendgroup:"powder-nuclear",
+      showlegend:true,legendrank:10,line:{color:"black",width:1.25},hoverinfo:"skip"});
+    const lines=new LineBins();
+    for(const group of nuclearGroups){
+      const relative=nuclearMax>0 ? group.intensity/nuclearMax : 0;
+      // Line points and hover text are built once per calculation; a scale
+      // change only re-colours (re-bins) them.
+      if(!group.line){
+        // With a CIF: the summed |F_N|² (barn) of the merged reflections.
+        let details=`${representativePowderHklText(group)}${nuclearShaded?'':`<br>${powderSfText(group.entries[0]?.sf2)}`}`;
+        if(nuclearShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F_N|² = ${barnText(group.sf2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>I / max = ${relative.toFixed(4)}`;
+        group.line={x:[],y:[],customdata:[]};
+        appendPowderBraggLine(group.line,group.q,hw,details);
+      }
+      lines.add(nuclearShaded?scaleColor(NUCLEAR_LINE_SCALE,relative,cmin,cmax):"black","solid",group.line);
+    }
+    for(const {color,dash,data} of lines.list()){
+      traces.push({...data,mode:"lines",name:"Nuclear Bragg peaks",legendgroup:"powder-nuclear",showlegend:false,
+        line:{color,width:1.25,dash},hovertemplate:braggHover('Nuclear Bragg peaks'),zorder:0});
+    }
+    // Carrier of the colorbar (Plotly drops the colorbar of an empty trace,
+    // so it holds one unplotted point).
+    if(nuclearShaded) traces.push({x:[null],y:[null],mode:"markers",name:"Nuclear Bragg peaks",legendgroup:"powder-nuclear",
+      showlegend:false,hoverinfo:"skip",
+      marker:{color:[0],colorscale:plotlyScale(NUCLEAR_LINE_SCALE),cmin,cmax,showscale:true,
+        colorbar:colorbarFor('Σ|F_N|²L / max',nuclearBar,cmin,cmax)}});
+  }
+
+  if(magneticGroups.length){
+    const cmin=peakScale('mfColorMinEntry',0), cmax=peakScale('mfColorMaxEntry',1);
+    traces.push({x:[null],y:[null],mode:"lines",name:"Magnetic Bragg peaks",legendgroup:"powder-magnetic",
+      showlegend:true,legendrank:20,line:{color:"red",width:1.25},hoverinfo:"skip"});
+    const lines=new LineBins();
+    const nuclearQ=new Set(nuclearGroups.map(g=>g.q.toFixed(6)));
+    for(const group of magneticGroups){
+      const relative=magneticMax>0 ? group.intensity/magneticMax : 0;
+      if(!group.line){
+        const entries=[...group.entries]
+          .sort((a,b)=>a.qIndex-b.qIndex || formatHKL(a.hkl).localeCompare(formatHKL(b.hkl)));
+        const rep=entries[0];
+        const suffix=entries.length>1 ? " & equivalent" : "";
+        let details=rep ? `k${rep.qIndex}: (${formatHKL(rep.hkl)})${suffix}` : "N/A";
+        if(magneticShaded) details+=`<br>Mult = ${group.entries.length}, Σ|F_M|² = ${barnText(group.fm2Sum)} barn<br>${lorentzHover(group.lorentz)}<br>I / max = ${relative.toFixed(4)}`;
+        group.line={x:[],y:[],customdata:[]};
+        appendPowderBraggLine(group.line,group.q,hw,details);
+      }
+      // k = 0 (or any coincidence): a magnetic line on top of a nuclear line
+      // is dashed so the nuclear line stays visible.  Both group lists use
+      // the same Q rounding (6 decimals), so a key comparison suffices.
+      const onNuclear=nuclearQ.has(group.q.toFixed(6));
+      lines.add(magneticShaded?scaleColor(MAGNETIC_LINE_SCALE,relative,cmin,cmax):"red",onNuclear?"dash":"solid",group.line);
+    }
+    for(const {color,dash,data} of lines.list()){
+      traces.push({...data,mode:"lines",name:"Magnetic Bragg peaks",legendgroup:"powder-magnetic",showlegend:false,
+        line:{color,width:1.25,dash},hovertemplate:braggHover('Magnetic Bragg peaks'),zorder:10});
+    }
+    if(magneticShaded) traces.push({x:[null],y:[null],mode:"markers",name:"Magnetic Bragg peaks",legendgroup:"powder-magnetic",
+      showlegend:false,hoverinfo:"skip",
+      marker:{color:[0],colorscale:plotlyScale(MAGNETIC_LINE_SCALE),cmin,cmax,showscale:true,
+        colorbar:colorbarFor('Σ|F_M|²L / max',magneticBar,cmin,cmax)}});
+  }
+
+  // Scale row (F_N / F_M min and max, M = x N) under the powder legend; its
+  // Lorentz selector shows the fixed powder factor (see updateModeVisibility).
+  const scaleRow=$?.('sfColorbarRange');
+  scaleRow?.classList.toggle('hidden',!nuclearShaded);
+  scaleRow?.classList.toggle('qe-magnetic-colorbar',magneticShaded);
+
+  // Edge of the accessible range, drawn over the Bragg lines: where the
+  // lines are dense they would otherwise hide the yellow region.  Same
+  // legend item as the region (one toggle for both).
+  const region=state.traces[0];
+  traces.push({x:region.x.concat(region.x[0]),y:region.y.concat(region.y[0]),mode:"lines",
+    name:region.name,showlegend:false,hoverinfo:"skip",
+    line:{color:"#b8961e",width:1.6},zorder:20});
+
+  const keptPowderView=currentPlotRanges("powderPlot");
+
+  renderQEExternalLegend('qePowderLegend','powderPlot',traces);
+  Plotly.react("powderPlot",traces,{
+    uirevision:"powderPlot-q",
+    showlegend:false,
+    xaxis:{
+      title:"Q (Å⁻¹)",
+      // Powder Q is non-negative by definition.  Always anchor the displayed
+      // x-axis at Q = 0; preserve only a previously zoomed positive upper edge.
+      range:[0,(keptPowderView.x && keptPowderView.x[1]>0) ? keptPowderView.x[1] : Qdraw],
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Use the same thin frame as the Q vector–E map.
+      showline:false,ticks:"outside",automargin:true
+    },
+    yaxis:{
+      title:"ħω (meV)",
+      // Keep the displayed hbar-omega range exactly on the generated
+      // accessible-range endpoints; no extra top/bottom padding.
+      range:[hwmin,hwmax],
+      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
+      // Match the Q vector–E map on all four sides.
+      showline:false,ticks:"outside",automargin:true
+    },
+    // Draw the axes frame at the plot data boundary on all four sides.
+    // A paper-coordinate shape is independent of the trace type and survives
+    // dense Powder overlays. The redundant exterior CSS plot border is removed.
+    shapes:[{
+      type:"rect",xref:"paper",yref:"paper",
+      x0:0,y0:0,x1:1,y1:1,
+      layer:"above",fillcolor:"rgba(0,0,0,0)",
+      line:{color:"#555",width:1.2}
+    }],
+    plot_bgcolor:"white",paper_bgcolor:"white",
+    // Room for the colorbars on the right (as in the Constant E map).
+    margin:{l:66,r:nuclearShaded?88:34,t:30,b:65},
+    hovermode:"closest"
+  },{responsive:true,doubleClick:"reset"});
 }
 
 function calculatePowder(){
@@ -243,6 +417,10 @@ function calculatePowder(){
   }];
 
   const Qlim=Math.max(...qmax), hwmin=Math.min(...hw), hwmax=Math.max(...hw);
+  // Bragg peaks are drawn out to 1.1 times the largest reachable Q, as in
+  // the single-crystal maps (the reflections just beyond the accessible
+  // range stay visible); the colour scales are normalized over these lines.
+  const Qdraw=1.1*Qlim;
   const latticeCentering=selectedSampleCentering();
 
   // Enumerate genuine powder reciprocal-lattice reflections rather than only
@@ -250,10 +428,11 @@ function calculatePowder(){
   // |h| <= a|Q|/(2π), etc., from h = a·Q/(2π), so non-orthogonal cells are
   // covered without relying on an orthogonal-axis approximation.
   const propagation=enabledPropagationVectors()
-    .map(kv=>({...kv,K:hklToQ({astar:rv.astar,bstar:rv.bstar,cstar:rv.cstar},kv.hkl)}))
-    .filter(kv=>norm(kv.K)>1e-10);
+    // Every enabled k, k = 0 included (same definition as the single-crystal
+    // maps): G ± k from every centering-allowed G.
+    .map(kv=>({...kv,K:hklToQ({astar:rv.astar,bstar:rv.bstar,cstar:rv.cstar},kv.hkl)}));
   const maxK=propagation.length ? Math.max(...propagation.map(kv=>norm(kv.K))) : 0;
-  const parentQlim=Qlim+maxK+1e-8;
+  const parentQlim=Qdraw+maxK+1e-8;
   const hmax=Math.max(1,Math.ceil(lc.a*parentQlim/(2*PI))+1);
   const kmax=Math.max(1,Math.ceil(lc.b*parentQlim/(2*PI))+1);
   const lmax=Math.max(1,Math.ceil(lc.c*parentQlim/(2*PI))+1);
@@ -300,66 +479,65 @@ function calculatePowder(){
   // 1 / (sin(theta) sin(2theta)), normalized within each BG material.
   for(const bg of selectedBackgrounds()){
     const material=backgroundMaterials.get(bg.key);
-    const visiblePeaks=backgroundPowderPeaks(material,Qlim);
+    const visiblePeaks=backgroundPowderPeaks(material,Qdraw);
 
-    visiblePeaks.forEach((p,index)=>{
+    // Lines of equal colour (intensity rounded to LINE_COLOR_LEVELS steps,
+    // invisible on screen) share one trace: dense patterns stay light.
+    const bins=new Map();
+    for(const p of visiblePeaks){
       const ratio=p.relativeIntensity;
-      const data={x:[],y:[],customdata:[]};
+      const level=Math.round(clamp(ratio,0,1)*(LINE_COLOR_LEVELS-1))/(LINE_COLOR_LEVELS-1);
+      if(!bins.has(level)) bins.set(level,{x:[],y:[],customdata:[]});
       appendPowderBackgroundCurve(
-        data,p.q,hw,
+        bins.get(level),p.q,hw,
         `BG${bg.index+1}: ${bg.key}<br>${representativePowderHklText(p)}<br>I/Imax = ${ratio.toFixed(3)}`
       );
-      if(!data.x.length) return;
+    }
+    let first=true;
+    for(const [level,data] of [...bins.entries()].sort((a,b)=>b[0]-a[0])){
+      if(!data.x.length) continue;
       traces.push({
         ...data,
         mode:"lines",
         name:`BG${bg.index+1}: ${bg.key}`,
         legendgroup:`background-scattering-${bg.index}`,
-        showlegend:index===0,
+        showlegend:first,
         legendrank:10+bg.index,
         line:{
-          color:backgroundColor(bg.slot,0.20+0.75*ratio),
+          color:backgroundColor(bg.slot,0.20+0.75*level),
           width:1.5
         },
         hovertemplate:`%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`
       });
-    });
+      first=false;
+    }
   }
 
-  // Nuclear Bragg peaks: all black solid lines have the same hbar-omega
-  // length.  Reflections with the same powder Q are merged into one line, and
-  // the hover text lists every contributing index and its own |F_N|².
+  // Nuclear Bragg peaks: all lines have the same hbar-omega length.
+  // Reflections with the same powder Q are merged into one line, and the
+  // hover text lists the representative index.  With a CIF each line is
+  // shaded by its powder intensity, as the Reflection graph defines it:
+  //   I = sum over the merged reflections of |F|^2 (= Mult·|F|^2)
+  //       x L,  L = 1/(sin θ sin 2θ) at the elastic wave vector of the fixed
+  // energy (always applied; Q > 2k is not reachable elastically: I = 0),
+  // relative to the strongest line, with the Constant E map colour scales
+  // (F_N / F_M min and max of the Scale row) and colorbars.
   const nuclearGroups=groupPowderReflectionsByQ(
-    parentCandidates.filter(p=>!p.isOrigin && p.q>1e-8 && p.q<=Qlim+1e-10)
+    parentCandidates.filter(p=>!p.isOrigin && p.q>1e-8 && p.q<=Qdraw+1e-10)
   );
-  const nuclearData={x:[],y:[],customdata:[]};
+  const nuclearShaded=!!nuclearCifStructure;
   for(const group of nuclearGroups){
-    const entries=[...group.entries]
-      .sort((a,b)=>formatHKL(a.hkl).localeCompare(formatHKL(b.hkl)));
-    const rep=entries[0];
-    const hklText=representativePowderHklText(group);
-    const details=`${hklText}<br>${powderSfText(rep?.sf2)}`;
-    appendPowderBraggLine(nuclearData,group.q,hw,details);
+    group.lorentz=powderLorentz(group.q);
+    group.sf2Sum=group.entries.reduce((sum,p)=>sum+Math.max(0,Number(p.sf2)||0),0)/100; // fm² -> barn
+    group.intensity=group.lorentz ? group.sf2Sum*group.lorentz : 0;
   }
-  if(nuclearData.x.length){
-    traces.push({
-      ...nuclearData,
-      mode:"lines",
-      name:"Nuclear Bragg peaks",
-      legendgroup:"powder-nuclear",
-      showlegend:true,
-      legendrank:10,
-      line:{color:"black",width:1.25,dash:"solid"},
-      hovertemplate:`Nuclear Bragg peaks<br>%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`,
-      zorder:0
-    });
-  }
+  const nuclearMax=Math.max(0,...nuclearGroups.map(g=>g.intensity));
 
   // Magnetic Bragg peaks: use surviving nuclear parents, exactly as the
-  // Single-crystal path does conceptually.  Magnetic structure factors are
-  // intentionally not invented here; the current application does not
-  // calculate them.  All k1/k2/k3 satellites share one red solid-line style,
-  // one compact legend entry, and the same hbar-omega line length.
+  // Single-crystal path does conceptually.  All k1/k2/k3 satellites share one
+  // red line style and one compact legend entry.  |F_M|² (same model as the
+  // Reflection table) is available for a single-k structure only, as in the
+  // single-crystal maps; otherwise the lines stay plain red.
   const magneticUnique=new Map();
   for(const parent of magneticParents){
     for(const kv of propagation){
@@ -367,7 +545,7 @@ function calculatePowder(){
         const hm=add(parent.hkl,scale(kv.hkl,sign));
         const Gm=hklToQ({astar:rv.astar,bstar:rv.bstar,cstar:rv.cstar},hm);
         const q=norm(Gm);
-        if(!(q>1e-8) || q>Qlim+1e-10) continue;
+        if(!(q>1e-8) || q>Qdraw+1e-10) continue;
         const hklKey=hm.map(x=>Number(x).toFixed(8)).join(",");
         const key=`${kv.index}:${hklKey}`;
         if(!magneticUnique.has(key)){
@@ -377,67 +555,53 @@ function calculatePowder(){
     }
   }
   const magneticGroups=groupPowderReflectionsByQ([...magneticUnique.values()]);
-  const magneticData={x:[],y:[],customdata:[]};
-  for(const group of magneticGroups){
-    const entries=[...group.entries]
-      .sort((a,b)=>a.qIndex-b.qIndex || formatHKL(a.hkl).localeCompare(formatHKL(b.hkl)));
-    const rep=entries[0];
-    const suffix=entries.length>1 ? " & equivalent" : "";
-    const details=rep ? `k${rep.qIndex}: (${formatHKL(rep.hkl)})${suffix}` : "N/A";
-    appendPowderBraggLine(magneticData,group.q,hw,details);
+  let magneticShaded=false;
+  if(nuclearCifStructure && enabledPropagationVectors().length===1 && magneticGroups.length && typeof getMagneticPeakIntensities==="function"){
+    const rows=getMagneticPeakIntensities(Qdraw);
+    if(rows?.length){
+      // Matched within 0.006 r.l.u., as in the single-crystal maps (covers a
+      // decimal k calculated as the nearest fraction, e.g. 0.333 -> 1/3).
+      // Hashed on a 0.01 r.l.u. grid (as in the single-crystal maps), so each
+      // look-up checks only the neighbouring cells, not every row.
+      const cell=v=>Math.round(v*100);
+      const grid=new Map();
+      for(const row of rows){
+        const key=row.hkl.map(cell).join(',');
+        if(!grid.has(key)) grid.set(key,[]);
+        grid.get(key).push(row);
+      }
+      const fm2At=hkl=>{
+        const base=hkl.map(cell);
+        let best=null,bestD=0.006;
+        for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++) for(let c=-1;c<=1;c++){
+          for(const row of grid.get([base[0]+a,base[1]+b,base[2]+c].join(','))||[]){
+            const d=Math.max(...row.hkl.map((v,i)=>Math.abs(v-hkl[i])));
+            if(d<=bestD){ bestD=d; best=row; }
+          }
+        }
+        return best ? Math.max(0,Number(best.fm2)||0) : 0;
+      };
+      for(const group of magneticGroups){
+        group.lorentz=powderLorentz(group.q);
+        group.fm2Sum=group.entries.reduce((sum,p)=>sum+fm2At(p.hkl),0);
+        group.intensity=group.lorentz ? group.fm2Sum*group.lorentz : 0;
+      }
+      magneticShaded=true;
+    }
   }
-  if(magneticData.x.length){
-    traces.push({
-      ...magneticData,
-      mode:"lines",
-      name:"Magnetic Bragg peaks",
-      legendgroup:"powder-magnetic",
-      showlegend:true,
-      legendrank:20,
-      line:{color:"red",width:1.25,dash:"solid"},
-      hovertemplate:`Magnetic Bragg peaks<br>%{customdata[0]}<br>Q = %{customdata[1]:.4f} Å⁻¹<br>ħω = %{y:.3f} meV<br>S2 = %{customdata[2]}<extra></extra>`,
-      zorder:10
-    });
+  const magneticMax=magneticShaded ? Math.max(0,...magneticGroups.map(g=>g.intensity)) : 0;
+
+  // Strongest magnetic line relative to the strongest nuclear line (both in
+  // barn per crystallographic cell, same Lorentz factor): M = x N.
+  const ratioBox=$?.('mfMaxRatio');
+  if(ratioBox){
+    const ratio=(magneticShaded && nuclearMax>0) ? magneticMax/nuclearMax : NaN;
+    const fmt=v=>v>=0.01 ? String(Number(v.toPrecision(2))) : v.toExponential(1).replace(/e([+-])(\d+)/,(m,sg,d)=>`×10${sg==='-'?'⁻':''}${[...d].map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')}`);
+    ratioBox.textContent=Number.isFinite(ratio) ? `M = ${fmt(ratio)} N` : '';
   }
-
-  const qMargin=0.1*Qlim;
-  const keptPowderView=currentPlotRanges("powderPlot");
-
-  renderQEExternalLegend('qePowderLegend','powderPlot',traces);
-  Plotly.react("powderPlot",traces,{
-    uirevision:"powderPlot-q",
-    showlegend:false,
-    xaxis:{
-      title:"Q (Å⁻¹)",
-      // Powder Q is non-negative by definition.  Always anchor the displayed
-      // x-axis at Q = 0; preserve only a previously zoomed positive upper edge.
-      range:[0,(keptPowderView.x && keptPowderView.x[1]>0) ? keptPowderView.x[1] : Qlim+qMargin],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
-      // Use the same thin frame as the Q vector–E map.
-      showline:false,ticks:"outside",automargin:true
-    },
-    yaxis:{
-      title:"ħω (meV)",
-      // Keep the displayed hbar-omega range exactly on the generated
-      // accessible-range endpoints; no extra top/bottom padding.
-      range:[hwmin,hwmax],
-      showgrid:true,gridcolor:"lightgray",zeroline:false,tickfont:{size:17},
-      // Match the Q vector–E map on all four sides.
-      showline:false,ticks:"outside",automargin:true
-    },
-    // Draw the axes frame at the plot data boundary on all four sides.
-    // A paper-coordinate shape is independent of the trace type and survives
-    // dense Powder overlays. The redundant exterior CSS plot border is removed.
-    shapes:[{
-      type:"rect",xref:"paper",yref:"paper",
-      x0:0,y0:0,x1:1,y1:1,
-      layer:"above",fillcolor:"rgba(0,0,0,0)",
-      line:{color:"#555",width:1.2}
-    }],
-    plot_bgcolor:"white",paper_bgcolor:"white",
-    margin:{l:66,r:34,t:30,b:65},
-    hovermode:"closest"
-  },{responsive:true,doubleClick:"reset"});
+  lastPowderState={traces,hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,
+    nuclearShaded,magneticShaded,nuclearMax,magneticMax};
+  drawPowder(lastPowderState);
 
   return {
     inst,lc,energyMode,
@@ -449,6 +613,6 @@ function calculatePowder(){
 }
 
   return {
-    backgroundPowderPeaks, calculatePowder, powderS2ForQAtHW, representativePowderHklText
+    backgroundPowderPeaks, calculatePowder, powderS2ForQAtHW, redrawPowder, representativePowderHklText
   };
 }

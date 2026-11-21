@@ -204,6 +204,8 @@
    tools use); Plotly's tool bar moves to its left. */
 #singlePlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 #singlePlotFrame #singlePlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
+/* Powder: Save figure (in the frame just above) sits over the powder plot. */
+#powderPlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
 #qeVectorPlotFrame .qe-save-figure{position:absolute;right:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 #qeVectorPlotFrame #qeVectorPlot .modebar-container{right:var(--qe-save-figure-width,calc(102px * var(--tas-density)))!important}

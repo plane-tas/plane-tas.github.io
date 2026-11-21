@@ -264,10 +264,10 @@ export function createQESingleCrystal(deps){
 
     // Generate Bragg peaks over the same radial range shown by the Single Crystal plot.
     // Using QmaxList[0] here made the index search depend on the first energy point
-    // and could truncate one reciprocal-space direction.  Search out to 1.2 times
+    // and could truncate one reciprocal-space direction.  Search out to 1.1 times
     // the instrument's maximum reachable Q over the full calculated energy range.
     const instrumentQmax=Math.max(...QmaxList);
-    const QplotLattice=1.2*instrumentQmax;
+    const QplotLattice=1.1*instrumentQmax;
     const Uq=hklToQ(rl,U), Vq=hklToQ(rl,V);
     const Ulen=norm(Uq), Vlen=norm(Vq);
     const Mmax=Math.ceil(QplotLattice/Ulen)+2, Nmax=Math.ceil(QplotLattice/Vlen)+2;
@@ -411,7 +411,8 @@ export function createQESingleCrystal(deps){
     }
 
     const ringData=[];
-    const qlimit=Math.max(...QmaxList);
+    // BG rings out to the same 1.1 x reachable Q as the Bragg peaks.
+    const qlimit=1.1*Math.max(...QmaxList);
     for(const bg of selectedBackgrounds()){
       const material=backgroundMaterials.get(bg.key);
       const peaks=backgroundPowderPeaks(material,qlimit);

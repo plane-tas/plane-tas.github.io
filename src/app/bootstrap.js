@@ -52,7 +52,7 @@ export function createAppBootstrap(deps){
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
-    getGeometrySliders, getSingleCache, setFixedBeamControls, addLocalInstruments
+    getGeometrySliders, getSingleCache, setFixedBeamControls, addLocalInstruments, redrawPowder
   }=deps;
 
 async function tryLoadDir(directory,map,{skipGitHubPages=false}={}){
@@ -175,11 +175,26 @@ async function initialize(){
   $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
   $('displayS2Ring').addEventListener('change',()=>{if(getSingleCache())renderSingle(getSingleCache(),Number($('hwSlider').value));saveRightPanelState();});
   // Constant E map: Save figure (plot with its colour bars, and the legend).
-  $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'singlePlot',legendId:'qePlotLegend',filename:'constant-e-map.png'})
+  // Powder: the same button saves the powder Q–E map and its legend.
+  $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure($('sampleMode')?.value==='powder'
+      ? {plotId:'powderPlot',legendId:'qePowderLegend',filename:'powder-qe-map.png'}
+      : {plotId:'singlePlot',legendId:'qePlotLegend',filename:'constant-e-map.png'})
     .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
   // Q vector–E map: the same (plot and its legend).
   $('qeVectorSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'qeVectorPlot',legendId:'qeVectorLegend',filename:'q-vector-e-map.png'})
     .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
+  // F_N / F_M scale entries: redraw the open map from its last calculation.
+  const refreshPeakScale=()=>{
+    if($('sampleMode')?.value==='powder'){ if(!redrawPowder?.()) recalculate(); return; }
+    if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
+  };
+  // Escape restores the value of the colorbar now drawn (either map).
+  const drawnColorbar=meta=>{
+    const powder=$('sampleMode')?.value==='powder';
+    const data=$(powder?'powderPlot':'singlePlot')?.data||[];
+    return powder ? data.find(t=>t.marker?.showscale && t.legendgroup===(meta==='nuclear-data'?'powder-nuclear':'powder-magnetic'))
+      : data.find(t=>t.meta===meta);
+  };
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);
     field?.addEventListener('focus',()=>field.select());
@@ -189,14 +204,14 @@ async function initialize(){
         field.blur(); // the change event applies the scale
       } else if(event.key==='Escape'){
         event.preventDefault();
-        const tr=$('singlePlot')?.data?.find(t=>t.meta==='nuclear-data');
+        const tr=drawnColorbar('nuclear-data');
         field.value=String(source==='max'?(tr?.marker?.cmax ?? 1):(tr?.marker?.cmin ?? 0));
         field.blur();
       }
     });
     field?.addEventListener('change',()=>{
       syncSfColorMaxControl(source);
-      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
+      refreshPeakScale();
       saveRightPanelState();
     });
   }
@@ -217,21 +232,24 @@ async function initialize(){
       if(event.key==='Enter'){ event.preventDefault(); field.blur(); }
       else if(event.key==='Escape'){
         event.preventDefault();
-        const tr=$('singlePlot')?.data?.find(t=>t.meta==='magnetic-data');
+        const tr=drawnColorbar('magnetic-data');
         field.value=String(source==='max'?(tr?.marker?.cmax ?? 1):(tr?.marker?.cmin ?? 0));
         field.blur();
       }
     });
     field?.addEventListener('change',()=>{
       syncMagneticColorbar(source);
-      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
+      refreshPeakScale();
       saveRightPanelState();
     });
   }
   // Lorentz factor of the Q-E peak shading (1/sin 2θ or none).
   const qeLorentz=$('qeLorentz');
   if(qeLorentz){
-    try{ const saved=localStorage.getItem('tas-qe-lorentz'); if(saved==='on'||saved==='off') qeLorentz.value=saved; }catch(_e){}
+    // In Powder the selector shows the fixed powder factor: keep the saved
+    // single-crystal choice for the return to Single crystal.
+    try{ const saved=localStorage.getItem('tas-qe-lorentz');
+      if(saved==='on'||saved==='off'){ if(qeLorentz.disabled) qeLorentz.dataset.singleValue=saved; else qeLorentz.value=saved; } }catch(_e){}
     qeLorentz.addEventListener('change',()=>{
       try{ localStorage.setItem('tas-qe-lorentz',qeLorentz.value); }catch(_e){}
       if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
