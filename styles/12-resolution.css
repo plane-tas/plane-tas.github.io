@@ -185,7 +185,11 @@
    four-sided axes inside the plotting rectangle. */
 #resolutionPanel #result .plots > div{
   box-sizing:border-box;
-  border:1px solid #d3dae4!important;
+  /* An outline, not a border: Plotly sizes the plot to the box including a
+     border, which then pushed it 2 px past the box (cut at the right and
+     bottom).  The frame is drawn over the plot by ::after. */
+  border:0!important;
+  position:relative;
   border-radius:calc(7px * var(--tas-density));
   background:#fff;
   overflow:hidden;
@@ -349,3 +353,5 @@
 #resolutionPanel .focus-name{grid-column:1/-1}
 #resolutionPanel .coll3-radial-value{color:#3d4b59;background:#f1f4f7}
 #resolutionPanel .resolution-compare-table tbody tr.selected td:is(.cmp-action,.cmp-index){background:#e3eefb}
+
+#resolutionPanel #result .plots > div::after{content:"";position:absolute;inset:0;border:1px solid #d3dae4;border-radius:calc(7px * var(--tas-density));pointer-events:none;z-index:5}

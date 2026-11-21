@@ -44,13 +44,15 @@ export function tasConventionFromLegacyUiSense(value){
   return {sense:"-+-",s1sign:"ccw"};
 }
 
+// The Sense of the page: monochromator / sample / analyzer signs (#sense,
+// set by the three M / S / A selects).
 export function selectedTasSense(){ return normalizeTasSense(checkedValue("sense")); }
 
 export function selectedS1Sign(){ return normalizeS1Sign(checkedValue("s1sign")); }
 
 export function checkedValue(name){
   const direct=$(name);
-  if(direct && direct.tagName==="SELECT") return direct.value;
+  if(direct && (direct.tagName==="SELECT" || direct.type==="hidden")) return direct.value;
   const el=document.querySelector(`input[name="${name}"]:checked`);
   return el ? el.value : null;
 }

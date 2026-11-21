@@ -6,6 +6,7 @@
 // Every point is multiplied by the intensity prefactor R0 selected in the
 // file card (R0/Rmon, normalisation to monitor counts).
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
+import {readTasSense} from '../core/tas-conventions.js';
 import {inverse, matvec} from '../core/matrix.js';
 import {movedInstrument} from '../app/instrument-renames.js';
 import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as legendValues, legendLine} from './convolution-legend.js';
@@ -72,7 +73,7 @@ export function createConvolutionUI(deps){
   // instrument (sidebar and Resolution instrument details), lattice,
   // scattering plane, and the entries of the 2D slice or 1D cut box.
   const INSTRUMENT_SETTING_IDS=['instrument','instrumentType','monoCrystal','anaCrystal',
-    'energyMode','energy','fixedBeamQuantity','geometry','sense','s1sign','method',
+    'energyMode','energy','fixedBeamQuantity','sense','msign','s1sign','asign','method',
     'coll1Type','monoHType','monoVType','anaHType','anaVType',
     'gm1','div1m','div1h','div1v','div2h','div2v','div3h','div3v','coll3Type','div4h','div4v',
     'dMono','mosMonoH','mosMonoV','monoHF','monoVF','monoHB','monoVB','monoWcm','monoHcm','monoTcm',
@@ -101,6 +102,8 @@ export function createConvolutionUI(deps){
       el.value=String(v); fire(el); return true;
     };
     const inst={...(set.instrument||{})};
+    // Files saved with a Geometry (W / anti-W): it is part of the Sense now.
+    if(inst.sense!==undefined && inst.geometry!==undefined){ inst.sense=readTasSense(inst.sense,inst.geometry); delete inst.geometry; }
     { const m=movedInstrument(inst.instrument,inst.instrumentType,[...($('instrument')?.options||[])].map(o=>o.value)); if(m){ inst.instrument=m.key; inst.instrumentType=m.type; } }
     // An instrument that is not in the list (loaded from a JSON file in
     // another browser): Custom (every type and crystal) takes its settings.

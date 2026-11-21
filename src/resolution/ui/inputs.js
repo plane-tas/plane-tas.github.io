@@ -87,7 +87,6 @@ function collectResolutionBase(){
   const convention=tasConvention(selectedTasSense(),selectedS1Sign());
   const config={
     energy_mode:em,Ei:em==='Ei fixed'?E:null,Ef:em==='Ef fixed'?E:null,
-    geometry:$('geometry').value,
     sense:convention.sense,s1sign:convention.s1sign,
     // Retained only for compatibility with untouched peripheral code.
     sign_config:convention.sense

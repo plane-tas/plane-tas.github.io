@@ -1,3 +1,4 @@
+import {readTasSense} from '../core/tas-conventions.js';
 // Legend of the 1D cut: one row per curve, in columns chosen by the user.
 // Pure text from a curve's points and recorded settings; the page (option
 // texts of the instrument and integration selects) is reached only through
@@ -10,7 +11,7 @@ export const fmt=(x,d=4)=>{ const v=Number(Number(x).toFixed(d)); return String(
 export const LEGEND_COLS=[
   {id:'pos',head:'(H, K, L)',on:true},{id:'hw',head:'ħω',on:true},
   {id:'inst',head:'Instrument',on:false},{id:'sense',head:'Sense',on:true},
-  {id:'geom',head:'Geom.',on:false},{id:'fixed',head:'Fixed',on:true},
+  {id:'fixed',head:'Fixed',on:true},
   {id:'mono',head:'Mono',on:false},{id:'ana',head:'Ana',on:false},
   {id:'focus',head:'Ana HF',on:true},{id:'col',head:'Collimator',on:true},
   {id:'approx',head:'Approx.',on:true},{id:'integ',head:'Integration',on:false}];
@@ -121,7 +122,8 @@ export function legendFields(k,lookup={}){
   if(!si) return {pos,hw,approx};
   const e=Number(si.energy);
   return {pos,hw,approx,
-    inst:instrumentText(si,lookup),sense:String(si.sense??''),geom:String(si.geometry??''),
+    // Sense: all three signs (files saved with a Geometry: W / anti-W).
+    inst:instrumentText(si,lookup),sense:si.sense===undefined ? '' : readTasSense(si.sense,si.geometry),
     fixed:`${si.energyMode==='Ei fixed' ? 'Ei' : 'Ef'}${Number.isFinite(e) ? ` (${fmt(e,3)})` : ''}`,
     mono:String(si.monoCrystal??''),ana:String(si.anaCrystal??''),focus:anaHFText(si),
     col:collimationText(si,k.settings,pts[0]?.E??0),integ:integrationText(k.settings?.convolution,lookup)};

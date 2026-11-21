@@ -2,24 +2,17 @@
   "name": "Poplar@HFIR",
   "energy_mode": "Ei fixed",
   "sense": "+-+",
-  "s1sign": "ccw",
+  "m_sign": "ccw",
+  "s_sign": "ccw",
+  "a_sign": "ccw",
   "instrument_type": "diffractometer",
   "instrument_setting": ["diffractometer", "larmor-diffractometer"],
   "diffractometer": {
     "default_energy": 27.6,
     "M2_min": 78.67,
     "M2_max": 78.67,
-    "S2_min": -10.0,
-    "S2_limits": [
-      {
-        "M2": 0,
-        "S2limit": -120
-      },
-      {
-        "M2": 180,
-        "S2limit": -120
-      }
-    ],
+    "S2_min": -120,
+    "S2_max": -10,
     "available_crystals": {
       "monochromator": [
         "Si(400)"
@@ -35,17 +28,8 @@
     "default_energy": 13.9,
     "M2_min": 78.36,
     "M2_max": 78.36,
-    "S2_min": -30.0,
-    "S2_limits": [
-      {
-        "M2": 0,
-        "S2limit": -60
-      },
-      {
-        "M2": 180,
-        "S2limit": -60
-      }
-    ],
+    "S2_min": -60,
+    "S2_max": -30,
     "available_crystals": {
       "monochromator": [
         "Si(220)"

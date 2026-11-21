@@ -50,9 +50,10 @@
   "configuration": {
     "energy_mode": "Ei fixed",
     "Ei": 14.5,
-    "geometry": "W",
     "sense": "+-+",
-    "s1sign": "ccw"
+    "m_sign": "ccw",
+    "s_sign": "ccw",
+    "a_sign": "ccw"
   },
   "distance": {
     "L0": 4.745,
@@ -69,17 +70,8 @@
   "M2_max": 41.3,
   "A2_min": -60,
   "A2_max": 120,
-  "S2_min": -5,
-  "S2_limits": [
-    {
-      "M2": 0,
-      "S2limit": -130
-    },
-    {
-      "M2": 180,
-      "S2limit": -130
-    }
-  ],
+  "S2_min": -130,
+  "S2_max": -5,
   "instrument_type": "four-circle",
   "instrument_setting": [
     "tas",
@@ -89,19 +81,10 @@
     "configuration": {
       "Ei": 14.45
     },
-    "S2_min": -2,
+    "S2_min": -92,
     "M2_min": 41.3,
     "M2_max": 41.3,
-    "S2_limits": [
-      {
-        "M2": 0,
-        "S2limit": -92
-      },
-      {
-        "M2": 180,
-        "S2limit": -92
-      }
-    ],
+    "S2_max": -2,
     "phi_sign": "ccw",
     "chi_sign": "ccw",
     "S1_min": -46,

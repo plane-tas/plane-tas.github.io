@@ -1,3 +1,4 @@
+import {selectedTasSense} from '../../app/dom-utils.js';
 // Time estimate: expression / range / detail parsing, row reading and validation.
 // Part of the Script / Time estimate workspace (see ../script-workspace.js for how the parts are wired).
 export function installTimeParse(ctx){
@@ -384,7 +385,7 @@ export function installTimeParse(ctx){
   function timeSignedS2FromMagnitude(s2){
     const mag=Math.abs(Number(s2));
     if(!Number.isFinite(mag)) return NaN;
-    const convention=tasConvention(checkedValue('sense'),checkedValue('s1sign'));
+    const convention=tasConvention(selectedTasSense(),checkedValue('s1sign'));
     return convention.s2EncoderSign*mag;
   }
 

@@ -97,7 +97,6 @@ function powderGeometryTarget(uiSenseOverride=null,rawSenseForDrawing=false){
   };
   let m1abs=braggAngle(ki,num('dMono'),'Monochromator');
   let a1abs=braggAngle(kf,num('dAna'),'Analyzer');
-  if(checkedValue('geometry')==='anti-W') a1abs=-a1abs;
 
   // Powder has no sample orientation, but its motor signs follow the same
   // Sense/S1-sign convention as Single-crystal Angle calculation.

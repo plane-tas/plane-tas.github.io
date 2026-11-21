@@ -65,7 +65,8 @@ export function createQESingleCrystal(deps){
     // chi limits of the Motor table (defaults from the instrument file).
     const chiLimit=(id,key,fallback)=>{
       const raw=$(id)?.value;
-      const v=raw!==undefined && String(raw).trim()!=='' ? Number(raw) : Number(inst?.[key]);
+      const fileValue=inst?.[key];
+      const v=raw!==undefined && String(raw).trim()!=='' ? Number(raw) : (fileValue===null || fileValue===undefined || fileValue==='' ? NaN : Number(fileValue));
       return Number.isFinite(v) ? v : fallback;
     };
     const chiMin=chiLimit("chiMin","chi_min",-90);

@@ -172,7 +172,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const numAh=focusing.analyzer.horizontal.blades, numAv=focusing.analyzer.vertical.blades;
   const {L0,L1,L2,L3,beam_width,beam_height,mono_width,mono_height,mono_thickness,ana_width,ana_height,ana_thickness,det_width,det_height}=geom;
   const {d_mono,mos_mono_h,mos_mono_v,mos_sam_h,mos_sam_v,d_ana,mos_ana_h,mos_ana_v}=mos;
-  const energyMode=config.energy_mode, geometry=config.geometry, sense=config.sign_config, method=approximation.method;
+  const energyMode=config.energy_mode, sense=config.sign_config, method=approximation.method;
   let Ei=energyMode==='Ei fixed' ? config.Ei : config.Ef+calc.hw;
   let Ef=energyMode==='Ei fixed' ? config.Ei-calc.hw : config.Ef;
   if(!(Ei>0&&Ef>0)) throw new Error(`Ei and Ef must be positive. Ei=${Ei}, Ef=${Ef}`);
@@ -195,11 +195,9 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const monoArg=(2*PI/d_mono)/(2*kiCal), anaArg=(2*PI/d_ana)/(2*kfCal);
   if(Math.abs(monoArg)>1 || Math.abs(anaArg)>1) throw new Error('Monochromator/analyzer Bragg condition is inaccessible for the selected energy.');
   let C1abs=asind(monoArg), C3abs=asind(anaArg);
-  if(geometry==='anti-W') C3abs=-C3abs;
-  let sm,ss,sa;
-  if(sense==='+-+') [sm,ss,sa]=[+1,-1,+1];
-  else if(sense==='-+-') [sm,ss,sa]=[-1,+1,-1];
-  else throw new Error(`Unsupported TAS sign configuration: ${sense}`);
+  // Scattering signs of monochromator, sample and analyzer, from the Sense.
+  if(!/^[+-]{3}$/.test(String(sense))) throw new Error(`Unsupported TAS sign configuration: ${sense}`);
+  const [sm,ss,sa]=[...String(sense)].map(c=>c==='-' ? -1 : +1);
   const A1=sm*2*C1abs, A2=ss*phiCal, A3=sa*2*C3abs;
   const thetaM=A1/2, thetaS=A2/2, thetaA=A3/2;
   const ki=Math.sqrt(Ei/E2K2), kf=Math.sqrt(Ef/E2K2);

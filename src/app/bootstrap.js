@@ -65,7 +65,7 @@ async function tryLoadCifDir(directory,map,{skipGitHubPages=false,beforeParse=nu
 }
 function mergeLegacyRangeData(){
   for(const [key,inst] of instruments){
-    if(Array.isArray(inst.S2_limits)||(inst.qe_range&&(Array.isArray(inst.qe_range.S2_limits)||Array.isArray(inst.qe_range.configuration)))) continue;
+    if(Array.isArray(inst.S2_limits)||inst.S2_max!==undefined||(inst.qe_range&&(Array.isArray(inst.qe_range.S2_limits)||Array.isArray(inst.qe_range.configuration)))) continue;
     let legacy=legacyRangeInstruments.get(key);
     if(!legacy){const target=(inst.name||key).toLowerCase();legacy=[...legacyRangeInstruments.values()].find(x=>(x.name||'').toLowerCase()===target);}
     if(legacy) inst.qe_range=legacy;
@@ -121,7 +121,7 @@ async function initialize(){
   // do not probe a possibly absent legacy instruments/ directory at startup;
   // that failed compatibility probe only creates noisy 404s. Static/GitHub
   // deployments retain the legacy fallback during migration.
-  const needsLegacy=[...instruments.values()].some(inst=>!(Array.isArray(inst.S2_limits)||(inst.qe_range&&(Array.isArray(inst.qe_range.S2_limits)||Array.isArray(inst.qe_range.configuration)))));
+  const needsLegacy=[...instruments.values()].some(inst=>!(Array.isArray(inst.S2_limits)||inst.S2_max!==undefined||(inst.qe_range&&(Array.isArray(inst.qe_range.S2_limits)||Array.isArray(inst.qe_range.configuration)))));
   if(needsLegacy && !isLocalDirectoryListingHost() && !isGitHubPages()){
     // `instruments/` is only a legacy compatibility source.  On GitHub Pages
     // the unified `instrument/` directory is authoritative; probing a removed

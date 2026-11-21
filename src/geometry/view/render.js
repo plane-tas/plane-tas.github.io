@@ -28,7 +28,8 @@ function renderGeometry(cache,index=0){
   syncGeometrySliders?.();
   if(!isPowder) updateGeometryTargetMarker?.(cache);
   fn.updateGeometryPlaneWarning();
-  const mirror=displaySense==="+-+" ? 1 : -1;
+  // The schematic turns at the monochromator to the side of its sign.
+  const mirror=convention.monoSign;
 
   // A Single-crystal target is h,k,l,hw; a Powder target is the linked S2/Q
   // pair together with hw.
@@ -57,6 +58,9 @@ function renderGeometry(cache,index=0){
   // Canonical (+-+) points of the instrument over the whole hbar-omega range
   // of the Q-E map and every S2, used to fix the figure scale (below).
   let envelopeCanonical=[];
+  // Side of the sample arm in the canonical drawing: -1 (clockwise) for W and
+  // anti-W, +1 for U and anti-U.
+  let canonicalSampleSign=-1;
 
   if(target){
     // Build one canonical (+-+) drawing, then make -+- an exact left/right
@@ -74,7 +78,12 @@ function renderGeometry(cache,index=0){
     // The selected physical Sense is applied exactly once by the display mirror
     // below.  Previously -+- was already selected inside qeGeometryAngles() and
     // then mirrored again here, so +-+ and -+- collapsed to the same schematic.
-    const canonicalConvention=tasConvention("+-+","ccw");
+    // The canonical drawing has the monochromator turning +; the sample and
+    // analyzer keep their sides relative to it (W, anti-W, U, anti-U).
+    const flip=c=>c==="+" ? "-" : "+";
+    const canonicalSense=convention.monoSign>0 ? convention.sense : [...convention.sense].map(flip).join("");
+    const canonicalConvention=tasConvention(canonicalSense,"ccw");
+    canonicalSampleSign=canonicalConvention.sampleScatteringSign;
     const drawTarget=isPowder
       ? powderGeometryTarget(canonicalConvention,true)
       : qeGeometryAngles(cache,null,canonicalConvention);
@@ -88,7 +97,7 @@ function renderGeometry(cache,index=0){
     // by the single display reflection below, which turns this same physical
     // arm into the required counter-clockwise S2 geometry. Do not apply the
     // Sense sign here as well, or -+- is reflected twice and appears clockwise.
-    const s2Draw=-Math.abs(Number(angles.s2));
+    const s2Draw=canonicalSampleSign*Math.abs(Number(angles.s2));
     thetaKf=thetaKi+deg2rad(s2Draw);
     analyzer=[sample[0]+SAMPLE_REGION_SCALE*0.90*L*Math.cos(thetaKf),sample[1]+SAMPLE_REGION_SCALE*0.90*L*Math.sin(thetaKf)];
     thetaOut=thetaKf+deg2rad(angles.a2);
@@ -147,7 +156,7 @@ function renderGeometry(cache,index=0){
         const s=[mono[0]+SAMPLE_REGION_SCALE*L*Math.cos(tKi),mono[1]+SAMPLE_REGION_SCALE*L*Math.sin(tKi)];
         envelopeCanonical.push(s);
         for(const s2 of s2List){
-          const tKf=tKi-deg2rad(s2);
+          const tKf=tKi+canonicalSampleSign*deg2rad(s2);
           const an=[s[0]+SAMPLE_REGION_SCALE*0.90*L*Math.cos(tKf),s[1]+SAMPLE_REGION_SCALE*0.90*L*Math.sin(tKf)];
           if(isDiffractometer){
             envelopeCanonical.push([s[0]+SAMPLE_REGION_SCALE*L*Math.cos(tKf),s[1]+SAMPLE_REGION_SCALE*L*Math.sin(tKf)]);
@@ -190,8 +199,8 @@ function renderGeometry(cache,index=0){
   qAngle-=Math.PI/2;
 
   let envelope=envelopeCanonical.map(rotateCCW90);
-  if(displaySense==="-+-") envelope=envelope.map(([x,y])=>[-x,y]);
-  if(displaySense==="-+-") {
+  if(mirror<0) envelope=envelope.map(([x,y])=>[-x,y]);
+  if(mirror<0) {
     const reflectX=([x,y])=>[-x,y];
     source=reflectX(source); mono=reflectX(mono); sample=reflectX(sample);
     analyzer=reflectX(analyzer); detector=reflectX(detector);
@@ -275,8 +284,8 @@ function renderGeometry(cache,index=0){
           // configurations are mirror images:
           //   +-+ : -(90°-theta)
           //   -+- : +(90°-theta)
-          base+=(displaySense==="+-+" ? -1 : +1)*qToKi;
-          darkReferenceOffset=(displaySense==="+-+"?-1:+1)*rad2deg(qToKi);
+          base+=convention.sampleScatteringSign*qToKi;
+          darkReferenceOffset=convention.sampleScatteringSign*rad2deg(qToKi);
         }
       }catch(_err){}
     }else if(asset.ref==="Fixed"){
@@ -376,7 +385,7 @@ function renderGeometry(cache,index=0){
   // changed whenever the geometry's auto-fit range changed).
   const componentFont={family:'Arial, sans-serif',size:20,color:'#243246'};
   const vectorFontSize=21;
-  const outward=displaySense==='+-+' ? -1 : 1;
+  const outward=-mirror;
   const equipmentLabel=(point,text,dx,dy,xanchor='center',yanchor='middle')=>({
     x:point[0],y:point[1],xref:'x',yref:'y',text,showarrow:false,
     xshift:dx,yshift:dy,xanchor,yanchor,font:componentFont,

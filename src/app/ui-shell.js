@@ -1,4 +1,5 @@
 import {movedInstrument} from './instrument-renames.js';
+import {readTasSense} from '../core/tas-conventions.js';
 // Extracted from app.js without changing calculation/display behavior.
 // Dependencies are injected by app.js to keep module boundaries explicit.
 export function createUIShell(deps){
@@ -495,6 +496,10 @@ function restoreGlobalUIState(){
   try{ saved=JSON.parse(localStorage.getItem(APP_UI_STORAGE_KEY)||'null'); }catch(_e){ return false; }
   if(!saved || ![1,2].includes(saved.version) || !saved.controls || typeof saved.controls!=='object') return false;
   restoringGlobalUI=true;
+  // Saves with a Geometry (W / anti-W): it is part of the Sense now.
+  if(saved.controls.sense!==undefined && saved.controls.geometry!==undefined){
+    saved.controls.sense=readTasSense(saved.controls.sense,saved.controls.geometry); delete saved.controls.geometry;
+  }
   try{
     // The selected CIF/mCIF is restored by initializeCifGenerator() BEFORE
     // this generic snapshot. Its space group and cell belong to that file,
@@ -621,6 +626,8 @@ function restoreLeftPanelState(){
     v.instrument=poplarKey;
     v.instrumentType=poplarType;
   }
+  // Saves with a Geometry (W / anti-W): it is part of the Sense now.
+  if(v.sense!==undefined && v.geometry!==undefined){ v.sense=readTasSense(v.sense,v.geometry); delete v.geometry; }
   // HODACA / HER files renamed and split (instrument-renames.js).
   { const m=movedInstrument(v.instrument,v.instrumentType,[...($('instrument')?.options||[])].map(o=>o.value)); if(m){ v.instrument=m.key; v.instrumentType=m.type; } }
   restoringLeftPanel=true;

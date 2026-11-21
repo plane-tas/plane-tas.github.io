@@ -168,7 +168,6 @@ function tasMotorAngles(calc,b){
 
   let m1abs=braggAngle(Ei,b.mos.d_mono,'Monochromator');
   let a1abs=braggAngle(Ef,b.mos.d_ana,'Analyzer');
-  if(b.config.geometry==='anti-W') a1abs=-a1abs;
 
   const convention=tasConvention(
     b.config.sense ?? selectedTasSense(),

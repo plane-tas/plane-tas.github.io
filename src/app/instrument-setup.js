@@ -1,6 +1,9 @@
 // Instrument configuration: Q-E range tables, S2 limits, analyzer/monochromator crystals and defaults.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {normalizeS1Sign, normalizeTasSense, tasConvention} from '../core/tas-conventions.js';
+import {normalizeS1Sign, readTasSense, tasConvention} from '../core/tas-conventions.js';
+import {fileTasConvention, s2FileRange} from './s2-range.js';
+import {sideRange, sideRangeFields} from './motor-range.js';
+import {selectedTasSense} from './dom-utils.js';
 
 export function createInstrumentSetup(deps){
   const {
@@ -87,7 +90,7 @@ function populateInstrumentTypeSelect(){
 // VERITAS energies), a type change re-applies all instrument defaults;
 // otherwise only the type-dependent limits and labels change.
 const FULL_DEFAULT_KEYS=['default_energy','energy_mode','configuration','qe_range',
-  'available_crystals','monochromator','analyzer','sense','s1sign','geometry'];
+  'available_crystals','monochromator','analyzer','sense','s1sign','s_sign','m_sign','a_sign','geometry'];  // geometry: older files
 function applyInstrumentTypeChange(){
   const key=$("instrument")?.value;
   if(!key || !instruments.has(key)) return;
@@ -106,10 +109,18 @@ function applyInstrumentTypeChange(){
 // S2 min / max fields show SIGNED values (the sign of the S2 motor for the
 // selected Sense and S1 sign); every calculation uses their magnitudes.
 function s2DisplaySign(){
-  try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).s2EncoderSign<0 ? -1 : 1; }catch(_e){ return 1; }
+  try{ return tasConvention(selectedTasSense(),checkedValue('s1sign')).s2EncoderSign<0 ? -1 : 1; }catch(_e){ return 1; }
 }
 // Flip the shown S2 min / max to the sign of the current Sense / S1 sign.
 function syncS2FieldSigns(){
+  // A change of scattering side uses the limits of that side.
+  const near=$('S2min');
+  if(near && near.dataset.side && near.dataset.side!==s2SideKey()){
+    try{ updateS2MaxDisplay(null,NaN,null,{reset:true}); }catch(_e){}
+    syncM2FieldSigns();
+    return;
+  }
+  orderS2Fields();
   const sign=s2DisplaySign();
   for(const id of ['S2min','S2maxEffective']){
     const el=$(id), v=Number(el?.value);
@@ -117,38 +128,100 @@ function syncS2FieldSigns(){
   }
   syncM2FieldSigns();
 }
-// M2 (monochromator 2θ_M) values carry the sign set by Sense: + for +-+, − for -+-.
-function m2DisplaySign(){
-  try{ return tasConvention(checkedValue('sense'),checkedValue('s1sign')).monoSign<0 ? -1 : 1; }catch(_e){ return 1; }
+// M2 and A2 ranges: the part of the file range on the side of the page's
+// Sense M / Sense A, as readings for the M2 / A2 sign (see motor-range.js),
+// in numerical order.  A change of side or motor sign puts back the file
+// values; edits are kept otherwise.  Blank = no limit.
+const ANGLE_MOTORS={
+  M2:{lo:'M2min',hi:'M2max',sign:'msign',fileSign:'m_sign',side:c=>c.monoSign,name:'M2',sense:'Sense M'},
+  A2:{lo:'A2min',hi:'A2max',sign:'asign',fileSign:'a_sign',side:c=>c.analyzerSign,name:'A2',sense:'Sense A'}
+};
+function motorEnc(v){ return normalizeS1Sign(v)==="cw" ? -1 : 1; }
+function fileMotorEnc(inst,key){
+  const cfg=(!Array.isArray(inst?.configuration) && inst?.configuration) ? inst.configuration : {};
+  const f=ANGLE_MOTORS[key].fileSign;
+  return motorEnc(cfg[f] ?? inst?.qe_range?.[f] ?? inst?.[f] ?? "ccw");
 }
-// The two fields are shown in numerical order: min < max also for negative
-// angles (-67 … -12, not -12 … -67).  The calculations use the magnitudes
-// in either order (angleRange).
-function syncM2FieldSigns(){
-  const sign=m2DisplaySign();
-  const lo=$('M2min'), hi=$('M2max');
-  const mag=el=>{ const t=String(el?.value??'').trim(), v=Number(t); return t!=='' && Number.isFinite(v) ? Math.abs(v) : null; };
-  const a=mag(lo), b=mag(hi);
-  if(a!==null && b!==null){
-    const small=Math.min(a,b), large=Math.max(a,b);
-    lo.value=formatS2ControlValue(sign>0 ? small : -large);
-    hi.value=formatS2ControlValue(sign>0 ? large : -small);
-    return;
+function pageMotorSide(key){
+  const m=ANGLE_MOTORS[key];
+  let side=1;
+  try{ side=m.side(tasConvention(selectedTasSense(),checkedValue('s1sign'))); }catch(_e){}
+  return {side,enc:motorEnc($(m.sign)?.value)};
+}
+function angleSideKey(key){ const p=pageMotorSide(key); return `${p.side},${p.enc}`; }
+function fileAngleRange(inst,key){
+  const {side,enc}=pageMotorSide(key);
+  return sideRange(inst?.[`${key}_min`],inst?.[`${key}_max`],fileMotorEnc(inst,key),side,enc);
+}
+function applyAngleRangeDefaults(key,inst=currentInstrument()){
+  const m=ANGLE_MOTORS[key], lo=$(m.lo), hi=$(m.hi);
+  if(!lo || !hi) return;
+  const {side,enc}=pageMotorSide(key);
+  const range=fileAngleRange(inst,key);
+  const [a,b]=sideRangeFields(range,side,enc);
+  setAngleField(m.lo,a); setAngleField(m.hi,b);
+  lo.dataset.side=angleSideKey(key);
+  lo.dataset.unreachable=range ? '' : '1';
+}
+// Error when the range of the instrument file does not reach the side of
+// the page (M2 for every type, A2 for TAS).
+function checkAngleRangeSides(inst=currentInstrument()){
+  for(const key of Object.keys(ANGLE_MOTORS)){
+    if(key==='A2' && (inst?.instrument_type||'tas')!=='tas') continue;
+    const m=ANGLE_MOTORS[key], lo=$(m.lo);
+    if(lo?.dataset.unreachable==='1') throw new Error(`The ${m.name} range of the instrument does not reach this side (${m.sense}).`);
   }
-  for(const [el,v] of [[lo,a],[hi,b]]) if(el && v!==null) el.value=formatS2ControlValue(sign*v);
+}
+function syncM2FieldSigns(){
+  let inst=null;
+  try{ inst=currentInstrument(); }catch(_e){ return; }
+  for(const key of Object.keys(ANGLE_MOTORS)){
+    const lo=$(ANGLE_MOTORS[key].lo);
+    if(lo && lo.dataset.side!==angleSideKey(key)) applyAngleRangeDefaults(key,inst);
+  }
 }
 function setAngleField(id,value){
   const el=$(id); if(!el) return;
   el.value=value!==undefined && value!==null && value!=='' && Number.isFinite(Number(value)) ? String(Number(value)) : '';
 }
+// S2 range of the instrument file: "S2_min" and "S2_max" are the two ends
+// of the S2 motor (readings for the Sense and S1 sign of the file, min < max).
+// Each end is a number or a table of the monochromator angle,
+// [{"M2": ..., "S2": ...}, ...] (interpolated at the M2 of the energy, end
+// values outside), for a limit set by the monochromator shielding.  The page
+// uses the part of the range on its scattering side (from the Sense S and the
+// S1 sign): the end on that side is the large-angle limit; the small-angle
+// limit is the other end when both ends are on that side, otherwise 0 (to
+// be entered on the page).  Older files: "S2_min"
+// (small-angle limit) with the table "S2_limits" of (M2, S2limit).
+// The S2 limits on the scattering side of the page: rows of the large-angle
+// (far) and small-angle (near) limits as magnitudes, or null if the range of
+// the file does not reach that side.
+function s2SideLimits(inst){
+  const {ends}=s2FileRange(inst);
+  // Physical side (+ = counter-clockwise) of the sample scattering.
+  const fileS1=fileTasConvention(inst).s1EncoderSign;
+  let page=1;
+  try{ page=tasConvention(selectedTasSense(),checkedValue('s1sign')).sampleScatteringSign; }catch(_e){}
+  const phys=rows=>Math.sign(rows.find(r=>r.S2!==0)?.S2 ?? 0)*fileS1;
+  const mag=rows=>rows.map(r=>({...r,S2:Math.abs(r.S2)}));
+  const size=rows=>Math.max(...rows.map(r=>Math.abs(r.S2)));
+  const here=ends.filter(rows=>phys(rows)===page);
+  if(!here.length) return null;
+  if(here.length===2){
+    const [a,b]=size(here[0])>=size(here[1]) ? here : [here[1],here[0]];
+    return {far:mag(a),near:mag(b)};
+  }
+  // The range crosses the beam: no small-angle limit in the file (0; it is
+  // entered on the page).
+  return {far:mag(here[0]),near:[{M2:0,S2:0},{M2:180,S2:0}]};
+}
+const S2_SIDE_ERROR='The S2 range of the instrument does not reach this scattering side (Sense S).';
 function applyInstrumentTypeDefaults(inst=currentInstrument()){
   const qr=inst.qe_range||{};
-  const s2MinJson=Number(qr.S2_min ?? inst.S2_min ?? inst.default_S2min ?? 8.0);
-  if($("S2min") && Number.isFinite(s2MinJson)) $("S2min").value=formatS2ControlValue(s2DisplaySign()*Math.abs(s2MinJson));
   // Sample-rotation (S1) limits; instruments without them keep the full turn.
   // Monochromator / analyzer angle ranges (editable; blank = not given).
-  setAngleField("M2min",inst.M2_min); setAngleField("M2max",inst.M2_max);
-  syncM2FieldSigns();
+  applyAngleRangeDefaults('M2',inst); applyAngleRangeDefaults('A2',inst);
   setIf("S1min",inst.S1_min ?? -180);
   setIf("S1max",inst.S1_max ?? 180);
   // Four-circle (bisecting): S1 = S2/2 is fixed, so a Bragg-peak orientation
@@ -164,12 +237,17 @@ function applyInstrumentTypeDefaults(inst=currentInstrument()){
   }
   initializeS2MaxControl(inst);
 }
+// Large-angle S2 limit on the scattering side of the page, as rows of
+// (M2 or Ei, S2limit) magnitudes.
 function rangeTable(inst){
-  if(Array.isArray(inst.S2_limits)) return inst.S2_limits;
-  if(inst.qe_range && Array.isArray(inst.qe_range.S2_limits)) return inst.qe_range.S2_limits;
-  if(inst.qe_range && Array.isArray(inst.qe_range.configuration)) return inst.qe_range.configuration;
-  if(Array.isArray(inst.configuration)) return inst.configuration; // legacy QErange JSON
-  throw new Error("Selected instrument has no S2-limit table. Add S2_limits to the unified instrument JSON (or keep the legacy instruments/ directory during migration).");
+  const side=s2SideLimits(inst);
+  if(!side) throw new Error(S2_SIDE_ERROR);
+  return side.far.map(r=>({M2:r.M2,Ei:r.Ei,S2limit:r.S2}));
+}
+function nearRangeTable(inst){
+  const side=s2SideLimits(inst);
+  if(!side) throw new Error(S2_SIDE_ERROR);
+  return side.near.map(r=>({M2:r.M2,Ei:r.Ei,S2limit:r.S2}));
 }
 // Energy-transfer range of the Q-E maps from the crystal angle ranges in the
 // instrument file:
@@ -288,16 +366,16 @@ function monochromatorTwoTheta(Ei,lambdaHalf=false){
   const s=Math.sqrt(81.8042/E)/(2*d);
   return s<1 ? 2*Math.asin(s)*180/Math.PI : NaN;
 }
-function s2LimitRows(inst){
-  return rangeTable(inst).map(x=>{
+function s2LimitRows(inst,table=null){
+  return (table||rangeTable(inst)).map(x=>{
     const S2=Math.abs(Number(x.S2limit));
     // M2 may be written signed (negative for a -+- instrument); magnitudes are used.
     const M2=Number.isFinite(Number(x.M2)) && x.M2!==null && x.M2!=='' ? Math.abs(Number(x.M2)) : monochromatorTwoTheta(Number(x.Ei));
     return [M2,S2];
   }).filter(([M2,S2])=>Number.isFinite(M2) && Number.isFinite(S2)).sort((p,q)=>p[0]-q[0]);
 }
-function instrumentInterp(inst,lambdaHalf=false){
-  const rows=s2LimitRows(inst);
+function instrumentInterp(inst,lambdaHalf=false,table=null){
+  const rows=s2LimitRows(inst,table);
   return Ei=>{
     if(!rows.length) return NaN;
     const M2=monochromatorTwoTheta(Ei,lambdaHalf);
@@ -312,9 +390,15 @@ function instrumentInterp(inst,lambdaHalf=false){
 }
 // A table whose S2limit varies is applied at the current M2 and shown read
 // only; a constant one is the editable default of the S2 max field.
-function s2DependsOnEi(inst){
-  const values=s2LimitRows(inst).map(r=>r[1]);
+function s2DependsOnEi(inst,table=null){
+  let values=[];
+  try{ values=s2LimitRows(inst,table).map(r=>r[1]); }catch(_e){ return false; }
   return values.some(v=>Math.abs(v-values[0])>1e-10);
+}
+// Small-angle limit on the page's side at an Ei (magnitude).
+function s2NearAtEi(inst,Ei,lambdaHalf=false){
+  const table=nearRangeTable(inst);
+  return Number.isFinite(Number(Ei)) ? Number(instrumentInterp(inst,lambdaHalf,table)(Ei)) : Math.abs(Number(table[0]?.S2limit));
 }
 function configuredConstantS2Max(inst){
   const first=rangeTable(inst).map(x=>Math.abs(Number(x.S2limit))).find(Number.isFinite);
@@ -333,6 +417,7 @@ function baseS2MaxAtEi(inst,Ei,lambdaHalf=false){
 // when the table varies with M2 (CTAX, HODACA): then the value at the
 // current monochromator angle is always taken from the file.
 function effectiveS2MaxAtEi(inst,Ei,lambdaHalf=false){
+  checkAngleRangeSides(inst);
   const base=baseS2MaxAtEi(inst,Ei,lambdaHalf);
   if(s2DependsOnEi(inst)) return base;
   const entered=Math.abs(Number($('S2maxEffective')?.value));
@@ -357,7 +442,18 @@ function currentS2DisplayContext(inst=null,EiOverride=NaN,lambdaHalfOverride=nul
 // (read only).  Others: write the file value only on reset (instrument /
 // type defaults) or when the field is empty, so a user edit is kept.
 function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null,{reset=false}={}){
-  const out=$('S2maxEffective'); if(!out) return;
+  const out=$('S2maxEffective'), nearOut=$('S2min'); if(!out) return;
+  orderS2Fields();
+  if(reset && nearOut) nearOut.dataset.side=s2SideKey();
+  // Small-angle limit: the file value is the default (editable); a limit
+  // that varies with M2 is shown read only at the current energy.
+  try{
+    inst=inst||currentInstrument();
+    const ctx=currentS2DisplayContext(inst,EiOverride,lambdaHalfOverride);
+    const dep=s2DependsOnEi(inst,nearRangeTable(inst));
+    if(nearOut && (dep || reset || String(nearOut.value).trim()==='')) nearOut.value=formatS2ControlValue(s2DisplaySign()*s2NearAtEi(inst,ctx.Ei0,ctx.lambdaHalf));
+    if(nearOut) nearOut.readOnly=dep;
+  }catch(_e){ if(nearOut && reset) nearOut.value=''; }
   try{
     const ctx=currentS2DisplayContext(inst,EiOverride,lambdaHalfOverride);
     const dep=s2DependsOnEi(ctx.inst);
@@ -372,6 +468,22 @@ function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null,{re
 }
 // Kept for callers of the former editable S2 max; nothing to synchronise now.
 function syncS2DeltaFromEffective(){}
+// The scattering side of the page (physical direction of S2).
+function s2SideKey(){
+  try{ const c=tasConvention(selectedTasSense(),checkedValue('s1sign')); return `${c.sampleScatteringSign},${c.s1EncoderSign}`; }catch(_e){ return '1'; }
+}
+// S2 min and max in numerical order: on the negative side the large-angle
+// limit comes first (-100 ... -5), on the positive side last (5 ... 100).
+function orderS2Fields(){
+  const near=$('S2min'), far=$('S2maxEffective');
+  if(!near || !far || near.parentNode!==far.parentNode) return;
+  const negative=s2DisplaySign()<0;
+  const farFirst=!!(near.compareDocumentPosition(far) & Node.DOCUMENT_POSITION_PRECEDING);
+  if(negative && !farFirst) near.before(far);
+  if(!negative && farFirst) far.before(near);
+  near.setAttribute('aria-label',negative ? 'S2 max (deg)' : 'S2 min (deg)');
+  far.setAttribute('aria-label',negative ? 'S2 min (deg)' : 'S2 max (deg)');
+}
 function updateS2MaxDisplayForQERange(cache,index){
   if(!cache?.hwList?.length) return;
   const i=Math.max(0,Math.min(Number(index)||0,cache.hwList.length-1));
@@ -588,22 +700,25 @@ function applyInstrumentConfigurationDefaults(){
   applyInstrumentTypeDefaults(inst);
   const hasNewSense=cfg.sense!==undefined || (cfg.sign===undefined && (qr.sense!==undefined || inst.sense!==undefined));
   const rawSense=cfg.sense ?? cfg.sign ?? qr.sense ?? inst.sense ?? "-+-";
-  const rawS1Sign=cfg.s1sign ?? qr.s1sign ?? inst.s1sign;
+  // Motor signs: "s_sign" (S1 / S2), "m_sign" (M1 / M2), "a_sign" (A1 / A2);
+  // "s1sign" in older files.
+  const rawS1Sign=cfg.s_sign ?? cfg.s1sign ?? qr.s_sign ?? qr.s1sign ?? inst.s_sign ?? inst.s1sign;
+  setSelect("msign",normalizeS1Sign(cfg.m_sign ?? qr.m_sign ?? inst.m_sign ?? "ccw"));
+  if($("asign")) $("asign").value=normalizeS1Sign(cfg.a_sign ?? qr.a_sign ?? inst.a_sign ?? "ccw");
   let tasConvention;
   if(rawS1Sign!==undefined){
-    tasConvention={sense:normalizeTasSense(rawSense),s1sign:normalizeS1Sign(rawS1Sign)};
-  }else if(hasNewSense && (rawSense==="+-+" || rawSense==="-+-")){
+    tasConvention={sense:readTasSense(rawSense,cfg.geometry),s1sign:normalizeS1Sign(rawS1Sign)};
+  }else if(hasNewSense && /^[+-]{3}$/.test(String(rawSense))){
     // New-format Sense without an explicit motor sign defaults to CCW.
-    tasConvention={sense:normalizeTasSense(rawSense),s1sign:"ccw"};
+    tasConvention={sense:readTasSense(rawSense,cfg.geometry),s1sign:"ccw"};
   }else{
     // Backward compatibility for old JSON files whose `sign` stored one of the
     // pre-refactor combined Sense/S1 labels.
     tasConvention=tasConventionFromLegacyUiSense(rawSense);
   }
-  setSelect("sense",tasConvention.sense);
+  if($("sense")) $("sense").value=tasConvention.sense;
   setSelect("s1sign",tasConvention.s1sign);
   syncS2FieldSigns();
-  setSelect("geometry",cfg.geometry || "W");
   applyInstrumentCrystalAvailability();
   updateEnergyLabel();
   // Use wavelength by default for incident-fixed diffractometers, while

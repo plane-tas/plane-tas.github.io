@@ -93,18 +93,14 @@ function setGeometryKiOrientationCondition(mode){
       const orientationRef=effectiveOrientationReference(b.rl,fixedE,convention);
       const c2Sign=convention.c2ToOmegaSign;
 
-      if(convention.sense==="+-+"){
-        // The physical Sense selects the crystal-azimuth handedness.
-        // Solve the S1=0 condition in crystal-azimuth space first, then map
-        // it back to the displayed U/V reciprocal-space coordinates.  Using
-        // phiAxis directly here mirrors the generated HKL to the wrong side.
-        const qAxis=usesV ? qV : qU;
-        const phiAxisCrystal=tasCrystalPhiDegForConvention(qAxis,ex,ey,convention.sense,convention.s1sign);
-        const phiTargetCrystal=wrap180(phiAxisCrystal+c2Sign*orientationRef.s1);
-        phiTargetDeg=tasPlotPhiFromCrystalPhiForConvention(phiTargetCrystal,convention.sense,convention.s1sign);
-      }else{
-        phiTargetDeg=wrap180(phiAxis+c2Sign*orientationRef.s1);
-      }
+      // The scattering at the sample selects the crystal-azimuth handedness.
+      // Solve the S1=0 condition in crystal-azimuth space first, then map
+      // it back to the displayed U/V reciprocal-space coordinates (with
+      // handedness +1 this is phiAxis itself).
+      const qAxis=usesV ? qV : qU;
+      const phiAxisCrystal=tasCrystalPhiDegForConvention(qAxis,ex,ey,convention.sense,convention.s1sign);
+      const phiTargetCrystal=wrap180(phiAxisCrystal+c2Sign*orientationRef.s1);
+      phiTargetDeg=tasPlotPhiFromCrystalPhiForConvention(phiTargetCrystal,convention.sense,convention.s1sign);
     }else if(orient==='perpU') phiTargetDeg=wrap180(-90+phiU-phiQlab-s1Perp);
     else if(orient==='perpV') phiTargetDeg=wrap180(-90+phiV-phiQlab-s1Perp);
     else{

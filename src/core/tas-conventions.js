@@ -6,8 +6,48 @@ import {
 } from "./tas-core.js";
 
 
+// A Sense is three scattering signs (monochromator, sample, analyzer).  The
+// page chooses it as a W Sense (+-+ or -+-: the side of the monochromator)
+// and a Geometry:
+//   W       sample against the monochromator, analyzer against the sample
+//   anti-W  sample against the monochromator, analyzer with the sample
+//   U       sample with the monochromator,    analyzer against the sample
+//   anti-U  sample with the monochromator,    analyzer with the sample
+// ("anti" = the analyzer turns the same way as the sample).
+export const TAS_W_SENSES=["+-+","-+-"];
+export const TAS_GEOMETRIES=["W","anti-W","U","anti-U"];
 export function normalizeTasSense(value){
-  return (value==="-+-" || value==="---") ? "-+-" : "+-+";
+  const v=String(value??"").trim();
+  return /^[+-]{3}$/.test(v) ? v : "+-+";
+}
+export function composeTasSense(base,geometry="W"){
+  const m=normalizeTasSense(base)[0]==="-" ? -1 : +1;
+  const g=TAS_GEOMETRIES.includes(geometry) ? geometry : "W";
+  const sample=g.endsWith("U") ? m : -m;
+  const analyzer=g.startsWith("anti") ? sample : -sample;
+  const c=x=>x>0 ? "+" : "-";
+  return c(m)+c(sample)+c(analyzer);
+}
+// The W Sense and the Geometry of any Sense (inverse of composeTasSense).
+export function splitTasSense(sense){
+  const s=normalizeTasSense(sense);
+  const u=s[1]===s[0], anti=s[2]===s[1];
+  return {base:s[0]==="-" ? "-+-" : "+-+",geometry:(anti ? "anti-" : "")+(u ? "U" : "W")};
+}
+// A Sense and a Geometry as saved by any version: a W Sense with its Geometry,
+// or (briefly) the whole Sense in one value.
+export function readTasSense(sense,geometry){
+  const s=normalizeTasSense(sense);
+  if(geometry!==undefined && geometry!==null && geometry!=="" && TAS_W_SENSES.includes(s)) return composeTasSense(s,geometry);
+  return s;
+}
+// A Sense is three scattering signs, monochromator / sample / analyzer
+// ('+' = counter-clockwise, as in Takin): +1 or -1 each.  Every other sign of
+// the convention follows from the one of the axis it belongs to.
+export function senseSigns(sense){
+  const s=normalizeTasSense(sense);
+  const sign=c=>c==='-' ? -1 : +1;
+  return {mono:sign(s[0]),sample:sign(s[1]),analyzer:sign(s[2])};
 }
 
 // The physical Direct-beam Dark-angle zero has opposite handedness in the
@@ -16,7 +56,7 @@ export function normalizeTasSense(value){
 // This is a geometric correction, not a sample S1 motor/encoder correction.
 export function darkDirectBeamZeroShiftDeg(rawOrientationOffsetDeg,sense){
   const offset=Number(rawOrientationOffsetDeg);
-  return (normalizeTasSense(sense)==="-+-" ? +1 : -1)*offset;
+  return senseSigns(sense).sample*offset;
 }
 
 export function normalizeS1Sign(value){
@@ -34,15 +74,16 @@ export function tasConvention(sense,s1sign="ccw"){
   const physicalSense=normalizeTasSense(sense);
   const motorSign=normalizeS1Sign(s1sign);
   const s1EncoderSign=motorSign==="ccw" ? +1 : -1; // physical CCW -> motor + for CCW-positive
-  const monoSign=physicalSense==="+-+" ? +1 : -1;
-  const sampleScatteringSign=physicalSense==="+-+" ? -1 : +1;
-  const analyzerSign=monoSign;
+  const signs=senseSigns(physicalSense);
+  const monoSign=signs.mono;
+  const sampleScatteringSign=signs.sample;
+  const analyzerSign=signs.analyzer;
   const s2EncoderSign=sampleScatteringSign*s1EncoderSign;
 
-  // Crystal/Q-space handedness is a property of physical scattering Sense;
+  // Crystal/Q-space handedness belongs to the scattering at the sample;
   // encoder polarity is handled independently by s1EncoderSign.
-  const crystalAzimuthHandedness=physicalSense==="+-+" ? -1 : +1;
-  const ccwC2ToOmegaSign=physicalSense==="+-+" ? -1 : +1;
+  const crystalAzimuthHandedness=sampleScatteringSign;
+  const ccwC2ToOmegaSign=sampleScatteringSign;
   const c2ToOmegaSign=ccwC2ToOmegaSign*s1EncoderSign;
 
   return {
@@ -146,7 +187,7 @@ export function calcQ0(s1,s2,ki,kf,s1Offset,refS1,QrefXY,sense,s1Calibration=nul
          ki*Math.cos(kiAngle)-kf*Math.cos(kfAngle)];
   // The old fallback reflection belonged to the physical -+- geometry; express
   // it directly in physical Sense rather than through the swapped calculation key.
-  if(normalizeTasSense(sense)==="-+-" && norm(QrefXY)>1e-10){
+  if(senseSigns(sense).sample>0 && norm(QrefXY)>1e-10){
     const eQ=normalize(QrefXY);
     q=sub(scale(eQ,2*dot(q,eQ)),q);
   }
@@ -155,15 +196,19 @@ export function calcQ0(s1,s2,ki,kf,s1Offset,refS1,QrefXY,sense,s1Calibration=nul
 
 
 // User-facing motor angles (Angle calculation, Script/Time-estimate checks and
-// the Resolution tab).  M1/M2 and A1/A2 are shown with the signs of
-// tasMotorAngles(), i.e. counter-clockwise positive: negative for -+- and
-// positive for +-+.  S1 and S2 are unchanged.  Powder has no sample rotation,
-// so its S1 is shown as 0.  Display only: no calculation uses these values.
-export function displayedMotorAngles(angles,isPowder=false){
+// the Resolution tab).  tasMotorAngles() gives M1/M2 and A1/A2 counter-
+// clockwise positive (negative for -+-, positive for +-+); the motors count
+// as their signs say ("m_sign" / "a_sign" of the instrument file: CW turns
+// them over).  S1 and S2 are unchanged (already in S1-motor units).  Powder
+// has no sample rotation, so its S1 is shown as 0.  Display only: no
+// calculation uses these values.
+export function displayedMotorAngles(angles,isPowder=false,{msign="ccw",asign="ccw"}={}){
   const a=angles||{};
+  const m=normalizeS1Sign(msign)==="cw" ? -1 : 1, an=normalizeS1Sign(asign)==="cw" ? -1 : 1;
+  const f=(k,v)=>v===null || v===undefined || !Number.isFinite(Number(v)) ? v : k*Number(v)+0;
   return {
-    m1:a.m1, m2:a.m2,
+    m1:f(m,a.m1), m2:f(m,a.m2),
     s1:isPowder ? 0 : a.s1, s2:a.s2,
-    a1:a.a1, a2:a.a2
+    a1:f(an,a.a1), a2:f(an,a.a2)
   };
 }

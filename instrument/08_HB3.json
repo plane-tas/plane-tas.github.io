@@ -50,9 +50,10 @@
   "configuration": {
     "energy_mode": "Ef fixed",
     "Ef": 14.7,
-    "geometry": "W",
     "sense": "-+-",
-    "s1sign": "ccw"
+    "m_sign": "ccw",
+    "s_sign": "ccw",
+    "a_sign": "ccw"
   },
   "distance": {
     "L0": 6.5,
@@ -65,21 +66,12 @@
     "height": 15,
     "shape": "rectangle"
   },
-  "M2_min": -13,
-  "M2_max": -58,
-  "A2_min": -40,
-  "A2_max": 90,
+  "M2_min": -58,
+  "M2_max": -13,
+  "A2_min": -90,
+  "A2_max": 40,
   "S2_min": 5,
-  "S2_limits": [
-    {
-      "M2": -12,
-      "S2limit": 128
-    },
-    {
-      "M2": -67,
-      "S2limit": 128
-    }
-  ],
+  "S2_max": 128,
   "instrument_type": "tas",
   "instrument_setting": ["tas"],
   "available_crystals": {

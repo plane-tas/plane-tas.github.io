@@ -61,7 +61,7 @@ export function createDarkAngle(deps){
     const fixedEnergy=energyMode==="Ei fixed" ? Ei : Ef;
     const armSign=convention.sampleScatteringSign;
     const darkCrystalSign=convention.s1EncoderSign;
-    const directBaseSign=convention.sense==="+-+" ? -1 : +1;
+    const directBaseSign=convention.sampleScatteringSign;
 
     const planePhi=hkl=>{
       const q=hklToQ(rl,hkl||[0,0,0]);

@@ -1169,3 +1169,8 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #toolboxUnitPane .harmonic-table > .harmonic-row-label{position:sticky;left:0;z-index:2;background:#f7f7f7}
 #toolboxUnitPane .harmonic-table > .harmonic-row-hover{background:#f6f9fc}
 #toolboxUnitPane .harmonic-table > .harmonic-row-selected{background:#e3eefb}
+
+/* Sense M / S / A: three equal columns (the A column stays empty without an
+   analyzer). */
+#tasConventionRow{grid-template-columns:1fr}
+.sense-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(4px * var(--tas-density))}

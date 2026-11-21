@@ -92,6 +92,10 @@ function recalculate(){
     }
   }catch(err){
     showError(err);
+    // No stale angles or drawing from the previous settings.
+    const angles=$("geometryAngles");
+    if(angles) angles.textContent="Enter a target Q and ħω to calculate TAS angles.";
+    try{ if(window.Plotly && $("geometryPlot")) window.Plotly.purge($("geometryPlot")); }catch(_e){}
   }
 }
 

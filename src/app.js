@@ -9,7 +9,7 @@ import {
   parseCifStructure, nuclearStructureFactorSquared, setNeutronData
 } from "./cif/cif-structure.js";
 import {
-  tasConvention,
+  normalizeTasSense, tasConvention,
   wrap180, angleDiffDeg,
   tasPhiLabDegForConvention,
   tasCrystalPhiDegForConvention, tasPlotPhiFromCrystalPhiForConvention,
@@ -81,7 +81,7 @@ const {
 
 const {
   CRYSTAL_NAMES, s2DependsOnEi,
-  syncS2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
+  syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
   fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable, energyTransferRange, energyTransferGrid,
   syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
@@ -221,20 +221,28 @@ let selectedCifText = "";
 
 
 function setupTasConventionUI(){
-  const senseSelect=$("sense"), senseRow=$("senseRow"), geometryRow=$("geometryRow");
-  if(!senseSelect || !senseRow || !geometryRow) return;
-
-  // Preserve the HTML default while migrating the old four-choice selector.
-  const initial=tasConventionFromLegacyUiSense(senseSelect.value);
-  senseSelect.replaceChildren();
-  for(const value of ["+-+","-+-"]){
-    const option=document.createElement("option");
-    option.value=value; option.textContent=value; senseSelect.appendChild(option);
-  }
-  senseSelect.value=initial.sense;
-  for(const node of senseRow.childNodes){
-    if(node.nodeType===Node.TEXT_NODE && node.nodeValue.trim()){ node.nodeValue="Sense"; break; }
-  }
+  const sense=$("sense"), senseRow=$("senseRow");
+  if(!sense || !senseRow) return;
+  const initial=tasConventionFromLegacyUiSense(sense.value);
+  // #sense holds the whole Sense (e.g. "-+-"); the Sense M / S / A selects
+  // show and set its three signs.  Writing #sense (restore, instrument
+  // files) updates the selects.
+  const parts=[...senseRow.querySelectorAll("select[data-sense-part]")];
+  const showParts=()=>{
+    const s=normalizeTasSense(sense.value);
+    parts.forEach(p=>{ p.value=s[Number(p.dataset.sensePart)]; });
+  };
+  const proto=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value");
+  Object.defineProperty(sense,"value",{configurable:true,
+    get(){ return proto.get.call(this); },
+    set(v){ proto.set.call(this,normalizeTasSense(v)); showParts(); }});
+  for(const p of parts) p.addEventListener("change",ev=>{
+    ev.stopPropagation();
+    const s=[...normalizeTasSense(sense.value)]; s[Number(p.dataset.sensePart)]=p.value;
+    sense.value=s.join("");
+    sense.dispatchEvent(new Event("change",{bubbles:true}));
+  });
+  sense.value=initial.sense;
 
   // S1 / phi / chi signs live in the Motor table (index.html).
   const s1Select=$("s1sign");
@@ -252,9 +260,11 @@ function updateInstrumentTypeRows(){
   let type='tas';
   try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
   const tas=type==='tas', fourCircle=type==='four-circle';
-  $("geometryRow")?.classList.toggle("hidden",!tas);
+  // Analyzer sign: TAS only (kept when hidden).
+  $("senseAnalyzerPart")?.classList.toggle("hidden",!tas);
   $("tasConventionRow")?.classList.remove("hidden");
   for(const el of document.querySelectorAll("#motorLimitTable .four-circle-limit")) el.classList.toggle("hidden",!fourCircle);
+  for(const el of document.querySelectorAll("#motorLimitTable .tas-only-limit")) el.classList.toggle("hidden",!tas);
   updateS2SignDisplay();
   // Dark angles are not available for 4-circle yet: keep the section visible
   // (greyed out, not editable) with its values unchanged for a later update.
@@ -596,9 +606,10 @@ $("instrumentDetailsSetDefault")?.addEventListener("click",()=>{
   saveAfterInstrumentReset();
 });
 // TAS / 4-circle / Diffractometer: only the type-dependent settings change.
-for(const id of ['phiSign','chiSign','phiMin','phiMax','chiMin','chiMax','S2maxEffective','M2min','M2max']) $(id)?.addEventListener('change',()=>scheduleRecalc());
+for(const id of ['phiSign','chiSign','phiMin','phiMax','chiMin','chiMax','S2maxEffective','M2min','M2max','A2min','A2max','msign','asign']) $(id)?.addEventListener('change',()=>scheduleRecalc());
 $('s1sign')?.addEventListener('change',updateS2SignDisplay);
 for(const id of ['sense','s1sign']) $(id)?.addEventListener('change',()=>syncS2FieldSigns());
+for(const id of ['msign','asign']) $(id)?.addEventListener('change',()=>syncM2FieldSigns());
 $("instrumentType")?.addEventListener("change",()=>{
   clearResolutionResults?.();
   applyInstrumentTypeChange();

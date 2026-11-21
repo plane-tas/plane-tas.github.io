@@ -17,7 +17,8 @@ export function installGeometryResultPanel(ctx){
 function geometryDisplayedMotorAngles(target,isPowder,sense,displaySense){
   void sense; void displaySense;
   const a=target.angles;
-  const shown=displayedMotorAngles({m1:Number(a.m1),m2:Number(a.m2),s1:Number(a.s1),s2:Number(a.s2),a1:Number(a.a1),a2:Number(a.a2)},isPowder);
+  const shown=displayedMotorAngles({m1:Number(a.m1),m2:Number(a.m2),s1:Number(a.s1),s2:Number(a.s2),a1:Number(a.a1),a2:Number(a.a2)},isPowder,
+    {msign:$('msign')?.value,asign:$('asign')?.value});
   // Four-circle: S1 is the bisecting omega; chi and phi are added.
   if(!isPowder && a.fourCircle){
     shown.s1=Number(a.fourCircle.s1); shown.chi=Number(a.fourCircle.chi); shown.phi=Number(a.fourCircle.phi);

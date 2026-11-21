@@ -109,10 +109,14 @@
 <label id="sidebarAnalyzerCrystalWrap">Analyzer<select id="sidebarAnaCrystal" aria-label="Analyzer crystal (linked to Resolution)"></select></label>
 </div>
 <div class="grid2" id="tasConventionRow">
-<label id="senseRow">Sense<select id="sense"><option>+++</option><option>+-+</option><option selected="">-+-</option><option>---</option></select></label>
-<label id="geometryRow">Geometry<select id="geometry"><option>W</option><option>anti-W</option></select></label>
+<div id="senseRow" class="sense-row">
+<label>Sense M<select data-sense-part="0" aria-label="Sense: monochromator"><option>+</option><option selected="">-</option></select></label>
+<label>Sense S<select data-sense-part="1" aria-label="Sense: sample"><option selected="">+</option><option>-</option></select></label>
+<label id="senseAnalyzerPart">Sense A<select data-sense-part="2" aria-label="Sense: analyzer"><option>+</option><option selected="">-</option></select></label>
+<input id="sense" type="hidden" value="-+-"/></div>
 </div>
-<div class="grid2">
+<!-- λ/2 is moved next to ħω of the Q-E map at start-up (qe-single-render.js); hidden here so that it does not flash in the sidebar while the page loads. -->
+<div class="grid2" style="display:none">
 <label class="checkbox-label"><input id="lambdaHalf" type="checkbox"/><span>λ/2 (only elastic)</span></label>
 <span></span>
 </div>
@@ -120,9 +124,9 @@
 <div class="motor-limit-table" id="motorLimitTable">
 <span class="motor-limit-head"></span><span class="motor-limit-head">sign</span><span class="motor-limit-head">min (deg)</span><span class="motor-limit-head">max (deg)</span>
 <span class="motor-limit-name" title="Monochromator scattering angle 2θM">M2</span>
-<span></span>
-<input id="M2min" step="0.1" type="number" placeholder="—" aria-label="M2 min (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed (magnitudes are used)"/>
-<input id="M2max" step="0.1" type="number" placeholder="—" aria-label="M2 max (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed (magnitudes are used)"/>
+<select id="msign" aria-label="M2 sign"><option value="ccw">CCW</option><option value="cw">CW</option></select>
+<input id="M2min" step="0.1" type="number" placeholder="—" aria-label="M2 min (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed"/>
+<input id="M2max" step="0.1" type="number" placeholder="—" aria-label="M2 max (deg)" title="M2 range: Ei range of the Q-E maps for Ef fixed"/>
 <span class="motor-limit-name" id="s1LimitName">S1</span>
 <select id="s1sign" aria-label="S1 sign"><option value="ccw">CCW</option><option value="cw">CW</option></select>
 <input id="S1min" step="0.1" type="number" value="-180" aria-label="S1 min (deg)"/>
@@ -131,6 +135,10 @@
 <output id="s2SignDisplay" class="motor-sign-display" title="Same as S1 sign">CCW</output>
 <input id="S2min" step="0.1" type="number" value="8" aria-label="S2 min (deg)"/>
 <input id="S2maxEffective" step="0.1" type="number" aria-label="S2 max (deg)"/>
+<span class="motor-limit-name tas-only-limit" title="Analyzer scattering angle 2θA">A2</span>
+<select id="asign" class="tas-only-limit" aria-label="A2 sign"><option value="ccw">CCW</option><option value="cw">CW</option></select>
+<input id="A2min" class="tas-only-limit" step="0.1" type="number" placeholder="—" aria-label="A2 min (deg)" title="A2 range: Ef range of the Q-E maps for Ei fixed"/>
+<input id="A2max" class="tas-only-limit" step="0.1" type="number" placeholder="—" aria-label="A2 max (deg)" title="A2 range: Ef range of the Q-E maps for Ei fixed"/>
 <span class="motor-limit-name four-circle-limit hidden">φ</span>
 <select id="phiSign" class="four-circle-limit hidden" aria-label="φ sign" title="Positive φ: CCW or CW seen from above at χ = 0"><option value="ccw">CCW</option><option value="cw">CW</option></select>
 <input id="phiMin" class="four-circle-limit hidden" step="0.1" type="number" aria-label="φ min (deg)"/>

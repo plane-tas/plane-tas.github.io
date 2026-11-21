@@ -1,4 +1,7 @@
 import {movedInstrument} from './instrument-renames.js';
+import {tasConvention} from '../core/tas-conventions.js';
+import {fileTasConvention, s2FileRange} from './s2-range.js';
+import {mergeSideRange} from './motor-range.js';
 // Instrument JSON: Save (current instrument with the sidebar / Resolution
 // settings), Load (adds an instrument file to the Instrument list; the last
 // loaded one is kept in this browser) and the built-in "Custom" instrument (every type and crystal).
@@ -21,18 +24,18 @@ function customInstrumentTemplate(crystalNames){
     analyzer:{crystal:'PG(002)',mosaic_h:30,mosaic_v:30,width:2,height:2,thickness:0.2,vfocus:true,hfocus:false,blade_h:7,blade_v:9},
     detector:{width:3.2,height:12,type:'single',shape:'cylinder'},
     // Ef 3.635 meV: 2θA = 90° with PG(002) (the usual reference).
-    configuration:{energy_mode:'Ef fixed',Ef:3.635,geometry:'W',sense:'+-+',s1sign:'ccw'},
+    configuration:{energy_mode:'Ef fixed',Ef:3.635,sense:'+-+',m_sign:'ccw',s_sign:'ccw',a_sign:'ccw'},
     distance:{L0:1,L1:1.6,L2:0.8,L3:0.6},
     beam:{width:7,height:14,shape:'rectangle'},
-    // Cold TAS with PG(002): Ei 2.5-20 meV (M2) and Ef 2.5-5 meV (A2).
-    M2_min:35.08,
-    M2_max:116.97,
-    A2_min:74.14,
-    A2_max:116.97,
+    // Any arrangement and energy: every motor over its full turn.
+    M2_min:-180,
+    M2_max:180,
+    A2_min:-180,
+    A2_max:180,
     S1_min:-180,
     S1_max:180,
-    S2_min:-5,
-    S2_limits:[{M2:0,S2limit:-120},{M2:180,S2limit:-120}],
+    S2_min:-180,
+    S2_max:180,
     instrument_type:'tas',
     instrument_setting:['tas','four-circle','diffractometer'],
     available_crystals:{monochromator:all,analyzer:all},
@@ -68,6 +71,7 @@ function safeFileName(name){
   return String(name||'instrument').replace(/@/g,'_').replace(/[^\w.-]+/g,'_').replace(/^_+|_+$/g,'') || 'instrument';
 }
 function hasS2Table(json){
+  if(json?.S2_min!==undefined && json?.S2_max!==undefined) return true;
   const rows=Array.isArray(json?.S2_limits) ? json.S2_limits : json?.qe_range?.S2_limits;
   return Array.isArray(rows) && rows.length>=2;
 }
@@ -128,8 +132,7 @@ export function createInstrumentJsonIO(deps){
     const tas=inst.instrument_type==='tas';
     const energyMode=text('energyMode')||'Ef fixed';
     const energy=value('energy');
-    const config={energy_mode:energyMode,sense:text('sense'),s1sign:text('s1sign')};
-    if(tas) config.geometry=text('geometry');
+    const config={energy_mode:energyMode,sense:text('sense'),m_sign:text('msign'),s_sign:text('s1sign'),a_sign:text('asign')};
     if(energy!==null) config[energyMode==='Ei fixed' ? 'Ei' : 'Ef']=energy;
     assign(target,'configuration',config);
     if(target.configuration){
@@ -161,21 +164,59 @@ export function createInstrumentJsonIO(deps){
     if(target.distance && target.distance.LSD===null) delete target.distance.LSD;
     assign(target,'beam',{width:value('srcWcm'),height:value('srcHcm'),shape:text('sourceShape')});
     assign(target,'detector',{width:value('detWcm'),height:value('detHcm'),type:text('detectorType'),shape:text('detectorShape')});
-    setOrDelete(target,'M2_min',value('M2min'));
-    setOrDelete(target,'M2_max',value('M2max'));
+    // M2 / A2: the file range with the part on the page's side replaced by
+    // the fields, as readings for the motor signs written above (null = no
+    // limit).
+    {
+      let c=null;
+      try{ c=tasConvention(text('sense'),text('s1sign')); }catch(_e){}
+      const enc=v=>String(v||'').toLowerCase()==='cw' ? -1 : 1;
+      const cfg=(!Array.isArray(inst?.configuration) && inst?.configuration) ? inst.configuration : {};
+      for(const [key,sideOf,signId,fileKey] of [['M2',x=>x.monoSign,'msign','m_sign'],['A2',x=>x.analyzerSign,'asign','a_sign']]){
+        if(!c || !$(`${key}min`)) continue;
+        const [lo,hi]=mergeSideRange(inst[`${key}_min`],inst[`${key}_max`],enc(cfg[fileKey] ?? inst[fileKey]),sideOf(c),enc(text(signId)),value(`${key}min`),value(`${key}max`))
+          .map(v=>v===null ? null : Number(v.toFixed(3)));
+        // Either end at the motor's full range is no limit.
+        target[`${key}_min`]=lo; target[`${key}_max`]=hi;
+        if(target.qe_range && typeof target.qe_range==='object'){ delete target.qe_range[`${key}_min`]; delete target.qe_range[`${key}_max`]; }
+      }
+    }
     setOrDelete(target,'S1_min',value('S1min'));
     setOrDelete(target,'S1_max',value('S1max'));
-    const s2min=value('S2min');
-    if(s2min!==null){
-      target.S2_min=s2min;
-      if(target.qe_range && typeof target.qe_range==='object') delete target.qe_range.S2_min;
-    }
-    // A constant S2 maximum is written into the S2-limit table; a table that
-    // varies with M2 is kept as it is (it is edited in the file).
-    const s2max=value('S2maxEffective');
-    if(s2max!==null && !s2DependsOnEi(inst)){
-      const rows=Array.isArray(inst.S2_limits) && inst.S2_limits.length>=2 ? inst.S2_limits : [{M2:0},{M2:180}];
-      target.S2_limits=rows.map(r=>{ const row={...r,S2limit:s2max}; delete row.Ei; if(row.M2===undefined) row.M2=0; return row; });
+    // S2 range: "S2_min" < "S2_max" as readings for the Sense and S1 sign
+    // written above (each a number, or the M2 table it came from).  The
+    // limits shown for the page's scattering side replace the file values
+    // unless read only.
+    {
+      const {ends}=s2FileRange(inst);
+      let k=1, r=1;
+      try{
+        const page=tasConvention(text('sense'),text('s1sign'));
+        k=fileTasConvention(inst).s1EncoderSign*page.s1EncoderSign; r=page.s2EncoderSign<0 ? -1 : 1;
+      }catch(_e){}
+      const list=ends.map(rows=>rows.map(x=>({...x,S2:k*x.S2})));
+      const first=rows=>rows.find(x=>x.S2!==0)?.S2 ?? rows[0]?.S2 ?? 0;
+      const field=id=>{ const el=$(id); const v=Math.abs(Number(el?.value)); return el && !el.readOnly && String(el.value).trim()!=='' && Number.isFinite(v) ? v : null; };
+      const near=field('S2min'), far=field('S2maxEffective');
+      const constant=v=>[{M2:0,S2:v},{M2:180,S2:v}];
+      const here=list.map((rows,i)=>[rows,i]).filter(([rows])=>Math.sign(first(rows))===r);
+      if(here.length===2){
+        here.sort((p,q)=>Math.abs(first(q[0]))-Math.abs(first(p[0])));
+        if(far!==null) list[here[0][1]]=constant(r*far);
+        if(near!==null) list[here[1][1]]=constant(r*near);
+      }else if(here.length===1){
+        // The range crosses the beam: the small-angle limit is not kept.
+        if(far!==null) list[here[0][1]]=constant(r*far);
+      }
+      const out=rows=>{
+        const vals=rows.map(x=>x.S2);
+        if(vals.every(v=>Math.abs(v-vals[0])<1e-10)) return vals[0];
+        return rows.map(x=>{ const row={}; if(x.M2!==undefined) row.M2=x.M2; else if(x.Ei!==undefined) row.Ei=x.Ei; row.S2=x.S2; return row; });
+      };
+      if(list.length===1) list.push(constant(0));
+      list.sort((p,q)=>first(p)-first(q));
+      for(const key of ['S2_min','S2_max','S2_gap','S2_limits','S2_range']){ delete target[key]; if(target.qe_range && typeof target.qe_range==='object') delete target.qe_range[key]; }
+      if(list.length){ target.S2_min=out(list[0]); target.S2_max=out(list[list.length-1]); }
     }
     if(inst.instrument_type==='four-circle'){
       for(const [k,id] of [['phi_min','phiMin'],['phi_max','phiMax'],['chi_min','chiMin'],['chi_max','chiMax']]) setOrDelete(target,k,value(id));
@@ -212,7 +253,7 @@ export function createInstrumentJsonIO(deps){
       try{ json=JSON.parse(await file.text()); }
       catch(err){ throw new Error(`${file.name}: not a valid JSON file (${err.message}).`); }
       if(!json || typeof json!=='object' || Array.isArray(json)) throw new Error(`${file.name}: an instrument file must be a JSON object.`);
-      if(!hasS2Table(json)) throw new Error(`${file.name}: "S2_limits" (at least two rows of M2 and S2limit) is required.`);
+      if(!hasS2Table(json)) throw new Error(`${file.name}: "S2_min" and "S2_max" are required.`);
       json=cleanInstrumentJson(json);
       if(!json.name) json.name=file.name.replace(/\.json$/i,'');
       const key=LOCAL_KEY_PREFIX+safeFileName(json.name);
