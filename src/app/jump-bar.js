@@ -1,16 +1,9 @@
-// Jump bars of the long panels (sidebar: Instrument / Sample / Dark angle;
+// Jump bars of the long panels (sidebar: Instrument / Sample / BG / Dark angles;
 // Resolution: Focusing / Collimator / Crystal / Component).  The bar stays
 // in view (sidebar: CSS position: sticky inside the panel; Instrument
 // details: above the scrolling card); a button scrolls its section to just
 // below the bar.
-const scrollParent=el=>{
-  for(let p=el?.parentElement;p;p=p.parentElement){
-    const o=getComputedStyle(p).overflowY;
-    if((o==='auto'||o==='scroll') && p.scrollHeight>p.clientHeight+1) return p;
-  }
-  return document.scrollingElement||document.documentElement;
-};
-const viewTop=scroller=>scroller===document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
+import {scrollParent, viewTop} from './scroll-reveal.js';
 function bindJumpBar(bar){
   for(const b of bar.querySelectorAll('button[data-jump]')){
     b.addEventListener('click',()=>{

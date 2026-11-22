@@ -813,16 +813,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 }
 #structurePanel .structure-k1-fields input{padding-left:calc(3px * var(--tas-density))!important;padding-right:calc(3px * var(--tas-density))!important}
 
-/* Sidebar: fade and a small chevron at the bottom while more settings lie
-   below (set by bootstrap.js; overlay scrollbars are often hidden). */
-:is(.shell > .sidebar,#resolutionDetailsBody).sidebar-has-more::after{
-  content:"⌄";position:sticky;bottom:calc(-10px * var(--tas-density));display:block;
-  height:calc(46px * var(--tas-density));margin-top:calc(-46px * var(--tas-density));
-  pointer-events:none;text-align:center;color:#7d8794;font-size:calc(22px * var(--tas-density));
-  line-height:calc(60px * var(--tas-density));
-  background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.92) 60%,#fff);
-}
-
 /* Instrument JSON: Save / Load (and Remove for a loaded instrument). */
 .instrument-json-row{display:flex;gap:calc(6px * var(--tas-density));margin-top:calc(8px * var(--tas-density))}
 .instrument-json-row>button{flex:1 1 0;min-width:0}
@@ -1219,3 +1209,18 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   font-size:calc(16px * var(--tas-density));
   line-height:1.2;
 }
+
+/* Dark-angle range table: the same columns as the card head above (No.
+   under No., Remove under Remove), header text at the size of the other
+   sidebar captions and the range number at the size of the entries. */
+.sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)!important;
+  gap:calc(5px * var(--tas-density))!important}
+/* (!important: the shared table text size of 00-base.css is !important.) */
+.sidebar .dark-table > div{font-size:calc(16px * var(--tas-density))!important;color:#333}
+.sidebar .dark-range-number{font-size:calc(18px * var(--tas-density));color:#111}
+.sidebar .dark-table > input{font-size:calc(18px * var(--tas-density))!important}
+.sidebar .dark-table > .remove-dark-range{font-size:calc(16px * var(--tas-density))!important}
+
+/* The header row of a sidebar table appears with its first row. */
+.sidebar-table-head:has(+ .propagation-vectors:empty),
+.sidebar-table-head:has(+ .background-rows:empty){display:none}

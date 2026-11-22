@@ -6,33 +6,6 @@ import {saveQEFigure} from '../qe/qe-save-figure.js';
 import {initializePlotSaveButtons} from './plot-save-buttons.js';
 import {initializeJumpBars} from './jump-bar.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
-// Sidebar: a fade at the bottom while more settings lie below (overlay
-// scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
-// The same for Instrument details of the Resolution tab (it scrolls on its own).
-function initializeSidebarMoreHint(){
-  bindMoreHint(document.querySelector('.shell > .sidebar'));
-  bindMoreHint(document.getElementById('resolutionDetailsBody'));
-}
-function bindMoreHint(sidebar){
-  if(!sidebar || sidebar.dataset.moreHintBound) return;
-  sidebar.dataset.moreHintBound='1';
-  let frame=0;
-  const update=()=>{
-    frame=0;
-    const more=sidebar.scrollHeight-sidebar.clientHeight-sidebar.scrollTop>2 && getComputedStyle(sidebar).overflowY!=='visible';
-    sidebar.classList.toggle('sidebar-has-more',more);
-  };
-  const request=()=>{ if(!frame) frame=requestAnimationFrame(update); };
-  sidebar.addEventListener('scroll',request,{passive:true});
-  window.addEventListener('resize',request);
-  if(typeof ResizeObserver==='function'){
-    const observer=new ResizeObserver(request);
-    observer.observe(sidebar);
-    for(const child of sidebar.children) observer.observe(child);
-  }
-  request();
-}
-
 export function createAppBootstrap(deps){
   const {
     applyInstrumentCrystalAvailability, applyInstrumentDefaults,
@@ -269,7 +242,6 @@ async function initialize(){
   });
   syncPowderLinkedInputs();
   initializeResponsivePlotResize();
-  initializeSidebarMoreHint();
   initializeJumpBars();
   setActiveTab(savedActiveTab());
   $('gm1').addEventListener('change',updateSupermirrorUI);$('calcMode').addEventListener('change',updateCalcMode);bindResolutionManualCalculation();$('calcScanResolution')?.addEventListener('click',doScanResolution);$('scanSlider').addEventListener('input',()=>renderResolutionScan(num('scanSlider')));$('prev').addEventListener('click',()=>renderResolutionScan(num('scanSlider')-1));$('next').addEventListener('click',()=>renderResolutionScan(num('scanSlider')+1));

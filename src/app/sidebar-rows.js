@@ -1,6 +1,7 @@
 // Sidebar dynamic rows: propagation vectors, dark-angle assets and ranges, sample environments.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {MAX_PROPAGATION_VECTORS, magneticSymbolSvg} from '../qe/magnetic-symbols.js';
+import {revealRange} from './scroll-reveal.js';
 
 export function createSidebarRows(deps){
   const {
@@ -209,7 +210,7 @@ function createDarkAsset(slot,values={}){
   asset.dataset.darkSlot=String(slot);
   asset.innerHTML=`
     <div class="dark-asset-head">
-      <div class="dark-asset-no-cell"><span>No.</span><span class="dark-asset-no">#${slot}</span></div>
+      <div class="dark-asset-no-cell"><span>No.</span><span class="dark-asset-no">SE${slot}</span></div>
       <label>Sample environment<select id="${ids.se}"><option value="${DARK_CUSTOM}">Custom</option></select></label>
       <button type="button" class="remove-dark-asset" data-dark-slot="${slot}">Remove</button>
     </div>
@@ -353,6 +354,7 @@ function bindDynamicSidebarUI(){
     values.push({});
     replacePropagationVectors(values,{recalc:true});
     saveLeftPanelState();
+    revealRange($("propagationVectors")?.lastElementChild,$("addPropagationVector"));
   });
 
   const backgroundHost=$("backgroundRows");
@@ -378,6 +380,7 @@ function bindDynamicSidebarUI(){
     values.push({key});
     replaceBackgroundRows(values,{recalc:true});
     saveLeftPanelState();
+    revealRange($("backgroundRows")?.lastElementChild,$("addBackground"));
   });
 
   const darkHost=$("darkAssets");
@@ -411,6 +414,9 @@ function bindDynamicSidebarUI(){
         ranges.push({});
         replaceDarkRanges(slot,ranges,{recalc:true});
         saveLeftPanelState();
+        // Show the new range and the Add under it.
+        const asset=document.querySelector(`.dark-asset[data-dark-slot="${slot}"]`);
+        revealRange(asset?.querySelector(`.dark-range-number[data-dark-range="${ranges.length-1}"]`),asset?.querySelector(".add-dark-range"));
       }else if(removeRange){
         removeDarkRange(Number(removeRange.dataset.darkSlot),Number(removeRange.dataset.darkRange));
       }else if(removeAsset){
@@ -425,6 +431,8 @@ function bindDynamicSidebarUI(){
     values.push({se:DARK_CUSTOM});
     replaceDarkAssets(values,{recalc:true});
     saveLeftPanelState();
+    // Show the whole new card and the Add under it.
+    revealRange($("darkAssets")?.lastElementChild,$("addDarkAsset"));
   });
 }
 

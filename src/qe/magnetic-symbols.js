@@ -12,7 +12,7 @@ export function magneticSymbol(qIndex){
   return MAGNETIC_SYMBOLS[(Math.max(1,qIndex)-1)%MAGNETIC_SYMBOLS.length];
 }
 // The marker as a small inline SVG (the same shapes as the map legend), for
-// the rows of the Propagation vectors table.
+// the rows of the Propagation vector table.
 export function magneticSymbolSvg(qIndex,color='red'){
   const shape={
     circle:`<circle cx="10" cy="10" r="6.7" fill="${color}"/>`,
