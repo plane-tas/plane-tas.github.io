@@ -19,12 +19,11 @@
 // Intensities are |F_perp|^2 in barn per nuclear cell, directly comparable
 // with the nuclear |F_N|^2. One magnetic domain (the entered q) is calculated.
 import {MAGNETIC_BRAGG_CONSTANT_BARN, cartesianMoment, debyeWaller, latticeVectors,
-  magneticFormFactorDisplay, magneticIonFormFactor, reciprocalBasis, reciprocalVector} from './magnetic-reflections.js';
+  ionFormFactor, magneticFormFactorDisplay, reciprocalBasis, reciprocalVector} from './magnetic-reflections.js';
+import {dot, norm, wrapFraction} from '../core/tas-core.js';
 
 const twopi=2*Math.PI;
-const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
-const norm=a=>Math.hypot(...a);
-const wrap=v=>{const w=v-Math.floor(v);return w>1-1e-9?0:w;};
+const wrap=wrapFraction;
 
 // Fourier components of an expanded mCIF atom (parseCifStructure:
 // magneticFourier = {cos, sin, phaseSign s, phaseShift t, transformR, transformFactor})
@@ -88,7 +87,7 @@ export function incommensurateSatellites(model,wavelength,{twoThetaMax=180,ionBy
   const count=bound.reduce((a,n)=>a*(2*n+1),1)*2;
   if(count>maxCandidates)throw Error(`Too many magnetic satellite candidates (${count}); increase wavelength.`);
   const rlen=reciprocalBasis(l).map(v=>norm(v)/twopi);
-  const formFactor=(element,Q)=>magneticIonFormFactor(element,Q,ionByElement);
+  const formFactor=ionFormFactor(ionByElement);
   const key=h=>h.map(v=>{const x=Number(v.toFixed(6));return Object.is(x,-0)?0:x;}).join(',');
   const acc=new Map();
   const uniform=model.sites.some(s=>s.m0 && norm(s.m0)>1e-12);

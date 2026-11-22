@@ -15,7 +15,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
     fn.clearResolutionResults();
     return;
   }
-  const {result:r,calc,unitMode,lc,angles}=entry;
+  const {result:r,calc,unitMode,lc}=entry;
   const limits=plotLimits || fn.resolutionFrame(r).lim;
   shared.lastResolutionRender={entry,indexInfo,scan:indexInfo.startsWith('| scan')};
 

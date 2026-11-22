@@ -20,14 +20,6 @@
 .structure-control-section{
   background:#fff;
 }
-#structurePanel .structure-section-heading h3{
-  margin:0;
-}
-#structurePanel .structure-section-heading > button{
-  flex:0 0 auto;
-  margin-left:auto;
-  white-space:nowrap;
-}
 #structurePanel .structure-moment-row > input[type=checkbox]{
   width:auto!important;
   min-width:0!important;
@@ -197,47 +189,14 @@
   #structurePanel .structure-atom-legend-dot{width:calc(18px * var(--tas-density))!important;height:calc(18px * var(--tas-density))!important;}
 }
 
-/* Spin element bulk toggles */
-#structurePanel .structure-spin-element-toggles{
-  display:flex;
-  flex-wrap:wrap;
-  gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));
-  align-items:center;
-  margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));
-  padding:calc(6px * var(--tas-density)) 0;
-  border-bottom:calc(1px * var(--tas-density)) solid rgba(127,127,127,.22);
-}
-#structurePanel .structure-spin-element-toggle{
-  display:inline-flex;
-  align-items:center;
-  gap:calc(5px * var(--tas-density));
-  white-space:nowrap;
-  font-size:calc(13.5px * var(--tas-density));
-  line-height:1.2;
-  cursor:pointer;
-}
-#structurePanel .structure-spin-element-toggle input{
-  margin:0;
-}
-
-/* Spins: global arrow width/head, compact Cartesian/Polar direction inputs. */
-#structurePanel .structure-spin-display-row{
-  display:grid;
-  grid-template-columns:minmax(calc(130px * var(--tas-density)),1.35fr) minmax(calc(86px * var(--tas-density)),.8fr) minmax(calc(86px * var(--tas-density)),.8fr);
-  gap:calc(8px * var(--tas-density));
-  align-items:end;
-  margin:calc(8px * var(--tas-density)) 0 calc(6px * var(--tas-density));
-}
 #structurePanel .structure-moment-row{
   grid-template-columns:auto minmax(calc(72px * var(--tas-density)),.8fr) minmax(calc(150px * var(--tas-density)),2fr) minmax(calc(82px * var(--tas-density)),.8fr) auto!important;
 }
 
 @container structure-viewer (max-width:760px){
-  #structurePanel .structure-spin-display-row{grid-template-columns:repeat(3,minmax(0,1fr));}
   #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(68px * var(--tas-density)),.9fr) minmax(calc(130px * var(--tas-density)),2fr) minmax(calc(76px * var(--tas-density)),.9fr) auto!important;}
 }
 @container structure-viewer (max-width:520px){
-  #structurePanel .structure-spin-display-row{grid-template-columns:1fr 1fr 1fr;}
   #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(64px * var(--tas-density)),1fr) minmax(0,2.3fr) minmax(calc(70px * var(--tas-density)),1fr) auto!important;}
   
 }
@@ -287,22 +246,11 @@
   
 }
 
-/* v14: global arrow length/width/head; each spin keeps three compact fields. */
-#structurePanel .structure-spin-display-row{grid-template-columns:repeat(4,minmax(0,1fr));}
 #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(54px * var(--tas-density)),.65fr) minmax(calc(150px * var(--tas-density)),3fr) auto!important;}
 
 #structurePanel .structure-moment-row .structure-entry-field{min-width:0;}
 @container structure-viewer (max-width:520px){
- #structurePanel .structure-spin-display-row{grid-template-columns:repeat(2,minmax(0,1fr));}
  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(48px * var(--tas-density)),.6fr) minmax(calc(125px * var(--tas-density)),3fr) auto!important;}
-}
-#structurePanel .structure-spin-editor-toolbar>.structure-entry-field,
-#structurePanel .structure-spin-editor-toolbar>.structure-individual-selector{
-  margin:0;
-  width:100%;
-  min-width:0;
-  max-width:none;
-  box-sizing:border-box;
 }
 
 /* mCIF Generator: Atoms / Spins / Bonds. */
@@ -681,19 +629,6 @@
 /* Do not show an mCIF future-support notice for ordinary CIF output,
    including on the first paint before scripts initialize. */
 #structurePanel #cifMcifBnsNotice[hidden]{display:none!important}
-#structurePanel .structure-style-modes label{
-  box-sizing:border-box;
-  display:flex;
-  flex-direction:row;
-  align-items:center;
-  justify-content:center;
-  gap:calc(5px * var(--tas-density));
-  width:100%;
-  min-width:0;
-  padding:calc(5px * var(--tas-density)) 0;
-  white-space:nowrap;
-  cursor:pointer;
-}
 #structurePanel .generator-unified-right > .generator-output-pane{
   grid-column:1;
   grid-row:2;
@@ -773,7 +708,6 @@
 #structurePanel .cif-cell-box[hidden]{display:none!important;}
 #structurePanel .cif-cell-box .cif-generator-setup{margin-top:3px;}
 #structurePanel .cif-cell-box .cif-lattice-grid{margin-top:10px;}
-#structurePanel .structure-plot-toolbar .structure-cell-reference-row{flex:0 0 100%;width:100%;min-width:0;}
 
 /* k note above the spin table (snapped decimal k / incommensurate k). */
 #structurePanel .cif-structure-editor-note{margin:6px 0 8px;font-size:13px;line-height:1.5}

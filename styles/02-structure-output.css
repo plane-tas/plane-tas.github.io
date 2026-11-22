@@ -120,9 +120,7 @@
 @media(max-width:700px){
   #structurePanel .structure-moment-axis-row{grid-template-columns:1fr;}
 }
-#structurePanel #mcifPreviewText{min-height:calc(570px * var(--tas-density));max-height:75vh}
 .cif-generator-beam-grid input{width:100%;max-width:none}
-#structurePanel .structure-spin-editor-toolbar>[hidden]{display:none!important;}
 #cifGeneratorPanel #cifPreviewPanel,
 #cifGeneratorPanel #cifReflectionsPanel{
   flex:1 1 0;
@@ -189,8 +187,7 @@
   min-height:calc(560px * var(--tas-density));
   padding:calc(12px * var(--tas-density));
 }
-#structurePanel #cifPreview,
-#structurePanel #mcifPreviewText{
+#structurePanel #cifPreview{
   display:block;
   box-sizing:border-box;
   width:100%;min-width:0;max-width:100%;
@@ -456,14 +453,11 @@
 .magnetic-options label{display:flex;flex-direction:column;align-items:stretch;gap:calc(3px * var(--tas-density));min-width:0;font-size:calc(12px * var(--tas-density))}
 .magnetic-options select{width:100%;max-width:none;min-width:0}
 @media (max-width:640px){.magnetic-options{grid-auto-flow:row}}
-#structurePanel .cif-reflection-plane-toggle.is-inactive{opacity:.45}
 /* Powder pattern (Reflections, Mode = Powder). */
 #structurePanel .reflection-powder-section{flex:0 0 auto;margin:0 0 calc(8px * var(--tas-density));min-width:0}
 #structurePanel .reflection-powder-section[hidden]{display:none!important}
 #structurePanel .reflection-plot-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density)) calc(24px * var(--tas-density));margin-top:calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density))}
-#structurePanel .reflection-radio-group{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(10px * var(--tas-density))}
-#structurePanel .reflection-radio-group > span{font-weight:600;font-size:max(12px,calc(17px * var(--tas-density)))!important}
-#structurePanel .reflection-radio-group label,#structurePanel .reflection-plot-fwhm{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap}
+#structurePanel .reflection-plot-fwhm{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap}
 #structurePanel .reflection-plot-fwhm input{width:calc(70px * var(--tas-density))}
 #structurePanel .reflection-plot-uvw input{width:calc(62px * var(--tas-density))}
 #structurePanel .reflection-plot-uvw button{padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density))}

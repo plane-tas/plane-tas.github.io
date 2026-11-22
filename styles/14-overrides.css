@@ -13,10 +13,6 @@
   justify-content:flex-start!important;
   margin:0!important;
 }
-.structure-color-chip.selected{
-  border-color:#111;
-  box-shadow:0 0 0 calc(1px * var(--tas-density)) #fff inset;
-}
 @media (max-width:1450px){
   
   .structure-moment-row{
@@ -295,14 +291,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   overflow-wrap:anywhere;
 }
 
-/* Shared mono/analyzer crystal selectors immediately below fixed energy. */
-.instrument-crystal-row{
-  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:calc(5px * var(--tas-density)); align-items:end;
-  margin-top:calc(7px * var(--tas-density));
-  margin-bottom:calc(7px * var(--tas-density));
-}
-
 /* Six fixed-beam unit choices share one existing Fixed and one value slot.
    The hidden legacy fields retain the canonical meV interface used by TAS calculations. */
 .instrument-primary-row > .fixed-beam-internal{display:none!important;}
@@ -390,7 +378,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .qe-control-entry,
 .tab-panel .qe-s2-control-entry > span,
 .tab-panel .qe-path-snap-label,
-.tab-panel .energy-slider-row output,
 .tab-panel .cif-reflection-plane-toggle,
 .tab-panel .structure-entry-label,
 .tab-panel .cif-unified-preview-label {
@@ -440,10 +427,8 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel label:has(> input[type="range"]),
 .tab-panel label:has(> input[type="checkbox"]),
 .tab-panel label:has(> select),
-.tab-panel .energy-slider-row > :is(label,output),
 #qeConstantMapPane .qe-control-entry,
 #qeConstantMapPane .qe-control-entry > :is(span,label),
-#qeDisplayControls .qe-map-toolbar label,
 #qeDisplayControls .qe-path-snap-label,
 #qeDisplayControls .checkbox-label {
   font-size: max(14px, calc(16px * var(--tas-density))) !important;
@@ -456,8 +441,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel :is(label, .checkbox-label, .structure-entry-label, .qe-control-entry,
                .qe-s2-control-entry > span, .qe-path-snap-label,
                .cif-reflection-plane-toggle, .cif-unified-preview-label),
-.tab-panel .energy-slider-row output,
-#qeDisplayControls :is(.qe-map-toolbar label, .checkbox-label, .qe-path-snap-label),
+#qeDisplayControls :is(.checkbox-label, .qe-path-snap-label),
 #qeConstantMapPane .qe-control-entry > :is(span,label) {
   font-size: var(--plane-tab-label-font) !important;
   font-weight: 400 !important;
@@ -466,7 +450,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 /* Selects get the same caption size as the Instrument select in the sidebar;
    their option/selected-value type is left unchanged. */
 .tab-panel label:has(> select),
-#qeDisplayControls .qe-map-toolbar label:has(> select),
 #qeDisplayControls .qe-path-snap-label:has(> select) {
   font-size: var(--plane-tab-select-caption-font) !important;
   font-weight: 400 !important;
@@ -474,8 +457,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 /* A few compound controls carry the bold weight on their inner caption. */
 .tab-panel label :is(span, b, strong),
 .tab-panel .checkbox-label :is(span, b, strong),
-#qeDisplayControls .qe-control-entry :is(span, b, strong),
-#qeDisplayControls .qe-map-toolbar label :is(span, b, strong) {
+#qeDisplayControls .qe-control-entry :is(span, b, strong) {
   font-weight: 400 !important;
 }
 .tab-panel button:not([role="tab"]) :is(b,strong),
@@ -860,13 +842,12 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    (each with its calculation condition) filling the rest. */
 .convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column}
 .convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
-#resolutionConvolutionPane :is(.convolution-row label,.convolution-inline,.convolution-hint,.convolution-box .checkbox-label){font-size:max(13px,calc(16px * var(--tas-density)))!important}
+#resolutionConvolutionPane :is(.convolution-row label,.convolution-box .checkbox-label){font-size:max(13px,calc(16px * var(--tas-density)))!important}
 .convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
 .convolution-file button{white-space:nowrap;flex:0 0 auto}
 .convolution-file input{flex:1 1 auto;min-width:0}
 .convolution-summary{font-size:max(13px,calc(16px * var(--tas-density)));color:inherit;margin:0 0 calc(6px * var(--tas-density))}
 .convolution-summary.conv-error,.convolution-message.conv-error{color:#b00020}
-.convolution-control-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:stretch}
 .convolution-box{min-width:0;margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));display:flex;flex-direction:column;gap:calc(6px * var(--tas-density))}
 .convolution-box-head{display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density));align-items:center}
 .convolution-integration{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
@@ -876,7 +857,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    "[N] points" (Monte Carlo), so the select does not move. */
 .convolution-integration-detail{display:inline-grid;align-items:center;white-space:nowrap}
 .convolution-integration-detail>*{grid-area:1/1}
-.convolution-grid-range{color:inherit;font-size:max(13px,calc(16px * var(--tas-density)))}
 /* Both stay in the same cell (the slot is as wide as the wider one); the
    inactive one is only made invisible. */
 .convolution-integration-detail>[hidden]{display:flex!important;visibility:hidden}
@@ -889,7 +869,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #resolutionConvolutionPane .convolution-field{flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;white-space:nowrap}
 .convolution-field input{flex:1 1 auto;width:auto;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-keep-empty{color:inherit;font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
-.convolution-buttons{display:flex;gap:calc(8px * var(--tas-density));flex-wrap:wrap}
 .convolution-box button{font-size:max(13px,calc(16px * var(--tas-density)))}
 #resolutionConvolutionPane button.convolution-calc{background:linear-gradient(#3a7bc8,#1f5fa8);color:#fff;border-color:#174c88;font-weight:650;box-shadow:0 1px 1px rgba(0,0,0,.18)}
 #resolutionConvolutionPane button.convolution-calc:hover{background:linear-gradient(#2f6db6,#174c88)}
@@ -905,15 +884,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-tabs .geometry-card-tab{flex:1 1 0!important;width:auto!important;max-width:none!important;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-tab-pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:calc(9px * var(--tas-density))}
 .convolution-tab-pane[hidden]{display:none}
-.convolution-actions{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
-.convolution-scan-fields{display:contents}
-.convolution-scan-fields[hidden]{display:none}
-.convolution-inline{flex-direction:column}
-.convolution-inline input,.convolution-inline select{width:calc(100px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
-.convolution-inline input.convolution-hkl{width:calc(190px * var(--tas-density))}
-.convolution-inline select{width:auto}
-.convolution-actions>button{font-size:max(13px,calc(16px * var(--tas-density)))}
-.convolution-hint{color:inherit}
 .convolution-message{font-size:max(13px,calc(16px * var(--tas-density)));color:inherit}
 /* 1D message under the cut box: room for one line kept, as in the CIF
    generator, so a note does not move the plot (the notes are kept short).
@@ -959,8 +929,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}
 .convolution-color-pick::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
 .convolution-color-pick::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
-.convolution-swatch{display:inline-block;position:relative;width:calc(30px * var(--tas-density));height:0;border-top:calc(4px * var(--tas-density)) solid;vertical-align:middle;margin-top:calc(9px * var(--tas-density));border-radius:2px}
-.convolution-swatch.dotted{border-top-style:dotted}
 .convolution-table-info{flex:0 0 auto;font-size:max(13px,calc(16px * var(--tas-density)));color:inherit;margin-bottom:calc(4px * var(--tas-density))}
 .convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
 .convolution-table{border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)));font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -969,7 +937,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-table tr.convolution-spacer td{padding:0;line-height:0}
 @media(max-width:1100px){
   .convolution-row{grid-template-columns:1fr 1fr}
-  .convolution-control-row{grid-template-columns:1fr}
   .convolution-plots{grid-template-columns:1fr}
   .convolution-plot{height:calc(360px * var(--tas-density))}
   .convolution-scan-layout>.convolution-scan-plotbox{flex:none}
@@ -982,7 +949,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    values and the 1D "ini fin bin" entries stay readable on one row. */
 .convolution-file-card{container-type:inline-size}
 @container (max-width:860px){
-  .convolution-control-row{grid-template-columns:1fr}
 }
 /* Convolution: estimated time, Stop state, data curves. */
 .convolution-box-foot{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(10px * var(--tas-density))}
@@ -991,24 +957,19 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #resolutionConvolutionPane button.convolution-calc.convolution-stop{background:linear-gradient(#d23b2f,#b42318);border-color:#912018}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop:hover{background:linear-gradient(#c02f24,#912018)}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop:active{background:#912018}
-.convolution-swatch.marker{width:calc(11px * var(--tas-density));height:calc(11px * var(--tas-density));border:calc(2.5px * var(--tas-density)) solid;border-radius:50%;margin:calc(4px * var(--tas-density)) calc(9px * var(--tas-density)) 0;box-sizing:border-box;background:transparent!important}
 .convolution-box-foot .checkbox-label{white-space:nowrap}
 /* 2D maps: colour-bar end values edited in place (as in the Q-E map). */
 .convolution-plot-frame{position:relative;min-width:0;min-height:calc(340px * var(--tas-density))}
 .convolution-plot-frame>.convolution-plot{height:100%}
 .convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-ell-kinds .checkbox-label{min-height:0}
-.convolution-line-toggle{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;color:inherit;cursor:pointer}
-.convolution-line-toggle input{width:auto;margin:0}
 .convolution-sliders .convolution-slider-name{font-weight:700}
-.convolution-sliders .convolution-line-toggle{margin-right:calc(6px * var(--tas-density))}
 /* 2D: each map has the one slider that changes it right above it. */
 .convolution-plot-col{display:flex;flex-direction:column;min-width:0;min-height:0}
 .convolution-plot-col>.convolution-sliders{margin:0 0 calc(4px * var(--tas-density));grid-template-columns:max-content minmax(0,1fr) calc(80px * var(--tas-density))!important}
 .convolution-plot-col>.convolution-plot-frame{flex:1 1 auto}
 /* Convolution: plain (not bold) row / column names and slider names. */
 #resolutionConvolutionPane :is(.convolution-range-name,.convolution-range-head),.convolution-sliders .convolution-slider-name{font-weight:400}
-.convolution-estimate-row{justify-content:space-between}
 /* 2D slice tab: display switches above the maps. */
 .convolution-show-row{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(12px * var(--tas-density));margin-bottom:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-show-row>*{flex:none}
@@ -1045,7 +1006,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Convolution labels the same size as the labels of the other tabs
    (the control text size, as in Q-E Range and Toolbox); the curve list uses
    the table size like every other table. */
-#resolutionConvolutionPane :is(.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-grid-range,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}
+#resolutionConvolutionPane :is(.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}
 
 /* Calculate row under the table, left to right in the order of use:
    integration (method, range or points), estimated time, Calculate, status.

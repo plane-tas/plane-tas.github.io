@@ -1,12 +1,6 @@
 /* Q-E Range panel: single-crystal / powder maps, Q-vector map, sliders and legends.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-/* v51: Q-E Range vertical spacing polish.
-   Keep the chosen 580 px plot height, but give the x-axis/legend and slider more breathing room. */
-#singleMain .chart-grid>div:first-child .energy-slider-row{
-  padding:calc(12px * var(--tas-density)) calc(20px * var(--tas-density)) calc(8px * var(--tas-density));
-}
-
 .nuclear-label-control .checkbox-label{min-height:calc(24px * var(--tas-density));margin:0}
 #sfColorMaxEntry{width:calc(88px * var(--tas-density))}
 .qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density))}
@@ -69,7 +63,6 @@
   max-width:100%;
   min-width:0;
 }
-.qe-map-toolbar select{width:auto;min-width:calc(82px * var(--tas-density));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
 #qeVectorMessage{padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
 
 /* Keep the Plotly axes frame, not a second border around the entire canvas.
@@ -79,17 +72,6 @@
   border-radius:0;
   background:#fff;
   box-sizing:border-box;
-}
-.nuclear-label-control .qe-map-toolbar{
-  order:-1;
-  padding:0;
-  border:0;
-  background:#fff;
-  justify-content:flex-start;
-}
-.nuclear-label-control .qe-map-toolbar label{
-  margin:0;
-  white-space:nowrap;
 }
 
 /* v63: Q-vector map legend, spacing, and taller plot. */
@@ -152,8 +134,6 @@
   background:#fff;
 }
 #qeDisplayControls.hidden,#qePlotLegend.hidden{display:none!important}
-#qeDisplayControls .qe-map-toolbar{margin:0;padding:0;border:0;background:transparent;order:0;}
-#qeDisplayControls .qe-map-toolbar label{display:flex;flex-direction:row;align-items:center;gap:calc(7px * var(--tas-density))}
 #qeDisplayControls .checkbox-label{margin:0;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));min-height:calc(28px * var(--tas-density));font-size:calc(13px * var(--tas-density));white-space:normal}
 #qePlotLegend{
   display:flex;
@@ -212,8 +192,7 @@
 #sfColorbarRange .qe-scale-lorentz{align-items:stretch}
 /* Input descriptions in Toolbox, and Q-E display checkboxes. */
 #toolboxPanel .toolbox-subpanel label,
-#qeDisplayControls .checkbox-label,
-#qeDisplayControls .qe-map-toolbar label {
+#qeDisplayControls .checkbox-label {
   font-size: calc(15.5px * var(--tas-density));
   line-height: 1.3;
 }
@@ -341,17 +320,9 @@
   scrollbar-width:thin;
   padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
 }
-#qeDisplayControls > .qe-map-toolbar{
-  order:0;
-  display:flex;
-  flex:0 0 auto;
-  align-items:center;
-  min-width:0;
-}
 #qeDisplayControls .qe-path-tools{
   display:contents;
 }
-#qeDisplayControls .qe-map-toolbar label,
 #qeDisplayControls .qe-path-snap-label,
 #qeDisplayControls > .checkbox-label{
   display:inline-flex;
@@ -367,7 +338,6 @@
   margin:0;
   min-height:calc(30px * var(--tas-density));
 }
-#qeDisplayControls .qe-map-toolbar select,
 #qeDisplayControls #qePathSnap{
   box-sizing:border-box;
   width:calc(67px * var(--tas-density));
@@ -407,36 +377,12 @@
   gap:calc(12px * var(--tas-density));
   overflow-x:auto;
 }
-#qeDisplayControls > .qe-toolbar-leading{
-  display:flex;
-  align-items:center;
-  gap:calc(12px * var(--tas-density));
-  flex:0 0 auto;
-  min-width:max-content;
-}
-#qeDisplayControls > .qe-toolbar-leading .qe-map-toolbar{
-  display:flex;
-  flex:0 0 auto;
-  padding:0;
-  margin:0;
-  border:0;
-  background:transparent;
-}
-#qeDisplayControls .qe-toolbar-leading .qe-map-toolbar label,
-#qeDisplayControls .qe-toolbar-leading > .checkbox-label,
 #qeDisplayControls .qe-path-snap-label{
   font-size:calc(14px * var(--tas-density));
   line-height:1.2;
   font-weight:600;
   white-space:nowrap;
   min-height:calc(30px * var(--tas-density));
-}
-#qeDisplayControls .qe-toolbar-leading .qe-map-toolbar select{
-  width:calc(84px * var(--tas-density));
-  min-width:calc(84px * var(--tas-density));
-  max-width:none;
-  padding:0 calc(18px * var(--tas-density)) 0 calc(6px * var(--tas-density));
-  font-size:calc(13px * var(--tas-density));
 }
 #qeDisplayControls > .qe-path-tools{
   display:flex;
@@ -494,18 +440,6 @@
   text-align:center;
 }
 
-/* Keep the entire r.l.u. option visible, including the native dropdown arrow. */
-#qeDisplayControls .qe-toolbar-leading .qe-map-toolbar select{
-  box-sizing:border-box;
-  /* Compact width (~59% of the previous 102px minimum).
-     Keep a little space for the native select arrow and the full r.l.u. text. */
-  width:60px;
-  min-width:60px;
-  max-width:60px;
-  padding-left:4px;
-  padding-right:2px;
-}
-
 /* 2026-10-13 Constant E map toolbar and Resolution unit headings.
    Display settings and path tools occupy two centered rows, never a
    horizontally scrolling strip. Narrow views wrap items within their row. */
@@ -522,7 +456,6 @@
   overflow-y: visible;
   padding: calc(9px * var(--tas-density)) calc(5px * var(--tas-density));
 }
-#qeDisplayControls > .qe-toolbar-leading,
 #qeDisplayControls > .qe-path-tools {
   display: flex;
   align-items: center;
@@ -539,11 +472,6 @@
 #qeDisplayControls > .qe-path-tools {
   gap: calc(7px * var(--tas-density));
 }
-#qeDisplayControls .qe-toolbar-leading .qe-map-toolbar {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-#qeDisplayControls .qe-toolbar-leading > .checkbox-label,
 #qeDisplayControls .qe-path-tools > :is(button,label) {
   flex: 0 0 auto;
 }

@@ -2,9 +2,11 @@
 // DOM behavior is preserved; app.js injects the small UI/state boundary.
 
 import {deg2rad, rad2deg, clamp} from "../core/tas-core.js";
+import {E_LAMBDA} from "../core/neutron-units.js";
 import {PLOT_FONTS} from "../core/plot-fonts.js";
 import {initializeMagneticFormFactorUI} from "../magnetic/magnetic-form-factor.js";
 import {neutronAbsorptionSummary, absorptionCrossSectionBarn, scatteringCrossSectionBarn, coherentCrossSectionBarn, incoherentCrossSectionBarn, neutronDataRecord} from "../cif/cif-structure.js";
+import {downloadText} from '../core/download.js';
 
 export function createToolbox({
   $, num, checkedValue,
@@ -12,7 +14,7 @@ export function createToolbox({
   getSelectedCifFileName
 }){
   // ==================== Toolbox: neutron unit conversion ====================
-  const NEUTRON_E_LAMBDA=81.8042;       // E[meV] = 81.8042 / lambda[Å]^2
+  const NEUTRON_E_LAMBDA=E_LAMBDA;      // E[meV] = 81.8042 / lambda[Å]^2
   const MEV_PER_THz=4.135667696;        // E[meV] = h * f[THz]
   const K_PER_MEV=11.60451812;          // equivalent temperature E/kB
   const CM1_PER_MEV=8.065543937;        // spectroscopic wavenumber
@@ -37,10 +39,7 @@ export function createToolbox({
       if(!absorptionCsvRows.length)return;
       const content=['sample_thickness_mm,overall_transmission_percent',
         ...absorptionCsvRows.map(row=>row.map(v=>Number(v).toPrecision(12)).join(','))].join('\n')+'\n';
-      const url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8'}));
-      const a=document.createElement('a');a.href=url;a.download='neutron_attenuation.csv';
-      document.body.appendChild(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      downloadText(content,'neutron_attenuation.csv','text/csv;charset=utf-8');
     });
     const buttons=[...document.querySelectorAll('#toolboxPanel [data-toolbox-target]')];
     const panes=[...document.querySelectorAll('#toolboxPanel .toolbox-subpanel')];

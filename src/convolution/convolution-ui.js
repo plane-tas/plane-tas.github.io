@@ -13,12 +13,13 @@ import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as 
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {qeMapTitle} from '../qe/qe-plot-title.js';
+import {downloadText} from '../core/download.js';
 
 
 const ROW_HEIGHT=22;
 const NOTE='Intensities are S(Q,ω); R0/Rmon (normalisation to monitor counts) is applied automatically.';
 // Plotly sizes are scaled by the UI density (about 0.67 on a laptop).
-const FONT={size:PLOT_FONTS.tick}, TITLE_FONT={size:PLOT_FONTS.title}, AXIS_TITLE_FONT={size:PLOT_FONTS.axis};
+const FONT={size:PLOT_FONTS.tick}, AXIS_TITLE_FONT={size:PLOT_FONTS.axis};
 // 2D map titles: one fixed size for every condition (see drawMaps).
 const CONV_TITLE_SIZE=18;
 const MAX_TABLE_RANGE_POINTS={ab:101,E:301};
@@ -1272,8 +1273,11 @@ export function createConvolutionUI(deps){
     // Horizontal axis title: every scanned variable shown (kept scans may differ).
     const axes=[...new Set(curves.map(c=>c.k.axis))];
     const frame={showline:true,ticks:'outside',linecolor:'#444',linewidth:1,zeroline:false,automargin:true};
-    const layout={font:FONT,margin:{l:96,r:20,t:44,b:76},showlegend:false,
-      xaxis:{...frame,mirror:true,title:{text:axes.map(i=>AXIS_NAMES[i]).join(' / '),font:AXIS_TITLE_FONT}},
+    // Top margin: room for Save figure above the top y tick label; the
+    // x-axis title sits right under the tick labels (fixed bottom margin), so
+    // the plot keeps its size.
+    const layout={font:FONT,margin:{l:96,r:20,t:55,b:66},showlegend:false,
+      xaxis:{...frame,automargin:false,mirror:true,title:{text:axes.map(i=>AXIS_NAMES[i]).join(' / '),font:AXIS_TITLE_FONT}},
       // log I (Show row): logarithmic axis; points with I ≤ 0 are not drawn.
       yaxis:{...frame,mirror:true,title:{text:normalized() ? 'I (normalized)' : 'I (arb.)',font:AXIS_TITLE_FONT},
         ...(log1D() ? {type:'log',exponentformat:'power',...logRange(traces)} : {type:'linear',rangemode:'tozero'})}};
@@ -1458,11 +1462,7 @@ export function createConvolutionUI(deps){
       'curve,H,K,L,hw_meV,I_arb,dI'];
     const num6=v=>Number.isFinite(v) ? String(Number(v.toFixed(6))) : '';
     for(const c of curves) c.pts.forEach((p,i)=>lines.push(`${c.tag},${p.hkl.map(num6).join(',')},${num6(p.E)},${Number.isFinite(c.I[i]) ? c.I[i].toPrecision(8) : ''},${c.err && Number.isFinite(c.err[i]) ? c.err[i].toPrecision(6) : ''}`));
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([lines.join('\n')+'\n'],{type:'text/csv'}));
-    a.download=csvName(curves.find(c=>c.settings?.dispersion?.file)?.settings.dispersion.file||fileName,'1d');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    downloadText(lines.join('\n')+'\n',csvName(curves.find(c=>c.settings?.dispersion?.file)?.settings.dispersion.file||fileName,'1d'),'text/csv');
   }
 
   // 2D volume: one row per (h, k, l, ħω) point inside the range, with the
@@ -1482,11 +1482,7 @@ export function createConvolutionUI(deps){
         lines.push(`${idx ? `${++n},` : ''}${hkl},${Number(E[e].toFixed(6))},${v.toPrecision(8)}`);
       }
     }
-    const el=document.createElement('a');
-    el.href=URL.createObjectURL(new Blob([lines.join('\n')+'\n'],{type:'text/csv'}));
-    el.download=csvName(volume.settings?.dispersion?.file||fileName,'2d');
-    document.body.appendChild(el); el.click(); el.remove();
-    setTimeout(()=>URL.revokeObjectURL(el.href),1000);
+    downloadText(lines.join('\n')+'\n',csvName(volume.settings?.dispersion?.file||fileName,'2d'),'text/csv');
   }
 
   // ------------------------------------------------------------ CSV input --
@@ -1764,5 +1760,5 @@ export function createConvolutionUI(deps){
     window.addEventListener('resize',()=>{ fitHeight(); resizePlots(); });
     document.addEventListener('click',e=>{ if(e.target?.closest?.('.tab-button,#tabResolution')) requestAnimationFrame(fitHeight); });
   }
-  return {bindConvolutionUI,resizeConvolutionPlots:resizePlots};
+  return {bindConvolutionUI};
 }

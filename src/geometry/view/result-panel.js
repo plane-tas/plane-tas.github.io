@@ -57,7 +57,7 @@ function geometryLimitWarnings(target,displayedAngles){
 // Motor-limit status of one H, K, L, hbar-omega point, exactly as the Angle
 // calculation shows it (used by the Script / Time-estimate validation).
 function geometryPointWarnings(cache,calc){
-  const target=qeGeometryAngles(cache,null,null,calc);
+  const target=qeGeometryAngles(cache,null,calc);
   const a=geometryDisplayedMotorAngles(target,false);
   const out=geometryLimitWarnings(target,a);
   if(target.angles?.warning) out.push('S1 unavailable (reference Q)');

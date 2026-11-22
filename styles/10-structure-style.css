@@ -254,26 +254,12 @@
     .toolbox-subtabs > .toolbox-subtab,
     .geometry-card-tabs > .geometry-card-tab,
     .cif-output-tabs > .cif-output-tab,
-    #structurePanel .structure-config-tabs > button,
-    #structurePanel .generator-mode-tabs > button,
-    .qe-mode-tabs > button,.qe-subtabs > button){
+    #structurePanel .structure-config-tabs > button){
   font-size:var(--tas-tab-text-size)!important;
   line-height:1.3;
 }
 
-/* Structure Editor Style: three equal-width radio selections on one row. */
-#structurePanel .structure-style-modes{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  align-items:center;
-  gap:calc(8px * var(--tas-density));
-  width:100%;
-  min-width:0;
-  margin-bottom:calc(9px * var(--tas-density));
-}
 @container structure-viewer (max-width:360px){
-  #structurePanel .structure-style-modes{gap:calc(4px * var(--tas-density));}
-  #structurePanel .structure-style-modes label{gap:3px;font-size:12px;}
 }
 
 /* Style: preserve the original select/distance/width allocations.  Only the

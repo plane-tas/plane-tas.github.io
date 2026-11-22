@@ -1,7 +1,7 @@
 /* Global foundation (the Anta web font is linked from index.html): element defaults, shared components and utilities used across several panels.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;background:#fff}*{box-sizing:border-box}body{margin:0}.status{font-size:calc(12px * var(--tas-density));color:#222}.shell{display:grid;grid-template-columns:calc(390px * var(--tas-density)) minmax(0,1fr);min-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar{padding:calc(10px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ddd;overflow:auto;max-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar section,.sidebar details,.calc-card,#result{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));margin-bottom:calc(9px * var(--tas-density))}main{padding:calc(12px * var(--tas-density));min-width:0}.grid2,.grid3,.grid4,.grid5,.vector,.toolbar{display:grid;gap:calc(4px * var(--tas-density))}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid5{grid-template-columns:repeat(5,minmax(0,1fr));align-items:end}.vector{grid-template-columns:calc(28px * var(--tas-density)) repeat(3,minmax(0,1fr));align-items:center;margin:calc(3px * var(--tas-density)) 0}.auto-vector{font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}.toolbar{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:calc(8px * var(--tas-density))}label{font-size:calc(12px * var(--tas-density));display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0}input,select,button{font:inherit;min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-radius:calc(4px * var(--tas-density));background:white}input[type=number]{width:10ch;min-width:8ch;max-width:100%}select{width:100%}input[type=checkbox]{width:auto}.checkbox-label{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));align-self:end;min-height:calc(28px * var(--tas-density))}.dark-table{display:grid;grid-template-columns:calc(26px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(70px * var(--tas-density));gap:calc(3px * var(--tas-density));align-items:center;font-size:calc(11px * var(--tas-density))}.chart-grid{display:grid;grid-template-columns:minmax(calc(520px * var(--tas-density)),1.35fr) minmax(calc(430px * var(--tas-density)),1fr);gap:calc(12px * var(--tas-density))}.qe-plot{width:100%;min-height:calc(620px * var(--tas-density))}.geometry{min-height:calc(620px * var(--tas-density))}.powder{min-height:calc(650px * var(--tas-density))}.energy-slider-row{display:flex;gap:calc(12px * var(--tas-density));align-items:center;padding:0 calc(20px * var(--tas-density)) calc(12px * var(--tas-density))}.energy-slider-row label{flex:1}.energy-slider-row input{width:100%}.calc-card{margin-top:calc(8px * var(--tas-density))}.plots{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--tas-density))}.summary{font-size:calc(13px * var(--tas-density));margin-bottom:calc(8px * var(--tas-density))}.error{border:calc(1px * var(--tas-density)) solid #c33;background:#fff4f4;padding:calc(10px * var(--tas-density));margin-bottom:calc(10px * var(--tas-density));white-space:pre-wrap}.hidden{display:none!important}.scan-nav{display:grid;grid-template-columns:auto 1fr auto auto;gap:calc(8px * var(--tas-density));align-items:center;margin-bottom:calc(8px * var(--tas-density))}pre{overflow:auto;font-size:calc(12px * var(--tas-density))}button{cursor:pointer}
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;background:#fff}*{box-sizing:border-box}body{margin:0}.status{font-size:calc(12px * var(--tas-density));color:#222}.shell{display:grid;grid-template-columns:calc(390px * var(--tas-density)) minmax(0,1fr);min-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar{padding:calc(10px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ddd;overflow:auto;max-height:calc(100vh - calc(50px * var(--tas-density)))}.sidebar section,.sidebar details,.calc-card,#result{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));margin-bottom:calc(9px * var(--tas-density))}main{padding:calc(12px * var(--tas-density));min-width:0}.grid2,.grid3,.grid4,.grid5,.vector,.toolbar{display:grid;gap:calc(4px * var(--tas-density))}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.grid5{grid-template-columns:repeat(5,minmax(0,1fr));align-items:end}.vector{grid-template-columns:calc(28px * var(--tas-density)) repeat(3,minmax(0,1fr));align-items:center;margin:calc(3px * var(--tas-density)) 0}.auto-vector{font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}.toolbar{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:calc(8px * var(--tas-density))}label{font-size:calc(12px * var(--tas-density));display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0}input,select,button{font:inherit;min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-radius:calc(4px * var(--tas-density));background:white}input[type=number]{width:10ch;min-width:8ch;max-width:100%}select{width:100%}input[type=checkbox]{width:auto}.checkbox-label{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));align-self:end;min-height:calc(28px * var(--tas-density))}.dark-table{display:grid;grid-template-columns:calc(26px * var(--tas-density)) repeat(3,minmax(0,1fr)) calc(70px * var(--tas-density));gap:calc(3px * var(--tas-density));align-items:center;font-size:calc(11px * var(--tas-density))}.chart-grid{display:grid;grid-template-columns:minmax(calc(520px * var(--tas-density)),1.35fr) minmax(calc(430px * var(--tas-density)),1fr);gap:calc(12px * var(--tas-density))}.qe-plot{width:100%;min-height:calc(620px * var(--tas-density))}.geometry{min-height:calc(620px * var(--tas-density))}.powder{min-height:calc(650px * var(--tas-density))}.calc-card{margin-top:calc(8px * var(--tas-density))}.plots{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--tas-density))}.summary{font-size:calc(13px * var(--tas-density));margin-bottom:calc(8px * var(--tas-density))}.error{border:calc(1px * var(--tas-density)) solid #c33;background:#fff4f4;padding:calc(10px * var(--tas-density));margin-bottom:calc(10px * var(--tas-density));white-space:pre-wrap}.hidden{display:none!important}.scan-nav{display:grid;grid-template-columns:auto 1fr auto auto;gap:calc(8px * var(--tas-density));align-items:center;margin-bottom:calc(8px * var(--tas-density))}pre{overflow:auto;font-size:calc(12px * var(--tas-density))}button{cursor:pointer}
 @media(max-width:1050px){.shell{grid-template-columns:calc(320px * var(--tas-density)) minmax(0,1fr)}.chart-grid{grid-template-columns:1fr}.geometry{min-height:calc(420px * var(--tas-density))}.plots{grid-template-columns:1fr}.grid5{grid-template-columns:repeat(2,minmax(0,1fr))}#singleInputs.grid5{grid-template-columns:repeat(5,minmax(0,1fr))}#scanInputs .grid5{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:760px){.shell{display:block}.sidebar{max-height:none;border-right:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd}.chart-grid{grid-template-columns:1fr}.qe-plot{min-height:calc(520px * var(--tas-density))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .geometry-target{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(4px * var(--tas-density))}
@@ -55,9 +55,6 @@
 .background-label{display:flex;align-items:center;gap:calc(4px * var(--tas-density))}
 .bg-swatch{display:inline-block;width:calc(14px * var(--tas-density));height:calc(3px * var(--tas-density));border-radius:calc(2px * var(--tas-density));flex:0 0 auto}
 .bg-swatch.bg1{background:rgb(0,0,128)}
-.bg-swatch.bg2{background:rgb(165,42,42)}
-.bg-swatch.bg3{background:rgb(44,160,44)}
-.bg-swatch.bg4{background:rgb(148,103,189)}
 
 /* v63: toolbox and powder relation helper */
 .toolbox-card{max-width:calc(1200px * var(--tas-density))}
@@ -119,7 +116,6 @@ textarea:disabled {
 
 /* Q-E readability refinements. */
 .qe-range-control .qe-control-entry{font-size:calc(14px * var(--tas-density));font-weight:600}
-
 
 /* CIF generator */
 
@@ -264,7 +260,6 @@ textarea:disabled {
 .calc-card select,
 #singleMain input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
 #singleMain select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
-.energy-slider-row output{font-size:calc(13px * var(--tas-density))}
 .cif-atom-cell button{white-space:nowrap;padding-left:calc(7px * var(--tas-density));padding-right:calc(7px * var(--tas-density))}
 
 /* CIF preview is a bounded, scrollable review pane like the reflection table. */
@@ -579,7 +574,6 @@ main{
 
 /* v87: multi-peak S2 conversion results */
 
-
 #structurePanel.hidden{
   display:none;
 }
@@ -600,14 +594,6 @@ main{
 
 /* Structure viewer v9 refinements */
 
-/* Structure Viewer final layout: keep controls explicit and avoid runtime CSS overrides. */
-#structurePanel .structure-section-heading{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:calc(10px * var(--tas-density));
-  margin-bottom:calc(8px * var(--tas-density));
-}
 #structurePanel .structure-entry-field{
   display:flex;
   flex-direction:column;
@@ -714,12 +700,11 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
 :is(table,table th,table td,
     .harmonic-table,.harmonic-table > *,
     .time-scan-table,.time-scan-header,.time-scan-index,
-    .s2-conversion-table,.s2-conversion-table th,.s2-conversion-table td,
     .cif-atom-table,.cif-atom-header,.cif-atom-index,
     .cif-thermal-table,.cif-thermal-header,
     .dark-table,.dark-table > *,
     .script-aset-table-header,.script-aset-index,
-    .atoms-table-head,.structure-moment-header){
+    .atoms-table-head){
   font-size:var(--tas-table-text-size)!important;
   line-height:1.35;
 }

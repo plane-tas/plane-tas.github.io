@@ -1,5 +1,6 @@
 // Generator output tabs, CIF generation/download and loading CIF files into the generator.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {downloadText} from '../../core/download.js';
 export function installGeneratorOutput(ctx){
   const {deps:{
     $, currentInstrument, effectiveS2MaxAtEi, getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText
@@ -7,7 +8,7 @@ export function installGeneratorOutput(ctx){
   Object.assign(fn,{
     downloadGeneratedCif, findGeneratorSpaceGroup, generateCifForReview,
     loadCifIntoGenerator, loadParsedCifIntoGenerator, recalculateGeneratedReflections,
-    setCifOutputTab, setUnifiedGeneratorOutputTab, showUnifiedCifPreview, syncPreviewWithLoadedFile
+    setUnifiedGeneratorOutputTab, showUnifiedCifPreview, syncPreviewWithLoadedFile
   });
 
 function recalculateGeneratedReflections(){
@@ -60,8 +61,7 @@ function recalculateGeneratedReflections(){
   }
 }
 
-// v59: Nuclear/magnetic editors and all four results share one output workspace.
-// Retain setCifOutputTab for legacy callers and restore logic.
+// Nuclear/magnetic editors and all results share one output workspace.
 // Preview tab: never blank.  While it shows nothing yet (no generated file)
 // or the loaded file, it shows the CIF/mCIF that is loaded now; a generated
 // file stays until Show loaded file.
@@ -110,9 +110,6 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   if(name==='reflections') requestAnimationFrame(()=>fn.renderReflectionPowderPlot?.());
   if(name==='preview') syncPreviewWithLoadedFile();
 }
-function setCifOutputTab(tab){
-  setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
-}
 function generateCifForReview(){
   const generated=fn.buildGeneratedCif();
   cifState.lastGeneratedCifText=generated.text;
@@ -132,10 +129,7 @@ function generateCifForReview(){
 }
 
 function downloadGeneratedCif(text,filename){
-  const blob=new Blob([text],{type:"chemical/x-cif;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),0);
+  downloadText(text,filename,"chemical/x-cif;charset=utf-8");
 }
 
 function normalizedSpaceGroupSymbol(value){

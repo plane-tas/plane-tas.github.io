@@ -1,6 +1,6 @@
 // Fixed-beam display conversion: preserve the established internal meV model.
 // E [meV] = 81.8042 / lambda [Angstrom]^2; k [Angstrom^-1] = 2 PI / lambda.
-const ENERGY_LAMBDA_CONSTANT = 81.8042;
+import {E_LAMBDA as ENERGY_LAMBDA_CONSTANT} from '../core/neutron-units.js';
 const SIDE = {Ei:'i',Ef:'f',lambda_i:'i',lambda_f:'f',ki:'i',kf:'f'};
 const LABEL = {Ei:'Ei (meV)',Ef:'Ef (meV)',lambda_i:'λi (Å)',lambda_f:'λf (Å)',ki:'ki (Å⁻¹)',kf:'kf (Å⁻¹)'};
 

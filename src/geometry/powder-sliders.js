@@ -2,6 +2,7 @@
 // They drive the linked Powder S2 / Q / hbar-omega entries: Q and S2 set the
 // link driver like typing in that field.  Dragging redraws only the TAS
 // geometry; releasing a slider commits through the normal input path.
+import {fixedText} from '../core/number-format.js';
 export function createPowderGeometrySliders(deps){
   const {$, checkedValue, parseNumericValue, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs,
     hwRange, renderGeometryNow}=deps;
@@ -9,8 +10,7 @@ export function createPowderGeometrySliders(deps){
   const ids={hw:'powderSliderHW',q:'powderSliderQ',s2:'powderSliderS2'};
   const fields={hw:'powderGeomHW',q:'powderGeomQ',s2:'powderGeomS2'};
   let dragging=false;
-  const fmt=(x,d)=>{const v=Number(x);return Math.abs(v)<0.5*Math.pow(10,-d)?'0':String(Number(v.toFixed(d)));};
-  const clean=(x,d=4)=>{ const v=Number(Number(x).toFixed(d)); return String(Object.is(v,-0)?0:v); };
+  const fmt=fixedText, clean=fixedText;
   const value=id=>parseNumericValue($(id)?.value);
   function setRange(el,min,max,step,v){
     if(!el) return;

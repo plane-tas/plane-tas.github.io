@@ -28,12 +28,6 @@ export function composeTasSense(base,geometry="W"){
   const c=x=>x>0 ? "+" : "-";
   return c(m)+c(sample)+c(analyzer);
 }
-// The W Sense and the Geometry of any Sense (inverse of composeTasSense).
-export function splitTasSense(sense){
-  const s=normalizeTasSense(sense);
-  const u=s[1]===s[0], anti=s[2]===s[1];
-  return {base:s[0]==="-" ? "-+-" : "+-+",geometry:(anti ? "anti-" : "")+(u ? "U" : "W")};
-}
 // A Sense and a Geometry as saved by any version: a W Sense with its Geometry,
 // or (briefly) the whole Sense in one value.
 export function readTasSense(sense,geometry){

@@ -16,13 +16,6 @@
   padding:calc(12px * var(--tas-density));
   background:#fafafa;
 }
-.structure-section-heading{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:calc(8px * var(--tas-density));
-  margin-bottom:calc(8px * var(--tas-density));
-}
 .structure-help-text{
   margin-top:calc(8px * var(--tas-density));
   line-height:1.4;
@@ -80,20 +73,6 @@
 .structure-control-section{
   padding:calc(10px * var(--tas-density));
 }
-.structure-color-palette{
-  display:grid;
-  grid-template-columns:repeat(6,calc(22px * var(--tas-density)));
-  gap:calc(3px * var(--tas-density));
-  align-items:center;
-}
-.structure-color-chip{
-  width:calc(22px * var(--tas-density));
-  min-width:calc(22px * var(--tas-density));
-  height:calc(22px * var(--tas-density));
-  padding:0;
-  border:calc(2px * var(--tas-density)) solid transparent;
-  border-radius:calc(4px * var(--tas-density));
-}
 .structure-moment-row{
   display:grid;
   grid-template-columns:auto minmax(calc(125px * var(--tas-density)),1fr) calc(150px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(145px * var(--tas-density)),1fr) calc(42px * var(--tas-density));
@@ -129,10 +108,7 @@
   height:calc(100vh - calc(182px * var(--tas-density)));
 }
 @media (max-width: 1450px){
-  
-  .structure-color-palette{grid-template-columns:repeat(4,calc(22px * var(--tas-density)))}
   .structure-moment-row{grid-template-columns:auto minmax(calc(110px * var(--tas-density)),1fr);}
-  .structure-moment-row .structure-color-palette{grid-column:1/-1;}
 }
 @media (max-width:1180px){
   .structure-viewer-main{min-height:auto}
@@ -635,16 +611,3 @@
 /* Unit-cell frame reference: second, unlabelled row under Structure controls. */
 #structurePanel .structure-plot-toolbar{flex-wrap:wrap!important;}
 /* Keep the selector on its own second row without stretching it across the toolbar. */
-#structurePanel .structure-plot-toolbar .structure-cell-reference-row select{
-  display:block;
-  box-sizing:border-box;
-  width:calc(176px * var(--tas-density));
-  max-width:100%;
-  min-width:0;
-}
-#structurePanel .structure-cell-reference-row option:disabled{color:#888;}
-#structurePanel .structure-plot-toolbar .structure-cell-reference-row select {
-  width:calc(176px * var(--tas-density));
-  max-width:100%;
-  min-width:0;
-}

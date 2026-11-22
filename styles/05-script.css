@@ -413,9 +413,6 @@
   line-height:1.5!important;
 }
 
-/* Inner tab rows (e.g. Angle calculation / Time estimate). */
-.geometry-inner-tabs{margin-top:0}
-
 /* vUI: compact instrument setup and balanced sample selectors. */
 .instrument-primary-row{display:grid;grid-template-columns:2fr 1fr 1fr;gap:calc(4px * var(--tas-density));align-items:end;min-width:0}
 .structure-help-text,

@@ -5,6 +5,7 @@
 // Unpolarized neutrons: nuclear and magnetic intensities add without interference.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {PLOT_FONTS} from '../../core/plot-fonts.js';
+import {downloadText} from '../../core/download.js';
 export function installReflectionTable(ctx){
   const {deps:{$, RL_calc, canonicalReflectionHkl, clamp, compareHkl, getSelectedCifFileName, hklKey, hklToQ, norm, rad2deg},
     state:cifState, fn}=ctx;
@@ -410,7 +411,7 @@ function renderReflectionPowderPlot(){
   // saved figure).
   const titleText=`${reflectionSourceFileName()||'Structure'} diffraction pattern, λ = ${wavelengthText(lambda)} Å`;
   syncReflectionCsvNames();
-  window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},
+  window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:62,b:110},font:{size:FONT},
     title:{text:titleText,font:{size:PLOT_FONTS.title},x:0.5,xanchor:'center'},
     // d has no finite value at 2θ = 0: autorange.
     xaxis:{title:{text:xTitle,font:{size:AXIS_FONT},standoff:10},tickfont:{size:FONT},zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,...grid,
@@ -515,6 +516,8 @@ function csvFileName(id,auto){
   const typed=String($(id)?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');
   return `${typed||auto}.csv`;
 }
+// Reflection CSVs are saved as text/csv (the CIF output uses its own type).
+const downloadCsv=(text,filename)=>downloadText(text,filename,'text/csv;charset=utf-8');
 function downloadPowderPattern(){
   const p=cifState.powderPattern;
   if(!p || !p.tth?.length) throw new Error('No powder pattern is available to download.');
@@ -528,7 +531,7 @@ function downloadPowderPattern(){
     const profile=t===undefined ? ['','','','','',''] : [csvFixed4(t),csvFixed4(4*Math.PI*s(t)/p.lambda),csvFixed4(p.lambda/(2*s(t))),csvSig5(p.yT[i]),csvSig5(p.yN[i]),csvSig5(p.yM[i])];
     lines.push([...profile,...colN.cells(p.peaksN?.[i]),...colM.cells(p.peaksM?.[i])].join(','));
   }
-  fn.downloadGeneratedCif(lines.join('\n'),csvFileName('cifPatternCsvName',`${reflectionCsvBase()}_powder_pattern`));
+  downloadCsv(lines.join('\n'),csvFileName('cifPatternCsvName',`${reflectionCsvBase()}_powder_pattern`));
 }
 function downloadCifReflectionTable(){
   const rows=sortedRows(displayRows());
@@ -537,7 +540,7 @@ function downloadCifReflectionTable(){
   const col=reflectionCsvColumns({powder});
   const lines=[...reflectionCsvComments(powder ? 'reflections (powder)' : 'reflections (single crystal)'),
     col.header.join(','),...rows.map(r=>col.cells(r).join(','))];
-  fn.downloadGeneratedCif(lines.join('\n'),powder
+  downloadCsv(lines.join('\n'),powder
     ? `${reflectionCsvBase()}_reflections_powder.csv`
     : csvFileName('cifTableCsvName',`${reflectionCsvBase()}_reflections_single_crystal`));
 }

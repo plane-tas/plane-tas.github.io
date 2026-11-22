@@ -2,6 +2,7 @@
 // parent crystallographic space group, determine the retained magnetic group.
 import {parseCifDocument, parseCifStructure} from './cif-structure.js';
 import {collinearSignAmbiguous, modulatedMoment, symmetryPhaseShift} from '../magnetic/magnetic-reflections.js';
+import {cross, dot} from '../core/tas-core.js';
 
 const wrap=x=>((x%1)+1)%1;
 // Identity of an expanded atom that does not depend on the order in which a
@@ -101,8 +102,6 @@ function basis(l){
 }
 function toCrystal(cart,l){
   const [A,B,C]=basis(l).map(v=>{const len=Math.hypot(...v);return v.map(x=>x/len);});
-  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-  const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
   const volume=dot(A,cross(B,C));
   if(Math.abs(volume)<1e-10)throw new Error('Invalid cell metric.');
   return [dot(cart,cross(B,C)),dot(cart,cross(C,A)),dot(cart,cross(A,B))].map(x=>x/volume);

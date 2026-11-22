@@ -2,6 +2,7 @@
 // The target Q is written as a*U + b*V (+ any out-of-plane part of the typed
 // HKL, kept unchanged). Dragging only redraws the geometry from the current
 // Q-E cache; releasing a slider commits through the normal input path.
+import {fixedText} from '../core/number-format.js';
 export function createGeometrySliders(deps){
   const {$, checkedValue, collectResolutionBase, getSingleCache, hklToQ, makeSpiceScatteringPlaneBasis,
     norm, dot, num, renderGeometryNow, syncMapHWFromTarget, syncMapWFromTarget}=deps;
@@ -12,7 +13,7 @@ export function createGeometrySliders(deps){
   // step, so the unmoved sliders must not be read back (that rounded the other
   // H/K/L and hbar-omega entries to the slider steps).
   const exact={a:NaN,b:NaN,c:NaN,hw:NaN};
-  const fmt=(x,d)=>{const v=Number(x);return Math.abs(v)<0.5*Math.pow(10,-d)?'0':String(Number(v.toFixed(d)));};
+  const fmt=fixedText;
 
   // Plane basis and the decomposition hkl = a*U + b*V + rest.
   function plane(){

@@ -1,5 +1,6 @@
 import {inferOrthogonalInPlaneHKL} from '../resolution-core.js';
 import {selectedTasSense} from '../../app/dom-utils.js';
+import {downloadBlob, downloadText} from '../../core/download.js';
 // Resolution: comparison of kept single-point results.
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
 //
@@ -335,7 +336,6 @@ export function installResolutionComparison(ctx){
     tableSig=sig;
     body.replaceChildren(); head.replaceChildren();
     body.closest('table')?.classList.toggle('scan',scan);
-    const empty=!rows.length;
     const cell=(tag,text,attrs={})=>{ const c=document.createElement(tag); c.textContent=text; for(const [k,v] of Object.entries(attrs)) c.setAttribute(k,v); return c; };
     const show=shown();
     // The position (h, k, l, ħω) is always shown, right of the colour; the
@@ -660,8 +660,7 @@ export function installResolutionComparison(ctx){
     }finally{ if(!scan) renderPlots(); }
     imgs.forEach((im,i)=>{ const cx=gap+(i%2)*(pw+gap), cy=gap+Math.floor(i/2)*(ph+gap); ctx.drawImage(im,cx,cy,pw,ph); });
     const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=scan ? 'scan-figure.png' : 'comparison-figure.png';
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    downloadBlob(blob,scan ? 'scan-figure.png' : 'comparison-figure.png');
   }
   // Save CSV: every kept result with all its columns, whatever Show is.
   // Widths in the unit and coordinates of the table (projection = incoherent,
@@ -718,10 +717,9 @@ export function installResolutionComparison(ctx){
   };
   $('resolutionCompareSaveCsv')?.addEventListener('click',()=>{
     const text=comparisonCsv(); if(!text) return;
-    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+text],{type:'text/csv'})); a.download=csvFileName();
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    downloadText('\ufeff'+text,csvFileName(),'text/csv');
   });
-  $('resolutionCompareSaveFigure')?.addEventListener('click',()=>saveComparisonFigure().catch(err=>setKeepNote(`Save figure: ${err?.message||err}`,true)));
+  $('resolutionCompareSaveFigure')?.addEventListener('click',()=>saveComparisonFigure().catch(err=>setKeepNote(`Save figure: ${err?.message||err}`)));
   $('calcMode')?.addEventListener('change',()=>requestAnimationFrame(renderResolutionComparison));
   $('unit')?.addEventListener('change',()=>requestAnimationFrame(renderResolutionComparison));
   // Q∥, Q⊥in, E, Q⊥out: the widths along Q have no fixed r.l.u. direction, so

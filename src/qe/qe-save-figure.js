@@ -2,6 +2,7 @@
 // colour bars and their min / max labels) and, under it, the legend items
 // that are shown (hidden ones are left out), as one PNG.  Plotly's own
 // download button saves the plot only, without the legend outside it.
+import {downloadBlob} from '../core/download.js';
 
 const loadImage=src=>new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
 
@@ -62,6 +63,5 @@ export async function saveQEFigure({plotId,legendId,filename}){
     for(const it of row){ it.draw(ctx,x,y); ctx.fillStyle='#222'; ctx.fillText(it.text,x+sw,y); x+=it.iw+gap; }
   });
   const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  downloadBlob(blob,filename);
 }

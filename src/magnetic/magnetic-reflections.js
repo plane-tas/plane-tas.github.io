@@ -1,17 +1,16 @@
 import {automaticMagneticFormFactorWeight, computeMagneticFormFactor, magneticIonConfigurations} from './magnetic-form-factor.js';
 import {MAGNETIC_ION_DATA} from './magnetic-form-factor-data.js';
+import {add, cross, dot, norm, scale} from '../core/tas-core.js';
 // Bragg intensities from a fully specified COMMENSURATE magnetic motif.
 // Intensity is the unpolarized magnetic structure factor in barn per magnetic
 // cell, excluding scale, Lorentz, absorption, extinction and form-factor terms.
 export const MAGNETIC_BRAGG_CONSTANT_BARN = 0.07265; // (gamma*r0/2)^2
 const twopi=2*Math.PI;
-const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
-const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-const norm=a=>Math.hypot(...a);
 const unit=a=>{const n=norm(a);return n>1e-12?a.map(x=>x/n):[0,0,0];};
-const plus=(a,b)=>a.map((x,i)=>x+b[i]);
-const times=(a,s)=>a.map(x=>x*s);
-function rotate(v,axis,angle){const u=unit(axis),c=Math.cos(angle),s=Math.sin(angle);return plus(plus(times(v,c),times(cross(u,v),s)),times(u,dot(u,v)*(1-c)));}
+function rotate(v,axis,angle){const u=unit(axis),c=Math.cos(angle),s=Math.sin(angle);return add(add(scale(v,c),scale(cross(u,v),s)),scale(u,dot(u,v)*(1-c)));}
+// Form factor of the magnetic ion of each element (the ion chosen per
+// element, otherwise automatic).
+export const ionFormFactor=ionByElement=>(element,Q)=>magneticIonFormFactor(element,Q,ionByElement);
 export function latticeVectors(l){
   const [a,b,c]=[l.a,l.b,l.c].map(Number);
   const [alpha,beta,gamma]=[l.alpha,l.beta,l.gamma].map(x=>Number(x)*Math.PI/180);
@@ -24,16 +23,16 @@ export function latticeVectors(l){
 }
 export function cartesianMoment(crystalAxis,lattice){
   const axes=latticeVectors(lattice).map(unit);
-  return crystalAxis.reduce((v,x,i)=>plus(v,times(axes[i],Number(x)||0)),[0,0,0]);
+  return crystalAxis.reduce((v,x,i)=>add(v,scale(axes[i],Number(x)||0)),[0,0,0]);
 }
 export function reciprocalBasis(lattice){
   const [a,b,c]=latticeVectors(lattice);
   const vol=dot(a,cross(b,c));
-  return [times(cross(b,c),twopi/vol),times(cross(c,a),twopi/vol),times(cross(a,b),twopi/vol)];
+  return [scale(cross(b,c),twopi/vol),scale(cross(c,a),twopi/vol),scale(cross(a,b),twopi/vol)];
 }
 export function reciprocalVector(lattice,hkl){
   const B=reciprocalBasis(lattice);
-  return hkl.reduce((v,x,i)=>plus(v,times(B[i],x)),[0,0,0]);
+  return hkl.reduce((v,x,i)=>add(v,scale(B[i],x)),[0,0,0]);
 }
 // Finite supercell for k=(n1/d1,n2/d2,n3/d3). Strict rational check
 // avoids silently replacing a genuinely incommensurate modulation.
@@ -130,7 +129,7 @@ export function magneticStructureFactorSquared(motif,hkl,{formFactor=()=>1}={}){
   const n=Q.map(x=>x/q),re=[0,0,0],im=[0,0,0];
   for(const s of motif.sites){
     if(!s.moment || norm(s.moment)<1e-12)continue;
-    const v=plus(s.moment,times(n,-dot(s.moment,n)));
+    const v=add(s.moment,scale(n,-dot(s.moment,n)));
     const ff=Number(formFactor(s.element,q));
     if(!Number.isFinite(ff))throw Error('Invalid magnetic form factor.');
     const amp=(s.occupancy??1)*ff*debyeWaller(s,hkl,q,rlen);
@@ -206,7 +205,7 @@ export function magneticBraggPeaks(motif,wavelength,{twoThetaMax=180,maxCandidat
     if(!(q>1e-9)||q>qMax+1e-8)continue;
     const theta2=2*Math.asin(Math.min(1,q*lambda/(4*Math.PI)))*180/Math.PI;
     if(theta2>twoThetaMax+1e-8)continue;
-    const formFactor=(element,Q)=>magneticIonFormFactor(element,Q,ionByElement);
+    const formFactor=ionFormFactor(ionByElement);
     const intensity=magneticStructureFactorSquared(motif,hkl,{formFactor});
     if(intensity>1e-12){
       const ff=magneticFormFactorDisplay(motif,q,ionByElement);

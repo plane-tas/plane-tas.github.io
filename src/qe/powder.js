@@ -4,6 +4,7 @@ import {PI, add, clamp, deg2rad, norm, rad2deg, reciprocalVectors, scale} from '
 import {nuclearExtinctionThreshold, nuclearStructureFactorSquared} from '../cif/cif-structure.js';
 import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
+import {magneticRatioText} from './bragg-intensity.js';
 
 export function createPowder(deps){
   const {
@@ -248,7 +249,7 @@ function redrawPowder(){
   return true;
 }
 function drawPowder(state){
-  const {hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,nuclearShaded,magneticShaded,nuclearMax,magneticMax}=state;
+  const {hw,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,nuclearShaded,magneticShaded,nuclearMax,magneticMax}=state;
   const traces=state.traces.slice();
   const nuclearBar=magneticShaded ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
   const magneticBar={len:0.34,y:0.23};
@@ -602,11 +603,7 @@ function calculatePowder(){
   // Strongest magnetic line relative to the strongest nuclear line (both in
   // barn per crystallographic cell, same Lorentz factor): M = x N.
   const ratioBox=$?.('mfMaxRatio');
-  if(ratioBox){
-    const ratio=(magneticShaded && nuclearMax>0) ? magneticMax/nuclearMax : NaN;
-    const fmt=v=>v>=0.01 ? String(Number(v.toPrecision(2))) : v.toExponential(1).replace(/e([+-])(\d+)/,(m,sg,d)=>`×10${sg==='-'?'⁻':''}${[...d].map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')}`);
-    ratioBox.textContent=Number.isFinite(ratio) ? `M = ${fmt(ratio)} N` : '';
-  }
+  if(ratioBox) ratioBox.textContent=magneticRatioText(magneticMax,nuclearMax,magneticShaded);
   lastPowderState={title:qeMapTitle({inst,energyMode,Ei:E,Ef:E}),traces,hw,Qlim,Qdraw,hwmin,hwmax,nuclearGroups,magneticGroups,
     nuclearShaded,magneticShaded,nuclearMax,magneticMax};
   drawPowder(lastPowderState);

@@ -2,6 +2,7 @@
 // Q is |momentum transfer| in Å^-1; the plot shows f(Q) and |f(Q)|², not full magnetic intensity.
 import { MAGNETIC_ION_DATA } from './magnetic-form-factor-data.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
+import {downloadText} from '../core/download.js';
 
 const FOUR_PI=4*Math.PI;
 const ORBITALS='SPDFGHIKLMNOQRTUVWXYZ';
@@ -340,11 +341,7 @@ export function initializeMagneticFormFactorUI(){
   download.addEventListener('click',()=>{
     if(!exportRows.length)return;
     const rows=['Q_A^-1,f(Q),abs_f(Q)^2',...exportRows.map(row=>row.map(v=>v.toPrecision(12)).join(','))];
-    const blob=new Blob([rows.join('\n')+'\n'],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download=`magnetic_form_factor_${ion.value}.csv`;
-    document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    downloadText(rows.join('\n')+'\n',`magnetic_form_factor_${ion.value}.csv`,'text/csv;charset=utf-8');
   });
   syncConfig();render();
   // Restore the selected plot on the first visible frame after a page reload.

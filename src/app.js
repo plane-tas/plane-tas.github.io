@@ -2,7 +2,7 @@ import {
   PI, deg2rad, rad2deg, clamp,
   add, sub, scale, dot, norm, cross, normalize,
   RL_calc, UB_calc, makeSpiceScatteringPlaneBasis,
-  linspace, arange
+  linspace
 } from "./core/tas-core.js";
 import {RL_calc as RLRes, inferOutOfPlaneHKL, calcResolution} from "./resolution/resolution-core.js";
 import {
@@ -47,7 +47,7 @@ import {createPowderGeometrySliders} from './geometry/powder-sliders.js';
 import {createConvolutionUI} from './convolution/convolution-ui.js';
 import {installGeometryNumericInputs, installNumericInputGuard} from './app/numeric-inputs.js';
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
-import {formatHKL, hklToQ, isAllowedByCentering, maxArray} from './core/hkl-utils.js';
+import {formatHKL, hklToQ, isAllowedByCentering} from './core/hkl-utils.js';
 import {createAppBootstrap} from './app/bootstrap.js';
 
 const instruments = new Map();
@@ -56,7 +56,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, setCifOutputTab, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryPointWarnings, updateGeometryTargetVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryPointWarnings, updateGeometryTargetVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal;
@@ -80,21 +80,21 @@ const {
 });
 
 const {
-  CRYSTAL_NAMES, s2DependsOnEi,
+  CRYSTAL_NAMES,
   syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
-  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
-  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable, energyTransferRange, energyTransferGrid,
-  syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
+  applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, currentInstrument, effectiveS2MaxAtEi,
+  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, energyTransferRange, energyTransferGrid,
+  syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
 }=createInstrumentSetup({
   $, checkedValue, clearResolutionResults:(...args)=>clearResolutionResults(...args), instruments, num,
   setStatus, tasConventionFromLegacyUiSense, updateAutoW:(...args)=>updateAutoW(...args),
-  updateEnergyLabel, getFixedBeamControls:()=>fixedBeamControls, getSingleCache:()=>singleCache
+  updateEnergyLabel, getFixedBeamControls:()=>fixedBeamControls
 });
 // Instrument JSON Save / Load and the built-in Custom instrument.
 const {addLocalInstruments, bindInstrumentJsonButtons}=createInstrumentJsonIO({
   $, instruments, refreshSelect:(...args)=>refreshSelect(...args), currentInstrument, crystalNames:CRYSTAL_NAMES,
-  s2DependsOnEi, setStatus, showError
+  setStatus, showError
 });
 bindInstrumentJsonButtons();
 // 3rd collimator Soller / radial; the analyzer horizontal focusing selects radial.
@@ -130,7 +130,7 @@ const {
   $, checkedValue, hklToQ, num, parseNumericValue,
   renderQEVectorMap:(...args)=>renderQEVectorMap(...args),
   renderSingle:(...args)=>renderSingle(...args), getSingleCache:()=>singleCache,
-  renderGeometry:(...args)=>renderGeometry(...args), rangeTable:(...args)=>rangeTable(...args)
+  renderGeometry:(...args)=>renderGeometry(...args)
 });
 
 const {
@@ -145,7 +145,7 @@ const {
 }=createPowder({
   backgroundColor, backgroundMaterials, checkedValue, currentInstrument, currentPlotRanges,
   effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL, hklToQ, isAllowedByCentering,
-  latticeParams, num, powderWavevectors:(...args)=>powderWavevectors(...args), rangeTable, energyTransferRange, energyTransferGrid,
+  latticeParams, num, powderWavevectors:(...args)=>powderWavevectors(...args), energyTransferRange, energyTransferGrid,
   renderQEExternalLegend:(...args)=>renderQEExternalLegend(...args), selectedBackgrounds,
   selectedSampleCentering:(...args)=>selectedSampleCentering(...args), validateEffectiveS2Max,
   getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null,
@@ -153,7 +153,7 @@ const {
 });
 
 const {
-  ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
+  nearestHWIndex, renderQEExternalLegend,
   renderSingle, singleMapBraggHoverAngles, updateGeometryTargetMarker
 }=createQESingleRender({
   $, backgroundColor, bindSingleRluGrid:(...args)=>bindSingleRluGrid(...args),
@@ -394,7 +394,7 @@ function updateBraggPeakCheck(){
   const elasticAngles=hkl=>{
     const energyMode=$('energyMode')?.value, E=num('energy');
     const cache=singleCache || {energyMode,Ei:E,Ef:E};
-    return qeGeometryAngles(cache,null,null,{h:hkl[0],k:hkl[1],l:hkl[2],hw:0}).angles;
+    return qeGeometryAngles(cache,null,{h:hkl[0],k:hkl[1],l:hkl[2],hw:0}).angles;
   };
   if(String(s1Box?.value??'').trim()===''){
     // Show (in grey) the S1 at which peak 1 sits with ki ⟂ U, the
@@ -588,7 +588,7 @@ function updateModeVisibility(){
 }
 
 
-function qeGeometryAngles(cache, senseOverride=null, uiSenseOverride=null, calcOverride=null){
+function qeGeometryAngles(cache, uiSenseOverride=null, calcOverride=null){
   const calc=calcOverride || {h:num("geomH"),k:num("geomK"),l:num("geomL"),hw:num("geomHW")};
   // Reuse exactly the same motor-angle calculation as Resolution & Angle.
   // Only override the fixed energy when Q-E Range is in lambda/2 mode, because
@@ -613,7 +613,6 @@ function qeGeometryAngles(cache, senseOverride=null, uiSenseOverride=null, calcO
   b.config.sense=convention.sense;
   b.config.s1sign=convention.s1sign;
   b.config.sign_config=convention.sense;
-  void senseOverride; // legacy argument retained for call-site compatibility
   const angles=tasMotorAngles(calc,b);
   const Ei=cache.energyMode==="Ei fixed" ? cache.Ei : cache.Ef+calc.hw;
   const Ef=cache.energyMode==="Ei fixed" ? cache.Ei-calc.hw : cache.Ef;
@@ -772,12 +771,6 @@ $("resolutionToGeometry")?.addEventListener("click",()=>{
   scheduleRecalc();
 });
 
-// Either S2 control may be used as the user's entry point.  Effective is an
-// absolute value; convert it to Delta before the normal recalculation handler
-// runs.  Editing Delta needs no conversion because Effective is derived from it.
-$('S2maxEffective')?.addEventListener('input',syncS2DeltaFromEffective);
-$('S2maxEffective')?.addEventListener('change',syncS2DeltaFromEffective);
-
 document.querySelectorAll("input,select").forEach(el=>{
   if(el.closest?.('.time-estimate-pane')) return;
   // Display controls of the Resolution results (Show, Graph, colours, the
@@ -860,14 +853,14 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
 ({
   calculateSingleCrystal
 }=createQESingleCrystal({
-  $, PI, RL_calc, UB_calc, add, arange, backgroundColor, backgroundMaterials, backgroundPowderPeaks,
+  $, PI, RL_calc, UB_calc, add, backgroundColor, backgroundMaterials, backgroundPowderPeaks,
   calcQ0, centeringFromSpaceGroup:(...args)=>centeringFromSpaceGroup(...args), checkedValue, clamp, currentInstrument,
   deg2rad, dot, effectiveOrientationReference, effectiveS2MaxAtEi, enabledPropagationVectors, formatHKL,
   getDarkAssets, getSelectedCifFileName:()=>selectedCifFileName,
   getNuclearCifStructure:()=>nuclearStructureForSelectedCif?.() ?? null,
   getMagneticPeakIntensities:qMax=>magneticPeakIntensities?.(qMax) ?? null,
-  hklToQ, isAllowedByCentering, latticeParams, linspace, makeSpiceScatteringPlaneBasis, maxArray, norm,
-  nuclearStructureFactorSquared, num, rad2deg, rangeTable, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons,
+  hklToQ, isAllowedByCentering, latticeParams, linspace, makeSpiceScatteringPlaneBasis, norm,
+  nuclearStructureFactorSquared, num, rad2deg, energyTransferRange, energyTransferGrid, rebuildGeometryMatchedDarkPolygons,
   representativePowderHklText, scale, selectedBackgrounds, selectedS1Sign,
   selectedSampleSpaceGroup:(...args)=>selectedSampleSpaceGroup(...args), selectedTasSense, tasConvention,
   tasPhiLabDegForConvention, tasPlotPhiFromCrystalPhiForConvention, validateEffectiveS2Max, wrap180, fourCircleSignFactors
@@ -893,11 +886,10 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   clearResolutionResults
 }=createResolutionUI({
   $, tasMotorAngles, PI, RLRes, add, calcResolution, checkedValue, clamp, clearError, currentInstrument, deg2rad,
-  hklInCurrentScatteringPlane:(...args)=>hklInCurrentScatteringPlane(...args), hklToQ, inferOutOfPlaneHKL, latticeParams,
+  inferOutOfPlaneHKL, latticeParams,
   linspace, markResolutionScanDirty, norm, num, parseNumericValue, powderS2ForQAtHW,
-  propagationVectorIndices, rad2deg, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
-  scheduleRecalc, selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
-  showError, tasConvention, tasConventionFromLegacyUiSense, userFacingTasMessage
+  propagationVectorIndices, rad2deg,
+  scheduleRecalc, selectedS1Sign, selectedTasSense, tasConvention, tasConventionFromLegacyUiSense, userFacingTasMessage
 }));
 
 ({
@@ -970,7 +962,6 @@ createConvolutionUI({
   centeringFromSpaceGroup,
   selectedSampleSpaceGroup,
   selectedSampleCentering,
-  setCifOutputTab,
   initializeCifGenerator,
   nuclearStructureForSelectedCif,
   magneticPeakIntensities,
@@ -1004,14 +995,14 @@ createConvolutionUI({
   saveLeftPanelState,
   restoreLeftPanelState
 }=createUIShell({
-  $, BACKGROUND_SLOTS, add, applyInstrumentDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults,
+  $, BACKGROUND_SLOTS, add, applyInstrumentDefaults, applyInstrumentTypeChange,
   applySampleEnvironmentDefaults, backgroundRowValues, buildResolutionLattice, checkedValue, currentGeometryCardTab,
   darkAssetIds, darkAssetSlots, darkAssetValues, markResolutionScanDirty,
   mountTimeEstimateForScript, propagationVectorValues, refreshDarkEnvironmentSelect, renderGeometry, renderQEVectorMap,
   renderResolutionScan, renderSingle, replaceBackgroundRows, replaceDarkAssets, replacePropagationVectors,
-  resolutionPanelIsVisible, scheduleRecalc, selectedS1Sign, setBackgroundCount, setCifOutputTab, setDarkAssetCount,
+  resolutionPanelIsVisible, scheduleRecalc, selectedS1Sign, setBackgroundCount, setDarkAssetCount,
   setDarkRangeCount, setGeometryCardTab, setPropagationVectorCount,
-  setQEMapTab, setupTasConventionUI, sub, updateAutoW, updateBackgroundSelectAvailability, updateDarkReferenceUI,
+  setQEMapTab, updateAutoW, updateBackgroundSelectAvailability, updateDarkReferenceUI,
   updateEnergyLabel, updateModeVisibility, updateOrientationReferenceUI, updateResolutionPlaneWarning, updateS2MaxDisplay,
   updateSupermirrorUI, getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
   getSelectedCifStructure:()=>selectedCifStructure,
@@ -1033,7 +1024,7 @@ const {
   doScanResolution:(...args)=>doScanResolution(...args),
   enableGlobalUIPersistence:(...args)=>enableGlobalUIPersistence(...args),
   enableRightPanelPersistence:(...args)=>enableRightPanelPersistence(...args),
-  ensureNuclearLabelControl, ensureQESliderControls, fillCrystal,
+  fillCrystal,
   flipScatteringPlaneUV:(...args)=>flipScatteringPlaneUV(...args),
   initializeCifGenerator:(...args)=>initializeCifGenerator(...args), initializeNeutronData,
   initializeResponsivePlotResize:(...args)=>initializeResponsivePlotResize(...args),

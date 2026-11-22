@@ -2,6 +2,7 @@
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {normalizeS1Sign, readTasSense, tasConvention} from '../core/tas-conventions.js';
 import {fileTasConvention, s2FileRange} from './s2-range.js';
+import {energyFromWavelength, wavelengthFromEnergy} from '../core/neutron-units.js';
 import {sideRange, sideRangeFields} from './motor-range.js';
 import {selectedTasSense} from './dom-utils.js';
 
@@ -223,7 +224,6 @@ function s2SideLimits(inst){
 }
 const S2_SIDE_ERROR='The S2 range of the instrument does not reach this scattering side (Sense S).';
 function applyInstrumentTypeDefaults(inst=currentInstrument()){
-  const qr=inst.qe_range||{};
   // Sample-rotation (S1) limits; instruments without them keep the full turn.
   // Monochromator / analyzer angle ranges (editable; blank = not given).
   applyAngleRangeDefaults('M2',inst); applyAngleRangeDefaults('A2',inst);
@@ -316,7 +316,7 @@ function analyzerAngleRange(inst){
 }
 function energyAtTwoTheta(d,twoTheta){
   const lambda=2*d*Math.sin(twoTheta*Math.PI/360);
-  return lambda>0 ? 81.8042/(lambda*lambda) : NaN;
+  return lambda>0 ? energyFromWavelength(lambda) : NaN;
 }
 function energyRangeFromAngles(range,d){
   if(!range || !(d>0)) return null;
@@ -389,7 +389,7 @@ function monochromatorTwoTheta(Ei,lambdaHalf=false){
   const d=Number($('dMono')?.value);
   const E=lambdaHalf ? Ei/4 : Ei;
   if(!(d>0) || !(E>0)) return NaN;
-  const s=Math.sqrt(81.8042/E)/(2*d);
+  const s=wavelengthFromEnergy(E)/(2*d);
   return s<1 ? 2*Math.asin(s)*180/Math.PI : NaN;
 }
 function s2LimitRows(inst,table=null){
@@ -492,8 +492,6 @@ function updateS2MaxDisplay(inst=null,EiOverride=NaN,lambdaHalfOverride=null,{re
     out.value='';
   }
 }
-// Kept for callers of the former editable S2 max; nothing to synchronise now.
-function syncS2DeltaFromEffective(){}
 // The scattering side of the page (physical direction of S2).
 function s2SideKey(){
   try{ const c=tasConvention(selectedTasSense(),checkedValue('s1sign')); return `${c.sampleScatteringSign},${c.s1EncoderSign}`; }catch(_e){ return '1'; }
@@ -541,7 +539,7 @@ function syncDEMANDIncidentEnergy(crystal){
   const lambda=DEMAND_MONO_WAVELENGTHS[crystal];
   if(!(lambda>0)) return;
   $('energyMode').value='Ei fixed';
-  $('energy').value=String(Number((81.8042/(lambda*lambda)).toPrecision(12)));
+  $('energy').value=String(Number((energyFromWavelength(lambda)).toPrecision(12)));
   getFixedBeamControls()?.syncFromCanonical({preferredQuantity:'lambda_i'});
   $('energyMode').dispatchEvent(new Event('change',{bubbles:true}));
   $('energy').dispatchEvent(new Event('change',{bubbles:true}));
@@ -557,7 +555,7 @@ function syncWAND2IncidentEnergy(crystal){
   const lambda=WAND2_MONO_WAVELENGTHS[crystal];
   if(!(lambda>0)) return;
   $('energyMode').value='Ei fixed';
-  $('energy').value=String(Number((81.8042/(lambda*lambda)).toPrecision(12)));
+  $('energy').value=String(Number((energyFromWavelength(lambda)).toPrecision(12)));
   getFixedBeamControls()?.syncFromCanonical({preferredQuantity:'lambda_i'});
   $('energyMode').dispatchEvent(new Event('change',{bubbles:true}));
   $('energy').dispatchEvent(new Event('change',{bubbles:true}));
@@ -824,12 +822,12 @@ function applyInstrumentDefaults(){
 }
 
   return {
-    CRYSTAL_NAMES:Object.keys(CRYSTALS).filter(k=>CRYSTALS[k]!=null), formatS2ControlValue, s2DependsOnEi,
+    CRYSTAL_NAMES:Object.keys(CRYSTALS).filter(k=>CRYSTALS[k]!=null),
     syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
-    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, applyInstrumentTypeDefaults, currentInstrument, effectiveS2MaxAtEi,
-    fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, rangeTable,
+    applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, currentInstrument, effectiveS2MaxAtEi,
+    fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer,
     energyTransferRange, energyTransferGrid,
-    syncS2DeltaFromEffective, syncSidebarCrystalSelectors, updateS2MaxDisplay,
-    updateS2MaxDisplayForQERange, updateSupermirrorUI, updateFocusingTypeUI, validateEffectiveS2Max
+    syncSidebarCrystalSelectors, updateS2MaxDisplay,
+    updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
   };
 }

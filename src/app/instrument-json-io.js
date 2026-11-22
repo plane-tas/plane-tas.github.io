@@ -2,6 +2,7 @@ import {movedInstrument} from './instrument-renames.js';
 import {tasConvention} from '../core/tas-conventions.js';
 import {fileTasConvention, s2FileRange} from './s2-range.js';
 import {mergeSideRange} from './motor-range.js';
+import {downloadText} from '../core/download.js';
 // Instrument JSON: Save (current instrument with the sidebar / Resolution
 // settings), Load (adds an instrument file to the Instrument list; the last
 // loaded one is kept in this browser) and the built-in "Custom" instrument (every type and crystal).
@@ -78,7 +79,7 @@ function hasS2Table(json){
 }
 
 export function createInstrumentJsonIO(deps){
-  const {$, instruments, refreshSelect, currentInstrument, crystalNames, s2DependsOnEi, setStatus, showError}=deps;
+  const {$, instruments, refreshSelect, currentInstrument, crystalNames, setStatus, showError}=deps;
 
   // Custom + the instrument loaded last in this browser (after instrument/).
   // Only one loaded instrument is kept: a new Load JSON replaces it.
@@ -229,13 +230,9 @@ export function createInstrumentJsonIO(deps){
   function saveInstrumentJson(){
     try{
       const json=currentInstrumentJson();
-      const blob=new Blob([JSON.stringify(json,null,2)+'\n'],{type:'application/json'});
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download=`${safeFileName(json.name)}.json`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-      setStatus?.(`${a.download} saved`);
+      const name=`${safeFileName(json.name)}.json`;
+      downloadText(JSON.stringify(json,null,2)+'\n',name,'application/json');
+      setStatus?.(`${name} saved`);
     }catch(err){ showError?.(err.message||String(err)); }
   }
 
@@ -274,5 +271,5 @@ export function createInstrumentJsonIO(deps){
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; loadInstrumentJson(f); });
   }
 
-  return {addLocalInstruments, bindInstrumentJsonButtons, currentInstrumentJson};
+  return {addLocalInstruments, bindInstrumentJsonButtons};
 }

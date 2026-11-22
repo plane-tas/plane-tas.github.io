@@ -28,6 +28,8 @@ export function normalize(a, message="zero vector") {
   if (n < EPS) throw new Error(message);
   return scale(a,1/n);
 }
+// Fractional coordinate in [0, 1) (values within 1e-9 below 1 become 0).
+export function wrapFraction(v) { const w=v-Math.floor(v); return w>1-1e-9 ? 0 : w; }
 export function matVec(M,v) {
   return M.map(row => dot(row,v));
 }
@@ -159,11 +161,4 @@ export function reciprocalVectors(a,b,c,alpha,beta,gamma) {
 export function linspace(a,b,n) {
   if (n<=1) return [a];
   return Array.from({length:n},(_,i)=>a+(b-a)*i/(n-1));
-}
-export function arange(start,stop,step) {
-  const out=[];
-  if (step===0) throw new Error("step must not be zero");
-  if (step>0) for(let x=start;x<stop-1e-12;x+=step) out.push(x);
-  else for(let x=start;x>stop+1e-12;x+=step) out.push(x);
-  return out;
 }

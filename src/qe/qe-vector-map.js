@@ -1,5 +1,6 @@
 import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
+import {braggPeakScale} from './bragg-intensity.js';
 // Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 export function createQEVectorMap(deps){
@@ -213,25 +214,8 @@ function addPathBraggTraces(cache,traces,paths,xScale){
   // I = |F|^2 L (L = 1/sin 2θ at the elastic wave vector, or 1), each
   // relative to its maximum over ALL peaks of the map, not only the path.
   const hasCif=!!cache.cifStructure;
-  const magneticIntensity=!!cache.magneticIntensity && hasCif;
-  const braggK=Number(cache.braggK);
-  const lorentzOn=$('qeLorentz')?.value!=='off';
-  const lorentz=p=>{
-    if(!lorentzOn) return 1;
-    const s=Number(p.q)/(2*braggK);
-    if(!(braggK>0) || !Number.isFinite(s) || s>1) return null;
-    return 1/Math.max(1e-3,Math.sin(2*Math.asin(s)));
-  };
-  const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
-  const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
-  // Normalized to the strongest peak drawn on the map (out to 1.1 times the
-  // largest reachable Q, as in the Powder map).
-  const nuclearMax=Math.max(0,...(cache.Gpoints||[]).map(nuclearI));
-  const magneticMax=magneticIntensity ? Math.max(0,...(cache.magPoints||[]).map(magneticI)) : 0;
-  const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
-  const magneticRelative=p=>magneticMax>0 ? magneticI(p)/magneticMax : 0;
-  const lorentzText=p=>{ if(!lorentzOn) return null; const L=lorentz(p); return L ? `L = 1/sin 2θ = ${L.toPrecision(4)}` : 'not reachable elastically'; };
-  const iSymbol=lorentzOn?'²L':'²';
+  const {magneticIntensity,nuclearRelative,magneticRelative,lorentzText,iSymbol}=
+    braggPeakScale(cache,$('qeLorentz')?.value!=='off');
   const entry=(id,fallback)=>{ const v=Number($(id)?.value); return Number.isFinite(v)?v:fallback; };
   const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
   const magneticBar={len:0.34,y:0.23};

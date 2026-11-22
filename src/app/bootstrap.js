@@ -38,7 +38,7 @@ export function createAppBootstrap(deps){
     applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
     bindResolutionManualCalculation, bindToolboxUI, clearSelectedCif, currentGeometryCardTab,
     darkAssetIds, darkAssetSlots, doScanResolution, enableGlobalUIPersistence,
-    enableRightPanelPersistence, ensureNuclearLabelControl, ensureQESliderControls, fillCrystal,
+    enableRightPanelPersistence, fillCrystal,
     flipScatteringPlaneUV, initializeCifGenerator, initializeNeutronData, initializeResponsivePlotResize,
     initializeScriptWorkspaceUI, initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments,
     nearestHWIndex, prepareToolboxUI, propagationVectorIndices, qeCommitPathText, qeDefaultPathText,
@@ -149,7 +149,7 @@ async function initialize(){
   for(const slot of darkAssetSlots()) updateDarkReferenceUI(slot);
   // Geometry starts at the current Reference Q HKL while preserving the current energy transfer.
   setGeometryTargetHKL([num("refh"),num("refk"),num("refl")]);
-  setPropagationVectorCount(propagationVectorIndices().length); setDarkAssetCount(darkAssetSlots().length); updatePropagationVectorLabels(); prepareToolboxUI(); ensureNuclearLabelControl(); ensureQESliderControls(); updateCifUI();
+  setPropagationVectorCount(propagationVectorIndices().length); setDarkAssetCount(darkAssetSlots().length); updatePropagationVectorLabels(); prepareToolboxUI(); updateCifUI();
   try{ await initializeCifGenerator(); }
   catch(err){ console.warn('CIF Generator initialization warning:',err); }
   // Right-side controls are restored only after dynamic Toolbox controls exist and

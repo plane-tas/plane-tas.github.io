@@ -16,6 +16,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {buildMagneticMotif, cartesianMoment, parentIndexingFromMcif} from '../../magnetic/magnetic-reflections.js';
 import {atomSiteKey} from '../mcif-export.js';
+import {wrapFraction} from '../../core/tas-core.js';
 import {buildIncommensurateModel, incommensurateMomentAt, incommensurateSettingFromMcifAtom} from '../../magnetic/incommensurate.js';
 
 export function installMagneticModel(ctx){
@@ -25,7 +26,7 @@ export function installMagneticModel(ctx){
   Object.assign(fn,{currentMagneticModel, editedMcifStructure, magneticMomentLookup});
 
 const MAX_MODEL_ATOMS=3000;
-const wrap=v=>{const w=v-Math.floor(v);return w>1-1e-9?0:w;};
+const wrap=wrapFraction;
 
 // Rewrite the moment loop of the selected mCIF with the edited asymmetric-site
 // moments and re-parse it, so the file's magnetic symmetry propagates them.

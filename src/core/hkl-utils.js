@@ -39,5 +39,3 @@ export function isAllowedByCentering(hkl, centering){
       return true;
   }
 }
-
-export function maxArray(a){ return Math.max(...a); }

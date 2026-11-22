@@ -1,8 +1,9 @@
 // Constant-E map rendering (renderSingle), external legends, hw slider and navigation controls.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
-import {PI, deg2rad, dot, linspace} from '../core/tas-core.js';
+import {dot} from '../core/tas-core.js';
 import {tasConvention} from '../core/tas-conventions.js';
 import {qeMapTitle, qeDomainTitleAnnotation} from './qe-plot-title.js';
+import {braggPeakScale, magneticRatioText} from './bragg-intensity.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 
 export function createQESingleRender(deps){
@@ -78,16 +79,8 @@ function qeLegendSymbol(symbol,color){
   }
   return svg;
 }
-// Constant E map and Q vector–E map share ONE legend (#qeSharedLegend):
-// the union of their items, each toggling the item in both plots.
-const QE_SHARED_PLOTS=['singlePlot','qeVectorPlot'];
-const qeSharedTraces=new Map();
+// Legend of a Q-E map, below the plot (each map has its own).
 function renderQEExternalLegend(hostId,plotId,traces){
-  if(QE_SHARED_PLOTS.includes(plotId) && $('qeSharedLegend')){
-    qeSharedTraces.set(plotId,traces);
-    return renderLegendInto('qeSharedLegend','qe-shared',
-      QE_SHARED_PLOTS.filter(id=>qeSharedTraces.has(id) && !$(id)?.closest('.hidden')).map(id=>[id,qeSharedTraces.get(id)]));
-  }
   return renderLegendInto(hostId,plotId,[[plotId,traces]]);
 }
 function renderLegendInto(hostId,visibilityId,plotTraces){
@@ -305,38 +298,12 @@ function renderSingle(cache,index=0){
   // slice has no nuclear peak, e.g. a four-circle W layer between lattice planes.
   // Plotly drops the colorbar of an empty trace, so carry one unplotted point.
   const colorbarOnly=!!cache.cifStructure && visibleGpoints.length===0;
-  // Peak shading: I = |F|^2 L with the single-crystal (omega scan) Lorentz
-  // factor L = 1/sin 2theta at the elastic wave vector of the fixed energy,
-  // each colorbar relative to its own maximum. |F_N|^2 is in fm^2
-  // (/100 -> barn), |F_M|^2 in barn per crystallographic cell. A peak beyond
-  // 2k cannot be reached elastically: I = 0.
-  const magneticIntensity=!!cache.magneticIntensity && !!cache.cifStructure;
-  const braggK=Number(cache.braggK);
-  const lorentzOn=$('qeLorentz')?.value!=='off';
-  const lorentz=p=>{
-    if(!lorentzOn) return 1;
-    const s=Number(p.q)/(2*braggK);
-    if(!(braggK>0) || !Number.isFinite(s) || s>1) return null;
-    return 1/Math.max(1e-3,Math.sin(2*Math.asin(s)));
-  };
-  const nuclearI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.sf2)) ? p.sf2/100*L : 0; };
-  const magneticI=p=>{ const L=lorentz(p); return (L && Number.isFinite(p.fm2)) ? p.fm2*L : 0; };
-  // Normalized to the strongest peak drawn on the map (out to 1.1 times the
-  // largest reachable Q, as in the Powder map).
-  const nuclearMax=Math.max(0,...(cache.Gpoints||[]).map(nuclearI));
-  const magneticMax=magneticIntensity ? Math.max(0,...(cache.magPoints||[]).map(magneticI)) : 0;
-  const nuclearRelative=p=>nuclearMax>0 ? nuclearI(p)/nuclearMax : 0;
-  // Strongest magnetic peak relative to the strongest nuclear peak (same
-  // units: barn per crystallographic cell, same Lorentz factor).
+  // Peak shading (bragg-intensity.js): I = |F|² L, each colorbar relative to
+  // its own maximum.
+  const {magneticIntensity,nuclearMax,magneticMax,nuclearRelative,magneticRelative,lorentzText,iSymbol}=
+    braggPeakScale(cache,$('qeLorentz')?.value!=='off');
   const ratioBox=$('mfMaxRatio');
-  if(ratioBox){
-    const ratio=(magneticIntensity && nuclearMax>0) ? magneticMax/nuclearMax : NaN;
-    const fmt=v=>v>=0.01 ? String(Number(v.toPrecision(2))) : v.toExponential(1).replace(/e([+-])(\d+)/,(m,sg,d)=>`×10${sg==='-'?'⁻':''}${[...d].map(c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).join('')}`);
-    ratioBox.textContent=Number.isFinite(ratio) ? `M = ${fmt(ratio)} N` : '';
-  }
-  const magneticRelative=p=>magneticMax>0 ? magneticI(p)/magneticMax : 0;
-  const lorentzText=p=>{ if(!lorentzOn) return null; const L=lorentz(p); return L ? `L = 1/sin 2θ = ${L.toPrecision(4)}` : 'not reachable elastically'; };
-  const iSymbol=lorentzOn?'²L':'²';
+  if(ratioBox) ratioBox.textContent=magneticRatioText(magneticMax,nuclearMax,magneticIntensity);
   // Colorbars on the right: nuclear above, magnetic below (single k only).
   const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
   const magneticBar={len:0.34,y:0.23};
@@ -583,8 +550,6 @@ function renderSingle(cache,index=0){
     positionSingleColorbarEntries();
   }).catch(err=>console.warn('Constant E map drawing warning:',err));
 
-  const hwDisplay=$("hwValue");
-  if(hwDisplay) hwDisplay.textContent=`${formatHwSlice(cache.hwList[i])} meV`;
   const hwEntry=$("hwEntry");
   if(hwEntry && document.activeElement!==hwEntry) hwEntry.value=formatHwSlice(cache.hwList[i]);
   updateQESpurionWarning(cache,i);
@@ -594,58 +559,6 @@ function renderSingle(cache,index=0){
 }
 
 
-// The nuclear-label checkbox was removed (labels are always shown); kept as a
-// no-op for the existing call site.
-function ensureNuclearLabelControl(){}
-
-function ensureQESliderControls(){
-  if(!$('hwEntry')){
-    const row=$('hwSlider')?.closest('.energy-slider-row');
-    if(row){
-      const parent=row.parentNode;
-      const grid=document.createElement('div');
-      grid.id='qeRangeControlGrid';
-      grid.className='qe-range-control-grid';
-
-      const hwCard=document.createElement('div');
-      hwCard.className='qe-range-control';
-      hwCard.innerHTML='<div class="qe-control-entry qe-hw-control-entry"><span>ħω (meV)</span><input id="hwEntry" type="number" step="0.1" value="0.0"></div>';
-      hwCard.appendChild($('hwSlider'));
-      const hwOut=$('hwValue'); if(hwOut) hwOut.classList.add('hidden');
-
-      // Four-circle instruments: the W layer card (the Constant E map is one W layer).
-      const wCard=document.createElement('div');
-      wCard.className='qe-range-control hidden';
-      wCard.id='qeWCard';
-      wCard.innerHTML='<div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0">';
-
-      // Spurion warning of the current slice at the right end of the row.
-      const spurionCell=document.createElement('div');
-      spurionCell.className='qe-spurion-cell';
-      spurionCell.innerHTML='<span id="qeSpurionWarning" class="qe-spurion-warning" role="status" aria-live="polite"></span>';
-      grid.append(hwCard,wCard,spurionCell);
-      parent.insertBefore(grid,row);
-      row.remove();
-    }
-  }
-  // Always enforce the actual DOM order, including if the ħω entry already
-  // existed. The checkbox itself is moved (not cloned) to keep its ID, state,
-  // event listeners and local-storage behavior intact.
-  const hwEntry=$('hwEntry');
-  const hwControl=hwEntry?.closest('.qe-hw-control-entry');
-  const lambdaLabel=$('lambdaHalf')?.closest('label');
-  if(hwControl && lambdaLabel){
-    const formerRow=lambdaLabel.parentElement;
-    const caption=hwControl.querySelector(':scope > span');
-    lambdaLabel.classList.add('qe-lambda-half-toggle', 'qe-s2-ring-toggle');
-    if(caption) caption.after(lambdaLabel);
-    else hwControl.insertBefore(lambdaLabel,hwEntry);
-    lambdaLabel.after(hwEntry);
-    // Remove only the emptied wrapper from the old sidebar location.
-    if(formerRow!==hwControl && formerRow?.classList.contains('grid2') &&
-       !formerRow.querySelector('input,select,button')) formerRow.remove();
-  }
-}
 function nearestHWIndex(cache,value){
   let best=0, d=Infinity; cache.hwList.forEach((x,i)=>{const di=Math.abs(x-value); if(di<d){d=di;best=i;}}); return best;
 }
@@ -653,7 +566,6 @@ function syncSingleNavigation(cache,index){
   const i=Math.max(0,Math.min(index,cache.hwList.length-1));
   if($('hwSlider')) $('hwSlider').value=i;
   if($('hwEntry')) $('hwEntry').value=formatHwSlice(cache.hwList[i]);
-  if($('hwValue')) $('hwValue').textContent=`${formatHwSlice(cache.hwList[i])} meV`;
 }
 function qeWVectorText(v){
   return v.map(x=>{const n=Number(x);return Math.abs(n-Math.round(n))<1e-9?String(Math.round(n)):String(Number(n.toFixed(3)));}).join(', ');
@@ -673,7 +585,7 @@ function syncQEWControl(cache){
 }
 
   return {
-    ensureNuclearLabelControl, ensureQESliderControls, nearestHWIndex, renderQEExternalLegend,
+    nearestHWIndex, renderQEExternalLegend,
     renderSingle, singleMapBraggHoverAngles, updateGeometryTargetMarker
   };
 }

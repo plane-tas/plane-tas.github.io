@@ -138,7 +138,6 @@
 .sidebar select {
   font-size: calc(16px * var(--tas-density));
 }
-.instrument-crystal-row label,.instrument-crystal-row select{min-width:0;width:100%;max-width:100%}
 #fixedBeamQuantity,#fixedBeamValue{width:100%;min-width:0;}
 #fixedBeamLabel{min-width:0;}
 .sidebar .propagation-enable input[type="checkbox"] {

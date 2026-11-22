@@ -21,7 +21,6 @@
 .qe-range-control .qe-control-entry{display:grid;grid-template-columns:minmax(0,1fr) calc(88px * var(--tas-density));align-items:center;gap:calc(8px * var(--tas-density));min-height:calc(28px * var(--tas-density))}
 @media(max-width:1050px){#singlePlot{height:calc(720px * var(--tas-density));min-height:calc(720px * var(--tas-density))}}
 @media(max-width:760px){.qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density))}#singlePlot{height:calc(620px * var(--tas-density));min-height:calc(620px * var(--tas-density))}}
-#singlePlot .legendtext{font-size:calc(14px * var(--tas-density))}
 
 /* Keep h / k / l / hbar-omega on one row in Angle calculation. */
 #singleMain .geometry-card .geometry-target .grid4{
@@ -534,8 +533,6 @@
 
 /* v59 Q-E map tabs and Q-vector map controls */
 .qe-map-tabs{margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-bottom:0;border-radius:calc(8px * var(--tas-density)) calc(8px * var(--tas-density)) 0 0;overflow:hidden}
-.qe-map-toolbar{display:flex;justify-content:flex-end;align-items:center;padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #ddd;border-top:0;background:#fff}
-.qe-map-toolbar label{display:flex;align-items:center;gap:calc(7px * var(--tas-density));font-size:calc(13px * var(--tas-density));font-weight:600}
 .qe-map-pane{min-width:0}
 
 /* v61: Constant-E-only Q-unit control sits beside the nuclear-label toggle. */

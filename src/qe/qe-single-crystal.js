@@ -1,5 +1,6 @@
 import {nuclearExtinctionThreshold} from '../cif/cif-structure.js';
 import {inferOutOfPlaneHKL} from '../resolution/resolution-core.js';
+import {wavelengthFromEnergy} from '../core/neutron-units.js';
 
 // Four-circle W layer: a peak within this |W - w| (r.l.u.) is shown on the map.
 export const W_LAYER_TOLERANCE=0.01+1e-9;
@@ -87,7 +88,7 @@ export function createQESingleCrystal(deps){
     const QrefNorm=norm(Qref);
     const QrefXY=[dot(Qref,ex),dot(Qref,ey)];
     const phiRefPlot=QrefNorm>1e-10?rad2deg(Math.atan2(QrefXY[1],QrefXY[0])):0;
-    const wavelength=Math.sqrt(81.8042/(energyMode==="Ef fixed"?Ef:Ei));   // E = 81.8042/λ²
+    const wavelength=wavelengthFromEnergy(energyMode==="Ef fixed"?Ef:Ei);
     let thetaRef=0;
     if(QrefNorm>1e-10){
       const dRef=2*PI/QrefNorm;

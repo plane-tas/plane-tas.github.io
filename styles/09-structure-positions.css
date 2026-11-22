@@ -25,18 +25,6 @@
 #cifGeneratorPanel .cif-generator-beam-grid{grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end}
 #cifMagMomentRows .structure-moment-site{overflow-wrap:anywhere;min-width:0}
 
-/* Spin editing controls: consistent Atom label; equal-width Mode/Atom columns.
-   Keep both fields on one row even when the structure panel is narrow. */
-#structurePanel .structure-spin-editor-toolbar{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  align-items:end;
-  column-gap:calc(10px * var(--tas-density));
-  margin:calc(8px * var(--tas-density)) 0 calc(6px * var(--tas-density));
-  min-width:0;
-  width:100%;
-}
-
 /* Sub-tabs in Q-E plots, angle/scan views and both CIF preview areas. */
 .geometry-card-tabs,
 .cif-output-tabs{
@@ -397,8 +385,6 @@
   #structurePanel .structure-config-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
 }
 
-/* Equal widths for Spins Mode / Element / Source. */
-#structurePanel .structure-spin-editor-toolbar{grid-template-columns:repeat(3,minmax(0,1fr));}
 #structurePanel .cif-unified-output-buttons { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: calc(6px * var(--tas-density)); }
 #structurePanel .cif-unified-output-buttons > button { min-width: 0; }
 
@@ -420,13 +406,6 @@
   }
 }
 
-/* Mode / Display each take precisely half of the available row. */
-#structurePanel .structure-spin-editor-toolbar {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  width: 100%;
-  min-width: 0;
-}
 #structurePanel .atoms-table-head{position:sticky;top:0;z-index:2;background:var(--panel-bg,#fff);font-size:calc(11px * var(--tas-density));font-weight:700;padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #d7dce3;}
 #structurePanel .atoms-site-row{background:rgba(120,140,160,.055);}
 
@@ -444,11 +423,6 @@
 #structurePanel .generator-unified-right{
   min-height:0;
   align-self:start;
-}
-#structurePanel .structure-style-modes input{
-  margin:0;
-  flex:0 0 auto;
-  accent-color:var(--tas-accent);
 }
 #cifGeneratorPanel .cif-thermal-header{
   font-size:max(14px,calc(15px * var(--tas-density)))!important;

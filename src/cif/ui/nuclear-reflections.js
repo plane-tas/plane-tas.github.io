@@ -2,8 +2,7 @@
 // The combined nuclear + magnetic table is rendered by reflection-table.js.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {operationsPreserveStructure} from '../cif-symmetry.js';
-// E [meV] = 81.8042 / λ [Å]², as everywhere else in PLANE-TAS.
-const E_LAMBDA=81.8042;
+import {E_LAMBDA} from '../../core/neutron-units.js';
 export function installNuclearReflections(ctx){
   const {deps:{
     $, RL_calc, canonicalReflectionHkl, checkedValue, clamp, cross, dot,

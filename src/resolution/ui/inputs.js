@@ -8,7 +8,7 @@ export function installResolutionInputs(ctx){
   }, state:shared, fn}=ctx;
   Object.assign(fn,{
     buildResolutionLattice, calcOne, clearResolutionResults, collectResolutionBase,
-    flipScatteringPlaneUV, formatResolutionCoordinate, matrixText, resolutionAxisNames,
+    flipScatteringPlaneUV, formatResolutionCoordinate, matrixText,
     resolutionCoordinates, resolutionFrame, resolutionIsUnavailable, traceEllipse, updateAutoW
   });
 
@@ -28,13 +28,6 @@ function resolutionFrame(r){
   if(c==='lattice' && r?.lattice) return r.lattice;
   if(c==='q' && r?.qframe) return r.qframe;
   return r;
-}
-// Names of the three Q axes in the chosen frame.
-function resolutionAxisNames(r){
-  const c=resolutionCoordinates();
-  if(c==='q' && r?.qframe) return ['Q∥','Q⊥','W'];
-  if(c==='lattice' && r?.lattice) return ['U','V','W'];
-  return ['U','U⊥in','U⊥out'];
 }
 // Lattice U–V plot: 'shape' keeps the true ellipse shape and tilts the V
 // axis; 'coefficients' plots the U and V coefficients on square axes.

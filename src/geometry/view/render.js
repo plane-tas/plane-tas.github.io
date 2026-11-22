@@ -86,7 +86,7 @@ function renderGeometry(cache,index=0){
     canonicalSampleSign=canonicalConvention.sampleScatteringSign;
     const drawTarget=isPowder
       ? powderGeometryTarget(canonicalConvention,true)
-      : qeGeometryAngles(cache,null,canonicalConvention);
+      : qeGeometryAngles(cache,canonicalConvention);
     const {angles,ki,kf}=drawTarget;
     source=[-L,0];
     mono=[0,0];

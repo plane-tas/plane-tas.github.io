@@ -93,7 +93,6 @@ export function createCifUI(deps){
     centeringFromSpaceGroup:fn.centeringFromSpaceGroup,
     selectedSampleSpaceGroup:fn.selectedSampleSpaceGroup,
     selectedSampleCentering:fn.selectedSampleCentering,
-    setCifOutputTab:fn.setCifOutputTab,
     initializeCifGenerator:fn.initializeCifGenerator,
     nuclearStructureForSelectedCif:fn.nuclearStructureForSelectedCif,
     magneticPeakIntensities:(...args)=>fn.magneticPeakIntensities(...args),

@@ -1,3 +1,4 @@
+import {fixedText} from '../core/number-format.js';
 import {readTasSense} from '../core/tas-conventions.js';
 // Legend of the 1D cut: one row per curve, in columns chosen by the user.
 // Pure text from a curve's points and recorded settings; the page (option
@@ -5,7 +6,7 @@ import {readTasSense} from '../core/tas-conventions.js';
 // the `lookup` functions passed in.
 
 // Numbers as written in the legend: at most d decimals, no "-0".
-export const fmt=(x,d=4)=>{ const v=Number(Number(x).toFixed(d)); return String(Object.is(v,-0)?0:v); };
+export const fmt=fixedText;
 
 // Columns, in display order.  `on`: shown by default.
 export const LEGEND_COLS=[

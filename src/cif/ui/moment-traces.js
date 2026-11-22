@@ -9,7 +9,7 @@ export function installMomentTraces(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     bindStructureK1Inputs, effectivePropagationVectorForStructure, magneticStructureTraces, updateStructureEditorKNote, formatStructureKComponent,
-    refreshMomentPropagationVectorSelect, rotateVectorAroundAxis, structureMomentRotationAxisVector
+    refreshMomentPropagationVectorSelect, structureMomentRotationAxisVector
   });
 function atomMomentSetting(atom,settings,structure){
   if(fn.spinEditingIsIncommensurate(structure)) return fn.incommensurateSettingForAtom(atom,settings);
@@ -53,11 +53,6 @@ function appendSolidArrowHead(mesh,tip,dir,headLength,color){
 function structureMomentRotationAxisVector(basis){
   const key=["a","b","c"].includes(String(cifState.structureMomentRotationAxis||"")) ? String(cifState.structureMomentRotationAxis) : "c";
   return fn.vecNormalize(basis?.[key]||basis?.c||[0,0,1]);
-}
-function rotateVectorAroundAxis(v,axis,angle){
-  const n=fn.vecNormalize(axis);
-  const c=Math.cos(angle), s=Math.sin(angle);
-  return fn.vecAdd(fn.vecAdd(fn.vecScale(v,c),fn.vecScale(fn.vecCross(n,v),s)),fn.vecScale(n,fn.vecDot(n,v)*(1-c)));
 }
 function effectivePropagationVectorForStructure(){
   const qs=fn.enabledPropagationVectorsForStructure();

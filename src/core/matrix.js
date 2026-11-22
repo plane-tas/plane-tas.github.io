@@ -1,4 +1,7 @@
-export const EPS = 1e-12;
+// Matrix routines (arrays of rows).  The 3-vector helpers are those of
+// tas-core.js, re-exported so both modules use the same definitions.
+import {EPS, dot, norm, cross, normalize as normalizeVector} from './tas-core.js';
+export {EPS, dot, norm, cross};
 
 export function zeros(r, c){ return Array.from({length:r}, ()=>Array(c).fill(0)); }
 export function eye(n){ const A=zeros(n,n); for(let i=0;i<n;i++) A[i][i]=1; return A; }
@@ -83,11 +86,7 @@ export function det3(A){
        - A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])
        + A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
 }
-export function dot(a,b){ return a.reduce((s,x,i)=>s+x*b[i],0); }
-export function norm(v){ return Math.hypot(...v); }
-export function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-export function normalize(v){ const n=norm(v); if(n<EPS) throw new Error('Cannot normalize zero vector'); return v.map(x=>x/n); }
-export function outer(a,b){ return a.map(x=>b.map(y=>x*y)); }
+export function normalize(v){ return normalizeVector(v,'Cannot normalize zero vector'); }
 
 export function eigSym2(A){
   const a=A[0][0], b=0.5*(A[0][1]+A[1][0]), d=A[1][1];

@@ -1,5 +1,6 @@
 // Structure rendering (Plotly 3D) and figure export.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
+import {downloadBlob} from '../../core/download.js';
 export function installStructureRender(ctx){
   const {deps:{
     $
@@ -81,9 +82,7 @@ async function saveStructureFigure(){
   }
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
   if(!blob) throw new Error("Could not encode PNG image.");
-  const href=URL.createObjectURL(blob),link=document.createElement("a");
-  link.download="structure-figure.png";link.href=href;document.body.appendChild(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(href),1500);
+  downloadBlob(blob,"structure-figure.png");
 }
 function renderCifStructureView(){
   const plot=$("cifStructurePlot"),status=$("cifStructureStatus");

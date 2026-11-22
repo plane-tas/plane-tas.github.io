@@ -97,26 +97,13 @@
   scrollbar-gutter:stable;
 }
 #structurePanel .structure-spin-mode-row select{width:100%;min-width:0;}
-#structurePanel .structure-spin-display-row select,
-#structurePanel .structure-spin-display-row input{width:100%;min-width:0;}
 #structurePanel .structure-moment-color-swatch{align-self:end;}
 #structurePanel .structure-moment-row input[type=number]{width:100%;min-width:0;}
 
 /* Individual expanded-atom spin editing: keep long lists usable on mobile. */
 .structure-individual-selector{max-width:calc(340px * var(--tas-density));width:100%;min-width:0;margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
 #cifSpinIndividualInfo{line-height:1.45;margin:calc(4px * var(--tas-density)) 0 calc(8px * var(--tas-density));overflow-wrap:anywhere}
-#structurePanel .structure-spin-editor-toolbar select{
-  width:100%;
-  max-width:100%;
-  min-width:0;
-  box-sizing:border-box;
-}
 #cifSpinIndividualInfo[hidden]{display:none!important;}
-#structurePanel .structure-spin-editor-toolbar > .structure-entry-field {
-  min-width: 0;
-  width: 100%;
-  max-width: none;
-}
 
 /* Preserve checkbox, site label, direction fields and color in ONE row.
    These rules intentionally override the older narrow-view 2-row breakpoint. */
@@ -154,7 +141,7 @@
 #structurePanel #cifMagMomentRows .structure-moment-row .structure-entry-label {
   font-size: calc(10px * var(--tas-density)); white-space: nowrap;
 }
-#structurePanel :is(.structure-moment-axis-row,.structure-spin-mode-row,.structure-spin-editor-toolbar) select,
+#structurePanel :is(.structure-moment-axis-row,.structure-spin-mode-row) select,
 #structurePanel :is(.structure-entry-field,.structure-plot-toolbar) :is(input,select){
   font-size:var(--tas-control-text-size)!important;
 }
@@ -346,9 +333,3 @@
 #structurePanel .structure-k1-fields .structure-entry-field{min-width:0;gap:2px;}
 #structurePanel .structure-k1-fields input{box-sizing:border-box;min-width:0;width:100%;}
 #structurePanel .structure-propagation-legacy-select{display:none!important;}
-#structurePanel .structure-plot-toolbar .structure-cell-reference-row {
-  grid-column:1 / -1;
-  width:auto!important;
-  min-width:0;
-  flex:none!important;
-}
