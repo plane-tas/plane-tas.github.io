@@ -58,6 +58,8 @@ function updateCifUI(){
   const showCurrentButton=$("cifShowCurrent");
   if(showCurrentButton) showCurrentButton.disabled=!getSelectedCifText();
   if($("cifReloadCurrent")) $("cifReloadCurrent").disabled=!getSelectedCifText();
+  // CIF/mCIF Preview follows the loaded file unless it shows a generated one.
+  fn.syncPreviewWithLoadedFile?.();
   $("sfColorbarRange")?.classList.toggle("hidden",!hasSelectedCif());
   updateAbsorptionCalculator();
 }

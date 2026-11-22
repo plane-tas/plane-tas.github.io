@@ -319,7 +319,12 @@ function renderReflectionPowderPlot(){
   if(!section||!plot) return;
   const show=mode()==='graph';
   section.hidden=!show;
-  if(!show || !window.Plotly || plot.closest('.hidden')) return;
+  // Not drawable yet (Plotly still loading, or the tab / panel not shown, as
+  // while a page is restored on reload): draw as soon as the plot gets a
+  // size (ResizeObserver in initializeReflectionTable).
+  plot.__tasPowderPending=show;
+  if(!show || !window.Plotly || plot.closest('.hidden') || !plot.clientWidth) return;
+  plot.__tasPowderPending=false;
   const data=cifState.reflectionData,lambda=Number(data?.wavelength);
   const incommensurate=!!data?.incommensurate;
   const groups=data&&lambda>0 ? powderGroups(data.rows) : [];
@@ -399,9 +404,11 @@ function renderReflectionPowderPlot(){
   const grid={showgrid:true,gridcolor:'#bcc4cd',gridwidth:1,minor:{showgrid:true,gridcolor:'#e8ebee',gridwidth:1,ticks:''}};
   // Shared figure font sizes: tick labels and the legend, axis titles.
   const FONT=PLOT_FONTS.tick, AXIS_FONT=PLOT_FONTS.axis;
-  // Title: the structure file and "diffraction pattern", at the height of the
-  // Save figure button (top left).
-  const titleText=`${reflectionSourceFileName()||'Structure'} diffraction pattern`;
+  // Title: the structure file, "diffraction pattern" and the wavelength, at
+  // the height of the Save figure button (top left).
+  // The wavelength of the calculation is part of the title (and so of the
+  // saved figure).
+  const titleText=`${reflectionSourceFileName()||'Structure'} diffraction pattern, λ = ${wavelengthText(lambda)} Å`;
   syncReflectionCsvNames();
   window.Plotly.react(plot,traces,{autosize:true,margin:{l:96,r:16,t:40,b:110},font:{size:FONT},
     title:{text:titleText,font:{size:PLOT_FONTS.title},x:0.5,xanchor:'center'},
@@ -476,6 +483,22 @@ function reflectionCsvColumns({powder,prefix='',part='all'}){
 // structure is read (as Save CSV of the Convolution: a name typed by hand is
 // kept until then; an empty box uses the automatic name).
 let csvNamesFor=null;
+// Wavelength used for 2θ, for the CSV comment lines and the Graph title:
+// with it the table and the pattern can be reproduced by other programs
+// without the instrument.  Five decimals, as in the Wavelength box.
+function reflectionWavelength(){
+  const w=Number(cifState.reflectionData?.wavelength);
+  return w>0 ? w : null;
+}
+const wavelengthText=w=>w.toFixed(5);
+// The pattern also records the peak width (U, V, W of the Gaussian, FullProf
+// convention) it was calculated with.
+function reflectionCsvComments(kind,uvw=null){
+  const w=reflectionWavelength();
+  return [`# PLANE-TAS ${kind}`,
+    ...(w ? [`# wavelength_A: ${wavelengthText(w)}`] : []),
+    ...(uvw ? [`# peak_width_deg2: U = ${uvw.U}, V = ${uvw.V}, W = ${uvw.W} (Gaussian, FWHM^2 = U tan^2(theta) + V tan(theta) + W)`] : [])];
+}
 function reflectionSourceFileName(){
   return fn.nuclearReflectionSource?.()?.fileName||getSelectedCifFileName?.()||'';
 }
@@ -499,7 +522,7 @@ function downloadPowderPattern(){
   const colN=reflectionCsvColumns({powder:true,prefix:'N_',part:'N'}), colM=reflectionCsvColumns({powder:true,prefix:'M_',part:'M'});
   const header=['two_theta_deg','Q_inv_A','d_A','I_total','I_nuclear','I_magnetic',...colN.header,...colM.header];
   const rows=Math.max(p.tth.length,p.peaksN?.length||0,p.peaksM?.length||0);
-  const lines=[header.join(',')];
+  const lines=[...reflectionCsvComments('powder pattern',p.uvw),header.join(',')];
   for(let i=0;i<rows;i++){
     const t=p.tth[i];
     const profile=t===undefined ? ['','','','','',''] : [csvFixed4(t),csvFixed4(4*Math.PI*s(t)/p.lambda),csvFixed4(p.lambda/(2*s(t))),csvSig5(p.yT[i]),csvSig5(p.yN[i]),csvSig5(p.yM[i])];
@@ -512,7 +535,8 @@ function downloadCifReflectionTable(){
   if(!rows.length) throw new Error('No reflections are available to download.');
   const powder=mode()==='graph';
   const col=reflectionCsvColumns({powder});
-  const lines=[col.header.join(','),...rows.map(r=>col.cells(r).join(','))];
+  const lines=[...reflectionCsvComments(powder ? 'reflections (powder)' : 'reflections (single crystal)'),
+    col.header.join(','),...rows.map(r=>col.cells(r).join(','))];
   fn.downloadGeneratedCif(lines.join('\n'),powder
     ? `${reflectionCsvBase()}_reflections_powder.csv`
     : csvFileName('cifTableCsvName',`${reflectionCsvBase()}_reflections_single_crystal`));
@@ -570,6 +594,11 @@ function initializeReflectionTable(){
   };
   $('reflectionPlotUVWDefault')?.addEventListener('click',()=>setUVW(POWDER_UVW_DEFAULT_IDS));
   if(!window.Plotly) window.addEventListener('load',()=>renderReflectionPowderPlot(),{once:true});
+  // A graph that could not be drawn while hidden is drawn when it is shown.
+  const plot=$('reflectionPowderPlot');
+  if(plot && typeof ResizeObserver==='function'){
+    new ResizeObserver(()=>{ if(plot.__tasPowderPending && plot.clientWidth) renderReflectionPowderPlot(); }).observe(plot);
+  }
   renderCifReflectionTable();
 }
 }

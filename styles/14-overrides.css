@@ -417,6 +417,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .generator-reflections-notice,
 .tab-panel .cif-release-note,
 .tab-panel .s2-conversion-info.warning,
+.tab-panel .qe-spurion-warning,
 .tab-panel .time-estimate-message,
 .tab-panel #cifSpinIndividualInfo {
   font-size: var(--plane-tab-warning-font) !important;
@@ -1093,7 +1094,9 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 
 /* Colour scale of the 2D maps, at the end of the Show row. */
 .convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
-.convolution-zrange input{width:calc(110px * var(--tas-density))}
+/* Narrower than before (room for the log I box); the value is shown with
+   three significant digits, e.g. 1.32e-8 or 0.0132, which still fits. */
+.convolution-zrange input{width:calc(66px * var(--tas-density));min-width:calc(7ch + 10px)}
 
 /* Sample orientation > Bragg peak position: peak 2 (check only) and the
    Reset / check-message row.  The message always fits on one line. */
@@ -1180,3 +1183,15 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .resolution-compare-tools .resolution-display-label.hidden+.resolution-display-sep{display:none}
 #resolutionPanel .resolution-compare-tools.convolution-show-row{flex-wrap:nowrap}
 #resolutionPanel .resolution-compare-tools .resolution-csv-name{min-width:6em}
+
+/* Nested scrolling: a table, list or preview that scrolls inside the page
+   hands the wheel / touch scroll over to the page (or the pane around it)
+   once it reaches its top or bottom, everywhere (as the Reflections table).
+   Only the two outermost scroll areas (sidebar and main workspace) keep the
+   scroll to themselves, so the browser window does not bounce. */
+.shell > main .main-scroll *,
+.shell > .sidebar *{overscroll-behavior:auto!important}
+
+/* CIF/mCIF Preview: the name of the file shown above the text. */
+.cif-preview-head{display:flex;align-items:center;min-width:0}
+.cif-preview-head > .cif-unified-preview-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

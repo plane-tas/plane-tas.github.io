@@ -492,7 +492,7 @@
 <span class="cif-filename-entry convolution-csv-name"><input id="convCsvName2D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
 </div>
 </section>
-<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span><span class="convolution-zrange">Color scale <input id="convZmin" type="number" step="any" aria-label="Colour scale minimum" placeholder="auto"/> to <input id="convZmax" type="number" step="any" aria-label="Colour scale maximum" placeholder="auto"/></span></div>
+<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Logarithmic colour scale (values ≤ 0 take the lowest colour)"><input id="convLog2D" type="checkbox"/><span>log I</span></label><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span><span class="convolution-zrange">Color scale <input id="convZmin" type="number" step="any" aria-label="Colour scale minimum" placeholder="auto"/> to <input id="convZmax" type="number" step="any" aria-label="Colour scale maximum" placeholder="auto"/></span></div>
 <div class="convolution-plots">
 <div class="convolution-plot-col">
 <div class="geometry-sliders convolution-sliders">
@@ -540,7 +540,7 @@
 </div>
 <div class="convolution-message" id="convMessage1D" aria-live="polite"></div>
 </section>
-<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Every curve divided by its own maximum (display and Save figure; Save CSV keeps the calculated values)"><input id="convNormalize1D" type="checkbox"/><span>normalized</span></label><span class="convolution-show-sep" aria-hidden="true"></span><span class="convolution-legend-columns" id="convLegendColumns"></span></div>
+<div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Logarithmic intensity axis (points with I ≤ 0 are not drawn)"><input id="convLog1D" type="checkbox"/><span>log I</span></label><label class="checkbox-label" title="Every curve divided by its own maximum (display and Save figure; Save CSV keeps the calculated values)"><input id="convNormalize1D" type="checkbox"/><span>normalized</span></label><span class="convolution-show-sep" aria-hidden="true"></span><span class="convolution-legend-columns" id="convLegendColumns"></span></div>
 <div class="convolution-scan-layout">
 <div class="convolution-scan-plotbox">
 <button id="convSaveFigure1D" type="button" class="convolution-save-figure" disabled>Save figure</button>
@@ -678,14 +678,14 @@
 </div>
 <div aria-labelledby="tabCifGenerator" class="tab-panel hidden" id="structurePanel" role="tabpanel"><section class="calc-card generator-unified-card"><div class="generator-unified-grid" id="cifGeneratorPanel"><div class="generator-unified-left"><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><section class="generator-shared-file"><div class="cif-pane-heading">
 <h3>Input file</h3>
-<div class="cif-heading-actions"><button id="cifReloadCurrent" type="button" disabled title="Discard current Structure editor changes and restore the original loaded CIF/mCIF">Reload current file</button><button id="cifShowCurrent" type="button">Show load file</button></div>
+<div class="cif-heading-actions"><button id="cifReloadCurrent" type="button" disabled title="Discard current Structure editor changes and restore the original loaded CIF/mCIF">Reload current file</button><button id="cifShowCurrent" type="button" disabled title="Show the loaded CIF/mCIF in CIF/mCIF Preview">Show loaded file</button></div>
 </div><div class="cif-generator-source-row">
 <button id="cifLoadExisting" type="button">Select CIF/mCIF</button>
 <input aria-label="Selected CIF or mCIF for CIF Generator" class="cif-file-name" id="cifGeneratorSourceName" readonly="" type="text" value="No file selected"/>
 <button disabled="" id="cifGeneratorSourceClear" type="button">Clear</button>
 <input accept=".cif,.mcif,text/plain,chemical/x-cif" class="hidden" id="cifLoadFile" type="file"/>
 </div></section><div class="cif-generator-input-pane">
-<section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated">Show generate file</button></div></div>
+<section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated" disabled title="Show the CIF/mCIF made with Generate in CIF/mCIF Preview">Show generated file</button></div></div>
 <div class="cif-unified-output-line">
 <label class="cif-output-format-label">
 <select id="cifOutputFormat" aria-label="Output file format"><option value="cif">CIF</option><option value="mcif">mCIF</option></select>
@@ -930,7 +930,7 @@
 <tbody id="cifReflectionRows"><tr><td class="cif-reflection-empty" colspan="9">No generated reflections yet.</td></tr></tbody>
 </table>
 </div>
-</div></div></div><div aria-labelledby="cifOutputTabPreview" class="cif-output-panel generator-output-pane hidden" id="cifPreviewPanel" role="tabpanel"><div class="cif-unified-preview-label" id="cifPreviewContext">No file selected</div>
+</div></div></div><div aria-labelledby="cifOutputTabPreview" class="cif-output-panel generator-output-pane hidden" id="cifPreviewPanel" role="tabpanel"><div class="cif-preview-head"><div class="cif-unified-preview-label" id="cifPreviewContext">No file selected</div></div>
 <pre class="cif-preview-note" id="cifPreview" tabindex="0">Press Generate to preview the CIF.</pre>
 </div></div></div></section></div>
 <div aria-labelledby="tabScript" class="tab-panel hidden" id="scriptPanel" role="tabpanel">

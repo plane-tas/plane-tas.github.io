@@ -87,7 +87,7 @@ export function createQESingleCrystal(deps){
     const QrefNorm=norm(Qref);
     const QrefXY=[dot(Qref,ex),dot(Qref,ey)];
     const phiRefPlot=QrefNorm>1e-10?rad2deg(Math.atan2(QrefXY[1],QrefXY[0])):0;
-    const wavelength=9.044/Math.sqrt(energyMode==="Ef fixed"?Ef:Ei);
+    const wavelength=Math.sqrt(81.8042/(energyMode==="Ef fixed"?Ef:Ei));   // E = 81.8042/λ²
     let thetaRef=0;
     if(QrefNorm>1e-10){
       const dRef=2*PI/QrefNorm;

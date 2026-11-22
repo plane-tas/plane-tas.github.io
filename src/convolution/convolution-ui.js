@@ -169,7 +169,7 @@ export function createConvolutionUI(deps){
     return set;
   };
   const INPUTS_KEY='plane-tas-convolution-inputs-v1';
-  const CHECK_IDS=['convShowDispersion','convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE','convNormalize1D'];
+  const CHECK_IDS=['convShowDispersion','convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE','convNormalize1D','convLog1D','convLog2D'];
   const savedInputsComplete=ids=>ids.every(id=>String($(id)?.value??'').trim()!=='');
   function saveInputs(){
     try{ localStorage.setItem(INPUTS_KEY,JSON.stringify({...Object.fromEntries(INPUT_IDS.map(id=>[id,$(id)?.value??''])),zlim,
@@ -777,16 +777,38 @@ export function createConvolutionUI(deps){
     // Colour scale: one range for the three maps, from the whole calculated
     // volume (so it stays the same while the sliders move) unless set in the
     // Show row.
-    const auto=volumeRange(I);
-    const zmin=zlim.min ?? auto[0], zmax0=zlim.max ?? auto[1];
-    const zmax=zmax0>zmin ? zmax0 : zmin+Math.max(1e-12,Math.abs(zmin)*1e-6);
+    // log I (Show row): the colour follows log10 I; the range and the
+    // colour-bar labels stay in I.  Automatic lower end: the smallest
+    // positive I, but not below 10⁻⁶ of the maximum; values at or below the
+    // lower end (0 included) take the lowest colour, points without a value
+    // stay blank.
+    const log=!!$('convLog2D')?.checked;
+    const auto=log ? volumeRangeLog(I) : volumeRange(I);
+    let zmin=zlim.min ?? auto[0], zmax0=zlim.max ?? auto[1];
+    if(log && !(zmin>0)) zmin=auto[0];
+    if(log && !(zmax0>0)) zmax0=auto[1];
+    const zmax=zmax0>zmin ? zmax0 : (log ? zmin*10 : zmin+Math.max(1e-12,Math.abs(zmin)*1e-6));
+    const lo=log ? Math.log10(zmin) : zmin, hi=log ? Math.log10(zmax) : zmax;
+    // Unreachable points (scattering triangle not closed) have no value and
+    // stay blank (white), also in log I.
+    const toColor=log ? (v=>!Number.isFinite(v) ? null : v>zmin ? Math.log10(v) : lo) : (v=>v);
+    // Colour-bar labels: three significant digits; in log I, powers of ten
+    // below 10⁻³ as 1e-6 (short enough for the bar).
+    const tickLabel=v=>{
+      const p=Number(v.toPrecision(3));
+      return log && p>0 && (p<1e-3 || p>=1e5) ? p.toExponential().replace('e+','e') : String(p);
+    };
     const heat=(key,x,y,z,xl,yl)=>{
-      // Five labelled ticks including both ends (kept in saved images).
-      const vals=Array.from({length:5},(_,i)=>zmin+(zmax-zmin)*i/4);
-      return {type:'heatmap',x,y,z,colorscale:'Viridis',zauto:false,zmin,zmax,showscale:true,
+      // Five labelled ticks including both ends (kept in saved images); in
+      // log I, whole decades when the range spans two or more.
+      let vals=Array.from({length:5},(_,i)=>lo+(hi-lo)*i/4);
+      if(log && hi-lo>=2){
+        vals=[]; for(let d=Math.ceil(lo-1e-9); d<=hi+1e-9; d++) vals.push(d);
+      }
+      return {type:'heatmap',x,y,z:log ? z.map(r=>r.map(toColor)) : z,customdata:z,colorscale:'Viridis',zauto:false,zmin:lo,zmax:hi,showscale:true,
         colorbar:{thickness:14,len:0.9,outlinewidth:0,tickfont:{size:PLOT_FONTS.tick},tickmode:'array',tickvals:vals,
-          ticktext:vals.map(v=>String(Number(v.toPrecision(3))))},
-        hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{z:.4g}<extra></extra>`};
+          ticktext:vals.map(v=>tickLabel(log ? 10**v : v))},
+        hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{customdata:.4g}<extra></extra>`};
     };
     // Slider positions as dashed lines, each switched by the box next to its slider.
     const all=$('convShowLine')?.checked!==false;
@@ -865,13 +887,24 @@ export function createConvolutionUI(deps){
       {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B,'convMapUV'),
        shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);
-    // Entries: the range in use (automatic: the whole calculation); a value
-    // typed in fixes that end, clearing the box returns to automatic.
+    // Entries: a value typed in fixes that end (black); an empty box is
+    // automatic and shows in grey the value in use (the whole calculation).
+    // "auto" only before there is a result.
+    const autoEnds={min:auto[0],max:auto[1]};
     for(const [end,v] of [['min',zmin],['max',zmax]]){
       const el=$(`convZ${end}`); if(!el) continue;
-      el.placeholder='auto';
-      if(document.activeElement!==el) el.value=String(Number(v.toPrecision(4)));
+      el.placeholder=String(Number(autoEnds[end].toPrecision(3)));
+      if(document.activeElement===el) continue;
+      el.value=zlim[end]===null ? '' : String(Number(v.toPrecision(3)));
     }
+  }
+  // log I: [smallest positive I (not below 10⁻⁶ of the maximum), maximum].
+  function volumeRangeLog(I){
+    let lo=Infinity, hi=0;
+    for(const v of I) if(Number.isFinite(v) && v>0){ if(v<lo) lo=v; if(v>hi) hi=v; }
+    if(!(hi>0)) return [1e-3,1];
+    lo=Math.max(lo,hi*1e-6);
+    return lo<hi ? [lo,hi] : [hi/10,hi];
   }
   function volumeRange(I){
     let lo=Infinity, hi=-Infinity;
@@ -1186,6 +1219,7 @@ export function createConvolutionUI(deps){
   // Normalize (check box under the 1D plot): every curve divided by its own
   // maximum, for comparing shapes and positions (Save CSV keeps the values).
   const normalized=()=>!!$('convNormalize1D')?.checked;
+  const log1D=()=>!!$('convLog1D')?.checked;
   const curveMax=I=>I.reduce((m,v)=>Number.isFinite(v) && v>m ? v : m,0);
   // Highlight (click a row of the curve table): that curve thick on top, the
   // others thin and faint; click it again to show all equally.
@@ -1219,6 +1253,17 @@ export function createConvolutionUI(deps){
   const legendText=k=>legendLine(legendFields(k),shownCols());
   // Traces and layout of the 1D plot.  On screen the curve list next to the
   // plot is the legend; Save figure adds it under the plot.
+  // log I: from the largest I down to 10⁻⁶ of it at most (as the 2D colour
+  // scale), so that the Gaussian tails do not stretch the axis over tens of
+  // decades.
+  function logRange(traces){
+    let lo=Infinity, hi=0;
+    for(const t of traces) for(const v of t.y) if(Number.isFinite(v) && v>0){ if(v<lo) lo=v; if(v>hi) hi=v; }
+    if(!(hi>0)) return {};
+    lo=Math.max(lo,hi*1e-6);
+    const a=Math.log10(lo), b=Math.log10(hi), pad=Math.max(0.1,(b-a)*0.05);
+    return {range:[a-pad,b+pad],autorange:false};
+  }
   function scanFigure(){
     const curves=curveList();
     // The highlighted curve is drawn last (on top).
@@ -1229,7 +1274,9 @@ export function createConvolutionUI(deps){
     const frame={showline:true,ticks:'outside',linecolor:'#444',linewidth:1,zeroline:false,automargin:true};
     const layout={font:FONT,margin:{l:96,r:20,t:44,b:76},showlegend:false,
       xaxis:{...frame,mirror:true,title:{text:axes.map(i=>AXIS_NAMES[i]).join(' / '),font:AXIS_TITLE_FONT}},
-      yaxis:{...frame,mirror:true,title:{text:normalized() ? 'I (normalized)' : 'I (arb.)',font:AXIS_TITLE_FONT},rangemode:'tozero'}};
+      // log I (Show row): logarithmic axis; points with I ≤ 0 are not drawn.
+      yaxis:{...frame,mirror:true,title:{text:normalized() ? 'I (normalized)' : 'I (arb.)',font:AXIS_TITLE_FONT},
+        ...(log1D() ? {type:'log',exponentformat:'power',...logRange(traces)} : {type:'linear',rangemode:'tozero'})}};
     return {curves,traces,layout};
   }
   function drawScan(){
@@ -1544,6 +1591,8 @@ export function createConvolutionUI(deps){
         for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(plotly()) Plotly.purge(id); }catch(_e){} }
         $('convDownload2D').disabled=true;
         message('convMessage2D','');
+        // No result: the colour-scale boxes are automatic again.
+        for(const end of ['min','max']){ const el=$(`convZ${end}`); if(el){ el.placeholder='auto'; if(zlim[end]===null) el.value=''; } }
       }
     }else{
       const n=kept.length;
@@ -1664,6 +1713,7 @@ export function createConvolutionUI(deps){
     $('convCalculate1D')?.addEventListener('click',calculate1D);
     $('convDownload')?.addEventListener('click',downloadScan);
     $('convNormalize1D')?.addEventListener('change',()=>{ saveInputs(); drawScan(); });
+    $('convLog1D')?.addEventListener('change',()=>{ saveInputs(); drawScan(); });
     $('convSaveFigure1D')?.addEventListener('click',()=>saveScanFigure().catch(err=>message('convMessage1D',`Save figure: ${err.message||err}`,true)));
     $('convClearKept1D')?.addEventListener('click',()=>{ kept.length=0; refreshKept(); });
     // The UI density changed (window width breakpoint): draw the figures
@@ -1677,6 +1727,7 @@ export function createConvolutionUI(deps){
     restoringResults=true; try{ refreshKept(); }finally{ restoringResults=false; }
     $('convDownload2D')?.addEventListener('click',downloadVolume);
     $('convShowDispersion')?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
+    $('convLog2D')?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
     for(const id of ['convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
     for(const end of ['min','max']){
       const el=$(`convZ${end}`);

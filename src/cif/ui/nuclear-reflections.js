@@ -2,6 +2,8 @@
 // The combined nuclear + magnetic table is rendered by reflection-table.js.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {operationsPreserveStructure} from '../cif-symmetry.js';
+// E [meV] = 81.8042 / λ [Å]², as everywhere else in PLANE-TAS.
+const E_LAMBDA=81.8042;
 export function installNuclearReflections(ctx){
   const {deps:{
     $, RL_calc, canonicalReflectionHkl, checkedValue, clamp, cross, dot,
@@ -22,7 +24,7 @@ export function installNuclearReflections(ctx){
 function syncCifReflectionBeamFromInstrument(){
   const e=Number($("energy")?.value);
   if(!(e>0)) return;
-  const wavelength=9.044/Math.sqrt(e);
+  const wavelength=Math.sqrt(E_LAMBDA/e);
   const wavevector=2*Math.PI/wavelength;
   if($("cifReflectionEnergy")) $("cifReflectionEnergy").value=e.toFixed(4);
   if($("cifReflectionWavelength")) $("cifReflectionWavelength").value=wavelength.toFixed(5);
@@ -33,17 +35,17 @@ function syncCifReflectionBeamFrom(source){
   if(source==="wavelength"){
     lambda=Number($("cifReflectionWavelength")?.value);
     if(!(lambda>0)) return;
-    e=(9.044/lambda)**2;
+    e=E_LAMBDA/(lambda*lambda);
     k=2*Math.PI/lambda;
   }else if(source==="wavevector"){
     k=Number($("cifReflectionWavevector")?.value);
     if(!(k>0)) return;
     lambda=2*Math.PI/k;
-    e=(9.044/lambda)**2;
+    e=E_LAMBDA/(lambda*lambda);
   }else{
     e=Number($("cifReflectionEnergy")?.value);
     if(!(e>0)) return;
-    lambda=9.044/Math.sqrt(e);
+    lambda=Math.sqrt(E_LAMBDA/e);
     k=2*Math.PI/lambda;
   }
   if($("cifReflectionEnergy")) $("cifReflectionEnergy").value=e.toFixed(5);
@@ -66,8 +68,8 @@ function currentCifReflectionBeam(){
   let wavelength=Number($("cifReflectionWavelength")?.value);
   let wavevector=Number($("cifReflectionWavevector")?.value);
   if(!(wavelength>0) && wavevector>0) wavelength=2*Math.PI/wavevector;
-  if(!(enteredEnergy>0) && wavelength>0) enteredEnergy=(9.044/wavelength)**2;
-  if(!(wavelength>0) && enteredEnergy>0) wavelength=9.044/Math.sqrt(enteredEnergy);
+  if(!(enteredEnergy>0) && wavelength>0) enteredEnergy=E_LAMBDA/(wavelength*wavelength);
+  if(!(wavelength>0) && enteredEnergy>0) wavelength=Math.sqrt(E_LAMBDA/enteredEnergy);
   if(!(wavevector>0) && wavelength>0) wavevector=2*Math.PI/wavelength;
   if(!(enteredEnergy>0) || !(wavelength>0) || !(wavevector>0)) throw new Error("Energy, wavelength, and wavevector must be greater than zero to calculate reflections.");
   const lambdaHalf=!!$("cifReflectionLambdaHalf")?.checked;

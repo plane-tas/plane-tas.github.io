@@ -2,12 +2,12 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 export function installGeneratorOutput(ctx){
   const {deps:{
-    $, currentInstrument, effectiveS2MaxAtEi, getSelectedCifStructure, getSelectedCifText
+    $, currentInstrument, effectiveS2MaxAtEi, getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     downloadGeneratedCif, findGeneratorSpaceGroup, generateCifForReview,
     loadCifIntoGenerator, loadParsedCifIntoGenerator, recalculateGeneratedReflections,
-    setCifOutputTab, setUnifiedGeneratorOutputTab, showUnifiedCifPreview
+    setCifOutputTab, setUnifiedGeneratorOutputTab, showUnifiedCifPreview, syncPreviewWithLoadedFile
   });
 
 function recalculateGeneratedReflections(){
@@ -62,9 +62,31 @@ function recalculateGeneratedReflections(){
 
 // v59: Nuclear/magnetic editors and all four results share one output workspace.
 // Retain setCifOutputTab for legacy callers and restore logic.
+// Preview tab: never blank.  While it shows nothing yet (no generated file)
+// or the loaded file, it shows the CIF/mCIF that is loaded now; a generated
+// file stays until Show loaded file.
+const PREVIEW_PLACEHOLDER='Press Generate to preview the CIF.';
+function syncPreviewWithLoadedFile(){
+  const pre=$("cifPreview"), ctxEl=$("cifPreviewContext");
+  // Show generated file: only when something has been generated.
+  const gen=$("cifShowGenerated");
+  if(gen) gen.disabled=!(cifState.lastGeneratedCifText || cifState.lastGeneratedMcifText);
+  if(!pre || !ctxEl) return;
+  const context=ctxEl.textContent||'', text=pre.textContent||'';
+  const showsLoaded=context.startsWith('Loaded file:');
+  if(!showsLoaded && text.trim() && text!==PREVIEW_PLACEHOLDER) return;
+  const loaded=getSelectedCifText?.();
+  if(loaded){
+    pre.textContent=loaded;
+    ctxEl.textContent=`Loaded file: ${getSelectedCifFileName?.()||'selected CIF/mCIF'}`;
+  }else if(showsLoaded){
+    pre.textContent=PREVIEW_PLACEHOLDER; ctxEl.textContent='No file selected';
+  }
+}
 function showUnifiedCifPreview(text,label){
   if($("cifPreview")) $("cifPreview").textContent=String(text||"");
   if($("cifPreviewContext")) $("cifPreviewContext").textContent=String(label||"CIF/mCIF Preview");
+  if($("cifShowGenerated")) $("cifShowGenerated").disabled=!(cifState.lastGeneratedCifText || cifState.lastGeneratedMcifText);
   setUnifiedGeneratorOutputTab('preview',{persist:true});
 }
 const GENERATOR_OUTPUT_TABS={
@@ -86,6 +108,7 @@ function setUnifiedGeneratorOutputTab(name,{persist=false}={}){
   fn.requestGeneratorViewportHeightSync();
   if(name==='structure') requestAnimationFrame(fn.renderCifStructureIfVisible);
   if(name==='reflections') requestAnimationFrame(()=>fn.renderReflectionPowderPlot?.());
+  if(name==='preview') syncPreviewWithLoadedFile();
 }
 function setCifOutputTab(tab){
   setUnifiedGeneratorOutputTab(tab==='reflections'?'reflections':'preview');
@@ -100,6 +123,7 @@ function generateCifForReview(){
   fn.saveStructureViewerState();
   if($("cifPreview")) $("cifPreview").textContent=generated.text;
   if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${generated.filename}`;
+  fn.syncPreviewWithLoadedFile?.();
   fn.setCifGeneratedReady(true);
   recalculateGeneratedReflections();
   fn.renderCifStructureIfVisible();

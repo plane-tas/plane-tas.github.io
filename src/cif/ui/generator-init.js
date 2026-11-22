@@ -183,7 +183,9 @@ async function initializeCifGenerator(){
       fn.setCifGeneratorMessage(`Showing loaded file: ${fileName}.`);
     });
     $("cifShowGenerated")?.addEventListener("click",()=>{
-      const mcif=$("cifOutputFormat")?.value==="mcif";
+      // The file of the selected output format, otherwise the other one.
+      let mcif=$("cifOutputFormat")?.value==="mcif";
+      if(!(mcif?cifState.lastGeneratedMcifText:cifState.lastGeneratedCifText)) mcif=!mcif;
       const text=mcif?cifState.lastGeneratedMcifText:cifState.lastGeneratedCifText;
       const fileName=mcif?cifState.lastGeneratedMcifName:cifState.lastGeneratedCifName;
       if(!text){fn.setCifGeneratorMessage(`Generate ${mcif?"mCIF":"CIF"} first to show its output.`,true);return;}

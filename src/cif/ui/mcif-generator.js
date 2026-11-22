@@ -140,6 +140,7 @@ function generateP1McifForReview(){
     const result=incommensurateMcif();
     if($("cifPreview")) $("cifPreview").textContent=result.text;
     if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (incommensurate, ${result.superspaceGroup})`;
+    fn.syncPreviewWithLoadedFile?.();
     fn.setCifGeneratedReady(true);
     fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: incommensurate superspace group ${result.superspaceGroup}, ${result.atomCount} atoms, ${result.magneticCount} magnetic. Review before Save or Set.`);
     return result;
@@ -184,6 +185,7 @@ function generateP1McifForReview(){
   cifState.lastGeneratedMcifName=`${fn.cleanCifBaseName($("cifGeneratedName")?.value)}.mcif`;
   if($("cifPreview")) $("cifPreview").textContent=output.text;
   if($("cifPreviewContext")) $("cifPreviewContext").textContent=`Generated file: ${cifState.lastGeneratedMcifName} (magnetic P1)`;
+  fn.syncPreviewWithLoadedFile?.();
   fn.setCifGeneratedReady(true);
   if(output.ambiguousSites) fn.setCifGeneratorMessage(`Warning: ${output.ambiguousSites} magnetic atom(s) lie on a node of cos(2πk·r) (k·r ≈ 1/4 or 3/4); their collinear sign is arbitrary for this k. Check the structure before Download or Set (use Sinusoidal, another k, or Manual spins if needed).`,true);
   else fn.setCifGeneratorMessage(`Generated ${cifState.lastGeneratedMcifName}: magnetic P1, ${output.atomCount} atoms. Review before Save or Set.`);

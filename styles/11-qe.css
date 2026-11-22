@@ -668,6 +668,8 @@
 .reflection-save-row.hidden{display:none}
 .reflection-save-row>.reflection-csv-name{flex:1 1 0;min-width:0}
 .reflection-csv-name input{width:100%;min-width:0}
+/* ".csv" at the size of ".cif" / ".mcif" of the CIF/mCIF output name. */
+.reflection-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
 
 /* Control row above the Constant E map, three fixed columns 1 : 2 : 1:
    Save figure (left end) | the slider and its check box (ħω and λ/2 for TAS,
