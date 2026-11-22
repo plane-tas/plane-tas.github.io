@@ -200,13 +200,10 @@
 #structurePanel .structure-triad-right{right:calc(12px * var(--tas-density));}
 
 @container structure-viewer (max-width:1050px){
-  
   #structurePanel .structure-viewer-main{
     width:100%!important;
     min-width:0!important;
     max-width:none!important;
-  }
-  #structurePanel .structure-viewer-main{
     min-height:calc(560px * var(--tas-density))!important;
   }
   #structurePanel .structure-plot-wrap .cif-structure-plot{

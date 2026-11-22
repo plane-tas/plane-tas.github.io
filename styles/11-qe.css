@@ -3,8 +3,7 @@
 
 .nuclear-label-control .checkbox-label{min-height:calc(24px * var(--tas-density));margin:0}
 #sfColorMaxEntry{width:calc(88px * var(--tas-density))}
-.qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density))}
-.qe-range-control .qe-control-entry input[type=number]{font-size:calc(14px * var(--tas-density));min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
+.qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density));font-size:calc(14px * var(--tas-density));min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
 
 /* Time estimate: widen the geometry card only while this tab is active. */
 @media(min-width:1501px){
@@ -421,8 +420,6 @@
   min-width: 0;
   margin: 0;
   flex: 0 1 auto;
-}
-#qeDisplayControls > .qe-path-tools {
   gap: calc(7px * var(--tas-density));
 }
 #qeDisplayControls .qe-path-tools > :is(button,label) {

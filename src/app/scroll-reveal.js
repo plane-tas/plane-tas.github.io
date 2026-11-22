@@ -8,14 +8,19 @@ export const scrollParent=el=>{
 };
 export const viewTop=scroller=>scroller===document.scrollingElement ? 0 : scroller.getBoundingClientRect().top;
 const viewBottom=scroller=>scroller===document.scrollingElement ? window.innerHeight : scroller.getBoundingClientRect().bottom;
+// The visible band of the scroller: below its sticky jump bar (if any) and
+// a little above its bottom edge.
+function viewBand(scroller){
+  const bar=scroller.querySelector?.('.jump-bar');
+  const top=Math.max(viewTop(scroller),bar && scroller.contains(bar) ? bar.getBoundingClientRect().bottom : -Infinity)+6;
+  return {top,bottom:viewBottom(scroller)-8};
+}
 
 // Whether everything from `first` down to `last` can be in view at once.
 export function fitsInView(first,last){
   if(!first || !last) return false;
-  const scroller=scrollParent(first);
-  const bar=scroller.querySelector?.('.jump-bar');
-  const top=Math.max(viewTop(scroller),bar && scroller.contains(bar) ? bar.getBoundingClientRect().bottom : -Infinity)+6;
-  return last.getBoundingClientRect().bottom-first.getBoundingClientRect().top<=viewBottom(scroller)-8-top;
+  const {top,bottom}=viewBand(scrollParent(first));
+  return last.getBoundingClientRect().bottom-first.getBoundingClientRect().top<=bottom-top;
 }
 
 // After an Add: scroll so that everything from `first` (the new row or
@@ -24,9 +29,7 @@ export function fitsInView(first,last){
 export function revealRange(first,last=first){
   if(!first) return;
   const scroller=scrollParent(first);
-  const bar=scroller.querySelector?.('.jump-bar');
-  const top=Math.max(viewTop(scroller),bar && scroller.contains(bar) ? bar.getBoundingClientRect().bottom : -Infinity)+6;
-  const bottom=viewBottom(scroller)-8;
+  const {top,bottom}=viewBand(scroller);
   const firstTop=first.getBoundingClientRect().top;
   const lastBottom=(last||first).getBoundingClientRect().bottom;
   let delta=0;

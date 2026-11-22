@@ -4,12 +4,10 @@
 .structure-moment-row>input[type=checkbox]{
   justify-self:center;
 }
-.structure-moment-row{
-  gap:calc(6px * var(--tas-density));
-}
 
 /* Compact Structure controls */
 .structure-moment-row{
+  gap:calc(6px * var(--tas-density));
   grid-template-columns:calc(44px * var(--tas-density)) minmax(calc(58px * var(--tas-density)),calc(72px * var(--tas-density))) minmax(calc(150px * var(--tas-density)),1fr) calc(90px * var(--tas-density)) calc(42px * var(--tas-density)) !important;
 }
 .structure-moment-color-swatch{

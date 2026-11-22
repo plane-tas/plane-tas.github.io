@@ -12,7 +12,7 @@ function canonicalOrientationMode(rl, rawMode=null){
   // Bragg peak position (2 peaks): peak 1 sets the orientation as for one
   // peak; peak 2 is only checked.
   const mode=String(rawMode ?? ($('orientationReference')?.value || 'bragg')).replace(/^bragg2$/,'bragg');
-  // Bragg peak position whose S1 is still empty (e.g. right after Reset):
+  // Bragg peak position whose S1 is still empty (e.g. a new experiment):
   // every calculation uses the standard orientation ki ⟂ U until an S1 is
   // entered.
   if(mode==='bragg') return String($('refs1')?.value??'').trim()==='' ? 'perpU' : 'bragg';

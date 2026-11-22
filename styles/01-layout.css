@@ -9,8 +9,8 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
   header > #status{flex:1 1 100%;margin-left:0!important;}
 }
 #tasTopBar { position: sticky; top: 0; z-index: 20; background: #fff; }
-#tasTopBar > header { position: static; }
 #tasTopBar > header{
+  position: static;
   display:flex;align-items:center;flex-wrap:wrap;
   gap:4px 12px!important;
   padding:4px 12px;

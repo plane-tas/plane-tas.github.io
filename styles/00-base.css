@@ -339,10 +339,10 @@ main{
   white-space:nowrap;
 }
 #structurePanel .structure-config-panel[hidden]{display:none!important;}
-#structurePanel .structure-config-panel{min-width:0;}
 
 /* vNext: consistent ordering UI, no duplicate tab headings/default buttons, and readable labels. */
 #structurePanel .structure-config-panel{
+  min-width:0;
   padding-top:calc(2px * var(--tas-density));
 }
 #structurePanel .structure-entry-label{
@@ -400,7 +400,7 @@ html { font-size: calc(16px * var(--tas-density)); }
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),
 select,
 textarea:not(.script-spice-text),
-button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab) {
+button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab) {
   font-size:var(--tas-control-text-size)!important;
 }
 /* Inputs must be allowed to contract inside narrow grid cells. */
@@ -429,13 +429,10 @@ button:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-
   line-height:1.35;
 }
 
-/* Brand and readiness status. Native CSS sizes, no scale transform. */
-:root{--tas-header-height:38px;}
-
 /* Shared output readability: Resolution summary and Angle calculation Single/Scan
    results all use the Single result text size. Keep the Scan point selector
    consistent too, without changing input labels or plotting fonts. */
-:root{--tas-calculation-output-font-size:max(14px,calc(19px * var(--tas-density)));}
+:root{--tas-header-height:38px;--tas-calculation-output-font-size:max(14px,calc(19px * var(--tas-density)));}
 
 /* Hide native numeric spin buttons throughout PLANE-TAS.
    Keep type=number, min/max/step, validation, and input events unchanged. */
@@ -449,24 +446,18 @@ input[type="number"]::-webkit-outer-spin-button{
   margin:0;
 }
 
-/* 2026-10-13: tab typography aligned to the Instrument configuration sidebar.
-   Keep layout dimensions and Plotly canvas sizes unchanged.  The minimum sizes
-   stop desktop compact-density settings from making labels unreadable. */
-:root {
-  --plane-tab-label-font: max(12px, calc(16px * var(--tas-density)));
-  --plane-tab-heading-font: calc(19px * var(--tas-density));
-  --plane-tab-warning-font: var(--tas-font-control, 13px);
-}
-
 /* 2026-10-13 follow-up: sidebar-like, regular-weight field captions.
    Do not change chart geometry or tab headings; the earlier selector which
    raised select/slider/checkbox captions to a 14px minimum was too large. */
 :root {
+  --plane-tab-label-font: max(12px, calc(16px * var(--tas-density)));
+  --plane-tab-heading-font: calc(19px * var(--tas-density));
+  --plane-tab-warning-font: var(--tas-font-control, 13px);
   --plane-tab-select-caption-font: calc(16px * var(--tas-density));
 }
 /* Buttons are actions, not titles.  Navigation tabs remain visually separate
    because they function as headings. */
-.tab-panel button:not([role="tab"]):not(.tab-button):not(.toolbox-subtab):not(.geometry-card-tab):not(.cif-output-tab):not(.generator-reflection-tab),
+.tab-panel button:not([role="tab"]):not(.tab-button):not(.toolbox-subtab):not(.geometry-card-tab):not(.cif-output-tab),
 .sidebar button,
 #qeDisplayControls button {
   font-weight: 400 !important;

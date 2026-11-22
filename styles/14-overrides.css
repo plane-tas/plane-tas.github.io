@@ -23,9 +23,8 @@
   }
 }
 .cif-generator-message.error-text{color:#a22}
-.absorption-table th,.absorption-table td{padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e1e1e1;text-align:right;white-space:nowrap}
+.absorption-table th,.absorption-table td{padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e1e1e1;text-align:right;white-space:nowrap;width:20%}
 .absorption-table th:first-child,.absorption-table td:first-child{text-align:left}
-.absorption-table:not(.absorption-summary-table) th,.absorption-table:not(.absorption-summary-table) td{width:20%}
 .cif-generator-section + .cif-generator-section{margin-top:calc(14px * var(--tas-density));padding-top:calc(12px * var(--tas-density));border-top:calc(1px * var(--tas-density)) solid #ddd}
 .cif-reflection-parameters-section .cif-generator-beam-grid{margin:calc(8px * var(--tas-density)) 0 0}
 .absorption-cif-row>label,.absorption-cif-row input,.absorption-input-mode-row label,.absorption-input-mode-row select{min-width:0;max-width:100%;box-sizing:border-box}
@@ -490,8 +489,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 /* Snap 1/n entry and the Constant E map HKL path box (same path as Q vector–E). */
 #qePathSnap{width:calc(64px * var(--tas-density))!important;min-width:0!important;text-align:center;}
 .qe-path-snap-label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(3px * var(--tas-density));}
-.qe-constant-path-input{margin-top:calc(6px * var(--tas-density));}
-.qe-constant-path-input{display:flex!important;align-items:center;gap:calc(6px * var(--tas-density));}
+.qe-constant-path-input{margin-top:calc(6px * var(--tas-density));display:flex!important;align-items:center;gap:calc(6px * var(--tas-density));}
 .qe-constant-path-input label{flex:none;}
 .qe-constant-path-input input{flex:1 1 auto;width:auto!important;min-width:0!important;}
 /* Powder: no map tabs and no HKL path box (beats the display rules above). */
@@ -937,10 +935,10 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    Low specificity (button + :where): any button with its own class style
    (tabs, toggles, the Convolution Calculate) keeps it, and a button whose
    colour is set inline (colour palettes) is left alone. */
-button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])){background:linear-gradient(#ffffff,#e9ecf0);border-color:#9aa4b0;color:#222;box-shadow:0 1px 1px rgba(0,0,0,.12)}
-button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):hover{background:linear-gradient(#f7f9fb,#dde2e8)}
-button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):active{background:#dde2e8;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
-button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.generator-reflection-tab):not(.atoms-row-name):not([style*="background"])):disabled{background:#fff;border-color:#d6dbe1;color:#a3aab2;box-shadow:none;cursor:default}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.atoms-row-name):not([style*="background"])){background:linear-gradient(#ffffff,#e9ecf0);border-color:#9aa4b0;color:#222;box-shadow:0 1px 1px rgba(0,0,0,.12)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.atoms-row-name):not([style*="background"])):hover{background:linear-gradient(#f7f9fb,#dde2e8)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.atoms-row-name):not([style*="background"])):active{background:#dde2e8;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.geometry-card-tab):not(.atoms-row-name):not([style*="background"])):disabled{background:#fff;border-color:#d6dbe1;color:#a3aab2;box-shadow:none;cursor:default}
 
 /* Calculation entries at the top of the 2D slice and 1D cut tabs, with a
    line under them (Save / Load CSV row). */
@@ -1020,14 +1018,14 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* The header stays in view when the table scrolls down. */
 #resolutionPanel .resolution-compare-table thead{position:sticky;top:0;z-index:4}
 @container (min-width: 860px){
-  #resolutionPanel .resolution-compare-body:not(.no-plots){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  #resolutionPanel .resolution-compare-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
   /* Beside the plots the table is as tall as they are and scrolls inside. */
-  #resolutionPanel .resolution-compare-body:not(.no-plots) .resolution-compare-side{order:0;align-self:stretch;position:relative;min-height:calc(160px * var(--tas-density))}
-  #resolutionPanel .resolution-compare-body:not(.no-plots) .resolution-compare-side .resolution-compare-table-wrap{position:absolute;inset:0;max-height:none}
-  #resolutionPanel .resolution-compare-body:not(.no-plots) .resolution-compare-plots{grid-template-columns:1fr 1fr}
-  #resolutionPanel #result .resolution-compare-body:not(.no-plots) .resolution-compare-plots>div{height:auto!important;aspect-ratio:1/0.9}
+  #resolutionPanel .resolution-compare-body .resolution-compare-side{order:0;align-self:stretch;position:relative;min-height:calc(160px * var(--tas-density))}
+  #resolutionPanel .resolution-compare-body .resolution-compare-side .resolution-compare-table-wrap{position:absolute;inset:0;max-height:none}
+  #resolutionPanel .resolution-compare-body .resolution-compare-plots{grid-template-columns:1fr 1fr}
+  #resolutionPanel #result .resolution-compare-body .resolution-compare-plots>div{height:auto!important;aspect-ratio:1/0.9}
   /* Lower than that when the window is not tall enough (ui-shell.js). */
-  #resolutionPanel.res-fit #result .resolution-compare-body:not(.no-plots) .resolution-compare-plots>div{height:var(--res-fit-plot)!important;aspect-ratio:auto}
+  #resolutionPanel.res-fit #result .resolution-compare-body .resolution-compare-plots>div{height:var(--res-fit-plot)!important;aspect-ratio:auto}
 }
 /* R matrix: one 4 × 4 block per row. */
 #resolutionPanel .resolution-compare-table td.cmp-mat{white-space:pre;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(12px * var(--tas-density));line-height:1.3}

@@ -12,7 +12,7 @@ export function createDarkAngle(deps){
     const assets=[];
     for(const slot of darkAssetSlots()){
       const ids=darkAssetIds(slot);
-      // No sample environment (None): not a dark angle.
+      // A card without a sample environment (from an old save): not a dark angle.
       if(!$(ids.se)?.value) continue;
       const rotation=num(ids.rotation);
       const ranges=[];

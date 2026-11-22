@@ -14,13 +14,13 @@ export function createAppBootstrap(deps){
     enableRightPanelPersistence, fillCrystal,
     flipScatteringPlaneUV, initializeCifGenerator, initializeNeutronData, initializeResponsivePlotResize,
     initializeScriptWorkspaceUI, initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments,
-    nearestHWIndex, prepareToolboxUI, propagationVectorIndices, qeCommitPathText, qeDefaultPathText,
+    nearestHWIndex, prepareToolboxUI, qeCommitPathText, qeDefaultPathText,
     qePathInput, recalculate, refreshCifAfterStateRestore, refreshSelect,
     renderResolutionScan, renderSingle, restoreGlobalUIState,
     restoreLeftPanelState, restoreRightPanelState, sampleEnvironments, saveGlobalUIState,
     saveLeftPanelState, saveRightPanelState, savedActiveTab, selectCifFile, setActiveTab,
-    setDarkAssetCount, setGeometryTargetHKL, setPowderLinkDriver,
-    setPropagationVectorCount, setQEMapTab, setTargetHWFromMap, syncGeometryTargetToOrientationReference,
+    setGeometryTargetHKL, setPowderLinkDriver,
+    setQEMapTab, setTargetHWFromMap, syncGeometryTargetToOrientationReference,
     syncPowderLinkedInputs, syncQEPathSnapDefault, syncSfColorMaxControl, syncSidebarCrystalSelectors,
     updateAutoW, updateBraggOrientationPlaneWarning, prepareBraggPeak2, updateCalcMode,
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
@@ -124,7 +124,7 @@ async function initialize(){
   for(const slot of darkAssetSlots()) updateDarkReferenceUI(slot);
   // Geometry starts at the current Reference Q HKL while preserving the current energy transfer.
   setGeometryTargetHKL([num("refh"),num("refk"),num("refl")]);
-  setPropagationVectorCount(propagationVectorIndices().length); setDarkAssetCount(darkAssetSlots().length); updatePropagationVectorLabels(); prepareToolboxUI(); updateCifUI();
+  updatePropagationVectorLabels(); prepareToolboxUI(); updateCifUI();
   try{ await initializeCifGenerator(); }
   catch(err){ console.warn('CIF Generator initialization warning:',err); }
   // Right-side controls are restored only after dynamic Toolbox controls exist and
