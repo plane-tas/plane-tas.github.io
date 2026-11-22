@@ -15,11 +15,11 @@ export function installResolutionInputs(ctx){
 shared.scanResults=[];
 shared.scanResolutionPlotLimits=null;
 shared.lastResolutionRender=null;
-// Display frame: 'q' (Q∥, Q⊥in, E, Q⊥out), 'orthogonal' (U, U⊥in, E, U⊥out) or
-// 'lattice' (U, V, E, W).
+// Display frame: 'q' (Q∥, Q⊥in, E, Q⊥out) or 'lattice' (U, V, E, W). The
+// former U, U⊥in, E, U⊥out frame ('orthogonal', the core's own frame) is no
+// longer offered; kept results that used it are shown in the Q frame.
 function resolutionCoordinates(){
-  const v=$('resolutionCoordinates')?.value;
-  return v==='lattice'||v==='q' ? v : 'orthogonal';
+  return $('resolutionCoordinates')?.value==='lattice' ? 'lattice' : 'q';
 }
 // Results of one calculation in the chosen frame (same fields as the core's
 // orthogonal result: display, lim, ellipses, displayAxes, qNorms).

@@ -500,12 +500,10 @@ function saveGlobalUIState(){
   }catch(_e){}
 }
 
-// Saves from before Bragg peak position (2 peaks): peak 2 was in use when
-// its S1 was entered (or, briefly, when it was shown with Add).
+// Saves from the short-lived Bragg peak position (2 peaks): one Bragg peak
+// position again (peak 2 is optional).
 function migrateBraggTwoPeaks(values){
-  if(values?.orientationReference!=='bragg') return;
-  const flag=values.braggPeak2Shown;
-  if(flag==='1' || ((flag===undefined || flag==='') && String(values.refs12??'').trim()!=='')) values.orientationReference='bragg2';
+  if(values?.orientationReference==='bragg2') values.orientationReference='bragg';
 }
 function restoreGlobalUIState(){
   let saved;

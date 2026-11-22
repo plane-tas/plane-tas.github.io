@@ -263,7 +263,7 @@
 #resolutionInstrumentDetails:has(#sampleShape option[value="cylinder"]:checked) .sample-box-only{display:none!important}
 
 /* Approximation / Mode / Unit / Coordinates / U–V plot. */
-#resolutionCalculation .toolbar{grid-template-columns:repeat(6,minmax(0,1fr));}
+#resolutionCalculation .toolbar{grid-template-columns:repeat(5,minmax(0,1fr));}
 @media(max-width:620px){#resolutionCalculation .toolbar{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 /* → Angle calc: same height as the entry boxes, on their baseline. */

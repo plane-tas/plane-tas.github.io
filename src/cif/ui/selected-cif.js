@@ -273,6 +273,22 @@ function clearSelectedCif(){
     if($("sampleSpaceGroup")) $("sampleSpaceGroup").value="1";
     if($("sampleSpaceGroupNumber")) $("sampleSpaceGroupNumber").value="1";
   }
+  // The Structure editor and the lattice start over as well (as after a
+  // reload without a file): P1, the default cell, no atoms.
+  for(const id of ["a","b","c","alpha","beta","gamma",...Object.values(cifState.CIF_LATTICE_FIELDS)]){
+    const el=$(id); if(el) el.value=el.defaultValue;
+  }
+  cifState.positionModeDrafts={sites:null,individual:null};
+  cifState.structurePositionEditingMode="sites";
+  cifState.structurePositionTableElement="*";
+  cifState.positionManualSourceSignature=null;
+  cifState.positionSavedSourcePreference=null;
+  if($("cifCrystalSystem")) $("cifCrystalSystem").value="custom";
+  if(cifState.cifSpaceGroups.length) fn.selectCifSpaceGroup(1,{syncSystem:true});
+  if($("cifSpaceGroupNumber")) $("cifSpaceGroupNumber").value="1";
+  if($("cifGeneratedName")) $("cifGeneratedName").value="generated_structure";
+  fn.replaceCifAtomRows([]);
+  fn.refreshPositionTableToolbar?.();
   updateCifUI();
   clearError();
   saveLeftPanelState();

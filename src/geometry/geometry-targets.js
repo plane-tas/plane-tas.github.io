@@ -166,7 +166,7 @@ function setGeometryTargetFromBragg(){ setGeometryTargetHKL([num("refh"),num("re
 // orientation reference is equivalent to clicking the corresponding
 // Set ki ⟂ U/V, Set ki ∥ U/V, or Set Bragg peak button.
 function syncGeometryTargetToOrientationReference(){
-  const mode=($('orientationReference')?.value || 'perpU').replace(/^bragg2$/,'bragg');
+  const mode=$('orientationReference')?.value || 'perpU';
   if(mode==='perpU') return setGeometryKiPerpU();
   if(mode==='perpV') return setGeometryKiPerpV();
   if(mode==='parallelU') return setGeometryKiParallelU();

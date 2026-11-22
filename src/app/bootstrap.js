@@ -22,7 +22,7 @@ export function createAppBootstrap(deps){
     setGeometryTargetHKL, setPowderLinkDriver,
     setQEMapTab, setTargetHWFromMap, syncGeometryTargetToOrientationReference,
     syncPowderLinkedInputs, syncQEPathSnapDefault, syncSfColorMaxControl, syncSidebarCrystalSelectors,
-    updateAutoW, updateBraggOrientationPlaneWarning, prepareBraggPeak2, updateCalcMode,
+    updateAutoW, updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode,
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
@@ -257,10 +257,10 @@ async function initialize(){
     $(id)?.addEventListener('input',updateBraggOrientationPlaneWarning);
     $(id)?.addEventListener('change',updateBraggOrientationPlaneWarning);
   }
+  $('braggReset')?.addEventListener('click',resetBraggPeaks);
   $('flipUV')?.addEventListener('click',flipScatteringPlaneUV);
   updateOrientationReferenceUI(); updateGeometryQuickTargetButtons();
   $('orientationReference')?.addEventListener('change',()=>{
-    prepareBraggPeak2();
     updateOrientationReferenceUI();
     updateGeometryQuickTargetButtons();
 

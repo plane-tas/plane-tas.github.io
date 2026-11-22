@@ -1001,8 +1001,11 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 
 /* Sample orientation > Bragg peak position: peak 2 (check only) and the
    Reset / check-message row.  The message always fits on one line. */
-.bragg-check-message{margin-top:calc(4px * var(--tas-density));min-width:0;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
-.bragg-check-message:empty{display:none}
+/* The check of peak 2 on the left, Reset on the right (one line). */
+.bragg-check-row{display:flex;align-items:center;gap:calc(6px * var(--tas-density));margin-top:calc(4px * var(--tas-density))}
+.bragg-check-message{flex:1 1 auto;min-width:0;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
+.bragg-check-row > button{flex:none;width:auto;min-height:calc(30px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));font-size:calc(16px * var(--tas-density));line-height:1.2}
 .bragg-check-message[data-state="warn"]{color:#b4441f}
 .bragg-check-message[data-state="pending"]{color:#999}
 

@@ -335,7 +335,7 @@ function installQEPathOverlay(){
   updateQEPathControls();
 }
 
-// Drag the Angle-calculation target (orange diamond) on the Constant E map.
+// Drag the Angle-calculation target (magenta ✕) on the Constant E map.
 // Only H, K, L change (in the U/V plane, honouring Snap 1/n); its hbar-omega
 // and any out-of-plane component are kept. Grabbing elsewhere keeps Plotly's
 // zoom/pan, and Select Path mode (hit layer on top) never starts a drag.

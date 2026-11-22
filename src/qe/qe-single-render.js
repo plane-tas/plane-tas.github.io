@@ -60,7 +60,7 @@ function qeLegendSymbol(symbol,color){
   };
   if(symbol==='x' || symbol==='cross'){
     const lines=symbol==='x' ? [[4,4,16,16],[16,4,4,16]] : [[10,2.5,10,17.5],[2.5,10,17.5,10]];
-    for(const [x1,y1,x2,y2] of lines) add('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.6,'stroke-linecap':'round'});
+    for(const [x1,y1,x2,y2] of lines) add('line',{x1,y1,x2,y2,stroke:color,'stroke-width':3.6,'stroke-linecap':'round'});
   }else if(symbol==='star' || symbol==='pentagon'){
     const n=symbol==='star'?10:5;
     const points=Array.from({length:n},(_,i)=>{
@@ -496,7 +496,7 @@ function renderSingle(cache,index=0){
   traces.push({type:'scatter',mode:'markers',showlegend:true,meta:'qe-geometry-target',zorder:110,
     name:'Angle calculation point',
     x:geometryTarget?[geometryTarget[0]]:[null],y:geometryTarget?[geometryTarget[1]]:[null],
-    marker:{size:17,symbol:'diamond',color:'#d6007a',line:{color:'#fff',width:2}},
+    marker:{size:17,symbol:'x',color:'#d6007a',line:{color:'#fff',width:2}},
     customdata:[geometryTargetHoverText(cache)],
     hovertemplate:'%{customdata}<extra></extra>'});
   // Plotly draws later traces on top. Keep the nuclear legend entry where it is,

@@ -345,8 +345,7 @@ let prepareToolboxUI, bindToolboxUI, updateAbsorptionCalculator;
 // Therefore, for an orthogonal U/V plane:
 //   ki ∥ V == ki ⟂ U
 //   ki ∥ U == ki ⟂ V
-// Bragg peak position: (1 peak) or (2 peaks; peak 2 is only checked).
-const orientationMode=fallback=>($('orientationReference')?.value || fallback).replace(/^bragg2$/,'bragg');
+const orientationMode=fallback=>$('orientationReference')?.value || fallback;
 function updateOrientationReferenceUI(){
   const mode=orientationMode('bragg');
   $('braggReferenceInputs')?.classList.toggle('hidden',mode!=='bragg');
@@ -386,16 +385,7 @@ function updateBraggOrientationPlaneWarning(){
 // (e.g. (0,-1,0) was used as (0,1,0) when the UB matrix was made): swapping
 // U and V fixes it.  Nothing is changed automatically.
 const BRAGG_CHECK_TOL=5;   // deg: "agrees" and "about 180° apart"
-// Peak 2 is used with Bragg peak position (2 peaks) only. Choosing that
-// mode starts peak 2 from V with S1 empty when it has no S1 yet.
-const braggPeak2Shown=()=>$('orientationReference')?.value==='bragg2';
-function prepareBraggPeak2(){
-  if(!braggPeak2Shown() || String($('refs12')?.value??'').trim()!=='') return;
-  const V=['Vh','Vk','Vl'].map(id=>$(id)?.value??'0');
-  ['refh2','refk2','refl2'].forEach((id,i)=>{ const el=$(id); if(el){ el.value=V[i]; el.dataset.lastValid=V[i]; } });
-}
 function updateBraggPeakCheck(){
-  $('braggPeak2Row')?.classList.toggle('hidden',!braggPeak2Shown());
   const box=$('braggCheckMessage');
   if(!box) return;
   const show=(text,state='')=>{ box.textContent=text; if(state) box.dataset.state=state; else delete box.dataset.state; };
@@ -417,8 +407,7 @@ function updateBraggPeakCheck(){
     }catch(_e){}
     return show('Peak 1 S1 empty: ki ⟂ U used','info');
   }
-  if(!braggPeak2Shown()) return show('');
-  // Until peak 2 is complete the line keeps its place (in grey).
+  // Peak 2 is optional; until it is complete the line keeps its place (in grey).
   const pending=()=>show('Peak 2 off by –°','pending');
   const raw=['refh2','refk2','refl2','refs12'].map(id=>String($(id)?.value??'').trim());
   if(raw.some(v=>v==='')) return pending();
@@ -438,6 +427,19 @@ function updateBraggPeakCheck(){
   if(off<=BRAGG_CHECK_TOL) return show(`${by}: OK`);
   if(off>=180-BRAGG_CHECK_TOL) return show(`${by}: flip U and V`,'warn');
   return show(`${by}: check hkl or lattice`,'warn');
+}
+
+// Reset for a new experiment: peak 1 = U, peak 2 = V, both S1 empty (the
+// orientation is ki ⟂ U until the S1 of peak 1 is entered).
+function resetBraggPeaks(){
+  const U=['Uh','Uk','Ul'].map(id=>$(id)?.value??'0'), V=['Vh','Vk','Vl'].map(id=>$(id)?.value??'0');
+  const values={refh:U[0],refk:U[1],refl:U[2],refs1:'',refh2:V[0],refk2:V[1],refl2:V[2],refs12:''};
+  for(const [id,value] of Object.entries(values)){
+    const el=$(id); if(!el) continue;
+    el.value=value; el.dataset.lastValid=value;
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  updateBraggOrientationPlaneWarning();
 }
 
 function updateGeometryQuickTargetButtons(){
@@ -1039,7 +1041,7 @@ const {
   setTargetHWFromMap, syncGeometryTargetToOrientationReference,
   syncPowderLinkedInputs:(...args)=>syncPowderLinkedInputs(...args), syncQEPathSnapDefault,
   syncSfColorMaxControl:(...args)=>syncSfColorMaxControl(...args), syncSidebarCrystalSelectors,
-  updateAutoW:(...args)=>updateAutoW(...args), updateBraggOrientationPlaneWarning, prepareBraggPeak2, updateCalcMode:(...args)=>updateCalcMode(...args),
+  updateAutoW:(...args)=>updateAutoW(...args), updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode:(...args)=>updateCalcMode(...args),
   updateCifUI:(...args)=>updateCifUI(...args), updateDarkReferenceUI, updateEnergyLabel,
   updateGeometryQuickTargetButtons, updateModeVisibility, updateOrientationReferenceUI,
   updatePropagationVectorLabels:(...args)=>updatePropagationVectorLabels(...args),
