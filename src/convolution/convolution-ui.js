@@ -1283,7 +1283,20 @@ export function createConvolutionUI(deps){
     if(!plotly()) return;
     const {curves,traces,layout}=scanFigure();
     if(!curves.length){ try{ Plotly.purge('convScanPlot'); }catch(_e){} return; }
-    Plotly.react('convScanPlot',traces,layout,{responsive:true,displaylogo:false});
+    // Double-click: back to the drawn view: autorange, but in log I the
+    // intensity range down to 10⁻⁶ of the maximum (Plotly's own autorange
+    // would go over every decade of the Gaussian tails).
+    const el=$('convScanPlot');
+    el.__convLogY=layout.yaxis.type==='log' ? layout.yaxis.range?.slice() : null;
+    Plotly.react(el,traces,layout,{responsive:true,displaylogo:false,doubleClick:false});
+    if(!el.__convDoubleClick){
+      el.__convDoubleClick=true;
+      el.on('plotly_doubleclick',()=>requestAnimationFrame(()=>{
+        if(!el.isConnected) return;
+        const y=el.__convLogY;
+        Plotly.relayout(el,{'xaxis.autorange':true,...(y ? {'yaxis.range':y.slice(),'yaxis.autorange':false} : {'yaxis.autorange':true})});
+      }));
+    }
   }
   // Save figure: the plot as on screen (current zoom) with the legend table
   // (a head row and one row per curve, the columns shown on screen) under it.  The legend is drawn with shapes and
