@@ -5,7 +5,6 @@
 @media(max-width:760px){
   .instrument-primary-row{grid-template-columns:1fr 1fr}
   .instrument-primary-row>label:first-child{grid-column:1/-1}
-  .sample-spacegroup-row{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   .sample-spacegroup-row label:last-child{grid-column:auto!important}
   .cif-heading-actions{justify-content:stretch}
   .cif-heading-actions button{flex:1 1 calc(150px * var(--tas-density))}
@@ -13,8 +12,6 @@
 .structure-control-section{
   border:calc(1px * var(--tas-density)) solid #d9d9d9;
   border-radius:calc(10px * var(--tas-density));
-  padding:calc(12px * var(--tas-density));
-  background:#fafafa;
 }
 .structure-help-text{
   margin-top:calc(8px * var(--tas-density));
@@ -42,7 +39,6 @@
   min-width:0;
   display:flex;
   flex-direction:column;
-  min-height:calc(640px * var(--tas-density));
 }
 .cif-structure-status{
   margin-bottom:calc(8px * var(--tas-density));
@@ -50,7 +46,6 @@
 }
 .cif-structure-plot{
   width:100%;
-  min-height:calc(560px * var(--tas-density));
   flex:1 1 auto;
   border:calc(1px * var(--tas-density)) solid #ddd;
   border-radius:calc(8px * var(--tas-density));
@@ -58,47 +53,23 @@
 }
 .structure-bond-row{
   display:grid;
-  gap:calc(8px * var(--tas-density));
   align-items:center;
-}
-@media (max-width: 1180px){
-  
-  .structure-viewer-main{
-    min-height:calc(480px * var(--tas-density));
-  }
-  .cif-structure-plot{
-    min-height:calc(440px * var(--tas-density));
-  }
 }
 .structure-control-section{
   padding:calc(10px * var(--tas-density));
 }
 .structure-moment-row{
   display:grid;
-  grid-template-columns:auto minmax(calc(125px * var(--tas-density)),1fr) calc(150px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(145px * var(--tas-density)),1fr) calc(42px * var(--tas-density));
-  gap:calc(6px * var(--tas-density));
   align-items:center;
-  padding:calc(7px * var(--tas-density));
-  border:calc(1px * var(--tas-density)) solid #ddd;
-  border-radius:calc(7px * var(--tas-density));
-  background:#fff;
 }
 .structure-moment-site{
-  display:flex;
   flex-direction:column;
   min-width:0;
-  font-size:calc(12px * var(--tas-density));
 }
 .structure-moment-site span{
   color:#222;
   font-size:calc(11px * var(--tas-density));
   overflow-wrap:anywhere;
-}
-.structure-moment-row>input[type=number]{
-  width:calc(58px * var(--tas-density));
-}
-.structure-bond-row{
-  grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(80px * var(--tas-density)) calc(44px * var(--tas-density)) auto;
 }
 .structure-viewer-main{
   min-height:calc(100vh - calc(142px * var(--tas-density)));
@@ -107,24 +78,14 @@
   min-height:calc(100vh - calc(182px * var(--tas-density)));
   height:calc(100vh - calc(182px * var(--tas-density)));
 }
-@media (max-width: 1450px){
-  .structure-moment-row{grid-template-columns:auto minmax(calc(110px * var(--tas-density)),1fr);}
-}
 @media (max-width:1180px){
   .structure-viewer-main{min-height:auto}
   .cif-structure-plot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
-}
-.structure-moment-row{
-  grid-template-columns:calc(28px * var(--tas-density)) calc(52px * var(--tas-density)) calc(138px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(78px * var(--tas-density)),1fr);
-  gap:calc(5px * var(--tas-density));
-  padding:calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
-  border-left:calc(4px * var(--tas-density)) solid var(--moment-site-color,#888);
 }
 .structure-moment-site{
   display:block;
   font-size:calc(12px * var(--tas-density));
   font-weight:700;
-  color:var(--moment-site-color,#333);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -234,8 +195,6 @@
   pointer-events:none!important;
   z-index:5;
   overflow:visible;
-  background:rgba(255,255,255,.72);
-  border-radius:calc(8px * var(--tas-density));
 }
 #structurePanel .structure-triad-left{left:calc(12px * var(--tas-density));}
 #structurePanel .structure-triad-right{right:calc(12px * var(--tas-density));}
@@ -256,14 +215,7 @@
 }
 
 #structurePanel .structure-plot-toolbar{
-  position:absolute;
-  top:calc(10px * var(--tas-density));
-  left:calc(10px * var(--tas-density));
   z-index:8;
-  display:flex;
-  gap:calc(8px * var(--tas-density));
-  align-items:end;
-  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
   background:rgba(255,255,255,.9);
   border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.12);
   border-radius:calc(7px * var(--tas-density));
@@ -271,25 +223,15 @@
 }
 #structurePanel .structure-plot-toolbar select{min-width:calc(94px * var(--tas-density));padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density));}
 #structurePanel .structure-atom-legend{
-  position:absolute;
-  top:calc(10px * var(--tas-density));
-  right:calc(10px * var(--tas-density));
   z-index:8;
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  gap:calc(5px * var(--tas-density)) calc(10px * var(--tas-density));
-  max-width:46%;
-  padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
   background:rgba(255,255,255,.9);
   border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.12);
   border-radius:calc(7px * var(--tas-density));
   box-shadow:0 calc(1px * var(--tas-density)) calc(4px * var(--tas-density)) rgba(0,0,0,.08);
   pointer-events:none;
-  font-size:calc(12px * var(--tas-density));
 }
-#structurePanel .structure-atom-legend-item{display:inline-flex;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;}
-#structurePanel .structure-atom-legend-dot{display:inline-block;width:calc(10px * var(--tas-density));height:calc(10px * var(--tas-density));border-radius:50%;border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.35);}
+#structurePanel .structure-atom-legend-item{align-items:center;white-space:nowrap;}
+#structurePanel .structure-atom-legend-dot{display:inline-block;border-radius:50%;border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.35);}
 
 @container structure-viewer (max-width:760px){
   
@@ -319,9 +261,6 @@
   position:static!important;
   top:auto!important;
   right:auto!important;
-  max-width:100%!important;
-  justify-content:flex-start!important;
-  gap:calc(8px * var(--tas-density)) calc(14px * var(--tas-density))!important;
   padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))!important;
   font-size:calc(18px * var(--tas-density))!important;
 }
@@ -348,19 +287,18 @@
   width:auto;
 }
 #structurePanel .structure-plot-toolbar label{
-  font-size:calc(13.5px * var(--tas-density))!important;
   line-height:1.25!important;
   gap:calc(4px * var(--tas-density))!important;
 }
 #structurePanel #mcifStructurePane{flex:1;min-width:0;min-height:0}
-.toolbox-grid{display:grid;grid-template-columns:repeat(4,minmax(calc(130px * var(--tas-density)),1fr));gap:calc(10px * var(--tas-density))}
+.toolbox-grid{display:grid;}
 .harmonic-table{display:grid;grid-template-columns:calc(90px * var(--tas-density)) repeat(7,minmax(calc(105px * var(--tas-density)),1fr));gap:0;min-width:calc(850px * var(--tas-density));border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
 .harmonic-table>*{background:#fff;padding:calc(8px * var(--tas-density));text-align:center;border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc}
-.cif-generator-output-pane{display:flex;flex-direction:column;min-height:calc(650px * var(--tas-density));overflow:hidden}
+.cif-generator-output-pane{display:flex;flex-direction:column;}
 .cif-generator-beam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density));margin:calc(10px * var(--tas-density)) 0 calc(12px * var(--tas-density))}
 
 /* v11: only the new figure export button; do not alter camera/viewer sizing. */
-#structurePanel #cifSaveFigure{align-self:end;white-space:nowrap;padding:calc(5px * var(--tas-density)) calc(9px * var(--tas-density));font-size:calc(12px * var(--tas-density));}
+#structurePanel #cifSaveFigure{align-self:end;white-space:nowrap;}
 .geometry-card-tabs .geometry-card-tab:last-child,
 .cif-output-tabs .cif-output-tab:last-child{border-right:0;}
 /* Larger Save figure action, including on narrow screens. */
@@ -416,10 +354,6 @@
 }
 /* Retain two tidy rows even at 280px, without overlapping x/y/z labels. */
 @media(max-width:340px){
-  #structurePanel .generator-structure-view-controls .structure-entry-label{
-    font-size:0!important;
-    line-height:1.3!important;
-  }
   #structurePanel .generator-structure-view-controls .structure-entry-label::after{
     content:attr(data-short-label);
     display:block;
@@ -431,15 +365,9 @@
 
 /* Six side-by-side view-range fields have less room than editor fields. */
 #structurePanel .generator-structure-view-controls .structure-entry-label{
-  font-size:calc(15px * var(--tas-density))!important;
   line-height:1.3!important;
 }
 @container generator-unified (max-width:660px){
-  #structurePanel .generator-structure-view-controls .structure-entry-label{
-    font-size:calc(13px * var(--tas-density))!important;
-  }
-}
-@media(max-width:420px){
   #structurePanel .generator-structure-view-controls .structure-entry-label{
     font-size:calc(13px * var(--tas-density))!important;
   }
@@ -553,9 +481,6 @@
 #structurePanel .generator-unified-right{
   overflow-anchor:none;
 }
-#structurePanel .generator-structure-view-controls label {
-  font-size: var(--plane-tab-label-font) !important;
-}
 
 /* View range x/y/z min/max are data-entry captions, not 10px footnotes.
    This also covers Unit cell and XYZ axes in the Structure viewer toolbar. */
@@ -610,4 +535,3 @@
 
 /* Unit-cell frame reference: second, unlabelled row under Structure controls. */
 #structurePanel .structure-plot-toolbar{flex-wrap:wrap!important;}
-/* Keep the selector on its own second row without stretching it across the toolbar. */

@@ -3,37 +3,17 @@
 
 /* v37 Script tab: Time estimate <-> SPICE macro */
 .script-card{margin-top:0;min-width:0;overflow:hidden}
-.script-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:calc(12px * var(--tas-density));align-items:stretch;min-width:0}
-.script-command-pane,.script-spice-pane{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));min-width:0;background:#fff;overflow:hidden}
 .script-pane-heading{font-size:calc(16px * var(--tas-density));font-weight:650;margin:0 0 calc(8px * var(--tas-density));min-height:calc(30px * var(--tas-density));display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
-.script-spice-heading{justify-content:space-between;flex-wrap:wrap}
-.script-actions{display:flex;gap:calc(6px * var(--tas-density));flex-wrap:wrap;margin-left:auto}
-.script-actions button{width:auto;white-space:nowrap}
+.script-actions{display:flex;gap:calc(6px * var(--tas-density));margin-left:auto}
 .script-time-mount{min-width:0}
 .script-time-mount>.time-estimate-pane{display:block!important;min-width:0;width:100%}
 .script-time-mount .time-range-help{margin-top:0}
-.script-spice-text{display:block;width:100%;min-width:0;height:calc(620px * var(--tas-density));resize:vertical;padding:calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #bbb;border-radius:calc(6px * var(--tas-density));font:calc(13px * var(--tas-density))/1.5 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;white-space:pre;overflow:auto}
+.script-spice-text{display:block;min-width:0;}
 .script-message{font-size:calc(13px * var(--tas-density));line-height:1.4;min-height:calc(20px * var(--tas-density));margin-top:calc(7px * var(--tas-density))}
 .script-message.error-text{color:#a22}
-@media(max-width:1180px){
-  .script-workspace{grid-template-columns:1fr}
-  .script-spice-text{height:calc(440px * var(--tas-density))}
-}
 
 /* v39 Script: labeled bidirectional conversion controls; one-space SPICE loop indentation. */
-.script-workspace{
-  grid-template-columns:minmax(0,1fr) calc(96px * var(--tas-density)) minmax(0,1fr);
-  gap:calc(8px * var(--tas-density));
-}
-.script-spice-heading{flex-wrap:nowrap}
 .script-actions{flex-wrap:nowrap}
-@media(max-width:1180px){
-  .script-workspace{grid-template-columns:1fr;gap:calc(8px * var(--tas-density))}
-  
-  
-  
-  
-}
 .time-estimate-message.warning-text{
   color:#6b4f00;
   background:#fff8df;
@@ -44,7 +24,6 @@
 
 .script-workspace{
   display:grid;
-  grid-template-columns:minmax(calc(180px * var(--tas-density)),1fr) minmax(calc(440px * var(--tas-density)),2fr) minmax(calc(220px * var(--tas-density)),1fr)!important;
   gap:calc(8px * var(--tas-density));
   align-items:stretch;
   min-width:0;
@@ -59,19 +38,8 @@
 }
 .script-command-heading,.script-spice-heading{justify-content:space-between;flex-wrap:nowrap}
 .script-command-heading button,.script-actions button{width:auto;white-space:nowrap}
-.script-aset-help{font-size:calc(12px * var(--tas-density));line-height:1.35;color:#222;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
-.script-aset-list{display:flex;flex-direction:column;gap:calc(7px * var(--tas-density))}
-.script-aset-item{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:calc(3px * var(--tas-density));
-  border:calc(1px * var(--tas-density)) solid #e2e2e2;
-  border-radius:calc(6px * var(--tas-density));
-  padding:calc(6px * var(--tas-density));
-  background:#fafafa;
-}
+.script-aset-help{color:#222;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
 .script-aset-item>span{font-size:calc(12px * var(--tas-density));font-weight:650}
-.script-aset-item input{width:100%;min-width:0;font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}
 .script-spice-editor{position:relative;width:100%;height:calc(620px * var(--tas-density));min-height:calc(620px * var(--tas-density));max-height:calc(620px * var(--tas-density));resize:none;overflow:hidden}
 .script-spice-backdrop,.script-spice-text{
   position:absolute;
@@ -107,12 +75,10 @@
 .script-spice-backdrop .spice-backdrop-line.spice-line-warning::selection{background:transparent}
 
 @media(max-width:1180px){
-  .script-workspace{grid-template-columns:1fr!important}
   .script-spice-editor{height:calc(440px * var(--tas-density));min-height:calc(440px * var(--tas-density));max-height:calc(440px * var(--tas-density))}
-  .script-aset-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .script-aset-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:760px){
-  .time-scan-table{grid-template-columns:calc(38px * var(--tas-density)) calc(82px * var(--tas-density)) calc(84px * var(--tas-density)) minmax(calc(150px * var(--tas-density)),1fr) calc(64px * var(--tas-density)) calc(40px * var(--tas-density))!important}
   .time-scan-table-wrap{overflow-x:auto}
   .script-aset-list{grid-template-columns:1fr}
 }
@@ -120,7 +86,6 @@
 /* v43: user-extensible ASET list and explicit first/last drag targets. */
 .script-aset-heading{justify-content:space-between;align-items:center}
 .script-aset-heading button{width:auto;white-space:nowrap}
-.script-aset-remove{width:auto;padding:calc(2px * var(--tas-density)) calc(5px * var(--tas-density));font-size:calc(11px * var(--tas-density));line-height:1.2}
 .time-scan-table-wrap.time-dragging .time-edge-dropzone{
   display:block;
   height:calc(16px * var(--tas-density));
@@ -136,9 +101,7 @@
 .script-aset-list{display:flex!important;flex-direction:column;gap:calc(4px * var(--tas-density))}
 .script-aset-table-header,.script-aset-item{
   display:grid;
-  grid-template-columns:calc(34px * var(--tas-density)) minmax(calc(68px * var(--tas-density)),.7fr) minmax(calc(120px * var(--tas-density)),1.6fr) calc(26px * var(--tas-density));
   gap:calc(4px * var(--tas-density));
-  align-items:center;
 }
 .script-aset-table-header{
   font-size:calc(11px * var(--tas-density));
@@ -163,16 +126,11 @@
 .script-aset-remove{width:calc(26px * var(--tas-density));height:calc(26px * var(--tas-density));padding:0;font-size:calc(13px * var(--tas-density));line-height:1}
 @media(max-width:760px){
   .time-scan-table{grid-template-columns:calc(38px * var(--tas-density)) calc(100px * var(--tas-density)) calc(82px * var(--tas-density)) minmax(calc(130px * var(--tas-density)),1fr) calc(60px * var(--tas-density)) calc(40px * var(--tas-density))!important}
-  .script-aset-table-header,.script-aset-item{grid-template-columns:calc(32px * var(--tas-density)) minmax(calc(80px * var(--tas-density)),.8fr) minmax(calc(180px * var(--tas-density)),1.7fr) calc(26px * var(--tas-density))}
   .script-aset-pane{overflow-x:auto}
-  .script-aset-table-header,.script-aset-list{min-width:calc(380px * var(--tas-density))}
 }
 .script-aset-item input.invalid{border-color:#c33;background:#fff4f4}
 
 /* v46: wider multiline ASET templates; keep Command readable while QE uses two Details fields. */
-.script-workspace{
-  grid-template-columns:minmax(calc(240px * var(--tas-density)),1.12fr) minmax(calc(430px * var(--tas-density)),1.88fr) minmax(calc(220px * var(--tas-density)),1fr)!important;
-}
 .script-aset-table-header,.script-aset-item{
   grid-template-columns:calc(34px * var(--tas-density)) minmax(calc(64px * var(--tas-density)),.52fr) minmax(calc(180px * var(--tas-density)),2.15fr) calc(26px * var(--tas-density));
   align-items:start;
@@ -192,9 +150,6 @@
   font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
 }
 .script-aset-item textarea[data-aset-template].invalid{border-color:#c33;background:#fff4f4}
-@media(max-width:1180px){
-  .script-workspace{grid-template-columns:1fr!important}
-}
 @media(max-width:760px){
   .script-aset-table-header,.script-aset-item{grid-template-columns:calc(32px * var(--tas-density)) minmax(calc(74px * var(--tas-density)),.55fr) minmax(calc(220px * var(--tas-density)),2.2fr) calc(26px * var(--tas-density))}
   .script-aset-table-header,.script-aset-list{min-width:calc(430px * var(--tas-density))}
@@ -229,52 +184,25 @@
 @media(max-width:1180px){
   .script-aset-list{
     flex:0 1 auto;
-    max-height:calc(420px * var(--tas-density));
     overflow-y:auto;
   }
 }
 
 /* v48: unified commands, collapsible ASET, and a wider SPICE editor. */
-.script-workspace{
-  grid-template-columns:minmax(calc(240px * var(--tas-density)),.9fr) minmax(calc(440px * var(--tas-density)),1.55fr) minmax(calc(360px * var(--tas-density)),1.35fr)!important;
-}
-.script-command-actions{display:flex;gap:calc(6px * var(--tas-density));align-items:center;flex-wrap:nowrap}
+.script-command-actions{flex-wrap:nowrap}
 .script-command-actions button{width:auto;white-space:nowrap}
-.script-workspace.aset-collapsed{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-}
-.script-workspace.aset-collapsed .script-aset-pane{display:none}
 .script-aset-remove{display:inline-flex!important;align-items:center;justify-content:center}
 .script-aset-list{max-height:calc(620px * var(--tas-density))}
 @media(max-width:1180px){
-  .script-workspace,.script-workspace.aset-collapsed{grid-template-columns:1fr!important}
-  .script-workspace.aset-collapsed .script-aset-pane{display:none}
   .script-aset-list{max-height:calc(420px * var(--tas-density))}
 }
 
 /* v49: case-sensitive ASET names, left-collapsing ASET drawer, SPICE line gutter. */
-.script-workspace{
-  transition:grid-template-columns .22s ease;
-}
-.script-aset-pane{
-  transition:transform .22s ease, opacity .18s ease, padding .22s ease, border-width .22s ease;
-  transform:translateX(0);
-  opacity:1;
-}
-.script-workspace.aset-collapsed{
-  grid-template-columns:0 minmax(calc(480px * var(--tas-density)),1fr) minmax(calc(600px * var(--tas-density)),1.42fr)!important;
-  gap:calc(8px * var(--tas-density));
-}
 .script-workspace.aset-collapsed .script-aset-pane{
-  display:flex!important;
-  transform:translateX(-105%);
-  opacity:0;
-  pointer-events:none;
   padding-left:0;
   padding-right:0;
   border-left-width:0;
   border-right-width:0;
-  overflow:hidden;
 }
 .script-spice-editor{
   padding-left:calc(44px * var(--tas-density));
@@ -319,10 +247,6 @@
   width:calc(100% - calc(44px * var(--tas-density)));
   border-radius:0 calc(6px * var(--tas-density)) calc(6px * var(--tas-density)) 0;
 }
-@media(max-width:1180px){
-  .script-workspace.aset-collapsed{grid-template-columns:1fr!important}
-  .script-workspace.aset-collapsed .script-aset-pane{display:none!important}
-}
 
 /* v50: restore the v48 ASET hide/show behavior. Hiding ASET removes the pane
    from the layout (rather than sliding it left) and redistributes the width to
@@ -365,10 +289,7 @@
 .script-aset-heading-actions{display:flex;align-items:center;gap:calc(6px * var(--tas-density))}
 .info-toggle-button{
   width:auto!important;
-  padding:calc(3px * var(--tas-density)) calc(7px * var(--tas-density));
   white-space:nowrap;
-  font-size:calc(12px * var(--tas-density));
-  line-height:1.35;
 }
 .time-info-row{display:flex;justify-content:flex-end;margin:0 0 calc(5px * var(--tas-density))}
 .time-info-panel{
@@ -390,11 +311,6 @@
 .script-aset-help{
   font-size:calc(14px * var(--tas-density))!important;
   line-height:1.5!important;
-}
-.script-spice-editor .script-spice-backdrop,
-.script-spice-editor .script-spice-text{
-  font-size:calc(15px * var(--tas-density))!important;
-  line-height:1.55!important;
 }
 .script-spice-line-numbers{
   font-size:calc(15px * var(--tas-density))!important;
@@ -420,7 +336,7 @@
   font-size:calc(13px * var(--tas-density));
   color:#222;
 }
-.harmonic-wrap{overflow-x:auto;margin-top:calc(14px * var(--tas-density))}
+.harmonic-wrap{margin-top:calc(14px * var(--tas-density))}
 /* Contain horizontal overflow in Script's Command pane; not the entire page. */
 #scriptPanel .time-scan-table-wrap{overflow-x:auto;}
 .script-spice-editor .script-spice-text,

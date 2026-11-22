@@ -6,19 +6,6 @@
   width:100%;
 }
 .structure-bond-row{
-  grid-template-columns:minmax(calc(58px * var(--tas-density)),1fr) minmax(calc(58px * var(--tas-density)),1fr) calc(68px * var(--tas-density)) calc(68px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
-  gap:calc(6px * var(--tas-density));
-}
-@media (max-width:1450px){
-  .structure-bond-row{
-    grid-template-columns:minmax(calc(58px * var(--tas-density)),1fr) minmax(calc(58px * var(--tas-density)),1fr) calc(64px * var(--tas-density)) calc(64px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
-  }
-}
-.structure-bond-row{
-  grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(72px * var(--tas-density)) calc(72px * var(--tas-density)) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
-  gap:calc(6px * var(--tas-density));
-}
-.structure-bond-row{
   grid-template-columns:minmax(calc(62px * var(--tas-density)),1fr) minmax(calc(62px * var(--tas-density)),1fr) calc(92px * var(--tas-density)) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) auto!important;
   gap:calc(6px * var(--tas-density));
 }
@@ -104,9 +91,7 @@
   font-weight:600;
 }
 #structurePanel .generator-unified-output-tabs > .cif-output-tab{
-  box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;
-  width:100%;min-width:0;max-width:100%;
   min-height:calc(46px * var(--tas-density));
   padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
   white-space:normal;
@@ -143,18 +128,15 @@
 
 /* 2026-10: Bonds list scrolling and one-line Spins controls. */
 #structurePanel #cifBondRows {
-  max-height: calc(330px * var(--tas-density));
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: calc(4px * var(--tas-density));
-  scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
 }
 
 /* Collapsible element/site table in Structure editor > Atoms. */
-#structurePanel #cifAtomColorRows{max-height:calc(330px * var(--tas-density));overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;padding-right:calc(4px * var(--tas-density));}
+#structurePanel #cifAtomColorRows{overflow-y:auto;overflow-x:hidden;padding-right:calc(4px * var(--tas-density));}
 #structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
- display:grid;grid-template-columns:minmax(calc(76px * var(--tas-density)),1fr) calc(47px * var(--tas-density)) calc(46px * var(--tas-density)) calc(62px * var(--tas-density));gap:calc(6px * var(--tas-density));align-items:center;min-width:0;
+ display:grid;align-items:center;min-width:0;
 }
 #structurePanel .atoms-table-head span:not(:first-child){text-align:center;}
 #structurePanel .atoms-table-row{padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e8ebef;min-height:calc(36px * var(--tas-density));}
@@ -163,15 +145,10 @@
 #structurePanel .atoms-visible{justify-self:center;margin:0;}
 #structurePanel .atoms-color{width:calc(33px * var(--tas-density));height:calc(27px * var(--tas-density));min-width:0;padding:calc(1px * var(--tas-density));justify-self:center;cursor:pointer;}
 #structurePanel .atoms-size{width:100%;min-width:0;box-sizing:border-box;font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density));}
-@media(max-width:420px){#structurePanel .atoms-table-head,#structurePanel .atoms-table-row{grid-template-columns:minmax(calc(56px * var(--tas-density)),1fr) calc(43px * var(--tas-density)) calc(42px * var(--tas-density)) calc(53px * var(--tas-density));gap:calc(3px * var(--tas-density));}}
 
 /* Atoms: twelve always-visible preset colors (6 x 2), plus independent RGB picker. */
-#structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
-  grid-template-columns:minmax(calc(90px * var(--tas-density)),1fr) calc(50px * var(--tas-density)) minmax(calc(210px * var(--tas-density)),calc(235px * var(--tas-density))) calc(62px * var(--tas-density));
-  gap:calc(6px * var(--tas-density));
-}
 #structurePanel .atoms-color-cell{
-  display:flex;align-items:center;justify-content:flex-start;gap:0;min-width:0;
+  display:flex;align-items:center;justify-content:flex-start;gap:0;
 }
 #structurePanel .atoms-preset-grid{
   display:grid;grid-template-columns:repeat(6,calc(22px * var(--tas-density)));grid-template-rows:repeat(2,calc(22px * var(--tas-density)));
@@ -189,10 +166,6 @@
   min-width:0;padding:calc(1px * var(--tas-density));cursor:pointer;margin-left:calc(18px * var(--tas-density));
 }
 @media(max-width:480px){
-  #structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
-    grid-template-columns:minmax(calc(42px * var(--tas-density)),1fr) calc(32px * var(--tas-density)) minmax(calc(146px * var(--tas-density)),1.5fr) calc(42px * var(--tas-density));
-    gap:calc(3px * var(--tas-density));
-  }
   #structurePanel .atoms-preset-grid{
     grid-template-columns:repeat(6,calc(16px * var(--tas-density)));grid-template-rows:repeat(2,calc(19px * var(--tas-density)));
     gap:calc(4px * var(--tas-density)) calc(2px * var(--tas-density));
@@ -217,9 +190,6 @@
 }
 #structurePanel .atoms-color-cell {
   min-width: 0;
-}
-#structurePanel .atoms-table-head span:nth-child(3) {
-  text-align: left;
 }
 @media (max-width: 480px) {
   #structurePanel .atoms-table-head,
@@ -267,7 +237,6 @@
    gutter reserved a blank strip even with no Style-list scrollbar. */
 #structurePanel #cifBondRows{
   padding-right:0;
-  scrollbar-gutter:auto;
   scrollbar-width:thin;
 }
 #structurePanel .structure-bond-row{
@@ -378,7 +347,6 @@
    Two atom selects + Min/Max/Width share five equal flexible columns.
    Color and Remove retain their previous allocations at every width. */
 #structurePanel #cifBondRows{
-  container-type:inline-size;
   container-name:cif-style-fields;
 }
 #structurePanel #cifBondRows .structure-bond-row{
@@ -433,12 +401,9 @@
 /* Spins: same dense, aligned table idiom as Positions. The header checkbox
    toggles the whole Display selection, including individual magnetic sites. */
 #structurePanel .structure-spin-table-wrap {
-  width:100%;max-width:100%;min-width:0;
-  max-height:calc(320px * var(--tas-density));
-  overflow:auto;-webkit-overflow-scrolling:touch;
+  width:100%;min-width:0;
   margin-top:calc(7px * var(--tas-density));
   border:calc(1px * var(--tas-density)) solid #c9cdd1;
-  scrollbar-gutter:stable;
 }
 
 /* 2026-10-13 — Positions / Atoms / Spins / Style: shared table metrics.
@@ -466,12 +431,6 @@
 }
 #structurePanel .structure-style-table {
   display:grid;
-  grid-template-columns:
-    calc(43px * var(--tas-density))
-    repeat(2,minmax(calc(76px * var(--tas-density)),1fr))
-    repeat(3,minmax(calc(72px * var(--tas-density)),1fr))
-    calc(54px * var(--tas-density));
-  min-width:calc(487px * var(--tas-density));
   width:100%;
   background:#dfe3e7;
   gap:calc(1px * var(--tas-density));
@@ -499,15 +458,13 @@
   justify-content:center;
   min-width:0;
   background:#fff;
-  padding:calc(4px * var(--tas-density));
   cursor:pointer;
 }
 #structurePanel .structure-style-table .structure-style-index {
   color:#222;background:#fafafa;font-weight:650;cursor:grab;user-select:none;touch-action:pan-y;
 }
 #structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]) {
-  width:100%;height:auto;min-height:calc(29px * var(--tas-density));
-  padding:calc(4px * var(--tas-density)) !important;
+  width:100%;height:auto;
 }
 #structurePanel .structure-style-table .structure-style-color input[type=color]{
   width:calc(32px * var(--tas-density));
@@ -527,10 +484,6 @@
 }
 #structurePanel .structure-style-actions button {width:100%;min-width:0;}
 #structurePanel .structure-style-actions button:disabled {opacity:.45;cursor:not-allowed;}
-#structurePanel .structure-style-table{
-  grid-template-columns:48px repeat(2,minmax(108px,1fr)) repeat(3,minmax(93px,1fr)) 60px;
-  min-width:655px;
-}
 
 /* 2026-10-13: Uij columns split into Index | Use | Atom | U11..U23.
    Retain the ordinary Positions cell borders and scroll behavior. */
@@ -552,14 +505,6 @@
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-size:calc(13px * var(--tas-density));
 }
-#structurePanel .structure-style-table{
-  grid-template-columns:
-    calc(36px * var(--tas-density))
-    repeat(2,minmax(calc(81px * var(--tas-density)),1fr))
-    repeat(3,minmax(calc(70px * var(--tas-density)),1fr))
-    calc(45px * var(--tas-density));
-  min-width:calc(492px * var(--tas-density));
-}
 
 /* Atomic positions shares the Spins Mode / Display control conventions. */
 #structurePanel .structure-position-editor-toolbar{
@@ -575,20 +520,6 @@
 #structurePanel #cifAtomColorRows .atoms-table-row{cursor:pointer;}
 
 /* Per-Style drawing choices: No | All | Atom1 | Atom2 | Bonds | Polyhedral | Min | Max | Width | Color */
-#structurePanel .structure-style-table {
-  grid-template-columns:
-    calc(40px * var(--tas-density))
-    calc(60px * var(--tas-density))
-    minmax(calc(85px * var(--tas-density)),1fr)
-    minmax(calc(85px * var(--tas-density)),1fr)
-    calc(57px * var(--tas-density))
-    calc(79px * var(--tas-density))
-    minmax(calc(72px * var(--tas-density)),.8fr)
-    minmax(calc(72px * var(--tas-density)),.8fr)
-    calc(63px * var(--tas-density))
-    calc(52px * var(--tas-density)) !important;
-  min-width:calc(765px * var(--tas-density)) !important;
-}
 #structurePanel .structure-style-table .structure-style-mode-header {
   white-space:nowrap;
   overflow:visible;

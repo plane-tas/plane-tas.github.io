@@ -70,7 +70,7 @@ async function initializeNeutronData(){
 // Feature modules extracted from app.js. They only define functions here;
 // dependencies assigned later in this file are passed as late-bound wrappers.
 const {
-  BACKGROUND_SLOTS, backgroundColor, backgroundRowIndices, backgroundRowValues,
+  BACKGROUND_SLOTS, backgroundColor, backgroundRowValues,
   handleBackgroundSelection, removeBackground, replaceBackgroundRows, selectedBackgrounds,
   setBackgroundCount, updateBackgroundSelectAvailability
 }=createBackgroundRows({
@@ -488,14 +488,10 @@ function updateGeometryQuickTargetButtons(){
 
 // Static JSON/CIF directory loading is implemented in data-loader.js.
 
-function refreshBackgroundSelect(select,emptyLabel="None"){
+// The materials of a Background materials row (no empty choice: Remove
+// deletes the row).
+function refreshBackgroundSelect(select){
   select.innerHTML="";
-  if(emptyLabel!==null){
-    const empty=document.createElement("option");
-    empty.value="";
-    empty.textContent=emptyLabel;
-    select.appendChild(empty);
-  }
   [...backgroundMaterials.keys()]
     .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}))
     .forEach(key=>{
@@ -1009,11 +1005,10 @@ const {
 }=createAppBootstrap({
   redrawPowder,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults,
-  applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
-  bindResolutionManualCalculation:(...args)=>bindResolutionManualCalculation(...args),
+  backgroundMaterials, bindResolutionManualCalculation:(...args)=>bindResolutionManualCalculation(...args),
   bindToolboxUI:(...args)=>bindToolboxUI(...args),
   clearSelectedCif:(...args)=>clearSelectedCif(...args),
-  currentGeometryCardTab:(...args)=>currentGeometryCardTab(...args), darkAssetIds, darkAssetSlots,
+  currentGeometryCardTab:(...args)=>currentGeometryCardTab(...args), darkAssetSlots,
   doScanResolution:(...args)=>doScanResolution(...args),
   enableGlobalUIPersistence:(...args)=>enableGlobalUIPersistence(...args),
   enableRightPanelPersistence:(...args)=>enableRightPanelPersistence(...args),
@@ -1027,7 +1022,7 @@ const {
   prepareToolboxUI:(...args)=>prepareToolboxUI(...args), propagationVectorIndices, qeCommitPathText,
   qeDefaultPathText, qePathInput, recalculate,
   refreshCifAfterStateRestore:(...args)=>refreshCifAfterStateRestore(...args),
-  refreshDarkEnvironmentSelect, refreshSelect,
+  refreshSelect,
   renderResolutionScan:(...args)=>renderResolutionScan(...args), renderSingle,
   restoreGlobalUIState:(...args)=>restoreGlobalUIState(...args),
   restoreLeftPanelState:(...args)=>restoreLeftPanelState(...args),
@@ -1037,13 +1032,12 @@ const {
   saveLeftPanelState:(...args)=>saveLeftPanelState(...args),
   saveRightPanelState:(...args)=>saveRightPanelState(...args),
   selectCifFile:(...args)=>selectCifFile(...args), setActiveTab:(...args)=>setActiveTab(...args),
-  setBackgroundCount, setDarkAssetCount, setGeometryTargetHKL,
+  setDarkAssetCount, setGeometryTargetHKL,
   setPowderLinkDriver:(...args)=>setPowderLinkDriver(...args), setPropagationVectorCount, setQEMapTab,
   setTargetHWFromMap, syncGeometryTargetToOrientationReference,
   syncPowderLinkedInputs:(...args)=>syncPowderLinkedInputs(...args), syncQEPathSnapDefault,
   syncSfColorMaxControl:(...args)=>syncSfColorMaxControl(...args), syncSidebarCrystalSelectors,
-  updateAutoW:(...args)=>updateAutoW(...args), updateBackgroundSelectAvailability,
-  updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode:(...args)=>updateCalcMode(...args),
+  updateAutoW:(...args)=>updateAutoW(...args), updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode:(...args)=>updateCalcMode(...args),
   updateCifUI:(...args)=>updateCifUI(...args), updateDarkReferenceUI, updateEnergyLabel,
   updateGeometryQuickTargetButtons, updateModeVisibility, updateOrientationReferenceUI,
   updatePropagationVectorLabels:(...args)=>updatePropagationVectorLabels(...args),

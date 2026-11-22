@@ -5,12 +5,10 @@
 .cif-atom-row{display:contents}
 .cif-atom-cell input.cif-invalid-number{background:#f2b19d;border-color:#c55235;box-shadow:0 0 0 calc(1px * var(--tas-density)) rgba(197,82,53,.12) inset}
 .cif-filename-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
-.cif-generator-beam-grid input{width:100%;max-width:none}
-.cif-generator-message.error-text{color:#a22}
 .cif-output-tab:last-child{border-right:0}
 .cif-output-tab.active{background:#fff;box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #555}
 .cif-reflection-plane-toggle input{margin:0}
-.cif-reflection-table th,.cif-reflection-table td{padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap}
+.cif-reflection-table th,.cif-reflection-table td{border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap}
 .cif-reflection-table th:first-child,.cif-reflection-table td:first-child{text-align:center}
 .cif-reflection-table th{position:sticky;top:0;z-index:1;background:#f3f3f3;font-weight:700}
 .cif-reflection-table th:last-child,.cif-reflection-table td:last-child{border-right:0}
@@ -20,7 +18,7 @@
 
 /* The preview remains bounded by its output pane; long CIFs scroll instead of
    stretching the entire page. */
-#cifPreviewPanel{min-height:0;overflow:hidden}
+#cifPreviewPanel{overflow:hidden}
 
 /* Reflection-table readability and row selection. */
 .cif-reflection-toolbar{grid-template-columns:calc(170px * var(--tas-density)) calc(175px * var(--tas-density)) calc(220px * var(--tas-density)) calc(160px * var(--tas-density)) minmax(0,1fr)}
@@ -39,10 +37,8 @@
 /* CIF atom/action proportions. */
 .cif-atom-table{grid-template-columns:calc(52px * var(--tas-density)) calc(72px * var(--tas-density)) repeat(4,minmax(calc(76px * var(--tas-density)),1fr)) calc(94px * var(--tas-density));min-width:calc(652px * var(--tas-density))}
 
-/* CIF preview intentionally uses the same viewport height as the Reflection table. */
-
 /* v4.5 reflection-table simplification */
-.cif-reflection-toolbar{display:flex;flex-wrap:wrap;gap:calc(10px * var(--tas-density)) calc(18px * var(--tas-density));align-items:center;margin-bottom:calc(9px * var(--tas-density))}
+.cif-reflection-toolbar{display:flex;flex-wrap:wrap;gap:calc(10px * var(--tas-density)) calc(18px * var(--tas-density));align-items:center;}
 .cif-sortable-th{cursor:pointer;user-select:none}
 .cif-sortable-th:hover{background:#e8edf3}
 .cif-sortable-th:focus{outline:calc(2px * var(--tas-density)) solid #3b82f6;outline-offset:calc(-2px * var(--tas-density))}
@@ -51,9 +47,6 @@
 .cif-reflection-toolbar{flex:0 0 auto;margin-bottom:calc(10px * var(--tas-density))}
 .cif-reflection-table th,.cif-reflection-table td{padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))}
 .cif-reflection-table th{font-size:calc(14px * var(--tas-density))}
-.structure-bond-row{
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr) calc(90px * var(--tas-density)) auto;
-}
 
 /* View: six equal direction buttons and six equal min/max entry boxes. */
 #structurePanel .cif-structure-view-buttons.structure-view-buttons-six{
@@ -66,12 +59,6 @@
 /* Magnetic moments: checkbox + site use only a narrow fixed area.  The M-vector
    group and Length/Width/Head group receive the remaining width. */
 #structurePanel .structure-moment-row{
-  display:grid!important;
-  grid-template-columns:calc(20px * var(--tas-density)) minmax(calc(42px * var(--tas-density)),calc(58px * var(--tas-density))) minmax(calc(135px * var(--tas-density)),1fr) minmax(calc(165px * var(--tas-density)),1.25fr) calc(40px * var(--tas-density))!important;
-  column-gap:calc(6px * var(--tas-density))!important;
-  row-gap:calc(4px * var(--tas-density))!important;
-  width:100%!important;
-  align-items:end!important;
   padding:calc(4px * var(--tas-density)) calc(2px * var(--tas-density))!important;
   border:0!important;
   background:#fff!important;
@@ -90,22 +77,14 @@
   min-width:calc(40px * var(--tas-density))!important;
   height:calc(30px * var(--tas-density))!important;
   padding:calc(2px * var(--tas-density))!important;
-  align-self:end;
 }
 
 /* Bonds: min and max are independent entry boxes. */
 #structurePanel .structure-bond-row{
   display:grid!important;
-  grid-template-columns:minmax(calc(54px * var(--tas-density)),.8fr) minmax(calc(54px * var(--tas-density)),.8fr) minmax(calc(136px * var(--tas-density)),1.6fr) calc(58px * var(--tas-density)) calc(40px * var(--tas-density)) calc(66px * var(--tas-density))!important;
   gap:calc(6px * var(--tas-density))!important;
   align-items:end!important;
   width:100%!important;
-}
-
-@media(max-width:1450px){
-  #structurePanel .structure-moment-row{
-    grid-template-columns:calc(20px * var(--tas-density)) minmax(calc(40px * var(--tas-density)),calc(54px * var(--tas-density))) minmax(calc(120px * var(--tas-density)),1fr) minmax(calc(150px * var(--tas-density)),1.25fr) calc(40px * var(--tas-density))!important;
-  }
 }
 
 /* Spiral/helical magnetic display: one global rotation axis combined with the
@@ -197,7 +176,6 @@
   contain:layout;
 }
 
-/* v61 — Consistent Nuclear sections and reflection parameters in results pane. */
 /* Atomic positions is inside the Positions tab. No section divider here. */
 #structurePanel #generatorReflectionsPane > .generator-reflection-settings{
   box-sizing:border-box;
@@ -223,27 +201,15 @@
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr)) auto;
-  gap:calc(8px * var(--tas-density));
   align-items:end;
   min-width:0;
   margin:calc(10px * var(--tas-density)) 0 0;
 }
-#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
-  min-width:0;
-}
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
   box-sizing:border-box;
-  min-width:0;
-  width:100%;
   max-width:100%;
 }
 
-@media (max-width:620px){
-  #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-}
 /* Keep beam parameters; remove the now-unneeded Reflection parameters heading. */
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
   margin-top:0;
@@ -267,20 +233,9 @@
   white-space:nowrap;
 }
 
-/* Set default was removed: use three equal-width fields. */
-#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
-@media(max-width:620px){#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-
 /* Nuclear and Magnetic: a common approximately-ten-data-row scroll viewport.
    Auto-height prevents blank space when the table contains fewer rows. */
 #structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
-  box-sizing:border-box;
-  flex:none;
-  height:auto!important;
-  min-height:0!important;
-  max-height:calc(11 * calc(38px * var(--tas-density)));
-  overflow:auto;
-  overscroll-behavior:contain;
   max-width:100%;
 }
 #structurePanel #generatorReflectionsPane .cif-reflection-table th{
@@ -325,15 +280,6 @@
 #structurePanel #generatorReflectionsPane :is(.generator-reflection-pane,.cif-reflection-table-wrap){
   min-height:0;
 }
-#structurePanel #cifPreviewPanel #cifPreview{
-  flex:0 0 auto;
-  width:100%;
-  height:auto!important;
-  min-height:0!important;
-  max-height:none;
-  aspect-ratio:1 / 1;
-  overflow:auto;
-}
 
 /* CIF Generator output height alignment (Structure / Reflections / Preview).
    Use the same square content viewport for all three tabs.  Reflections
@@ -341,27 +287,12 @@
 /* Reflections returns to the original compact, content-height table viewport. */
 #structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
   box-sizing:border-box;
-  display:block;
-  flex:none;
   width:100%;
-  height:auto!important;
-  min-height:0!important;
-  max-height:calc(11 * calc(38px * var(--tas-density)))!important;
-  aspect-ratio:auto;
-  overflow:auto;
-  overscroll-behavior:contain;
 }
 
 #structurePanel #cifPreviewPanel #cifPreview{
   box-sizing:border-box;
-  display:block;
   width:100%;
-  height:auto!important;
-  min-height:0!important;
-  max-height:none!important;
-  aspect-ratio:1 / 1;
-  margin:0;
-  overflow:auto;
 }
 #structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel):not(.hidden){
   display:flex;
@@ -445,8 +376,6 @@
   overscroll-behavior:contain;
 }
 
-/* Uncertainty messages share the existing Cell Note typography. */
-
 /* Reflections: Mode / Reflections / Lorentz / form-factor selectors in one equal-width row. */
 .magnetic-options{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:calc(10px * var(--tas-density));margin:0 0 calc(9px * var(--tas-density))}
 .magnetic-ion-selectors{display:contents}
@@ -464,7 +393,7 @@
 #structurePanel .reflection-powder-plot{width:100%;height:calc(280px * var(--tas-density));min-width:0}
 #structurePanel #cifReflectionTableWrap.hidden{display:none!important}
 #structurePanel .reflection-powder-section:not([hidden]){flex:1 1 auto;display:flex;flex-direction:column;min-height:calc(320px * var(--tas-density))}
-#structurePanel .reflection-powder-section .reflection-powder-plot{flex:1 1 auto;min-height:calc(300px * var(--tas-density))}
+#structurePanel .reflection-powder-section .reflection-powder-plot{flex:1 1 auto;}
 #structurePanel .reflection-powder-plot-wrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-fwhm{position:absolute;top:calc(8px * var(--tas-density));left:calc(8px * var(--tas-density));z-index:2;font-size:max(12px,calc(15px * var(--tas-density)))}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-xaxis{position:absolute;bottom:calc(4px * var(--tas-density));left:50%;transform:translateX(-50%);z-index:2;width:auto;min-width:calc(120px * var(--tas-density));max-width:none;font-size:max(12px,calc(16px * var(--tas-density)))}

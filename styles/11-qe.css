@@ -4,7 +4,6 @@
 .nuclear-label-control .checkbox-label{min-height:calc(24px * var(--tas-density));margin:0}
 #sfColorMaxEntry{width:calc(88px * var(--tas-density))}
 .qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density))}
-.qe-range-control .qe-control-entry input[type=number]{font-size:calc(14px * var(--tas-density))}
 .qe-range-control .qe-control-entry input[type=number]{font-size:calc(14px * var(--tas-density));min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
 
 /* Time estimate: widen the geometry card only while this tab is active. */
@@ -113,28 +112,21 @@
 /* Constant E map: controls are discoverable before scrolling into the plot.
    No frame around them (like the 2D Convolution sliders). */
 #qeConstantMapPane > .qe-range-control-grid{
-  grid-template-columns:repeat(auto-fit,minmax(calc(210px * var(--tas-density)),1fr));
   padding:calc(4px * var(--tas-density)) 0;
   margin:calc(6px * var(--tas-density)) 0;
-  align-items:start;
 }
 #qeConstantMapPane .qe-range-control{justify-content:start}
 #qeConstantMapPane .qe-range-control input[type=range]{accent-color:var(--tas-accent)}
 #singlePlot{height:calc(760px * var(--tas-density));min-height:calc(760px * var(--tas-density))}
 #qeDisplayControls{
-  display:flex;
-  align-items:center;
-  gap:calc(12px * var(--tas-density)) calc(22px * var(--tas-density));
-  flex-wrap:wrap;
   /* No partial border below the plot: keep controls on the same white background. */
   border:0;
   border-radius:0;
-  padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
   margin-top:0;
   background:#fff;
 }
 #qeDisplayControls.hidden,#qePlotLegend.hidden{display:none!important}
-#qeDisplayControls .checkbox-label{margin:0;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));min-height:calc(28px * var(--tas-density));font-size:calc(13px * var(--tas-density));white-space:normal}
+#qeDisplayControls .checkbox-label{margin:0;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));min-height:calc(28px * var(--tas-density));white-space:normal}
 #qePlotLegend{
   display:flex;
   flex-wrap:wrap;
@@ -158,9 +150,8 @@
 #qePlotLegend .qe-legend-line{height:0;border:0;border-top:calc(3px * var(--tas-density)) solid var(--legend-color);border-radius:0;background:transparent}
 @media(max-width:1050px){#singlePlot{height:calc(670px * var(--tas-density));min-height:calc(670px * var(--tas-density))}}
 @media(max-width:760px){
-  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}
+  #qeConstantMapPane > .qe-range-control-grid{gap:calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}
   #singlePlot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
-  #qeDisplayControls{gap:calc(8px * var(--tas-density)) calc(16px * var(--tas-density))}
 }
 
 /* Same accessible, clickable legend component for all three Q–E views. */
@@ -175,7 +166,7 @@
 
 /* Constant E map: Save figure at the top left of the plot (as in the 1D cut
    and Comparison). */
-#singlePlotFrame{position:relative;min-width:0;background:#fff}
+#singlePlotFrame{min-width:0;background:#fff}
 /* Constant E map / Powder: Save figure is in the control row above the map
    (left end), so Plotly's tool bar keeps its usual place. */
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
@@ -207,9 +198,6 @@
 .time-scan-table .time-range-inputs{max-width:100%;width:100%;}
 .time-scan-table .time-range-field{min-width:0;}
 .time-scan-table .time-range-field input{min-width:0;max-width:100%;}
-/* HKL headings and H/K/L field labels were smaller than other input labels. */
-
-/* Q vector–E: mode toggle remains on one readable line when there is room. */
 
 /* Q-E Range: keep the Constant E / Q vector plots alongside TAS geometry
    until the usable MAIN content (not the entire window) becomes too narrow.
@@ -226,13 +214,6 @@
       max-width:100%;
     }
   }
-}
-/* Keep an out-of-plane warning legible, without resizing other controls. */
-#qeVectorPlaneWarning,
-#geometryPlaneWarning{
-  font-size:max(15px,calc(18px * var(--tas-density)));
-  font-weight:600;
-  line-height:1.4;
 }
 
 /* 2026-10-12 — Q-E Range: one stable 50:50 split for BOTH right-hand tabs.
@@ -271,7 +252,6 @@
 /* Q path snap preferences share the Constant E map toolbar without
    forcing other controls to grow or breaking the 50:50 tablet layout. */
 #qeDisplayControls .qe-path-tools .qe-path-snap-label{
-  display:inline-flex;align-items:center;gap:4px;
   min-width:0;white-space:nowrap;margin:0;
   font-size:max(12px,calc(13px * var(--tas-density)));
   font-weight:normal;
@@ -309,16 +289,7 @@
 /* Constant-E toolbar: keep all seven controls on one aligned row, including
    when the right panel remains beside the map on a tablet. */
 #qeDisplayControls{
-  display:flex;
-  align-items:center;
-  flex-wrap:nowrap;
-  gap:calc(6px * var(--tas-density));
-  width:100%;
-  min-width:0;
-  overflow-x:auto;
-  overflow-y:hidden;
   scrollbar-width:thin;
-  padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
 }
 #qeDisplayControls .qe-path-tools{
   display:contents;
@@ -343,7 +314,6 @@
   width:calc(67px * var(--tas-density));
   min-width:calc(58px * var(--tas-density));
   max-width:none;
-  height:calc(30px * var(--tas-density));
   padding:0 calc(4px * var(--tas-density));
   font-size:inherit;
 }
@@ -363,8 +333,6 @@
   width:calc(14px * var(--tas-density));
   height:calc(14px * var(--tas-density));
 }
-/* Match the visual shape of Snap and Q unit comboboxes. */
-#qeDisplayControls .qe-path-snap-label{font-weight:600;}
 
 /* Q vector–E map: the HKL box sits below the plot, legend and Scale row,
    styled like the Constant E map one (.qe-constant-path-input). */
@@ -373,24 +341,13 @@
 
 /* Constant E toolbar: natural left/right grouping without changing any plot
    dimensions. Do not squeeze the text of the r.l.u. unit selector. */
-#qeDisplayControls{
-  gap:calc(12px * var(--tas-density));
-  overflow-x:auto;
-}
 #qeDisplayControls .qe-path-snap-label{
-  font-size:calc(14px * var(--tas-density));
-  line-height:1.2;
   font-weight:600;
   white-space:nowrap;
   min-height:calc(30px * var(--tas-density));
 }
 #qeDisplayControls > .qe-path-tools{
-  display:flex;
-  align-items:center;
-  flex:0 0 auto;
-  gap:calc(5px * var(--tas-density));
   margin-left:auto;
-  min-width:max-content;
 }
 #qeDisplayControls .qe-path-tools .qe-path-snap-label{
   display:inline-flex;
@@ -409,12 +366,9 @@
 #qeConstantMapPane .qe-s2-control-entry .qe-s2-ring-toggle{
   display:inline-flex;
   align-items:center;
-  justify-content:flex-end;
   gap:calc(4px * var(--tas-density));
   min-width:0;
   white-space:nowrap;
-  font-size:calc(12px * var(--tas-density));
-  font-weight:500;
   margin:0;
   cursor:pointer;
 }
@@ -462,7 +416,6 @@
   justify-content: center;
   flex-wrap: wrap;
   align-content: center;
-  gap: calc(7px * var(--tas-density)) calc(15px * var(--tas-density));
   width: 100%;
   max-width: 100%;
   min-width: 0;

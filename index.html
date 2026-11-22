@@ -167,7 +167,7 @@
 <button disabled="" id="cifClearButton" type="button">Clear</button>
 <input accept=".cif,.mcif,text/plain" hidden="" id="cifFileInput" type="file"/>
 </div>
-<h3 class="lattice-parameters-heading">Unit cell</h3>
+<h3 class="unit-cell-heading">Unit cell</h3>
 <div class="grid3">
 <label>a (Å)<input id="a" step="0.01" type="number" value="5"/></label><label>b (Å)<input id="b" step="0.01" type="number" value="5"/></label><label>c (Å)<input id="c" step="0.01" type="number" value="5"/></label>
 <label>α (deg)<input id="alpha" step="1" type="number" value="90"/></label><label>β (deg)<input id="beta" step="1" type="number" value="90"/></label><label>γ (deg)<input id="gamma" step="1" type="number" value="90"/></label>
@@ -437,7 +437,7 @@
 <div class="convolution-layout" id="convLayout">
 <section class="calc-card convolution-card convolution-file-card">
 <div class="convolution-row convolution-file-row">
-<label>Dispersion file<span class="convolution-file"><button id="convSelectFile" type="button">Select file</button><input id="convFileName" data-no-persist="" type="text" readonly placeholder=".txt, .dat or .csv" aria-label="Dispersion file name"/></span></label>
+<label for="convFileName">Dispersion file<span class="convolution-file"><button id="convSelectFile" type="button">Select file</button><input id="convFileName" data-no-persist="" type="text" readonly placeholder=".txt, .dat or .csv" aria-label="Dispersion file name"/></span></label>
 <label>Format<select id="convFormat">
 <option value="index">index, h, k, l, E1 … En, I1 … In</option>
 <option value="plain">h, k, l, E1 … En, I1 … In</option>

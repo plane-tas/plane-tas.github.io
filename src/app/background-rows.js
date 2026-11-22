@@ -126,7 +126,7 @@ function createBackgroundRow(index,value={}){
   picker.addEventListener("change",()=>saveLeftPanelState());
   const select=row.querySelector(`#backgroundSelect${index}`);
   // No "None": a row always has a material (Remove deletes the row).
-  refreshBackgroundSelect(select,null);
+  refreshBackgroundSelect(select);
   const requested=String(value.key||"");
   if([...select.options].some(o=>o.value===requested)) select.value=requested;
   return row;
@@ -172,7 +172,7 @@ function backgroundColor(slot,alpha=1){
 }
 
   return {
-    BACKGROUND_SLOTS, backgroundColor, backgroundRowIndices, backgroundRowValues,
+    BACKGROUND_SLOTS, backgroundColor, backgroundRowValues,
     handleBackgroundSelection, removeBackground, replaceBackgroundRows, selectedBackgrounds,
     setBackgroundCount, updateBackgroundSelectAvailability
   };

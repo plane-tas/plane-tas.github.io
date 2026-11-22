@@ -9,21 +9,20 @@ import {$, checkedValue, clearError, num, setStatus, showError} from './dom-util
 export function createAppBootstrap(deps){
   const {
     applyInstrumentCrystalAvailability, applyInstrumentDefaults,
-    applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
-    bindResolutionManualCalculation, bindToolboxUI, clearSelectedCif, currentGeometryCardTab,
-    darkAssetIds, darkAssetSlots, doScanResolution, enableGlobalUIPersistence,
+    backgroundMaterials, bindResolutionManualCalculation, bindToolboxUI, clearSelectedCif, currentGeometryCardTab,
+    darkAssetSlots, doScanResolution, enableGlobalUIPersistence,
     enableRightPanelPersistence, fillCrystal,
     flipScatteringPlaneUV, initializeCifGenerator, initializeNeutronData, initializeResponsivePlotResize,
     initializeScriptWorkspaceUI, initializeSidebarCrystalSelectors, instruments, legacyRangeInstruments,
     nearestHWIndex, prepareToolboxUI, propagationVectorIndices, qeCommitPathText, qeDefaultPathText,
-    qePathInput, recalculate, refreshCifAfterStateRestore, refreshDarkEnvironmentSelect, refreshSelect,
+    qePathInput, recalculate, refreshCifAfterStateRestore, refreshSelect,
     renderResolutionScan, renderSingle, restoreGlobalUIState,
     restoreLeftPanelState, restoreRightPanelState, sampleEnvironments, saveGlobalUIState,
     saveLeftPanelState, saveRightPanelState, savedActiveTab, selectCifFile, setActiveTab,
-    setBackgroundCount, setDarkAssetCount, setGeometryTargetHKL, setPowderLinkDriver,
+    setDarkAssetCount, setGeometryTargetHKL, setPowderLinkDriver,
     setPropagationVectorCount, setQEMapTab, setTargetHWFromMap, syncGeometryTargetToOrientationReference,
     syncPowderLinkedInputs, syncQEPathSnapDefault, syncSfColorMaxControl, syncSidebarCrystalSelectors,
-    updateAutoW, updateBackgroundSelectAvailability, updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode,
+    updateAutoW, updateBraggOrientationPlaneWarning, resetBraggPeaks, updateCalcMode,
     updateCifUI, updateDarkReferenceUI, updateEnergyLabel, updateGeometryQuickTargetButtons,
     updateModeVisibility, updateOrientationReferenceUI, updatePropagationVectorLabels,
     updateResolutionPlaneWarning, updateSupermirrorUI, validateAllTimeScanRows, getFixedBeamControls,
@@ -106,9 +105,11 @@ async function initialize(){
   mergeLegacyRangeData();
   // Custom and the instruments loaded from JSON files in this browser.
   addLocalInstruments?.();
-  refreshSelect(instruments,$('instrument'),null);setBackgroundCount(Number($('backgroundCount')?.value)||0);for(const slot of darkAssetSlots()) refreshDarkEnvironmentSelect(slot);
+  refreshSelect(instruments,$('instrument'),null);
   if(!instruments.size) throw new Error('instrument directory has no JSON files.');
-  $('instrument').selectedIndex=0;for(const i of backgroundRowIndices()) $(`backgroundSelect${i}`).value='';for(const slot of darkAssetSlots()) $(darkAssetIds(slot).se).value='';applyInstrumentDefaults();for(const slot of darkAssetSlots()) applySampleEnvironmentDefaults(slot);updateBackgroundSelectAvailability();
+  // Propagation vectors, Background materials and Dark angles start empty
+  // (their rows come from Add or from the saved state below).
+  $('instrument').selectedIndex=0;applyInstrumentDefaults();
   // JSON configuration is now fully loaded.  Only at this point is it safe to
   // overlay browser-local user parameters (including the selected instrument).
   const restoredLocalState=restoreLeftPanelState();

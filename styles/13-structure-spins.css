@@ -4,38 +4,11 @@
 .structure-moment-row>input[type=checkbox]{
   justify-self:center;
 }
-@media (max-width:1450px){
-  .structure-moment-row{
-    grid-template-columns:calc(28px * var(--tas-density)) calc(52px * var(--tas-density)) minmax(calc(138px * var(--tas-density)),1fr) calc(58px * var(--tas-density)) minmax(calc(78px * var(--tas-density)),calc(110px * var(--tas-density)));
-  }
-  
-}
 .structure-moment-row{
-  grid-template-columns:calc(28px * var(--tas-density)) calc(52px * var(--tas-density)) calc(138px * var(--tas-density)) calc(58px * var(--tas-density)) calc(58px * var(--tas-density)) minmax(calc(78px * var(--tas-density)),1fr);
-}
-@media (max-width:1450px){
-  .structure-moment-row{grid-template-columns:auto minmax(calc(110px * var(--tas-density)),1fr);}
-}
-.structure-moment-row{
-  grid-template-columns:calc(28px * var(--tas-density)) calc(48px * var(--tas-density)) calc(150px * var(--tas-density)) calc(66px * var(--tas-density)) calc(58px * var(--tas-density)) calc(66px * var(--tas-density)) minmax(calc(165px * var(--tas-density)),1fr);
   gap:calc(6px * var(--tas-density));
-}
-@media (max-width:1450px){
-  
-  
-  .structure-moment-row{
-    grid-template-columns:calc(28px * var(--tas-density)) calc(48px * var(--tas-density)) repeat(4,minmax(calc(58px * var(--tas-density)),1fr));
-  }
-  
-  .structure-bond-row{
-    grid-template-columns:minmax(calc(58px * var(--tas-density)),1fr) minmax(calc(58px * var(--tas-density)),1fr) calc(66px * var(--tas-density)) calc(66px * var(--tas-density)) calc(54px * var(--tas-density)) calc(40px * var(--tas-density)) auto;
-  }
 }
 
 /* Compact Structure controls */
-.structure-moment-row{
-  grid-template-columns:calc(44px * var(--tas-density)) minmax(calc(58px * var(--tas-density)),calc(72px * var(--tas-density))) minmax(calc(150px * var(--tas-density)),1fr) minmax(calc(150px * var(--tas-density)),calc(190px * var(--tas-density))) minmax(calc(170px * var(--tas-density)),1fr) !important;
-}
 .structure-moment-row{
   grid-template-columns:calc(44px * var(--tas-density)) minmax(calc(58px * var(--tas-density)),calc(72px * var(--tas-density))) minmax(calc(150px * var(--tas-density)),1fr) calc(90px * var(--tas-density)) calc(42px * var(--tas-density)) !important;
 }
@@ -44,25 +17,6 @@
   min-width:calc(40px * var(--tas-density))!important;
   height:calc(30px * var(--tas-density))!important;
   padding:calc(2px * var(--tas-density))!important;
-}
-
-/* Structure viewer v9 refinements */
-.structure-moment-row{
-  border:calc(1px * var(--tas-density)) solid #333!important;
-  border-left:calc(1px * var(--tas-density)) solid #333!important;
-}
-.structure-moment-site{
-  color:#111!important;
-}
-.structure-moment-row{
-  border:0!important;
-  border-left:0!important;
-  border-radius:0!important;
-  padding:calc(4px * var(--tas-density)) calc(2px * var(--tas-density))!important;
-  background:#fff!important;
-}
-.structure-moment-site{
-  color:#111!important;
 }
 
 /* Structure viewer v9 cleanup */
@@ -108,7 +62,6 @@
 /* Preserve checkbox, site label, direction fields and color in ONE row.
    These rules intentionally override the older narrow-view 2-row breakpoint. */
 #structurePanel #cifMagMomentRows .structure-moment-row {
-  display: grid !important;
   grid-template-columns: calc(20px * var(--tas-density)) minmax(calc(33px * var(--tas-density)), .65fr) minmax(0, 4fr) calc(30px * var(--tas-density)) !important;
   grid-template-rows: auto !important;
   column-gap: calc(4px * var(--tas-density)) !important;
@@ -147,19 +100,12 @@
 }
 #structurePanel #cifSpinTable {
   display:grid;
-  grid-template-columns:calc(38px * var(--tas-density)) calc(53px * var(--tas-density)) minmax(calc(67px * var(--tas-density)),.8fr) repeat(3,minmax(calc(72px * var(--tas-density)),1fr)) calc(53px * var(--tas-density));
-  min-width:calc(475px * var(--tas-density));
   width:100%;box-sizing:border-box;
   gap:calc(1px * var(--tas-density));
   background:#c9cdd1;
   align-items:stretch;
 }
-#structurePanel #cifSpinTable .structure-spin-table-header {
-  box-sizing:border-box;min-width:0;
-  padding:calc(7px * var(--tas-density)) calc(2px * var(--tas-density));
-  background:#f7f7f7;
-  color:#222;
-  font-size:calc(11px * var(--tas-density));font-weight:650;
+#structurePanel #cifSpinTable .structure-spin-table-header {min-width:0;
   text-align:center;white-space:nowrap;
   position:sticky;top:0;z-index:3;
   display:flex;align-items:center;justify-content:center;
@@ -169,7 +115,6 @@
   margin:0;cursor:pointer;font-size:inherit;font-weight:inherit;
 }
 #structurePanel #cifSpinTable .structure-spin-bulk-header input[type=checkbox] {
-  width:calc(14px * var(--tas-density));height:calc(14px * var(--tas-density));
   min-width:0;margin:0;cursor:pointer;
 }
 #structurePanel #cifMagMomentRows,
@@ -177,29 +122,23 @@
   display:contents!important;
 }
 #structurePanel #cifSpinTable .structure-spin-cell {
-  min-width:0;box-sizing:border-box;
-  min-height:calc(34px * var(--tas-density));
-  padding:calc(3px * var(--tas-density));
+  min-width:0;
   background:#fff;
   display:flex;align-items:center;justify-content:center;
 }
 #structurePanel #cifSpinTable .structure-spin-index {
-  background:#fafafa;font-weight:650;font-size:calc(11px * var(--tas-density));color:#222;
+  background:#fafafa;font-weight:650;color:#222;
 }
 #structurePanel #cifSpinTable .structure-spin-atom {justify-content:flex-start;}
 #structurePanel #cifSpinTable .structure-moment-site {
   display:block;max-width:none!important;width:100%;overflow:hidden;
   white-space:nowrap;text-overflow:ellipsis;
-  font-size:calc(12px * var(--tas-density));
 }
 #structurePanel #cifSpinTable .structure-spin-use input[type=checkbox] {
-  width:calc(15px * var(--tas-density));height:calc(15px * var(--tas-density));
   min-width:0;margin:0;cursor:pointer;
 }
 #structurePanel #cifSpinTable .structure-spin-value input[type=number] {
-  box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:none!important;
-  padding:calc(4px * var(--tas-density)) calc(3px * var(--tas-density))!important;
-  font-size:calc(12px * var(--tas-density));text-align:right;
+  box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:none!important;text-align:right;
 }
 #structurePanel #cifSpinTable .structure-spin-color input[type=color] {
   width:calc(32px * var(--tas-density))!important;
@@ -215,19 +154,13 @@
 #structurePanel #cifSpinTable .structure-spin-table-header,
 #structurePanel .structure-style-table .structure-style-header {
   box-sizing:border-box;
-  font-size:calc(12px * var(--tas-density)) !important;
   font-weight:650 !important;
   color:#222;
-  line-height:1.35;
-  padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));
-  min-height:calc(33px * var(--tas-density));
   background:#f7f7f7;
 }
 #structurePanel #cifSpinTable .structure-spin-cell,
 #structurePanel .structure-style-table .structure-style-cell {
   box-sizing:border-box;
-  min-height:calc(37px * var(--tas-density));
-  font-size:calc(12px * var(--tas-density));
 }
 /* Native input and header dimensions match the Positions cells. */
 #structurePanel #cifSpinTable .structure-spin-value input[type=number],
@@ -248,25 +181,7 @@
 /* Match Positions text and input dimensions in both Spins and Style. */
 #structurePanel #cifSpinTable .structure-spin-table-header,
 #structurePanel .structure-style-table .structure-style-header{
-  font-size:max(15px,calc(17px * var(--tas-density)))!important;
-  min-height:max(35px,calc(36px * var(--tas-density)));
   line-height:1.35;
-}
-#structurePanel #cifSpinTable .structure-spin-cell,
-#structurePanel .structure-style-table .structure-style-cell{
-  font-size:max(15px,calc(17px * var(--tas-density)))!important;
-  min-height:max(42px,calc(42px * var(--tas-density)));
-}
-#structurePanel #cifSpinTable .structure-spin-index,
-#structurePanel #cifSpinTable .structure-moment-site,
-#structurePanel .structure-style-table .structure-style-index{
-  font-size:max(15px,calc(17px * var(--tas-density)))!important;
-}
-#structurePanel #cifSpinTable .structure-spin-value input[type=number],
-#structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]){
-  font-size:max(15px,calc(17px * var(--tas-density)))!important;
-  min-height:max(32px,calc(33px * var(--tas-density)));
-  padding:calc(5px * var(--tas-density)) calc(5px * var(--tas-density))!important;
 }
 #structurePanel #cifSpinTable .structure-spin-bulk-header input[type=checkbox],
 #structurePanel #cifSpinTable .structure-spin-use input[type=checkbox]{
@@ -283,14 +198,6 @@
 #structurePanel #cifSpinTable .structure-moment-row.spin-row-selected > .structure-spin-value input{
   background:#fff;
 }
-/* Keep enlarged fields usable: let the table scroll horizontally instead of
-   shrinking numeric input text or the native select arrow below usability. */
-#structurePanel #cifSpinTable{
-  grid-template-columns:45px 65px minmax(95px,.9fr) repeat(3,minmax(94px,1fr)) 60px;
-  min-width:630px;
-}
-/* Reopening Uij shares the height budget with Positions. When collapsed the
-   JS removes the temporary override and restores the usual Positions cap. */
 
 /* Spins and Style: 75% of the preceding large-font/large-field treatment.
    All select/input/pointer interactions are unchanged. */

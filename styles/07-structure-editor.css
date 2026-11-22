@@ -3,7 +3,6 @@
 
 .cif-pane-heading h3,.cif-atom-heading h3{margin:0 0 calc(4px * var(--tas-density))}
 .cif-space-group-picker label{min-width:0}
-.cif-lattice-grid input{width:100%;max-width:none}
 .cif-filename-entry input{border-top-right-radius:0;border-bottom-right-radius:0}
 
 .cif-heading-actions button{white-space:nowrap}
@@ -36,11 +35,6 @@
 /* Fallback for browsers without container-query support: switch the overall
    Structure layout to controls-above / plot-below earlier on narrow windows. */
 @media (max-width:1380px){
-  
-  #structurePanel .structure-viewer-main{
-    width:100%;
-    min-width:0;
-  }
   #structurePanel .structure-plot-wrap .cif-structure-plot{
     min-height:calc(560px * var(--tas-density));
   }
@@ -152,28 +146,13 @@
 }
 
 /* vNext: compact Atoms / Spins / Bonds tabs and plot-overlay legend placement. */
-#structurePanel .structure-config-section{padding-top:0;overflow:hidden;}
+#structurePanel .structure-config-section{padding-top:0;}
 #structurePanel .structure-config-tabs{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:calc(4px * var(--tas-density));
-  margin:0 calc(-1px * var(--tas-density)) calc(8px * var(--tas-density));
-  padding:calc(4px * var(--tas-density));
-  background:#f2f4f7;
-  border:calc(1px * var(--tas-density)) solid #d7dce3;
   border-radius:calc(8px * var(--tas-density));
 }
 #structurePanel .structure-config-tabs button{
-  min-width:0;
-  padding:calc(7px * var(--tas-density)) calc(8px * var(--tas-density));
-  border:0;
   border-radius:calc(6px * var(--tas-density));
-  background:transparent;
   font-weight:600;
-}
-#structurePanel .structure-config-tabs button.active{
-  background:#fff;
-  box-shadow:0 calc(1px * var(--tas-density)) calc(3px * var(--tas-density)) rgba(0,0,0,.12);
 }
 #structurePanel .structure-spin-mode-row{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
@@ -189,10 +168,6 @@
   #structurePanel .structure-atom-legend-dot{width:calc(18px * var(--tas-density))!important;height:calc(18px * var(--tas-density))!important;}
 }
 
-#structurePanel .structure-moment-row{
-  grid-template-columns:auto minmax(calc(72px * var(--tas-density)),.8fr) minmax(calc(150px * var(--tas-density)),2fr) minmax(calc(82px * var(--tas-density)),.8fr) auto!important;
-}
-
 @container structure-viewer (max-width:760px){
   #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(68px * var(--tas-density)),.9fr) minmax(calc(130px * var(--tas-density)),2fr) minmax(calc(76px * var(--tas-density)),.9fr) auto!important;}
 }
@@ -202,7 +177,7 @@
 }
 
 /* mCIF Generator preview panes */
-#structurePanel .structure-viewer-main{display:flex;flex-direction:column;min-width:0}
+#structurePanel .structure-viewer-main{display:flex;flex-direction:column;}
 
 .cif-generator-input-pane,.cif-generator-output-pane{min-width:0;border:calc(1px * var(--tas-density)) solid #d5d5d5;border-radius:calc(7px * var(--tas-density));background:#fff}
 .cif-generator-input-pane{padding:calc(12px * var(--tas-density))}
@@ -214,7 +189,6 @@
 .cif-generator-input-pane label{font-size:calc(13.5px * var(--tas-density))}
 .cif-generator-input-pane input:not([type=checkbox]):not([type=radio]):not([type=file]),
 .cif-generator-input-pane select{font-size:calc(14px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
-.cif-generator-output-pane{min-height:0}
 .cif-generator-output-pane{min-height:0;overflow:hidden}
 
 .cif-generator-source-row .cif-file-name{width:100%;min-width:0;}
@@ -226,7 +200,7 @@
 
 /* v13: Four numeric inputs share available width; no changes to 3D plot. */
 #structurePanel .structure-moment-row{
-  display:grid!important;grid-template-columns:calc(22px * var(--tas-density)) minmax(calc(42px * var(--tas-density)),.75fr) minmax(0,4.5fr) calc(36px * var(--tas-density))!important;
+  display:grid!important;
   grid-template-rows:auto!important;column-gap:calc(7px * var(--tas-density))!important;row-gap:calc(5px * var(--tas-density))!important;
   align-items:end!important;width:100%!important;min-width:0!important;
 }
@@ -255,42 +229,30 @@
 
 /* mCIF Generator: Atoms / Spins / Bonds. */
 #structurePanel .structure-config-tabs{
-  display:flex;
   flex-wrap:nowrap;
-  grid-template-columns:none;
   align-items:stretch;
-  overflow-x:auto;
   overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
-  gap:calc(4px * var(--tas-density));
-  padding:calc(4px * var(--tas-density));
 }
 #structurePanel .structure-config-tabs button{
   flex:1 0 auto;
   min-width:max-content;
   white-space:nowrap;
   padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
-  border:0;
   background:#f3f5f7;
   color:#222;
   font-size:calc(14px * var(--tas-density));
 }
 #structurePanel .structure-config-tabs button:hover{background:#eaf0f6;}
 #structurePanel .structure-config-tabs button.active{
-  background:#fff;
-  box-shadow:none;
   color:#222;
 }
 /* Three Structure tabs are likewise 1:1:1. */
 #structurePanel .structure-config-tabs{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:calc(4px * var(--tas-density));
   overflow-x:hidden;
 }
 #structurePanel .structure-config-tabs > button{
-  width:100%;min-width:0;flex:none;
   white-space:normal;overflow-wrap:anywhere;
   text-align:center;
 }
@@ -317,10 +279,6 @@
 #cifGeneratorPanel .cif-generator-section + .cif-generator-section{
   border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
 }
-
-/* v52: Match the CIF Generator outer-to-inner spacing to mCIF Generator.
-   The CIF card previously had 14px inset plus a 12px workspace top margin,
-   while the mCIF card has a 10px inset with no extra top margin. */
 
 /* v53: match CIF/mCIF source-section spacing and keep both interfaces legible. */
 #cifGeneratorPanel .cif-generator-source-section .cif-pane-heading{
@@ -357,11 +315,6 @@
 #cifGeneratorPanel .cif-lattice-information-heading h3{margin:0;}
 #cifGeneratorPanel .cif-lattice-information-section .cif-generator-setup{margin-top:calc(8px * var(--tas-density));}
 #cifGeneratorPanel .cif-lattice-information-section .cif-lattice-grid{margin-top:calc(12px * var(--tas-density));}
-#structurePanel .structure-config-section > .structure-section-title{
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
-  margin:0 0 calc(9px * var(--tas-density));
-}
 @media(max-width:760px){
   
   
@@ -450,8 +403,6 @@
   box-sizing:border-box;
   display:block;
   flex:1 1 auto;
-  height:auto!important;
-  min-height:calc(560px * var(--tas-density));
   min-width:0;
   max-width:100%;
   width:100%;
@@ -461,8 +412,6 @@
 #structurePanel .generator-reflections-notice{
   margin:calc(12px * var(--tas-density)) 0;
   color:#222;
-  font-size:calc(14px * var(--tas-density));
-  line-height:1.5;
 }
 #structurePanel .generator-unified-right .cif-structure-plot{min-width:0;max-width:100%;}
 #structurePanel .generator-structure-view-controls .cif-structure-view-buttons{
@@ -520,7 +469,6 @@
 /* Format + File name on one row, including narrow layouts. */
 #structurePanel .cif-unified-output-line {
   display: grid !important;
-  grid-template-columns: minmax(calc(82px * var(--tas-density)),1fr) minmax(0,2fr) !important;
   align-items: end;
   gap: calc(8px * var(--tas-density));
 }

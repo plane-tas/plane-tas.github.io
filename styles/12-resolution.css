@@ -45,8 +45,6 @@
   padding:0;
   background:#fff;
   border:0;
-  font-size:calc(16px * var(--tas-density));
-  font-weight:650;
 }
 #resolutionInstrumentDetails details[open] > summary{margin-bottom:calc(8px * var(--tas-density))}
 #resolutionInstrumentDetails details:not([open]) > summary{margin-bottom:0}
@@ -66,7 +64,7 @@
   font-size:calc(16px * var(--tas-density));
   font-weight:650;
 }
-#resolutionInstrumentDetails h3{font-size:calc(13px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
+#resolutionInstrumentDetails h3{margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
 #resolutionInstrumentDetails input[type=number],#resolutionInstrumentDetails input[data-fraction],
 #resolutionInstrumentDetails input[type=text]{
   width:100%;
@@ -198,7 +196,7 @@
 }
 
 /* Instrument type: omit analyzer controls for diffractometers. */
-.diffractometer-resolution-note{font-size:var(--tas-font-control,13px);line-height:1.45;color:#8a5317;background:#fff8e9;border:1px solid #edd8ad;border-radius:6px;padding:8px 10px;margin:0 0 12px}
+.diffractometer-resolution-note{color:#8a5317;background:#fff8e9;border:1px solid #edd8ad;border-radius:6px;padding:8px 10px;margin:0 0 12px}
 
 /* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
 #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -242,10 +240,6 @@
   font-weight: 650 !important;
   line-height: 1.3;
 }
-#resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
-  font-size: 0.9em;
-  font-weight: 400;
-}
 /* Crystal's dropdown caption and neighboring d-entry label should not have
    different weights.  The label with the select is never oversized. */
 #resolutionInstrumentDetails label {
@@ -274,7 +268,6 @@
 
 /* → Angle calc: same height as the entry boxes, on their baseline. */
 #resolutionCalculation #singleInputs .resolution-to-geometry{align-self:end;white-space:nowrap}
-/* A scan point (or a whole scan) that cannot be calculated. */
 
 /* Individual: Figure / Matrices, a smaller second row of tabs. */
 #resolutionPanel #result .resolution-detail-tabs{margin:calc(8px * var(--tas-density)) 0 calc(8px * var(--tas-density));justify-content:flex-start}

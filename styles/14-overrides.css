@@ -29,7 +29,7 @@
 .cif-generator-section + .cif-generator-section{margin-top:calc(14px * var(--tas-density));padding-top:calc(12px * var(--tas-density));border-top:calc(1px * var(--tas-density)) solid #ddd}
 .cif-reflection-parameters-section .cif-generator-beam-grid{margin:calc(8px * var(--tas-density)) 0 0}
 .absorption-cif-row>label,.absorption-cif-row input,.absorption-input-mode-row label,.absorption-input-mode-row select{min-width:0;max-width:100%;box-sizing:border-box}
-.toolbox-subtab.active{background:white;border-color:#c5cad2;box-shadow:0 calc(1px * var(--tas-density)) calc(3px * var(--tas-density)) #00000014;}
+.toolbox-subtab.active{border-color:#c5cad2;}
 .magff-info.error{color:#9c441d;border:0;padding:0;background:transparent;}
 .magff-extra-row>label{
   min-width:0;display:grid;gap:calc(5px * var(--tas-density));align-content:end;
@@ -75,9 +75,6 @@
 }
 .toolbox-subtab:hover{background:#eaf0f6;}
 .toolbox-subtab.active{
-  background:#fff;
-  border:0;
-  box-shadow:none;
   color:#222;
 }
 .geometry-card-tabs .geometry-card-tab,
@@ -85,9 +82,7 @@
   flex:1 0 auto;
   min-width:max-content;
   white-space:nowrap;
-  border:0;
   border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
-  border-radius:0;
   background:#f3f5f7;
   color:#222;
   font-size:calc(14px * var(--tas-density));
@@ -101,9 +96,7 @@
 .cif-output-tabs .cif-output-tab:hover{background:#eaf0f6;}
 .geometry-card-tabs .geometry-card-tab.active,
 .cif-output-tabs .cif-output-tab.active{
-  background:#fff;
   border-color:#aab7c5;
-  box-shadow:inset 0 calc(-1px * var(--tas-density)) 0 #66798b;
   color:#222;
   position:static;
   bottom:auto;
@@ -156,22 +149,9 @@
 /* Viewport fallback for browsers without the main-column container query. */
 @media (max-width:760px){
   main > .main-tabs{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
     grid-template-rows:repeat(2,auto);
-    gap:calc(5px * var(--tas-density));
-    overflow:visible;
   }
   main > .main-tabs > .tab-button{
-    flex:none;
-    width:100%;
-    min-width:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    white-space:normal;
-    overflow-wrap:anywhere;
-    text-align:center;
     padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
   }
 }
@@ -179,7 +159,6 @@
 /* v49: equal-width items throughout every navigation tab group. */
 main > .main-tabs{
   display:grid;
-  grid-template-columns:repeat(6,minmax(0,1fr));
   gap:calc(5px * var(--tas-density));
   overflow:visible;
 }
@@ -210,9 +189,6 @@ main > .main-tabs > .tab-button{
   overflow-x:auto;
 }
 @container (max-width:850px){
-  main > .main-tabs{grid-template-columns:repeat(3,minmax(0,1fr));}
-}
-@media (max-width:760px){
   main > .main-tabs{grid-template-columns:repeat(3,minmax(0,1fr));}
 }
 @media (max-width:600px){
@@ -310,13 +286,11 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
    Size the shell from the space remaining beneath the actual header rather
    than assuming a fixed header height (which can vary with wrapping/zoom). */
 @media (min-width: 761px) {
-  html { height: 100%; }
   body {
     height: 100vh;
     height: 100dvh;
     display: flex;
     flex-direction: column;
-    overflow-y: hidden;
   }
   #tasTopBar { flex: 0 0 auto; }
   .shell {
@@ -411,18 +385,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   line-height: 1.45;
 }
 
-/* Propagation vector toggles should be the same native size as the parent
-   'show' checkbox. The slightly wider first column keeps the k_i legend
-   legible; the three HKL fields continue to flex and can display four digits. */
-.sidebar .propagation-row {
-  grid-template-columns: calc(88px * var(--tas-density)) repeat(3, minmax(0,1fr)) calc(70px * var(--tas-density));
-}
-.sidebar .propagation-enable {
-  gap: calc(6px * var(--tas-density));
-  align-items: center;
-  padding-top: calc(15px * var(--tas-density));
-}
-
 /* Slider/checkbox/combobox captions. */
 .tab-panel label:has(> input[type="range"]),
 .tab-panel label:has(> input[type="checkbox"]),
@@ -511,8 +473,8 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   font-size:var(--tas-control-text-size)!important;
 }
 
-/* Sidebar: Lattice parameters and Scattering plane use the same heading size. */
-.sidebar h3.lattice-parameters-heading{
+/* Sidebar: Unit cell and Scattering plane use the same heading size. */
+.sidebar h3.unit-cell-heading{
   font-size:calc(16px * var(--tas-density))!important;
   line-height:1.3;
 }
@@ -842,7 +804,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-box-head{display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density));align-items:center}
 .convolution-integration{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
 .convolution-integration select{font-size:max(13px,calc(16px * var(--tas-density)));width:auto}
-/* Random points: a small label above the box, so the row stays one line. */
 /* Fixed-width slot right of the select: "within ±1.5 FWHM" (Grid) or
    "[N] points" (Monte Carlo), so the select does not move. */
 .convolution-integration-detail{display:inline-grid;align-items:center;white-space:nowrap}
@@ -941,7 +902,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 @container (max-width:860px){
 }
 /* Convolution: estimated time, Stop state, data curves. */
-.convolution-box-foot{display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(10px * var(--tas-density))}
 .convolution-box-foot>*{flex:none}
 .convolution-estimate{margin-left:auto;color:inherit;font-size:max(13px,calc(16px * var(--tas-density)));white-space:nowrap;font-variant-numeric:tabular-nums}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop{background:linear-gradient(#d23b2f,#b42318);border-color:#912018}
@@ -953,7 +913,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-plot-frame>.convolution-plot{height:100%}
 .convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-ell-kinds .checkbox-label{min-height:0}
-.convolution-sliders .convolution-slider-name{font-weight:700}
 /* 2D: each map has the one slider that changes it right above it. */
 .convolution-plot-col{display:flex;flex-direction:column;min-width:0;min-height:0}
 .convolution-plot-col>.convolution-sliders{margin:0 0 calc(4px * var(--tas-density));grid-template-columns:max-content minmax(0,1fr) calc(80px * var(--tas-density))!important}
@@ -968,15 +927,10 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    .checkbox-label rule aligns to the end of its line; the brackets used a
    larger font). */
 .convolution-show-row .convolution-ell-kinds{font-size:inherit!important;align-self:center}
-.convolution-show-title{color:inherit;line-height:1.3}  /* = the check box labels beside it (#resolutionPanel label) */
-/* Notes under Dispersion file: the blue information box of the app, black text. */
+.convolution-show-title{color:inherit;line-height:1.3}/* Notes under Dispersion file: the blue information box of the app, black text. */
 .convolution-note{background:#eef6fb;border:calc(1px * var(--tas-density)) solid #b9d8ea;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(9px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
 .convolution-note .convolution-summary{color:#222;margin:0}
 .convolution-note .convolution-summary.conv-error{color:#b00020}
-
-/* 2D slice / 1D cut boxes: Calculate, status, integration on the first row;
-   Save / Load CSV and the estimated time on the last. */
-.convolution-box-head .convolution-status{flex:1 1 0;min-width:4em}
 
 /* Buttons: raised (white-to-grey gradient, darker border, small shadow) so
    they stand apart from flat white entry boxes and flat grey read-only ones.
@@ -992,7 +946,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    line under them (Save / Load CSV row). */
 .convolution-tab-pane>.convolution-box{flex:0 0 auto;margin-bottom:calc(8px * var(--tas-density));border:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd;border-radius:0;padding:0 0 calc(8px * var(--tas-density))}
 
-/* 1D: plot and curve list share the width 1:1. */
 /* Convolution labels the same size as the labels of the other tabs
    (the control text size, as in Q-E Range and Toolbox); the curve list uses
    the table size like every other table. */
@@ -1001,7 +954,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Calculate row under the table, left to right in the order of use:
    integration (method, range or points), estimated time, Calculate, status.
    The estimate has a fixed width so Calculate does not move. */
-.convolution-box-head .convolution-estimate{margin-left:calc(4px * var(--tas-density));min-width:11.5em;text-align:left}
+.convolution-box-head .convolution-estimate{margin-left:calc(4px * var(--tas-density));text-align:left}
 
 .convolution-box-head select.convolution-method{width:auto;font-size:var(--tas-control-text-size)}
 
@@ -1017,7 +970,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Calculate and Stop the same width, so the progress bar does not move. */
 #resolutionConvolutionPane button.convolution-calc{min-width:6.5em}
 
-/* Load CSV on its own row above the table. */
 /* Calculate row: equal columns — approximation, integration, range / points,
    estimate, Calculate, progress bar, Keep (2D: empty).  The progress bar is
    always there (empty frame), so nothing moves when it fills. */
@@ -1090,8 +1042,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #resolutionCalculation .resolution-single-notes{margin-top:calc(6px * var(--tas-density))}
 #resolutionCalculation .resolution-single-notes[hidden]{display:none}
 #resolutionCalculation .resolution-point-message{margin:0;min-height:1.4em;line-height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9a3b00;font-weight:600;font-size:max(13px,calc(16px * var(--tas-density)))}
-#resolutionCalculation .resolution-point-note{margin:0 0 calc(4px * var(--tas-density))}  /* the blue note of the Convolution tab */
-/* Headers spanning both header rows sit at the bottom, next to the column names. */
+#resolutionCalculation .resolution-point-note{margin:0 0 calc(4px * var(--tas-density))}/* Headers spanning both header rows sit at the bottom, next to the column names. */
 #resolutionPanel .resolution-compare-table thead th[rowspan="2"]{vertical-align:bottom}
 /* Mode = scan: no button column; the slider (Graph: slider) above the plots. */
 #resolutionPanel .resolution-compare-table.scan{--cmp-a:0px}
@@ -1165,62 +1116,60 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #resolutionInstrumentDetails .resolution-details-head > .jump-bar{position:static;box-shadow:none;margin-bottom:calc(6px * var(--tas-density));gap:calc(3px * var(--tas-density))}
 #resolutionInstrumentDetails .resolution-details-head > .jump-bar > button{padding-left:calc(8px * var(--tas-density));padding-right:calc(8px * var(--tas-density))}
 
-/* Sidebar tables (Propagation vectors, Background materials): one header
-   row (No. / h k l, No. / Material) and rows added with Add; empty at first.
-   No. is shown at the size of the entries; Remove has one width
-   that fits its label. */
+/* Sidebar tables and cards: Propagation vectors (k1 ● h k l), Background
+   materials (BG1 ■ material) and the Dark angles cards (SE1 environment,
+   then the From / To / Offset table). Each starts empty; Add makes a row or
+   card. The No. column and the Remove column have one width throughout, so
+   the numbers and the Remove buttons line up; numbers are at the size of
+   the entries, headers at the size of the other captions. */
 .sidebar{--sidebar-remove-w:calc(84px * var(--tas-density));--sidebar-no-w:calc(52px * var(--tas-density))}
-.sidebar-table-head{display:grid;gap:calc(5px * var(--tas-density));font-size:calc(16px * var(--tas-density));color:#333;
-  margin-bottom:calc(2px * var(--tas-density))}
-.sidebar .propagation-head,
-.sidebar .propagation-row{grid-template-columns:calc(30px * var(--tas-density)) calc(22px * var(--tas-density)) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)!important;
-  gap:calc(5px * var(--tas-density));align-items:center}
-.sidebar .background-head,
-.sidebar .background-row{grid-template-columns:var(--sidebar-no-w) calc(24px * var(--tas-density)) minmax(0,1fr) var(--sidebar-remove-w)!important;
-  gap:calc(5px * var(--tas-density));align-items:center}
 .propagation-vectors,.background-rows{display:grid;gap:calc(5px * var(--tas-density))}
 .propagation-vectors:empty,.background-rows:empty{display:none}
-.propagation-no{font-size:calc(18px * var(--tas-density));color:#111}
-/* The marker of the vector on the maps, centred in its cell. */
+.sidebar-table-head{margin-bottom:calc(2px * var(--tas-density));font-size:calc(16px * var(--tas-density));color:#333}
+/* The header row appears with the first row. */
+.sidebar-table-head:has(+ .propagation-vectors:empty),
+.sidebar-table-head:has(+ .background-rows:empty){display:none}
+.sidebar :is(.sidebar-table-head,.propagation-row,.background-row,.dark-asset-head,.dark-table){
+  display:grid;gap:calc(5px * var(--tas-density));align-items:center;min-width:0;width:100%}
+.sidebar :is(.propagation-head,.propagation-row){
+  grid-template-columns:calc(30px * var(--tas-density)) calc(22px * var(--tas-density)) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)}
+.sidebar :is(.background-head,.background-row){
+  grid-template-columns:var(--sidebar-no-w) calc(24px * var(--tas-density)) minmax(0,1fr) var(--sidebar-remove-w)}
+.sidebar :is(.propagation-row,.dark-table) input{width:100%;min-width:0;max-width:100%}
+.sidebar :is(.background-row,.dark-asset-head) select{width:100%;min-width:0}
+:is(.propagation-no,.background-label,.dark-asset-no,.dark-range-number){font-size:calc(18px * var(--tas-density));color:#111}
+
+/* Propagation vectors: the marker of the vector on the maps, centred. */
 .propagation-symbol{display:flex;align-items:center;justify-content:center;align-self:stretch}
 .propagation-symbol svg{display:block;width:calc(21px * var(--tas-density));height:calc(21px * var(--tas-density))}
-.sidebar .propagation-row input[type=text]{width:100%;min-width:0}
-.background-label{font-size:calc(18px * var(--tas-density));color:#111}
-.background-row select{min-width:0;width:100%}
-.bg-swatch{width:calc(24px * var(--tas-density))!important;height:calc(24px * var(--tas-density))!important;padding:0!important;margin:0;cursor:pointer;
-  border-radius:calc(3px * var(--tas-density));border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.25);box-sizing:border-box;
-  background:none;-webkit-appearance:none;appearance:none;min-height:0!important;display:block}
+
+/* Background materials: the color of the row, a square color picker. */
+.bg-swatch{display:block;width:calc(24px * var(--tas-density));height:calc(24px * var(--tas-density));min-height:0!important;
+  padding:0!important;margin:0;cursor:pointer;box-sizing:border-box;background:none;-webkit-appearance:none;appearance:none;
+  border-radius:calc(3px * var(--tas-density));border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.25)}
 .bg-swatch::-webkit-color-swatch-wrapper{padding:0}
 .bg-swatch::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
 .bg-swatch::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
 
-/* Dark angle card head, in the form of the tables above: No. over the card
-   number, Sample environment over its select, and Remove. */
-.sidebar .dark-asset-head{grid-template-columns:var(--sidebar-no-w) minmax(0,1fr) var(--sidebar-remove-w)!important;align-items:end}
+/* Dark angles: a card per sample environment. Head: No. over SE<n>, the
+   environment select, Remove; the range table below has the same columns. */
+.dark-asset{border:calc(1.5px * var(--tas-density)) solid #111;border-radius:calc(6px * var(--tas-density));
+  padding:calc(7px * var(--tas-density));margin-top:calc(7px * var(--tas-density))}
+.sidebar .dark-asset-head{grid-template-columns:var(--sidebar-no-w) minmax(0,1fr) var(--sidebar-remove-w);align-items:end;
+  margin-bottom:calc(5px * var(--tas-density))}
 .dark-asset-no-cell{display:flex;flex-direction:column;font-size:calc(16px * var(--tas-density));color:#333;min-width:0}
-.dark-asset-no{font-size:calc(18px * var(--tas-density));color:#111;display:flex;align-items:center;
-  min-height:calc(40px * var(--tas-density))}
-
-.remove-propagation-vector,
-.remove-background{
-  min-width:0;
-  min-height:calc(30px * var(--tas-density));
-  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
-  font-size:calc(16px * var(--tas-density));
-  line-height:1.2;
-}
-
-/* Dark-angle range table: the same columns as the card head above (No.
-   under No., Remove under Remove), header text at the size of the other
-   sidebar captions and the range number at the size of the entries. */
-.sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)!important;
-  gap:calc(5px * var(--tas-density))!important}
+.dark-asset-no{display:flex;align-items:center;min-height:calc(40px * var(--tas-density))}
+.sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w);
+  margin-top:calc(5px * var(--tas-density))}
 /* (!important: the shared table text size of 00-base.css is !important.) */
 .sidebar .dark-table > div{font-size:calc(16px * var(--tas-density))!important;color:#333}
-.sidebar .dark-range-number{font-size:calc(18px * var(--tas-density));color:#111}
 .sidebar .dark-table > input{font-size:calc(18px * var(--tas-density))!important}
 .sidebar .dark-table > .remove-dark-range{font-size:calc(16px * var(--tas-density))!important}
 
-/* The header row of a sidebar table appears with its first row. */
-.sidebar-table-head:has(+ .propagation-vectors:empty),
-.sidebar-table-head:has(+ .background-rows:empty){display:none}
+/* Add under each table / card list, and the Remove buttons of the rows. */
+.dynamic-add-wide{display:block;width:100%;margin-top:calc(6px * var(--tas-density));
+  padding:calc(7px * var(--tas-density)) calc(10px * var(--tas-density))}
+:is(.remove-propagation-vector,.remove-background,.remove-dark-asset,.remove-dark-range){
+  width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
+  font-size:calc(16px * var(--tas-density));line-height:1.2;white-space:nowrap}

@@ -240,10 +240,10 @@ function refreshDarkEnvironmentSelect(slot){
   custom.value=DARK_CUSTOM; custom.textContent="Custom";
   select.insertBefore(custom,select.options[0]||null);
   select.value=[...select.options].some(o=>o.value===keep) ? keep : DARK_CUSTOM;
-  syncDarkCardMode(slot);
+  rememberDarkSelection(slot);
 }
 // Remember the selection, so that leaving Custom can keep its settings.
-function syncDarkCardMode(slot){
+function rememberDarkSelection(slot){
   const select=$(darkAssetIds(slot).se);
   if(select) select.dataset.previous=select.value;
 }
@@ -294,7 +294,7 @@ function applyDarkAssetValues(slot,values={}){
   if(values.custom) customDarkSettings.set(slot,values.custom);
   else customDarkSettings.delete(slot);
   applyDarkSettings(slot,values);
-  syncDarkCardMode(slot);
+  rememberDarkSelection(slot);
 }
 
 function darkAssetValues(){
@@ -453,7 +453,7 @@ function applySampleEnvironmentDefaults(slot=1){
   const ids=darkAssetIds(slot);
   const key=$(ids.se)?.value || "";
   if($(ids.se)?.dataset.previous===DARK_CUSTOM) customDarkSettings.set(slot,currentDarkSettings(slot));
-  syncDarkCardMode(slot);
+  rememberDarkSelection(slot);
   // Custom: restore the hand-typed settings, if there are any.
   if(key===DARK_CUSTOM){
     if(customDarkSettings.has(slot)) applyDarkSettings(slot,customDarkSettings.get(slot));
