@@ -14,6 +14,8 @@ export function createUIShell(deps){
     darkAssetIds,
     darkAssetSlots,
     darkAssetValues,
+    darkCustomSettings,
+    restoreDarkCustomSettings,
     markResolutionScanDirty,
     mountTimeEstimateForScript,
     propagationVectorValues,
@@ -498,10 +500,18 @@ function saveGlobalUIState(){
   }catch(_e){}
 }
 
+// Saves from before Bragg peak position (2 peaks): peak 2 was in use when
+// its S1 was entered (or, briefly, when it was shown with Add).
+function migrateBraggTwoPeaks(values){
+  if(values?.orientationReference!=='bragg') return;
+  const flag=values.braggPeak2Shown;
+  if(flag==='1' || ((flag===undefined || flag==='') && String(values.refs12??'').trim()!=='')) values.orientationReference='bragg2';
+}
 function restoreGlobalUIState(){
   let saved;
   try{ saved=JSON.parse(localStorage.getItem(APP_UI_STORAGE_KEY)||'null'); }catch(_e){ return false; }
   if(!saved || ![1,2].includes(saved.version) || !saved.controls || typeof saved.controls!=='object') return false;
+  migrateBraggTwoPeaks(saved.controls);
   restoringGlobalUI=true;
   // Saves with a Geometry (W / anti-W): it is part of the Sense now.
   if(saved.controls.sense!==undefined && saved.controls.geometry!==undefined){
@@ -597,6 +607,7 @@ function saveLeftPanelState(){
     values.__propagationVectors=propagationVectorValues();
     values.propagationCount=values.__propagationVectors.length;
     values.__darkAssets=darkAssetValues();
+    values.__darkCustom=darkCustomSettings();
     values.darkAssetCount=values.__darkAssets.length;
     // S1 sign is dynamically injected by setupTasConventionUI(); keep an explicit
     // snapshot so future layout changes cannot accidentally omit it.
@@ -621,6 +632,7 @@ function restoreLeftPanelState(){
   try{saved=JSON.parse(localStorage.getItem(LEFT_PANEL_STORAGE_KEY)||'null');}catch(_e){return false;}
   if(!saved || !saved.values || typeof saved.values!=='object') return false;
   const v=saved.values;
+  migrateBraggTwoPeaks(v);
   // Migrate HB-3A's former filename without discarding saved user parameters.
   if(v.instrument==='08_HB3A_DEMAND.json' &&
      [...($('instrument')?.options||[])].some(option=>option.value==='08_HB3A.json')){
@@ -697,21 +709,33 @@ function restoreLeftPanelState(){
       rotation:Number(card?.rotation), refH:String(card?.refH??''), refK:String(card?.refK??''), refL:String(card?.refL??''),
       ranges:Array.isArray(card?.ranges) ? card.ranges.map(r=>({from:Number(r?.from),to:Number(r?.to),offset:Number(r?.offset)})) : [{}]
     });
+    // The settings of Custom 1 / Custom 2 (kept by name).
+    const savedDarkCustom={};
+    for(const key of ['custom1','custom2']) if(v.__darkCustom?.[key]) savedDarkCustom[key]=darkSettings(v.__darkCustom[key]);
+    const freeCustom=()=>['custom1','custom2'].find(key=>!savedDarkCustom[key]);
     const savedDarkAssets=Array.isArray(v.__darkAssets)
       ? v.__darkAssets.map(card=>{
           const settings=darkSettings(card);
           // Saves from before None / Custom: the former "Standard" (no
           // preset) with typed ranges is Custom; without ranges it is None.
           let se=String(card?.se||"") || (settings.ranges.some(r=>Math.abs(r.to-r.from)>1e-9) ? 'custom' : '');
-          let custom=card?.custom ? darkSettings(card.custom) : (se==='custom' ? settings : null);
+          // Saves with one "Custom" per card: they become Custom 1, Custom 2
+          // (a third is left out).
+          if(se==='custom'){ se=freeCustom()||''; if(se) savedDarkCustom[se]=settings; }
           // Saves from before the checkbox was removed: an unchecked card
           // was not used.
           if(card?.enabled===false) se='';
-          return {se,...settings,...(custom?{custom}:{})};
+          return {se,...settings};
         })
         // A card without a sample environment (the former None) is left out.
         .filter(card=>card.se)
       : null;
+    // The Custom settings a card kept while showing a preset fill a Custom
+    // left free by the cards above.
+    for(const card of Array.isArray(v.__darkAssets)?v.__darkAssets:[]){
+      if(card?.custom && card.se!=='custom' && freeCustom()) savedDarkCustom[freeCustom()]=darkSettings(card.custom);
+    }
+    restoreDarkCustomSettings(savedDarkCustom);
     if(savedDarkAssets){
       // Exact snapshot: preserve card count, range count, sample-environment
       // selection and all user-entered values.
@@ -751,7 +775,7 @@ function restoreLeftPanelState(){
         const ids=darkAssetIds(slot);
         // The former "Standard" (no preset) with typed ranges is now Custom;
         // an unchecked card (the checkbox was removed) is None.
-        if(!v[ids.se] && [0,1,2,3].some(i=>Math.abs(Number(v[ids.to(i)]??0)-Number(v[ids.from(i)]??0))>1e-9)) v[ids.se]='custom';
+        if(!v[ids.se] && [0,1,2,3].some(i=>Math.abs(Number(v[ids.to(i)]??0)-Number(v[ids.from(i)]??0))>1e-9)) v[ids.se]=slot===1?'custom1':'custom2';
         if(v[`darkEnable${slot}`]===false) v[ids.se]='';
         if(setSavedControl(ids.se,v[ids.se])) applySampleEnvironmentDefaults(slot);
       }

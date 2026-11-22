@@ -9,7 +9,9 @@ export function createTasAngleCalculation(deps){
   }=deps;
 
 function canonicalOrientationMode(rl, rawMode=null){
-  const mode=rawMode ?? ($('orientationReference')?.value || 'bragg');
+  // Bragg peak position (2 peaks): peak 1 sets the orientation as for one
+  // peak; peak 2 is only checked.
+  const mode=String(rawMode ?? ($('orientationReference')?.value || 'bragg')).replace(/^bragg2$/,'bragg');
   // Bragg peak position whose S1 is still empty (e.g. right after Reset):
   // every calculation uses the standard orientation ki ⟂ U until an S1 is
   // entered.

@@ -231,8 +231,9 @@ function applyInstrumentTypeDefaults(inst=currentInstrument()){
   setIf("S1max",inst.S1_max ?? 180);
   // Four-circle (bisecting): S1 = S2/2 is fixed, so a Bragg-peak orientation
   // reference is read on phi instead of S1.
-  const refS1Text=$("refs1")?.closest("label")?.firstChild;
-  if(refS1Text?.nodeType===3) refS1Text.nodeValue=inst.instrument_type==="four-circle" ? "φ (deg)" : "S1 (deg)";
+  const refS1Name=inst.instrument_type==="four-circle" ? "φ" : "S1";
+  if($("braggS1Head")) $("braggS1Head").textContent=`${refS1Name} (deg)`;
+  for(const n of [1,2]) $(n===1?"refs1":"refs12")?.setAttribute("aria-label",`Peak ${n} ${refS1Name} (deg)`);
   // Four-circle motor signs (CCW unless the instrument file says otherwise)
   // and the cradle limits (defaults from the instrument file, editable).
   setSelect("phiSign",String(inst.phi_sign||"ccw").toLowerCase());

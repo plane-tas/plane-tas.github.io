@@ -473,8 +473,8 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   font-size:var(--tas-control-text-size)!important;
 }
 
-/* Sidebar: Unit cell and Scattering plane use the same heading size. */
-.sidebar h3.unit-cell-heading{
+/* Sidebar: Lattice parameters and Scattering plane use the same heading size. */
+.sidebar h3.lattice-parameters-heading{
   font-size:calc(16px * var(--tas-density))!important;
   line-height:1.3;
 }
@@ -1003,14 +1003,10 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 
 /* Sample orientation > Bragg peak position: peak 2 (check only) and the
    Reset / check-message row.  The message always fits on one line. */
-.bragg-check-caption{margin-top:calc(6px * var(--tas-density))}
-.bragg-check-row{margin-top:calc(2px * var(--tas-density))}
-.bragg-check-row > input{width:100%;max-width:none;min-width:0}
-.bragg-reset-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density));margin-top:calc(6px * var(--tas-density))}
-.bragg-reset-row > button{flex:none}
-.bragg-check-message{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
-.bragg-check-message[data-state="ok"]{color:#2a7a2a}
+.bragg-check-message{margin-top:calc(4px * var(--tas-density));min-width:0;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
+.bragg-check-message:empty{display:none}
 .bragg-check-message[data-state="warn"]{color:#b4441f}
+.bragg-check-message[data-state="pending"]{color:#999}
 
 /* Resolution results (Mode = single): Show row with Save figure, then the
    four plots on the left and the table on the right; on a narrow panel the
@@ -1118,26 +1114,28 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 
 /* Sidebar tables and cards: Propagation vectors (k1 ● h k l), Background
    materials (BG1 ■ material) and the Dark angles cards (SE1 environment,
-   then the From / To / Offset table). Each starts empty; Add makes a row or
-   card. The No. column and the Remove column have one width throughout, so
+   then the From / To / Offset table). Each starts empty (a table shows its
+   header); Add makes a row or card. The No. column and the Remove column have one width throughout, so
    the numbers and the Remove buttons line up; numbers are at the size of
    the entries, headers at the size of the other captions. */
 .sidebar{--sidebar-remove-w:calc(84px * var(--tas-density));--sidebar-no-w:calc(52px * var(--tas-density))}
 .propagation-vectors,.background-rows{display:grid;gap:calc(5px * var(--tas-density))}
 .propagation-vectors:empty,.background-rows:empty{display:none}
 .sidebar-table-head{margin-bottom:calc(2px * var(--tas-density));font-size:calc(16px * var(--tas-density));color:#333}
-/* The header row appears with the first row. */
-.sidebar-table-head:has(+ .propagation-vectors:empty),
-.sidebar-table-head:has(+ .background-rows:empty){display:none}
-.sidebar :is(.sidebar-table-head,.propagation-row,.background-row,.dark-asset-head,.dark-table){
+.sidebar :is(.sidebar-table-head,.propagation-row,.background-row,.dark-asset-head,.dark-table,.bragg-row){
   display:grid;gap:calc(5px * var(--tas-density));align-items:center;min-width:0;width:100%}
 .sidebar :is(.propagation-head,.propagation-row){
   grid-template-columns:calc(30px * var(--tas-density)) calc(22px * var(--tas-density)) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)}
 .sidebar :is(.background-head,.background-row){
   grid-template-columns:var(--sidebar-no-w) calc(24px * var(--tas-density)) minmax(0,1fr) var(--sidebar-remove-w)}
-.sidebar :is(.propagation-row,.dark-table) input{width:100%;min-width:0;max-width:100%}
+.sidebar :is(.propagation-row,.dark-table,.bragg-row) input{width:100%;min-width:0;max-width:100%}
+/* Sample orientation > Bragg peak position: Peak 1 (sets the orientation)
+   and Peak 2 (only checked; Add / Remove). */
+.sidebar :is(.bragg-head,.bragg-row){
+  grid-template-columns:var(--sidebar-no-w) repeat(4,minmax(0,1fr))}
+.sidebar .bragg-row + .bragg-row{margin-top:calc(5px * var(--tas-density))}
 .sidebar :is(.background-row,.dark-asset-head) select{width:100%;min-width:0}
-:is(.propagation-no,.background-label,.dark-asset-no,.dark-range-number){font-size:calc(18px * var(--tas-density));color:#111}
+:is(.propagation-no,.background-label,.dark-asset-no,.dark-range-number,.bragg-no){font-size:calc(18px * var(--tas-density));color:#111}
 
 /* Propagation vectors: the marker of the vector on the maps, centred. */
 .propagation-symbol{display:flex;align-items:center;justify-content:center;align-self:stretch}

@@ -1,7 +1,7 @@
 // Sidebar dynamic rows: propagation vectors, dark-angle assets and ranges, sample environments.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {MAX_PROPAGATION_VECTORS, magneticSymbolSvg} from '../qe/magnetic-symbols.js';
-import {revealRange} from './scroll-reveal.js';
+import {fitsInView, revealRange} from './scroll-reveal.js';
 
 export function createSidebarRows(deps){
   const {
@@ -26,8 +26,10 @@ function enabledPropagationVectors(){
   return out;
 }
 
-// The Custom sample environment of a dark-angle card (not a file).
-const DARK_CUSTOM='custom';
+// The hand-typed sample environments of the dark-angle cards (not files):
+// at most two are needed (e.g. a cryostat and a sample stick).
+const DARK_CUSTOMS=[["custom1","Custom 1"],["custom2","Custom 2"]];
+const isDarkCustom=key=>DARK_CUSTOMS.some(([value])=>value===key);
 function darkAssetIds(slot){
   const suffix=slot===1?"":String(slot);
   const legacyRangeId=(kind,i)=>{
@@ -52,8 +54,8 @@ function darkAssetSlots(){
 function currentDarkRangeCount(slot){
   const ids=darkAssetIds(slot);
   const saved=Number($(ids.rangeCount)?.value);
-  if(Number.isInteger(saved) && saved>=1) return saved;
-  return document.querySelectorAll(`.dark-asset[data-dark-slot="${slot}"] .dark-range-number`).length || 1;
+  if(Number.isInteger(saved) && saved>=0 && $(ids.rangeCount)?.value!=="") return saved;
+  return document.querySelectorAll(`.dark-asset[data-dark-slot="${slot}"] .dark-range-number`).length;
 }
 
 // Numbers that come from a file (e.g. 0.3333333333333333) are shown as an
@@ -174,7 +176,8 @@ function replaceDarkRanges(slot,ranges,{recalc=false}={}){
   const asset=document.querySelector(`.dark-asset[data-dark-slot="${slot}"]`);
   const table=asset?.querySelector(".dark-table");
   if(!asset || !table) return;
-  const rows=(Array.isArray(ranges)&&ranges.length)?ranges:[{}];
+  // The table may be empty (only its header): Add makes the first range.
+  const rows=Array.isArray(ranges)?ranges:[];
   table.replaceChildren();
   for(const label of ["No.","From","To","Offset",""]){
     const head=document.createElement("div");
@@ -188,7 +191,7 @@ function replaceDarkRanges(slot,ranges,{recalc=false}={}){
 }
 
 function setDarkRangeCount(slot,count,{recalc=false}={}){
-  count=Math.max(1,Math.floor(Number(count)||1));
+  count=Math.max(0,Math.floor(Number(count)||0));
   const ranges=darkRangeValues(slot);
   while(ranges.length<count) ranges.push({});
   ranges.length=count;
@@ -197,8 +200,8 @@ function setDarkRangeCount(slot,count,{recalc=false}={}){
 
 function removeDarkRange(slot,index){
   const ranges=darkRangeValues(slot);
-  const i=Math.max(0,Math.min(ranges.length-1,Number(index)||0));
-  ranges.splice(i,1);
+  const i=Number(index);
+  if(Number.isInteger(i) && i>=0 && i<ranges.length) ranges.splice(i,1);
   replaceDarkRanges(slot,ranges,{recalc:true});
   saveLeftPanelState();
 }
@@ -211,7 +214,7 @@ function createDarkAsset(slot,values={}){
   asset.innerHTML=`
     <div class="dark-asset-head">
       <div class="dark-asset-no-cell"><span>No.</span><span class="dark-asset-no">SE${slot}</span></div>
-      <label>Sample environment<select id="${ids.se}"><option value="${DARK_CUSTOM}">Custom</option></select></label>
+      <label>Sample environment<select id="${ids.se}"></select></label>
       <button type="button" class="remove-dark-asset" data-dark-slot="${slot}">Remove</button>
     </div>
     <div class="grid2">
@@ -229,29 +232,59 @@ function createDarkAsset(slot,values={}){
   return asset;
 }
 
-// Sample environment of a dark-angle card: Custom (ranges typed by hand;
-// the choice of a new card) or a preset from sample_environments/.
+// Sample environment of a dark-angle card: Custom 1 / Custom 2 (ranges
+// typed by hand) or a preset from sample_environments/. Each can be chosen
+// by one card only, as the materials of Background materials.
+function darkEnvironmentKeys(){
+  return [...DARK_CUSTOMS.map(([value])=>value),
+    ...[...sampleEnvironments.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}))];
+}
 function refreshDarkEnvironmentSelect(slot){
   const select=$(darkAssetIds(slot).se);
   if(!select) return;
   const keep=select.value;
   refreshSelect(sampleEnvironments,select,null);
-  const custom=document.createElement("option");
-  custom.value=DARK_CUSTOM; custom.textContent="Custom";
-  select.insertBefore(custom,select.options[0]||null);
-  select.value=[...select.options].some(o=>o.value===keep) ? keep : DARK_CUSTOM;
+  DARK_CUSTOMS.slice().reverse().forEach(([value,label])=>{
+    const option=document.createElement("option");
+    option.value=value; option.textContent=label;
+    select.insertBefore(option,select.options[0]||null);
+  });
+  select.value=[...select.options].some(o=>o.value===keep) ? keep : DARK_CUSTOMS[0][0];
   rememberDarkSelection(slot);
 }
-// Remember the selection, so that leaving Custom can keep its settings.
+// Hide in every card the environments chosen in the other cards; Add is
+// disabled when every environment is in use.
+function updateDarkEnvironmentAvailability(){
+  const chosen=darkAssetSlots().map(slot=>[slot,$(darkAssetIds(slot).se)?.value]);
+  for(const [slot] of chosen){
+    const select=$(darkAssetIds(slot).se);
+    if(!select) continue;
+    for(const option of select.options){
+      const used=chosen.some(([other,key])=>other!==slot && key===option.value);
+      option.disabled=used; option.hidden=used;
+    }
+  }
+  const add=$("addDarkAsset");
+  if(add) add.disabled=chosen.length>=darkEnvironmentKeys().length;
+}
+// Remember the selection, so that leaving a Custom can keep its settings.
 function rememberDarkSelection(slot){
   const select=$(darkAssetIds(slot).se);
   if(select) select.dataset.previous=select.value;
 }
 
-// The hand-typed settings of Custom are kept while another sample
-// environment (or None) is selected, so switching back restores them; they
-// are part of the card's snapshot and so of the saved state.
+// The settings of Custom 1 and Custom 2, kept by name: whichever card
+// chooses Custom 1 gets them, also after another environment was chosen or
+// the card was removed. Saved with the left panel (darkCustomSettings).
 const customDarkSettings=new Map();
+function darkCustomSettings(){
+  darkAssetValues();
+  return Object.fromEntries(customDarkSettings);
+}
+function restoreDarkCustomSettings(saved){
+  customDarkSettings.clear();
+  for(const [key] of DARK_CUSTOMS) if(saved?.[key]) customDarkSettings.set(key,saved[key]);
+}
 function currentDarkSettings(slot){
   const ids=darkAssetIds(slot);
   return {
@@ -278,21 +311,23 @@ function rawNumericText(id){
   return Number.isFinite(parseNumericValue(raw)) ? raw : num(id);
 }
 function snapshotDarkAsset(slot){
-  const se=$(darkAssetIds(slot).se)?.value||"";
+  // The settings shown belong to the remembered selection: between the
+  // select's input event and its change handler the select already shows
+  // the new environment, but the card still the settings of the old one.
+  const select=$(darkAssetIds(slot).se);
+  const se=select?.dataset.previous||select?.value||"";
   const current=currentDarkSettings(slot);
-  const custom=se===DARK_CUSTOM ? current : customDarkSettings.get(slot);
-  return {se,...current,...(custom?{custom}:{})};
+  if(isDarkCustom(se)) customDarkSettings.set(se,current);
+  return {se,...current};
 }
 
 function applyDarkAssetValues(slot,values={}){
   const ids=darkAssetIds(slot);
   refreshDarkEnvironmentSelect(slot);
   if($(ids.se)){
-    const requested=String(values.se||DARK_CUSTOM);
-    $(ids.se).value=[...$(ids.se).options].some(o=>o.value===requested)?requested:DARK_CUSTOM;
+    const requested=String(values.se||"");
+    if([...$(ids.se).options].some(o=>o.value===requested)) $(ids.se).value=requested;
   }
-  if(values.custom) customDarkSettings.set(slot,values.custom);
-  else customDarkSettings.delete(slot);
   applyDarkSettings(slot,values);
   rememberDarkSelection(slot);
 }
@@ -304,9 +339,12 @@ function darkAssetValues(){
 function replaceDarkAssets(values,{recalc=false}={}){
   const host=$("darkAssets");
   if(!host) return;
-  // No card at first; Add makes one (Custom).
-  const cards=Array.isArray(values)?values:[];
-  customDarkSettings.clear();
+  // No card at first; Add makes one. One card per environment.
+  const seen=new Set();
+  const cards=(Array.isArray(values)?values:[]).filter(card=>{
+    if(!card?.se || seen.has(card.se)) return false;
+    seen.add(card.se); return true;
+  });
   host.replaceChildren();
   cards.forEach((value,i)=>{
     const slot=i+1;
@@ -314,6 +352,7 @@ function replaceDarkAssets(values,{recalc=false}={}){
     applyDarkAssetValues(slot,value);
   });
   if($("darkAssetCount")) $("darkAssetCount").value=String(cards.length);
+  updateDarkEnvironmentAvailability();
   updateGeometryQuickTargetButtons();
   if(recalc) scheduleRecalc();
 }
@@ -414,9 +453,12 @@ function bindDynamicSidebarUI(){
         ranges.push({});
         replaceDarkRanges(slot,ranges,{recalc:true});
         saveLeftPanelState();
-        // Show the new range and the Add under it.
+        // Show the new range and the Add under it and, when it fits, also
+        // the Add of the cards below, so that it is not overlooked.
         const asset=document.querySelector(`.dark-asset[data-dark-slot="${slot}"]`);
-        revealRange(asset?.querySelector(`.dark-range-number[data-dark-range="${ranges.length-1}"]`),asset?.querySelector(".add-dark-range"));
+        const row=asset?.querySelector(`.dark-range-number[data-dark-range="${ranges.length-1}"]`);
+        const outer=$("addDarkAsset");
+        revealRange(row,fitsInView(row,outer)?outer:asset?.querySelector(".add-dark-range"));
       }else if(removeRange){
         removeDarkRange(Number(removeRange.dataset.darkSlot),Number(removeRange.dataset.darkRange));
       }else if(removeAsset){
@@ -428,8 +470,15 @@ function bindDynamicSidebarUI(){
 
   $("addDarkAsset")?.addEventListener("click",()=>{
     const values=darkAssetValues();
-    values.push({se:DARK_CUSTOM});
+    // The new card takes the first environment no card uses (Custom 1,
+    // Custom 2, then the presets), with its saved settings for a Custom.
+    const used=new Set(values.map(v=>v.se));
+    const se=darkEnvironmentKeys().find(key=>!used.has(key));
+    if(!se) return;
+    values.push({se,...(isDarkCustom(se)?customDarkSettings.get(se):null)});
     replaceDarkAssets(values,{recalc:true});
+    // A preset fills in its ranges.
+    if(!isDarkCustom(se)) applySampleEnvironmentDefaults(values.length);
     saveLeftPanelState();
     // Show the whole new card and the Add under it.
     revealRange($("darkAssets")?.lastElementChild,$("addDarkAsset"));
@@ -452,19 +501,14 @@ function updateDarkReferenceUI(slot){
 function applySampleEnvironmentDefaults(slot=1){
   const ids=darkAssetIds(slot);
   const key=$(ids.se)?.value || "";
-  if($(ids.se)?.dataset.previous===DARK_CUSTOM) customDarkSettings.set(slot,currentDarkSettings(slot));
+  const previous=$(ids.se)?.dataset.previous;
+  if(isDarkCustom(previous)) customDarkSettings.set(previous,currentDarkSettings(slot));
   rememberDarkSelection(slot);
-  // Custom: restore the hand-typed settings, if there are any.
-  if(key===DARK_CUSTOM){
-    if(customDarkSettings.has(slot)) applyDarkSettings(slot,customDarkSettings.get(slot));
-    scheduleRecalc();
-    return;
-  }
-  if(!key || !sampleEnvironments.has(key)){
-    setRadio(ids.ref,"Reference Q");
-    updateDarkReferenceUI(slot);
-    setDarkRangeCount(slot,1);
-    $(ids.from(0)).value=0; $(ids.to(0)).value=0; $(ids.offset(0)).value=0;
+  updateDarkEnvironmentAvailability();
+  // Custom 1 / 2: its saved settings, or Reference Q with no range yet.
+  // (An unknown environment is treated the same way.)
+  if(isDarkCustom(key) || !sampleEnvironments.has(key)){
+    applyDarkSettings(slot,(isDarkCustom(key) && customDarkSettings.get(key)) || {ranges:[]});
     scheduleRecalc();
     return;
   }
@@ -474,9 +518,9 @@ function applySampleEnvironmentDefaults(slot=1){
   if(rq&&rq.length>=3){ $(ids.refH).value=rq[0]; $(ids.refK).value=rq[1]; $(ids.refL).value=rq[2]; }
   updateDarkReferenceUI(slot);
   const ranges=Array.isArray(se.dark_angle_ranges)?se.dark_angle_ranges:[];
-  setDarkRangeCount(slot,Math.max(1,ranges.length));
-  for(let i=0;i<Math.max(1,ranges.length);i++){
-    const r=ranges[i] || {from:0,to:0,offset:0};
+  setDarkRangeCount(slot,ranges.length);
+  for(let i=0;i<ranges.length;i++){
+    const r=ranges[i];
     $(ids.from(i)).value=Number(r.from||0);
     $(ids.to(i)).value=Number(r.to||0);
     $(ids.offset(i)).value=Number(r.offset||0);
@@ -486,7 +530,7 @@ function applySampleEnvironmentDefaults(slot=1){
 
   return {
     applySampleEnvironmentDefaults, bindDynamicSidebarUI, currentDarkRangeCount, darkAssetIds,
-    darkAssetSlots, darkAssetValues, enabledPropagationVectors, propagationVectorIndices,
+    darkAssetSlots, darkAssetValues, darkCustomSettings, restoreDarkCustomSettings, enabledPropagationVectors, propagationVectorIndices,
     propagationVectorValues, refreshDarkEnvironmentSelect, replaceDarkAssets, replacePropagationVectors,
     setDarkAssetCount, setDarkRangeCount, setPropagationVectorCount, updateDarkReferenceUI
   };
