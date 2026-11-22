@@ -351,7 +351,6 @@ function removeSelectedCifAtomRows(){
     row.remove();
   }
   cifAtomSelectionAnchor=null;
-  if(!$("cifAtomRows")?.querySelector(".cif-atom-row")) addCifAtomRow({}, {invalidate:false});
   refreshCifAtomRowIndices();
   refreshCifAtomDetailedLabels();
   refreshCifAtomSelectionUI();
@@ -554,8 +553,8 @@ function replaceCifAtomRows(atoms){
   host.replaceChildren();
   cifAtomSelectionAnchor=null;
   $("cifAtomDetailedRows")?.replaceChildren();
+  // The table may be empty: Add makes the first row.
   for(const atom of atoms) addCifAtomRow(atom,{invalidate:false});
-  if(!atoms.length) addCifAtomRow({}, {invalidate:false});
   refreshCifAtomRowIndices();
   refreshCifAtomSelectionUI();
   fn.saveCifGeneratorAtomsState();

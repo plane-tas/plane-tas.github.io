@@ -114,7 +114,7 @@ const {
   propagationVectorValues, refreshDarkEnvironmentSelect, replaceDarkAssets, replacePropagationVectors,
   setDarkAssetCount, setDarkRangeCount, setPropagationVectorCount, updateDarkReferenceUI
 }=createSidebarRows({
-  $, applyDarkAngleSlotColors, backgroundRowValues, checkedValue, handleBackgroundSelection, num,
+  $, backgroundMaterials, backgroundRowValues, checkedValue, handleBackgroundSelection, num,
   parseNumericValue, refreshSelect, removeBackground, replaceBackgroundRows, sampleEnvironments,
   saveLeftPanelState:(...args)=>saveLeftPanelState(...args),
   scheduleRecalc:(...args)=>scheduleRecalc(...args), setRadio, updateGeometryQuickTargetButtons,
@@ -438,15 +438,6 @@ function resetBraggPeaks(){
   updateBraggOrientationPlaneWarning();
 }
 
-function applyDarkAngleSlotColors(){
-  // Dark-angle cards/checkbox labels use one neutral black UI style.
-  for(const slot of darkAssetSlots()){
-    const label=$(darkAssetIds(slot).enable)?.closest("label");
-    const caption=label?.querySelector("span");
-    if(caption){ caption.style.color="#111"; caption.style.fontWeight="700"; }
-  }
-}
-
 function updateGeometryQuickTargetButtons(){
   const mode=$('orientationReference')?.value || 'perpU';
   const bragg=mode==='bragg';
@@ -471,7 +462,7 @@ function updateGeometryQuickTargetButtons(){
 
   let fourCircle=false;
   try{ fourCircle=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
-  const showDark=!!$('addDark')?.checked && !fourCircle;
+  const showDark=!fourCircle;
   for(const slot of slots){
     let button=$(`geomSetRefQ${slot}`);
     if(!button){
@@ -489,7 +480,7 @@ function updateGeometryQuickTargetButtons(){
     if(resolutionButton?.parentElement===container) container.insertBefore(button,resolutionButton);
     else container.appendChild(button);
     const ids=darkAssetIds(slot);
-    const visible=showDark && !!$(ids.enable)?.checked && checkedValue(ids.ref)==='Reference Q';
+    const visible=showDark && !!$(ids.se)?.value && checkedValue(ids.ref)==='Reference Q';
     button.classList.toggle('hidden',!visible);
   }
 }
@@ -499,10 +490,12 @@ function updateGeometryQuickTargetButtons(){
 
 function refreshBackgroundSelect(select,emptyLabel="None"){
   select.innerHTML="";
-  const empty=document.createElement("option");
-  empty.value="";
-  empty.textContent=emptyLabel;
-  select.appendChild(empty);
+  if(emptyLabel!==null){
+    const empty=document.createElement("option");
+    empty.value="";
+    empty.textContent=emptyLabel;
+    select.appendChild(empty);
+  }
   [...backgroundMaterials.keys()]
     .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}))
     .forEach(key=>{
@@ -1015,7 +1008,7 @@ const {
   initialize
 }=createAppBootstrap({
   redrawPowder,
-  applyDarkAngleSlotColors, applyInstrumentCrystalAvailability, applyInstrumentDefaults,
+  applyInstrumentCrystalAvailability, applyInstrumentDefaults,
   applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
   bindResolutionManualCalculation:(...args)=>bindResolutionManualCalculation(...args),
   bindToolboxUI:(...args)=>bindToolboxUI(...args),

@@ -16,7 +16,10 @@
   align-items:start;
 }
 #resolutionPanel .resolution-main-column{min-width:0}
-#resolutionInstrumentDetails{
+/* Instrument details: the title (with Set default) and the jump buttons
+   above a bordered card; only the card scrolls. */
+#resolutionInstrumentDetails{min-width:0;background:#fff}
+#resolutionInstrumentDetails .resolution-details-body{
   min-width:0;
   border:calc(1px * var(--tas-density)) solid #ddd;
   border-radius:calc(8px * var(--tas-density));
@@ -98,21 +101,19 @@
    a compact two-column grid where space permits. */
 @media(max-width:1250px){
   #resolutionPanel .resolution-workspace{grid-template-columns:1fr}
-  #resolutionInstrumentDetails{
-    position:static;
+  #resolutionInstrumentDetails{position:static}
+  #resolutionInstrumentDetails .resolution-details-body{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:calc(8px * var(--tas-density));
   }
-  #resolutionInstrumentDetails .resolution-detail-title{
-    grid-column:1 / -1;
-    margin-bottom:0;
-  }
+  /* The page scrolls here: the title and the jump buttons stay at its top. */
+  #resolutionInstrumentDetails .resolution-details-head{position:sticky;top:0;z-index:5;background:#fff}
   #resolutionInstrumentDetails details{margin-bottom:0}
   #resolutionInstrumentDetails .instrument-fixed-section{margin-bottom:0}
 }
 @media(max-width:1050px){
-  #resolutionInstrumentDetails{grid-template-columns:1fr}
+  #resolutionInstrumentDetails .resolution-details-body{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   #resolutionCalculation #singleInputs{grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:calc(4px * var(--tas-density))}

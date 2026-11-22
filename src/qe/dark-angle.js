@@ -12,12 +12,18 @@ export function createDarkAngle(deps){
     const assets=[];
     for(const slot of darkAssetSlots()){
       const ids=darkAssetIds(slot);
-      if(!$(ids.enable)?.checked) continue;
+      // No sample environment (None): not a dark angle.
+      if(!$(ids.se)?.value) continue;
       const rotation=num(ids.rotation);
       const ranges=[];
       for(let i=0;i<currentDarkRangeCount(slot);i++){
-        ranges.push([num(ids.from(i)),num(ids.to(i)),num(ids.offset(i))+rotation]);
+        const from=num(ids.from(i)), to=num(ids.to(i));
+        // A range of zero width (the empty default 0 to 0) blocks nothing.
+        if(!(Math.abs(to-from)>1e-9)) continue;
+        ranges.push([from,to,num(ids.offset(i))+rotation]);
       }
+      // A card without any range is not a dark angle (nothing on the maps).
+      if(!ranges.length) continue;
       assets.push({slot,key:$(ids.se)?.value||"",ref:checkedValue(ids.ref)||"Reference Q",refHkl:[num(ids.refH),num(ids.refK),num(ids.refL)],ranges});
     }
     return assets;

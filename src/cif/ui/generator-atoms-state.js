@@ -56,7 +56,9 @@ function saveCifGeneratorAtomsState(){
 function restoreCifGeneratorAtomsState(){
   let saved;
   try{ saved=JSON.parse(localStorage.getItem(cifState.CIF_GENERATOR_ATOMS_STORAGE_KEY)||"null"); }catch(_e){ return false; }
-  if(!saved || ![1,2,3].includes(saved.version) || !Array.isArray(saved.atoms) || !saved.atoms.length) return false;
+  if(!saved || ![1,2,3].includes(saved.version) || !Array.isArray(saved.atoms)) return false;
+  // Drafts from before the table could be empty kept a blank first row.
+  const atoms=(saved.atoms.length===1 && !String(saved.atoms[0]?.element??'').trim()) ? [] : saved.atoms;
   // Saved edits from an unrelated imported file must never overwrite this CIF.
   if(saved.version===3 && saved.sourceKey!==currentEditorSourceKey()) return false;
   cifState.restoringCifGeneratorAtoms=true;
@@ -92,7 +94,7 @@ function restoreCifGeneratorAtomsState(){
     }
     // Position Mode is an editor-view option. Never replace the selected mCIF
     // Structure (or its parent-cell frame) with a P1 draft on restoration.
-    fn.replaceCifAtomRows(saved.atoms);
+    fn.replaceCifAtomRows(atoms);
     fn.refreshPositionTableToolbar();
     return true;
   }finally{ cifState.restoringCifGeneratorAtoms=false; }

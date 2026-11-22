@@ -418,7 +418,7 @@ export function installTimeParse(ctx){
       let darkCache=null, angleCache=null;
       if(checkedValue('sampleMode')==='single'){
         try{ angleCache=deps.singleCache || calculateSingleCrystal(); }catch(_e){ angleCache=null; }
-        if($('addDark')?.checked) darkCache=angleCache;
+        darkCache=angleCache;
       }
       for(let i=0;i<rows.length;i++){
         const result=results[i];

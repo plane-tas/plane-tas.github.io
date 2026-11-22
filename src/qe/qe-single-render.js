@@ -2,6 +2,7 @@
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 import {dot} from '../core/tas-core.js';
 import {tasConvention} from '../core/tas-conventions.js';
+import {magneticSymbol} from './magnetic-symbols.js';
 import {qeMapTitle, qeDomainTitleAnnotation} from './qe-plot-title.js';
 import {braggPeakScale, magneticRatioText} from './bragg-intensity.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
@@ -382,15 +383,13 @@ function renderSingle(cache,index=0){
       zorder:0
     });
   }
-  // Keep propagation vectors visually distinct by marker shape while retaining
-  // one magnetic-peak color.  The symbol sequence cycles only if many k vectors
-  // are added; the propagation-vector index remains explicit in the legend.
-  const magneticSymbols=["circle","x","star","diamond","cross","triangle-up","square","diamond-open","triangle-down","pentagon"];
+  // Keep propagation vectors visually distinct by marker shape (circle,
+  // triangle, square, star for k1..k4) while retaining one magnetic-peak color.
   const magneticIndices=[...new Set(transformedMag.map(p=>Number(p.qIndex)).filter(Number.isFinite))].sort((a,b)=>a-b);
   for(const qIndex of magneticIndices){
     const pts=transformedMag.filter(p=>p.qIndex===qIndex);
     if(!pts.length) continue;
-    const symbol=magneticSymbols[(qIndex-1)%magneticSymbols.length];
+    const symbol=magneticSymbol(qIndex).plotly;
     const name=`Magnetic Bragg peaks: k${qIndex}`;
     if(magneticIntensity){
       // Single k: white-to-red |F_M|^2 colorbar below the nuclear one; the

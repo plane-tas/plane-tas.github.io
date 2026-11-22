@@ -22,12 +22,8 @@ async function initializeCifGenerator(){
     if($("cifCrystalSystem")) $("cifCrystalSystem").value="custom";
     fn.populateCifSpaceGroupOptions(1);
     if(!getSelectedCifStructure()) fn.restoreSelectedCifLocal();
-    // Keep the editor's own initial cell until a structure is loaded.
-    // A bootstrap placeholder must not overwrite a saved editor draft
-    // before restoreCifGeneratorAtomsState() has had a chance to read it.
-    cifState.restoringCifGeneratorAtoms=true;
-    try{fn.addCifAtomRow({element:"",x:0,y:0,z:0,occupancy:1},{invalidate:false});}
-    finally{cifState.restoringCifGeneratorAtoms=false;}
+    // The Positions table starts empty (Add makes the first row) until a
+    // structure is loaded or a saved editor draft is restored.
     fn.updateCifSpaceGroupInfo();
     fn.syncCifReflectionBeamFromInstrument();
     if(getSelectedCifStructure()){

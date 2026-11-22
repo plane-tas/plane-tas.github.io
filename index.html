@@ -89,8 +89,9 @@
 </div>
 <div class="shell">
 <aside class="sidebar">
-<section>
-<div class="sidebar-heading-row"><h2>Instrument configuration</h2><button id="instrumentSetDefault" type="button" title="Reset the Instrument configuration (energy, Sense, crystals, motor limits) to the values of the selected instrument file">Set default</button></div>
+<nav class="jump-bar" aria-label="Sidebar sections"><button type="button" data-jump="sidebarInstrument">Instrument</button><button type="button" data-jump="sidebarSample">Sample</button><button type="button" data-jump="sidebarBackground">BG</button><button type="button" data-jump="darkSection">Dark angle</button></nav>
+<section id="sidebarInstrument">
+<div class="sidebar-heading-row"><h2>Instrument</h2><button id="instrumentSetDefault" type="button" title="Reset Instrument (energy, Sense, crystals, motor limits) to the values of the selected instrument file">Set default</button></div>
 <div class="instrument-select-row">
 <label>Instrument<select id="instrument"><option>Loading...</option></select></label>
 <label>Type<select id="instrumentType" aria-label="Instrument type"><option value="tas">TAS</option></select></label>
@@ -149,7 +150,7 @@
 <input id="instrumentJsonFile" type="file" accept=".json,application/json" hidden/>
 </div>
 </section>
-<section>
+<section id="sidebarSample">
 <h2>Sample</h2>
 <div class="sample-spacegroup-row">
 <label>Type<select id="sampleMode"><option selected="" value="single">Single crystal</option><option value="powder">Powder</option></select></label>
@@ -187,35 +188,21 @@
 <div aria-live="polite" class="orientation-plane-warning hidden" id="braggPlaneWarning" role="status"></div>
 </div>
 <h3>Propagation vectors</h3>
-<label class="checkbox-label"><input checked="" id="showPropagation" type="checkbox"/><span>show</span></label>
-<input id="propagationCount" type="hidden" value="1"/>
-<div class="propagation-vectors" id="propagationVectors">
-<div class="propagation-row" data-q-index="1"><label class="checkbox-label propagation-enable"><input checked="" id="q_enable1" type="checkbox"/><span>k1</span></label><label>k1_h<input id="q1_h" data-fraction="" inputmode="text" type="text" value="0"/></label><label>k1_k<input id="q1_k" data-fraction="" inputmode="text" type="text" value="0"/></label><label>k1_l<input id="q1_l" data-fraction="" inputmode="text" type="text" value="0"/></label><button class="remove-propagation-vector" data-q-index="1" type="button">Remove</button></div>
-</div>
-<button class="dynamic-add-wide" id="addPropagationVector" type="button">+ Add propagation vector</button>
-<h3>Background scattering</h3>
-<input id="backgroundCount" type="hidden" value="1"/>
-<div class="background-rows" id="backgroundRows">
-<div class="background-row" data-background-index="1"><label><span class="background-label"><i class="bg-swatch bg1"></i>BG1</span><select id="backgroundSelect1"><option value="">None</option></select></label><button class="remove-background" data-background-index="1" type="button">Remove</button></div>
-</div>
-<button class="dynamic-add-wide" id="addBackground" type="button">+ Add background</button>
+<input id="propagationCount" type="hidden" value="0"/>
+<div class="sidebar-table-head propagation-head" aria-hidden="true"><span>No.</span><span></span><span>h</span><span>k</span><span>l</span><span></span></div>
+<div class="propagation-vectors" id="propagationVectors"></div>
+<button class="dynamic-add-wide" id="addPropagationVector" type="button">Add</button>
+</section>
+<section id="sidebarBackground"><h2>Background materials</h2>
+<input id="backgroundCount" type="hidden" value="0"/>
+<div class="sidebar-table-head background-head" aria-hidden="true"><span>No.</span><span></span><span>Material</span><span></span></div>
+<div class="background-rows" id="backgroundRows"></div>
+<button class="dynamic-add-wide" id="addBackground" type="button">Add</button>
 </section>
 <section id="darkSection"><h2>Dark angle</h2>
-<label class="checkbox-label"><input id="addDark" type="checkbox"/><span>show</span></label>
-<input id="darkAssetCount" type="hidden" value="1"/>
-<div id="darkAssets">
-<div class="dark-asset" data-dark-slot="1">
-<div class="dark-asset-head"><label class="checkbox-label"><input checked="" id="darkEnable1" type="checkbox"/><span>Dark angle 1</span></label><label>Sample environment<select id="seSelect"><option value="">Standard</option></select></label><button class="remove-dark-asset" data-dark-slot="1" type="button">Remove</button></div>
-<div class="grid2"><label>Reference<select id="darkRef"><option>Reference Q</option><option>Direct beam</option><option>Fixed</option></select></label><label>Rotation (deg)<input id="darkRotation" step="1" type="number" value="0"/></label></div>
-<div class="grid3" id="darkRefQRow1"><label>h<input id="darkRefH1" type="text" inputmode="text" data-fraction="" value="1"/></label><label>k<input id="darkRefK1" type="text" inputmode="text" data-fraction="" value="0"/></label><label>l<input id="darkRefL1" type="text" inputmode="text" data-fraction="" value="0"/></label></div>
-<input id="darkRangeCount1" type="hidden" value="1"/>
-<div class="dark-table" data-dark-range-table="1"><div>No.</div><div>From</div><div>To</div><div>Offset</div><div></div>
-<span class="dark-range-number" data-dark-range="0">1</span><input data-dark-range="0" id="darkFrom0" type="number" value="0"/><input data-dark-range="0" id="darkTo0" type="number" value="0"/><input data-dark-range="0" id="darkOffset0" type="number" value="0"/><button class="remove-dark-range" data-dark-range="0" data-dark-slot="1" type="button">Remove</button>
-</div>
-<button class="add-dark-range dynamic-add-wide" data-dark-slot="1" type="button">+ Add range</button>
-</div>
-</div>
-<button class="dynamic-add-wide" id="addDarkAsset" type="button">+ Add dark angle</button>
+<input id="darkAssetCount" type="hidden" value="0"/>
+<div id="darkAssets"></div>
+<button class="dynamic-add-wide" id="addDarkAsset" type="button">Add</button>
 </section>
 </aside>
 <main>
@@ -371,8 +358,12 @@
 <div aria-labelledby="tabResolution" class="tab-panel hidden" id="resolutionPanel" role="tabpanel">
 <div class="resolution-workspace">
 <aside class="resolution-instrument-details" id="resolutionInstrumentDetails">
+<div class="resolution-details-head">
 <div class="resolution-detail-title sidebar-heading-row"><span>Instrument details</span><button id="instrumentDetailsSetDefault" type="button" title="Reset the Instrument details (collimation, focusing, mosaic, sizes, distances) to the values of the selected instrument file">Set default</button></div>
-<section class="instrument-fixed-section"><div class="instrument-fixed-heading">Focusing conditions</div>
+<nav class="jump-bar" aria-label="Instrument details sections"><button type="button" data-jump="detailsFocusing">Focusing</button><button type="button" data-jump="detailsCollimator">Collimator</button><button type="button" data-jump="detailsCrystal">Crystal</button><button type="button" data-jump="detailsComponent">Component</button></nav>
+</div>
+<div class="resolution-details-body" id="resolutionDetailsBody">
+<section class="instrument-fixed-section" id="detailsFocusing"><div class="instrument-fixed-heading">Focusing</div>
 <div id="resolutionFocusingGrid">
 <div class="coll-grid focus-grid"><b class="focus-name">Monochromator</b>
 <label class="coll-head" for="monoHType">Horizontal</label><label class="coll-head" for="monoHB">Blades</label><label class="coll-head" for="monoVType">Vertical</label><label class="coll-head" for="monoVB">Blades</label>
@@ -384,7 +375,7 @@
 <input hidden id="anaHF" type="checkbox"/><input checked="" hidden id="anaVF" type="checkbox"/></div>
 </div>
 </section>
-<section class="instrument-fixed-section"><div class="instrument-fixed-heading">Collimator conditions <small>(min; blank: none)</small></div>
+<section class="instrument-fixed-section" id="detailsCollimator"><div class="instrument-fixed-heading">Collimator <small>(min; blank: none)</small></div>
 <input hidden id="gm1" type="checkbox"/>
 <div class="coll-grid">
 <label class="coll-head" for="coll1Type">1st</label><label class="coll-head res-coll1-soller" for="div1h">Horizontal</label><label class="coll-head res-coll1-soller" for="div1v">Vertical</label><label class="coll-head coll-span2 res-coll1-guide" for="div1m" hidden>m-value</label>
@@ -396,7 +387,7 @@
 <label class="coll-head" for="coll4Type">4th</label><label class="coll-head" for="div4h">Horizontal</label><label class="coll-head" for="div4v">Vertical</label>
 <select aria-label="4th collimator type" id="coll4Type" disabled title="Soller only (leave H blank when no collimator is installed)"><option value="soller">Soller</option></select><input aria-label="4th horizontal divergence" id="div4h" placeholder="blank or value" type="number" value="80"/><input aria-label="4th vertical divergence" id="div4v" placeholder="blank or value" type="number" value="80"/>
 </div></section>
-<section class="instrument-fixed-section"><div class="instrument-fixed-heading">Crystal &amp; Mosaic <small>(min)</small></div>
+<section class="instrument-fixed-section" id="detailsCrystal"><div class="instrument-fixed-heading">Crystal &amp; mosaic <small>(min)</small></div>
 <div class="coll-grid crystal-grid"><b class="focus-name">Monochromator</b>
 <label class="coll-head" for="monoCrystal">Crystal</label><label class="coll-head" for="dMono">d (Å)</label><label class="coll-head" for="mosMonoH">Mosaic H</label><label class="coll-head" for="mosMonoV">Mosaic V</label>
 <select aria-label="Monochromator crystal" id="monoCrystal"></select><input aria-label="Monochromator d spacing" id="dMono" min="0.000001" step="any" type="number" value="3.355"/><input aria-label="Monochromator mosaic H" id="mosMonoH" type="number" value="30"/><input aria-label="Monochromator mosaic V" id="mosMonoV" type="number" value="30"/></div>
@@ -407,7 +398,7 @@
 <label class="coll-head" for="anaCrystal">Crystal</label><label class="coll-head" for="dAna">d (Å)</label><label class="coll-head" for="mosAnaH">Mosaic H</label><label class="coll-head" for="mosAnaV">Mosaic V</label>
 <select aria-label="Analyzer crystal" id="anaCrystal"></select><input aria-label="Analyzer d spacing" id="dAna" min="0.000001" step="any" type="number" value="3.355"/><input aria-label="Analyzer mosaic H" id="mosAnaH" type="number" value="30"/><input aria-label="Analyzer mosaic V" id="mosAnaV" type="number" value="30"/></div>
 </section>
-<section class="instrument-fixed-section"><div class="instrument-fixed-heading">Component information</div>
+<section class="instrument-fixed-section" id="detailsComponent"><div class="instrument-fixed-heading">Component <small>(distance m, size cm)</small></div>
 <h3>Distance <small>(m)</small></h3><div class="grid4 resolution-distance-grid" id="resolutionDistanceGrid"><label>L0<input id="L0" step="0.01" type="number" value="1.5"/></label><label>L1<input id="L1" step="0.01" type="number" value="1.5"/></label><label class="resolution-tas-distance">L2<input id="L2" step="0.01" type="number" value="1.5"/></label><label class="resolution-tas-distance">L3<input id="L3" step="0.01" type="number" value="1.5"/></label><label class="resolution-diffraction-distance hidden" id="resolutionSampleDetectorDistanceLabel">LSD<input id="sampleDetectorDistance" aria-label="Sample to detector distance in metres" min="0" step="0.01" type="number" placeholder="Not specified"/></label></div>
 <h3>Size and shape <small>(cm)</small></h3>
 <div class="coll-grid size-grid"><b class="focus-name">Source</b>
@@ -426,6 +417,7 @@
 <label class="coll-head" for="detectorShape">Shape</label><label class="coll-head" for="detWcm">Width</label><label class="coll-head" for="detHcm">Height</label><label class="coll-head" for="detectorType">Type</label>
 <select aria-label="Detector shape" id="detectorShape"><option value="rectangle">Rectangle</option><option value="cylinder" selected>Cylinder</option></select><input aria-label="Detector width" id="detWcm" min="0" step="0.1" type="number" value="2"/><input aria-label="Detector height" id="detHcm" min="0" step="0.1" type="number" value="2"/><select aria-label="Detector type" id="detectorType"><option value="anger">Anger</option><option value="single" selected>Single</option></select></div>
 </section>
+</div>
 </aside>
 <div class="resolution-main-column">
 <div aria-label="Resolution mode" class="geometry-card-tabs resolution-mode-tabs" role="tablist">
@@ -768,9 +760,9 @@
 <div class="cif-atom-rows" id="cifAtomRows"></div>
 </div>
 </div><div class="cif-atom-actions">
-<button id="cifCopyAtom" type="button">Copy</button>
+<button disabled="" id="cifCopyAtom" type="button">Copy</button>
 <button id="cifAddAtom" type="button">Add</button>
-<button id="cifRemoveAtom" type="button">Remove</button>
+<button disabled="" id="cifRemoveAtom" type="button">Remove</button>
 </div><details class="cif-atom-detailed" id="cifAtomDetailed">
 <summary>Anisotropic Uij</summary>
 <div class="cif-thermal-table-wrap">

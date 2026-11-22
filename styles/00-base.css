@@ -54,7 +54,6 @@
 .background-row{display:grid;grid-template-columns:minmax(0,1fr) calc(70px * var(--tas-density));gap:calc(5px * var(--tas-density));align-items:end}
 .background-label{display:flex;align-items:center;gap:calc(4px * var(--tas-density))}
 .bg-swatch{display:inline-block;width:calc(14px * var(--tas-density));height:calc(3px * var(--tas-density));border-radius:calc(2px * var(--tas-density));flex:0 0 auto}
-.bg-swatch.bg1{background:rgb(0,0,128)}
 
 /* v63: toolbox and powder relation helper */
 .toolbox-card{max-width:calc(1200px * var(--tas-density))}

@@ -89,20 +89,44 @@ function backgroundRowIndices(){
     .sort((a,b)=>a-b);
 }
 
+// Colors: each row starts with the default of its position (the palette
+// above); clicking the square changes it, and a changed color is saved with
+// the row (it follows the material when rows above are removed).
+const rgbToHex=rgb=>'#'+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+const hexToRgb=hex=>{
+  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'').trim());
+  return m ? [0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)) : null;
+};
 function backgroundRowValues(){
-  return backgroundRowIndices().map(index=>({key:$( `backgroundSelect${index}` )?.value||""}));
+  return backgroundRowIndices().map(index=>{
+    const value={key:$(`backgroundSelect${index}`)?.value||""};
+    const color=rgbToHex(backgroundSlot(index).rgb);
+    if(color!==rgbToHex(backgroundRgbForIndex(index))) value.color=color;
+    return value;
+  });
 }
 
 function createBackgroundRow(index,value={}){
   const slot=backgroundSlot(index);
-  const [r,g,b]=slot.rgb;
+  slot.rgb=hexToRgb(value.color) || backgroundRgbForIndex(index);
   const row=document.createElement("div");
   row.className="background-row";
   row.dataset.backgroundIndex=String(index);
-  row.innerHTML=`<label><span class="background-label"><i class="bg-swatch bg${index}" style="background:rgb(${r},${g},${b})"></i>BG${index}</span><select id="backgroundSelect${index}"><option value="">None</option></select></label>`+
+  // One row of the table under the No. / Material header.
+  row.innerHTML=`<span class="background-label">BG${index}</span><input type="color" class="bg-swatch" id="backgroundColor${index}" title="BG${index} color" aria-label="BG${index} color"><select id="backgroundSelect${index}" aria-label="BG${index} material"><option value="">None</option></select>`+
     `<button type="button" class="remove-background" data-background-index="${index}">Remove</button>`;
+  const picker=row.querySelector(`#backgroundColor${index}`);
+  picker.value=rgbToHex(slot.rgb);
+  picker.addEventListener("input",()=>{
+    const rgb=hexToRgb(picker.value);
+    if(!rgb) return;
+    slot.rgb=rgb;
+    scheduleRecalc();
+  });
+  picker.addEventListener("change",()=>saveLeftPanelState());
   const select=row.querySelector(`#backgroundSelect${index}`);
-  refreshBackgroundSelect(select,"None");
+  // No "None": a row always has a material (Remove deletes the row).
+  refreshBackgroundSelect(select,null);
   const requested=String(value.key||"");
   if([...select.options].some(o=>o.value===requested)) select.value=requested;
   return row;
@@ -111,8 +135,9 @@ function createBackgroundRow(index,value={}){
 function replaceBackgroundRows(values,{recalc=false}={}){
   const host=$("backgroundRows");
   if(!host) return;
-  const rows=(Array.isArray(values)&&values.length)?values:[{}];
-  backgroundSlot(rows.length);
+  // The table may be empty (no background material).
+  const rows=Array.isArray(values)?values:[];
+  backgroundSlot(Math.max(1,rows.length));
   host.replaceChildren();
   rows.forEach((value,i)=>{
     const row=createBackgroundRow(i+1,value);
@@ -120,14 +145,15 @@ function replaceBackgroundRows(values,{recalc=false}={}){
   });
   if($("backgroundCount")) $("backgroundCount").value=String(rows.length);
   updateBackgroundSelectAvailability();
+  // Each material can be used once.
   const add=$("addBackground");
-  if(add) add.disabled=false;
+  if(add) add.disabled=backgroundMaterials.size>0 && rows.length>=backgroundMaterials.size;
   if(recalc) scheduleRecalc();
 }
 
 function setBackgroundCount(count,{recalc=false}={}){
-  count=Math.max(1,Math.floor(Number(count)||1));
-  backgroundSlot(count);
+  count=Math.max(0,Math.floor(Number(count)||0));
+  backgroundSlot(Math.max(1,count));
   const values=backgroundRowValues();
   while(values.length<count) values.push({});
   values.length=count;

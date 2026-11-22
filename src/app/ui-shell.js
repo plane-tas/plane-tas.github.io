@@ -460,6 +460,10 @@ function globalUIPersistentControls(){
     // state (tas-simulator-structure-viewer-v2). Restoring an older global
     // snapshot here, without change events, made them disagree with it.
     if(/^(cifMoment|cifSpin|cifRange|cifUnitCell)/.test(el.id)) return false;
+    // The rows of the sidebar tables and dark-angle cards are restored from
+    // their snapshots in the left-panel state; values by id would land on
+    // other rows once rows are added or removed.
+    if(el.closest('#propagationVectors, #backgroundRows, #darkAssets')) return false;
     return true;
   });
 }
@@ -566,7 +570,8 @@ const LEFT_PANEL_STORAGE_KEY='tas-qe-left-panel-v1';
 let restoringLeftPanel=false;
 
 function leftPanelControls(){
-  return [...document.querySelectorAll('.sidebar input[id], .sidebar select[id]')].filter(el=>el.type!=='file');
+  // Background colors are saved with their rows (__backgroundRows).
+  return [...document.querySelectorAll('.sidebar input[id], .sidebar select[id]')].filter(el=>el.type!=='file' && el.type!=='color');
 }
 
 function resolutionInstrumentDetailControls(){
@@ -596,7 +601,7 @@ function saveLeftPanelState(){
     // S1 sign is dynamically injected by setupTasConventionUI(); keep an explicit
     // snapshot so future layout changes cannot accidentally omit it.
     values.s1sign=selectedS1Sign();
-    localStorage.setItem(LEFT_PANEL_STORAGE_KEY,JSON.stringify({version:3,values}));
+    localStorage.setItem(LEFT_PANEL_STORAGE_KEY,JSON.stringify({version:4,values}));
   }catch(_e){ /* localStorage may be unavailable in a restricted browser context. */ }
 }
 
@@ -647,44 +652,69 @@ function restoreLeftPanelState(){
     // controls.  For legacy fixed-3/fixed-4 saves, only actually used extra
     // slots/ranges are expanded.
     const nonzero=x=>Number.isFinite(Number(x)) && Math.abs(Number(x))>1e-12;
+    // Saves from before the "show" switches were removed: a switch that was
+    // off turns its rows off (the rows themselves are kept).
+    const switchedOff=(off,rows,pattern)=>{
+      if(!off) return;
+      if(Array.isArray(rows)) rows.forEach(r=>{ if(r && typeof r==='object') r.enabled=false; });
+      for(const key of Object.keys(v)) if(pattern.test(key)) v[key]=false;
+    };
+    switchedOff(v.showPropagation===false,v.__propagationVectors,/^q_enable\d+$/);
+    switchedOff(v.addDark===false,v.__darkAssets,/^darkEnable\d+$/);
+    // Saves from before the checkboxes were removed: an unchecked vector (or
+    // the unchecked template row) was not used, so it is left out.
     const savedPropagationVectors=Array.isArray(v.__propagationVectors)
-      ? v.__propagationVectors.map(row=>({
-          enabled:!!row?.enabled,
+      ? v.__propagationVectors.filter(row=>row?.enabled!==false).map(row=>({
           h:String(row?.h ?? "0"), k:String(row?.k ?? "0"), l:String(row?.l ?? "0")
         }))
       : null;
-    let propagationCount=savedPropagationVectors?.length || Number(v.propagationCount);
-    if(!(propagationCount>=1)){
-      propagationCount=1;
+    let propagationCount=Number(v.propagationCount);
+    if(!savedPropagationVectors && !(propagationCount>=1)){
+      // Saves from before the rows were dynamic (fixed k1..k3).
+      propagationCount=v.q_enable1 || ["h","k","l"].some(c=>nonzero(v[`q1_${c}`])) ? 1 : 0;
       for(let i=2;i<=3;i++){
         if(v[`q_enable${i}`] || ["h","k","l"].some(c=>nonzero(v[`q${i}_${c}`]))) propagationCount=i;
       }
     }
-    if(savedPropagationVectors?.length) replacePropagationVectors(savedPropagationVectors,{recalc:false});
+    if(savedPropagationVectors) replacePropagationVectors(savedPropagationVectors,{recalc:false});
     else setPropagationVectorCount(propagationCount);
 
     const savedBackgroundRows=Array.isArray(v.__backgroundRows)
-      ? v.__backgroundRows.map(row=>({key:String(row?.key||"")}))
+      // Rows without a material (the former None) are left out.
+      ? v.__backgroundRows.filter(row=>row?.key).map(row=>({key:String(row.key),...(row?.color?{color:String(row.color)}:{})}))
       : null;
-    let backgroundCount=savedBackgroundRows?.length || Number(v.backgroundCount);
-    if(!(backgroundCount>=1)){
-      backgroundCount=1;
-      for(let i=2;i<=BACKGROUND_SLOTS.length;i++) if(v[`backgroundSelect${i}`]) backgroundCount=i;
+    let backgroundCount=Number(v.backgroundCount);
+    if(!savedBackgroundRows && !(backgroundCount>=1)){
+      // Saves from before the rows were dynamic (fixed BG1..BG4).
+      backgroundCount=0;
+      for(let i=1;i<=BACKGROUND_SLOTS.length;i++) if(v[`backgroundSelect${i}`] || (i===1 && v.sampleSelect)) backgroundCount=i;
     }
-    if(savedBackgroundRows?.length) replaceBackgroundRows(savedBackgroundRows,{recalc:false});
+    if(savedBackgroundRows) replaceBackgroundRows(savedBackgroundRows,{recalc:false});
     else setBackgroundCount(backgroundCount);
 
+    const darkSettings=card=>({
+      ref:String(card?.ref||"Reference Q"),
+      rotation:Number(card?.rotation), refH:String(card?.refH??''), refK:String(card?.refK??''), refL:String(card?.refL??''),
+      ranges:Array.isArray(card?.ranges) ? card.ranges.map(r=>({from:Number(r?.from),to:Number(r?.to),offset:Number(r?.offset)})) : [{}]
+    });
     const savedDarkAssets=Array.isArray(v.__darkAssets)
-      ? v.__darkAssets.map(card=>({
-          enabled:card?.enabled!==undefined ? !!card.enabled : true,
-          se:String(card?.se||""), ref:String(card?.ref||"Reference Q"),
-          rotation:Number(card?.rotation), refH:String(card?.refH??''), refK:String(card?.refK??''), refL:String(card?.refL??''),
-          ranges:Array.isArray(card?.ranges) ? card.ranges.map(r=>({from:Number(r?.from),to:Number(r?.to),offset:Number(r?.offset)})) : [{}]
-        }))
+      ? v.__darkAssets.map(card=>{
+          const settings=darkSettings(card);
+          // Saves from before None / Custom: the former "Standard" (no
+          // preset) with typed ranges is Custom; without ranges it is None.
+          let se=String(card?.se||"") || (settings.ranges.some(r=>Math.abs(r.to-r.from)>1e-9) ? 'custom' : '');
+          let custom=card?.custom ? darkSettings(card.custom) : (se==='custom' ? settings : null);
+          // Saves from before the checkbox was removed: an unchecked card
+          // was not used.
+          if(card?.enabled===false) se='';
+          return {se,...settings,...(custom?{custom}:{})};
+        })
+        // A card without a sample environment (the former None) is left out.
+        .filter(card=>card.se)
       : null;
-    if(savedDarkAssets?.length){
-      // Exact snapshot: preserve asset count, range count, checkbox state,
-      // sample-environment selection and all user-entered values.
+    if(savedDarkAssets){
+      // Exact snapshot: preserve card count, range count, sample-environment
+      // selection and all user-entered values.
       replaceDarkAssets(savedDarkAssets,{recalc:false});
     }else{
       // Backward-compatible restore for pre-v113 localStorage.
@@ -693,7 +723,7 @@ function restoreLeftPanelState(){
         darkCount=1;
         for(let slot=2;slot<=3;slot++){
           const ids=darkAssetIds(slot);
-          const used=!!v[ids.enable] || !!v[ids.se] || (v[ids.ref] && v[ids.ref]!=="Reference Q") ||
+          const used=!!v[`darkEnable${slot}`] || !!v[ids.se] || (v[ids.ref] && v[ids.ref]!=="Reference Q") ||
             nonzero(v[ids.rotation]) || (v[ids.refH]!==undefined && Math.abs(Number(v[ids.refH])-1)>1e-12) || nonzero(v[ids.refK]) || nonzero(v[ids.refL]) ||
             [0,1,2,3].some(i=>nonzero(v[ids.from(i)])||nonzero(v[ids.to(i)])||nonzero(v[ids.offset(i)]));
           if(used) darkCount=slot;
@@ -717,7 +747,14 @@ function restoreLeftPanelState(){
 
       // Legacy saves relied on the selected sample-environment JSON to seed
       // the rest of each dark-angle card before individual controls were restored.
-      for(const slot of darkAssetSlots()){ const ids=darkAssetIds(slot); if(setSavedControl(ids.se,v[ids.se])) applySampleEnvironmentDefaults(slot); }
+      for(const slot of darkAssetSlots()){
+        const ids=darkAssetIds(slot);
+        // The former "Standard" (no preset) with typed ranges is now Custom;
+        // an unchecked card (the checkbox was removed) is None.
+        if(!v[ids.se] && [0,1,2,3].some(i=>Math.abs(Number(v[ids.to(i)]??0)-Number(v[ids.from(i)]??0))>1e-9)) v[ids.se]='custom';
+        if(v[`darkEnable${slot}`]===false) v[ids.se]='';
+        if(setSavedControl(ids.se,v[ids.se])) applySampleEnvironmentDefaults(slot);
+      }
     }
 
     // Migrate the v57 single background selection into BG1 once, if present.
@@ -749,6 +786,10 @@ function restoreLeftPanelState(){
       // Read-only fields (S2 max, cradle limits) always show the instrument file.
       if(el.readOnly) continue;
       if(explicitBackgroundRows && /^backgroundSelect\d+$/.test(el.id)) continue;
+      // Rows restored from their snapshots keep those values (left-out rows
+      // shift the numbers, so the per-id values would land on other rows).
+      if(savedPropagationVectors && el.closest('#propagationVectors')) continue;
+      if(savedDarkAssets && el.closest('#darkAssets')) continue;
       setSavedControl(el.id,v[el.id],{dispatchChange:el.id==='monoCrystal'||el.id==='anaCrystal'});
     }
 

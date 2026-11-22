@@ -1,6 +1,7 @@
 import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {braggPeakScale} from './bragg-intensity.js';
+import {magneticSymbol} from './magnetic-symbols.js';
 // Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 export function createQEVectorMap(deps){
@@ -262,13 +263,12 @@ function addPathBraggTraces(cache,traces,paths,xScale){
 
   // Magnetic: one red marker shape per propagation vector (as in the Constant
   // E map); single k also gets the white-to-red |F_M|² colorbar.
-  const magneticSymbols=['circle','x','star','diamond','cross','triangle-up','square','diamond-open','triangle-down','pentagon'];
   const allIndices=[...new Set((cache.magPoints||[]).map(p=>Number(p.qIndex)).filter(Number.isFinite))].sort((a,b)=>a-b);
   for(const qIndex of allIndices){
     const pts=magnetic.filter(o=>o.p.qIndex===qIndex);
     // Keep the single-k colorbar even with no satellite on the path.
     if(!pts.length && !magneticIntensity) continue;
-    const symbol=magneticSymbols[(qIndex-1)%magneticSymbols.length];
+    const symbol=magneticSymbol(qIndex).plotly;
     const name=`Magnetic Bragg peaks: k${qIndex}`;
     const size=symbol==='star'?sizes.star:sizes.magnetic;
     const onlyBar=!pts.length;

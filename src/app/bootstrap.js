@@ -4,13 +4,14 @@ import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirect
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {saveQEFigure} from '../qe/qe-save-figure.js';
 import {initializePlotSaveButtons} from './plot-save-buttons.js';
+import {initializeJumpBars} from './jump-bar.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 // Sidebar: a fade at the bottom while more settings lie below (overlay
 // scrollbars, e.g. on macOS, are hidden until the panel is scrolled).
 // The same for Instrument details of the Resolution tab (it scrolls on its own).
 function initializeSidebarMoreHint(){
   bindMoreHint(document.querySelector('.shell > .sidebar'));
-  bindMoreHint(document.getElementById('resolutionInstrumentDetails'));
+  bindMoreHint(document.getElementById('resolutionDetailsBody'));
 }
 function bindMoreHint(sidebar){
   if(!sidebar || sidebar.dataset.moreHintBound) return;
@@ -34,7 +35,7 @@ function bindMoreHint(sidebar){
 
 export function createAppBootstrap(deps){
   const {
-    applyDarkAngleSlotColors, applyInstrumentCrystalAvailability, applyInstrumentDefaults,
+    applyInstrumentCrystalAvailability, applyInstrumentDefaults,
     applySampleEnvironmentDefaults, backgroundMaterials, backgroundRowIndices,
     bindResolutionManualCalculation, bindToolboxUI, clearSelectedCif, currentGeometryCardTab,
     darkAssetIds, darkAssetSlots, doScanResolution, enableGlobalUIPersistence,
@@ -132,7 +133,7 @@ async function initialize(){
   mergeLegacyRangeData();
   // Custom and the instruments loaded from JSON files in this browser.
   addLocalInstruments?.();
-  refreshSelect(instruments,$('instrument'),null);setBackgroundCount(Number($('backgroundCount')?.value)||1);for(const slot of darkAssetSlots()) refreshDarkEnvironmentSelect(slot);
+  refreshSelect(instruments,$('instrument'),null);setBackgroundCount(Number($('backgroundCount')?.value)||0);for(const slot of darkAssetSlots()) refreshDarkEnvironmentSelect(slot);
   if(!instruments.size) throw new Error('instrument directory has no JSON files.');
   $('instrument').selectedIndex=0;for(const i of backgroundRowIndices()) $(`backgroundSelect${i}`).value='';for(const slot of darkAssetSlots()) $(darkAssetIds(slot).se).value='';applyInstrumentDefaults();for(const slot of darkAssetSlots()) applySampleEnvironmentDefaults(slot);updateBackgroundSelectAvailability();
   // JSON configuration is now fully loaded.  Only at this point is it safe to
@@ -269,6 +270,7 @@ async function initialize(){
   syncPowderLinkedInputs();
   initializeResponsivePlotResize();
   initializeSidebarMoreHint();
+  initializeJumpBars();
   setActiveTab(savedActiveTab());
   $('gm1').addEventListener('change',updateSupermirrorUI);$('calcMode').addEventListener('change',updateCalcMode);bindResolutionManualCalculation();$('calcScanResolution')?.addEventListener('click',doScanResolution);$('scanSlider').addEventListener('input',()=>renderResolutionScan(num('scanSlider')));$('prev').addEventListener('click',()=>renderResolutionScan(num('scanSlider')-1));$('next').addEventListener('click',()=>renderResolutionScan(num('scanSlider')+1));
   for(const id of ['h','k','l','h0','k0','l0','h1','k1','l1','npts','Uh','Uk','Ul','Vh','Vk','Vl','a','b','c','alpha','beta','gamma']){
@@ -284,7 +286,7 @@ async function initialize(){
   }
   $('braggReset')?.addEventListener('click',resetBraggPeaks);
   $('flipUV')?.addEventListener('click',flipScatteringPlaneUV);
-  updateOrientationReferenceUI(); applyDarkAngleSlotColors(); updateGeometryQuickTargetButtons();
+  updateOrientationReferenceUI(); updateGeometryQuickTargetButtons();
   $('orientationReference')?.addEventListener('change',()=>{
     updateOrientationReferenceUI();
     updateGeometryQuickTargetButtons();
@@ -297,7 +299,6 @@ async function initialize(){
 
     syncGeometryTargetToOrientationReference();
   });
-  $('addDark')?.addEventListener('change',updateGeometryQuickTargetButtons);
   // Restore any ordinary controls/tabs that are not owned by a specialized
   // serializer, then start the catch-all listener only after initialization so
   // defaults cannot overwrite the user's previous browser-local state.

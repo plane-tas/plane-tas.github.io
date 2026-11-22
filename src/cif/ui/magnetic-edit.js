@@ -1,6 +1,7 @@
 // Imported magnetic structures: Modify drafts, original/modified moments and Spins row selection.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {atomSiteKey} from '../mcif-export.js';
+import {MAX_PROPAGATION_VECTORS} from '../../qe/magnetic-symbols.js';
 export function installMagneticEdit(ctx){
   const {deps:{
     $, getPropagationVectors, getSelectedCifStructure, getSelectedCifText, scheduleRecalc, setPropagationVectorsFromFile
@@ -58,7 +59,8 @@ function syncSpinModifyLock(){
   }
   const host=$("propagationVectors");
   if(host) for(const field of host.querySelectorAll("input,select,button")) field.disabled=false;
-  const addQ=$("addPropagationVector"); if(addQ) addQ.disabled=false;
+  const addQ=$("addPropagationVector");
+  if(addQ) addQ.disabled=(host?.querySelectorAll(".propagation-row").length||0)>=MAX_PROPAGATION_VECTORS;
   fn.syncIncommensurateControls?.();
   for(const id of ["cifMagMomentRows","cifSpinBulkCheckbox"]){
     const host=$(id);

@@ -1,8 +1,10 @@
 // Sidebar dynamic rows: propagation vectors, dark-angle assets and ranges, sample environments.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
+import {MAX_PROPAGATION_VECTORS, magneticSymbolSvg} from '../qe/magnetic-symbols.js';
+
 export function createSidebarRows(deps){
   const {
-    $, applyDarkAngleSlotColors, backgroundRowValues, checkedValue, handleBackgroundSelection, num,
+    $, backgroundMaterials, backgroundRowValues, checkedValue, handleBackgroundSelection, num,
     parseNumericValue, refreshSelect, removeBackground, replaceBackgroundRows, sampleEnvironments,
     saveLeftPanelState, scheduleRecalc, setRadio, updateGeometryQuickTargetButtons,
     updatePropagationVectorLabels
@@ -16,18 +18,15 @@ function propagationVectorIndices(){
 }
 
 function enabledPropagationVectors(){
-  // Global display switch: keep every entered k-vector intact while hiding
-  // all magnetic Bragg peaks when Propagation vectors > show is off.
-  if($("showPropagation") && !$("showPropagation").checked) return [];
   const out=[];
   for(const i of propagationVectorIndices()){
-    if($(`q_enable${i}`)?.checked){
-      out.push({index:i, hkl:[num(`q${i}_h`),num(`q${i}_k`),num(`q${i}_l`)]});
-    }
+    out.push({index:i, hkl:[num(`q${i}_h`),num(`q${i}_k`),num(`q${i}_l`)]});
   }
   return out;
 }
 
+// The Custom sample environment of a dark-angle card (not a file).
+const DARK_CUSTOM='custom';
 function darkAssetIds(slot){
   const suffix=slot===1?"":String(slot);
   const legacyRangeId=(kind,i)=>{
@@ -35,7 +34,7 @@ function darkAssetIds(slot){
     return `dark${kind}${slot}_${i}`;
   };
   return {
-    enable:`darkEnable${slot}`, se:`seSelect${suffix}`, ref:`darkRef${suffix}`, rotation:`darkRotation${suffix}`,
+    se:`seSelect${suffix}`, ref:`darkRef${suffix}`, rotation:`darkRotation${suffix}`,
     refH:`darkRefH${slot}`, refK:`darkRefK${slot}`, refL:`darkRefL${slot}`, refRow:`darkRefQRow${slot}`,
     rangeCount:`darkRangeCount${slot}`,
     from:i=>legacyRangeId("From",i), to:i=>legacyRangeId("To",i), offset:i=>legacyRangeId("Offset",i)
@@ -75,12 +74,12 @@ function createPropagationVectorRow(index,values={}){
   const row=document.createElement("div");
   row.className="propagation-row";
   row.dataset.qIndex=String(index);
-  row.innerHTML=`<label class="checkbox-label propagation-enable"><input id="q_enable${index}" type="checkbox"><span>k${index}</span></label>`+
-    `<label>k${index}_h<input id="q${index}_h" type="text" inputmode="text" data-fraction="" value="0"></label>`+
-    `<label>k${index}_k<input id="q${index}_k" type="text" inputmode="text" data-fraction="" value="0"></label>`+
-    `<label>k${index}_l<input id="q${index}_l" type="text" inputmode="text" data-fraction="" value="0"></label>`+
+  // One row of the table under the No. / h / k / l header: k<n>, its
+  // marker on the maps, the components and Remove.
+  row.innerHTML=`<span class="propagation-no">k${index}</span>`+
+    `<span class="propagation-symbol">${magneticSymbolSvg(index)}</span>`+
+    ["h","k","l"].map(c=>`<input id="q${index}_${c}" type="text" inputmode="text" data-fraction="" value="0" aria-label="k${index} ${c}">`).join("")+
     `<button type="button" class="remove-propagation-vector" data-q-index="${index}">Remove</button>`;
-  row.querySelector(`#q_enable${index}`).checked=values.enabled!==undefined ? !!values.enabled : true;
   for(const c of ["h","k","l"]){
     const raw=values[c] ?? 0;
     const value=parseNumericValue(raw);
@@ -90,8 +89,10 @@ function createPropagationVectorRow(index,values={}){
 }
 
 function propagationVectorValues(){
+  // Every row is used (Remove deletes a vector); "enabled" is kept for the
+  // readers of these values.
   return propagationVectorIndices().map(index=>({
-    enabled:!!$(`q_enable${index}`)?.checked,
+    enabled:true,
     // Preserve the user's exact text (including fractions) when rows are
     // added/removed; numerical calculations parse these values via num().
     h:$(`q${index}_h`)?.value ?? "0",
@@ -103,16 +104,19 @@ function propagationVectorValues(){
 function replacePropagationVectors(values,{recalc=false}={}){
   const host=$("propagationVectors");
   if(!host) return;
-  const rows=(Array.isArray(values)&&values.length)?values:[{}];
+  // The table may be empty (no propagation vector: no magnetic peaks).
+  const rows=(Array.isArray(values)?values:[]).slice(0,MAX_PROPAGATION_VECTORS);
   host.replaceChildren();
   rows.forEach((value,i)=>host.appendChild(createPropagationVectorRow(i+1,value)));
   if($("propagationCount")) $("propagationCount").value=String(rows.length);
+  const add=$("addPropagationVector");
+  if(add) add.disabled=rows.length>=MAX_PROPAGATION_VECTORS;
   updatePropagationVectorLabels();
   if(recalc) scheduleRecalc();
 }
 
 function setPropagationVectorCount(count,{recalc=false}={}){
-  count=Math.max(1,Math.floor(Number(count)||1));
+  count=Math.max(0,Math.floor(Number(count)||0));
   const values=propagationVectorValues();
   while(values.length<count) values.push({});
   values.length=count;
@@ -205,8 +209,8 @@ function createDarkAsset(slot,values={}){
   asset.dataset.darkSlot=String(slot);
   asset.innerHTML=`
     <div class="dark-asset-head">
-      <label class="checkbox-label"><input id="${ids.enable}" type="checkbox" checked><span>Dark angle ${slot}</span></label>
-      <label>Sample environment<select id="${ids.se}"><option value="">Standard</option></select></label>
+      <div class="dark-asset-no-cell"><span>No.</span><span class="dark-asset-no">#${slot}</span></div>
+      <label>Sample environment<select id="${ids.se}"><option value="${DARK_CUSTOM}">Custom</option></select></label>
       <button type="button" class="remove-dark-asset" data-dark-slot="${slot}">Remove</button>
     </div>
     <div class="grid2">
@@ -220,27 +224,36 @@ function createDarkAsset(slot,values={}){
     </div>
     <input id="${ids.rangeCount}" type="hidden" value="1">
     <div class="dark-table" data-dark-range-table="${slot}"></div>
-    <button type="button" class="add-dark-range dynamic-add-wide" data-dark-slot="${slot}">+ Add range</button>`;
+    <button type="button" class="add-dark-range dynamic-add-wide" data-dark-slot="${slot}">Add</button>`;
   return asset;
 }
 
+// Sample environment of a dark-angle card: Custom (ranges typed by hand;
+// the choice of a new card) or a preset from sample_environments/.
 function refreshDarkEnvironmentSelect(slot){
   const select=$(darkAssetIds(slot).se);
   if(!select) return;
   const keep=select.value;
-  refreshSelect(sampleEnvironments,select,"Standard");
-  if([...select.options].some(o=>o.value===keep)) select.value=keep;
+  refreshSelect(sampleEnvironments,select,null);
+  const custom=document.createElement("option");
+  custom.value=DARK_CUSTOM; custom.textContent="Custom";
+  select.insertBefore(custom,select.options[0]||null);
+  select.value=[...select.options].some(o=>o.value===keep) ? keep : DARK_CUSTOM;
+  syncDarkCardMode(slot);
+}
+// Remember the selection, so that leaving Custom can keep its settings.
+function syncDarkCardMode(slot){
+  const select=$(darkAssetIds(slot).se);
+  if(select) select.dataset.previous=select.value;
 }
 
-function rawNumericText(id){
-  const raw=String($(id)?.value??"").trim();
-  return Number.isFinite(parseNumericValue(raw)) ? raw : num(id);
-}
-function snapshotDarkAsset(slot){
+// The hand-typed settings of Custom are kept while another sample
+// environment (or None) is selected, so switching back restores them; they
+// are part of the card's snapshot and so of the saved state.
+const customDarkSettings=new Map();
+function currentDarkSettings(slot){
   const ids=darkAssetIds(slot);
   return {
-    enabled:!!$(ids.enable)?.checked,
-    se:$(ids.se)?.value||"",
     ref:checkedValue(ids.ref)||"Reference Q",
     rotation:num(ids.rotation),
     // Keep the typed text (e.g. "1/2") when it is a valid number or fraction.
@@ -248,15 +261,8 @@ function snapshotDarkAsset(slot){
     ranges:darkRangeValues(slot)
   };
 }
-
-function applyDarkAssetValues(slot,values={}){
+function applyDarkSettings(slot,values={}){
   const ids=darkAssetIds(slot);
-  refreshDarkEnvironmentSelect(slot);
-  if($(ids.enable)) $(ids.enable).checked=values.enabled!==undefined ? !!values.enabled : true;
-  if($(ids.se)){
-    const requested=String(values.se||"");
-    $(ids.se).value=[...$(ids.se).options].some(o=>o.value===requested)?requested:"";
-  }
   setRadio(ids.ref,values.ref||"Reference Q");
   if($(ids.rotation)) $(ids.rotation).value=Number.isFinite(Number(values.rotation))?String(values.rotation):"0";
   if($(ids.refH)) $(ids.refH).value=Number.isFinite(parseNumericValue(values.refH))?String(values.refH).trim():"1";
@@ -266,6 +272,30 @@ function applyDarkAssetValues(slot,values={}){
   updateDarkReferenceUI(slot);
 }
 
+function rawNumericText(id){
+  const raw=String($(id)?.value??"").trim();
+  return Number.isFinite(parseNumericValue(raw)) ? raw : num(id);
+}
+function snapshotDarkAsset(slot){
+  const se=$(darkAssetIds(slot).se)?.value||"";
+  const current=currentDarkSettings(slot);
+  const custom=se===DARK_CUSTOM ? current : customDarkSettings.get(slot);
+  return {se,...current,...(custom?{custom}:{})};
+}
+
+function applyDarkAssetValues(slot,values={}){
+  const ids=darkAssetIds(slot);
+  refreshDarkEnvironmentSelect(slot);
+  if($(ids.se)){
+    const requested=String(values.se||DARK_CUSTOM);
+    $(ids.se).value=[...$(ids.se).options].some(o=>o.value===requested)?requested:DARK_CUSTOM;
+  }
+  if(values.custom) customDarkSettings.set(slot,values.custom);
+  else customDarkSettings.delete(slot);
+  applyDarkSettings(slot,values);
+  syncDarkCardMode(slot);
+}
+
 function darkAssetValues(){
   return darkAssetSlots().map(slot=>snapshotDarkAsset(slot));
 }
@@ -273,7 +303,9 @@ function darkAssetValues(){
 function replaceDarkAssets(values,{recalc=false}={}){
   const host=$("darkAssets");
   if(!host) return;
-  const cards=(Array.isArray(values)&&values.length)?values:[{}];
+  // No card at first; Add makes one (Custom).
+  const cards=Array.isArray(values)?values:[];
+  customDarkSettings.clear();
   host.replaceChildren();
   cards.forEach((value,i)=>{
     const slot=i+1;
@@ -281,13 +313,12 @@ function replaceDarkAssets(values,{recalc=false}={}){
     applyDarkAssetValues(slot,value);
   });
   if($("darkAssetCount")) $("darkAssetCount").value=String(cards.length);
-  applyDarkAngleSlotColors();
   updateGeometryQuickTargetButtons();
   if(recalc) scheduleRecalc();
 }
 
 function setDarkAssetCount(count,{recalc=false}={}){
-  count=Math.max(1,Math.floor(Number(count)||1));
+  count=Math.max(0,Math.floor(Number(count)||0));
   const values=darkAssetValues();
   while(values.length<count) values.push({});
   values.length=count;
@@ -318,6 +349,7 @@ function bindDynamicSidebarUI(){
 
   $("addPropagationVector")?.addEventListener("click",()=>{
     const values=propagationVectorValues();
+    if(values.length>=MAX_PROPAGATION_VECTORS) return;
     values.push({});
     replacePropagationVectors(values,{recalc:true});
     saveLeftPanelState();
@@ -337,7 +369,13 @@ function bindDynamicSidebarUI(){
   }
   $("addBackground")?.addEventListener("click",()=>{
     const values=backgroundRowValues();
-    values.push({});
+    // The new row shows the first material that no other row uses.
+    const used=new Set(values.map(v=>v.key));
+    const key=[...backgroundMaterials.keys()]
+      .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}))
+      .find(k=>!used.has(k));
+    if(!key) return;
+    values.push({key});
     replaceBackgroundRows(values,{recalc:true});
     saveLeftPanelState();
   });
@@ -360,7 +398,8 @@ function bindDynamicSidebarUI(){
       }else{
         scheduleRecalc();
       }
-      if(ev.target.id===ids.enable || ev.target.id===ids.ref) updateGeometryQuickTargetButtons();
+      // Set Ref Q follows the checkbox, the reference and the ranges.
+      updateGeometryQuickTargetButtons();
     });
     darkHost.addEventListener("click",ev=>{
       const add=ev.target.closest(".add-dark-range");
@@ -383,7 +422,7 @@ function bindDynamicSidebarUI(){
 
   $("addDarkAsset")?.addEventListener("click",()=>{
     const values=darkAssetValues();
-    values.push({});
+    values.push({se:DARK_CUSTOM});
     replaceDarkAssets(values,{recalc:true});
     saveLeftPanelState();
   });
@@ -405,6 +444,14 @@ function updateDarkReferenceUI(slot){
 function applySampleEnvironmentDefaults(slot=1){
   const ids=darkAssetIds(slot);
   const key=$(ids.se)?.value || "";
+  if($(ids.se)?.dataset.previous===DARK_CUSTOM) customDarkSettings.set(slot,currentDarkSettings(slot));
+  syncDarkCardMode(slot);
+  // Custom: restore the hand-typed settings, if there are any.
+  if(key===DARK_CUSTOM){
+    if(customDarkSettings.has(slot)) applyDarkSettings(slot,customDarkSettings.get(slot));
+    scheduleRecalc();
+    return;
+  }
   if(!key || !sampleEnvironments.has(key)){
     setRadio(ids.ref,"Reference Q");
     updateDarkReferenceUI(slot);

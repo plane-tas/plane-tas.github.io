@@ -815,7 +815,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 
 /* Sidebar: fade and a small chevron at the bottom while more settings lie
    below (set by bootstrap.js; overlay scrollbars are often hidden). */
-:is(.shell > .sidebar,#resolutionInstrumentDetails).sidebar-has-more::after{
+:is(.shell > .sidebar,#resolutionDetailsBody).sidebar-has-more::after{
   content:"⌄";position:sticky;bottom:calc(-10px * var(--tas-density));display:block;
   height:calc(46px * var(--tas-density));margin-top:calc(-46px * var(--tas-density));
   pointer-events:none;text-align:center;color:#7d8794;font-size:calc(22px * var(--tas-density));
@@ -1120,7 +1120,9 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Instrument details (beside the calculation and results): it scrolls on its
    own within the visible height (ui-shell.js), as the left sidebar does. */
 @media(min-width:1251px){
-  #resolutionPanel #resolutionInstrumentDetails{position:sticky;top:0;scrollbar-gutter:stable;max-height:var(--res-details-max,calc(100vh - calc(120px * var(--tas-density))));overflow-y:auto}
+  #resolutionPanel #resolutionInstrumentDetails{position:sticky;top:0;display:flex;flex-direction:column;max-height:var(--res-details-max,calc(100vh - calc(120px * var(--tas-density))))}
+  #resolutionPanel #resolutionInstrumentDetails > .resolution-details-head{flex:0 0 auto}
+  #resolutionPanel #resolutionDetailsBody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
 }
 #resolutionPanel #resolutionScanGraph{width:auto}
 #resolutionPanel .resolution-csv-name{flex:0 1 13em;min-width:8em}
@@ -1156,3 +1158,64 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* CIF/mCIF Preview: the name of the file shown above the text. */
 .cif-preview-head{display:flex;align-items:center;min-width:0}
 .cif-preview-head > .cif-unified-preview-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Jump bar at the top of the sidebar and of Instrument details: small
+   rounded chips (a table of contents, unlike the action buttons), kept at
+   the top while the panel scrolls. */
+.jump-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:calc(5px * var(--tas-density));
+  margin:0 0 calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0;background:#fff;
+  box-shadow:0 calc(4px * var(--tas-density)) calc(4px * var(--tas-density)) calc(-4px * var(--tas-density)) rgba(0,0,0,.12)}
+.jump-bar > button{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:max(12px,calc(14px * var(--tas-density)));font-weight:400;line-height:1.3;
+  padding:calc(3px * var(--tas-density)) calc(11px * var(--tas-density));
+  border:calc(1px * var(--tas-density)) solid #d3dae3;border-radius:999px;background:#eef2f7;color:#2d4a6b}
+.jump-bar > button:hover{background:#e1e8f0;border-color:#b9c4d1}
+/* The sidebar has 10 px padding: the bar covers it while stuck. */
+.shell > .sidebar > .jump-bar{top:calc(-10px * var(--tas-density));margin-top:calc(-10px * var(--tas-density));padding-top:calc(10px * var(--tas-density))}
+#resolutionInstrumentDetails .resolution-details-head > .jump-bar{position:static;box-shadow:none;margin-bottom:calc(6px * var(--tas-density));gap:calc(3px * var(--tas-density))}
+#resolutionInstrumentDetails .resolution-details-head > .jump-bar > button{padding-left:calc(8px * var(--tas-density));padding-right:calc(8px * var(--tas-density))}
+
+/* Sidebar tables (Propagation vectors, Background materials): one header
+   row (No. / h k l, No. / Material) and rows added with Add; empty at first.
+   No. is shown at the size of the entries; Remove has one width
+   that fits its label. */
+.sidebar{--sidebar-remove-w:calc(84px * var(--tas-density));--sidebar-no-w:calc(52px * var(--tas-density))}
+.sidebar-table-head{display:grid;gap:calc(5px * var(--tas-density));font-size:calc(16px * var(--tas-density));color:#333;
+  margin-bottom:calc(2px * var(--tas-density))}
+.sidebar .propagation-head,
+.sidebar .propagation-row{grid-template-columns:calc(30px * var(--tas-density)) calc(22px * var(--tas-density)) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w)!important;
+  gap:calc(5px * var(--tas-density));align-items:center}
+.sidebar .background-head,
+.sidebar .background-row{grid-template-columns:var(--sidebar-no-w) calc(24px * var(--tas-density)) minmax(0,1fr) var(--sidebar-remove-w)!important;
+  gap:calc(5px * var(--tas-density));align-items:center}
+.propagation-vectors,.background-rows{display:grid;gap:calc(5px * var(--tas-density))}
+.propagation-vectors:empty,.background-rows:empty{display:none}
+.propagation-no{font-size:calc(18px * var(--tas-density));color:#111}
+/* The marker of the vector on the maps, centred in its cell. */
+.propagation-symbol{display:flex;align-items:center;justify-content:center;align-self:stretch}
+.propagation-symbol svg{display:block;width:calc(21px * var(--tas-density));height:calc(21px * var(--tas-density))}
+.sidebar .propagation-row input[type=text]{width:100%;min-width:0}
+.background-label{font-size:calc(18px * var(--tas-density));color:#111}
+.background-row select{min-width:0;width:100%}
+.bg-swatch{width:calc(24px * var(--tas-density))!important;height:calc(24px * var(--tas-density))!important;padding:0!important;margin:0;cursor:pointer;
+  border-radius:calc(3px * var(--tas-density));border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.25);box-sizing:border-box;
+  background:none;-webkit-appearance:none;appearance:none;min-height:0!important;display:block}
+.bg-swatch::-webkit-color-swatch-wrapper{padding:0}
+.bg-swatch::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
+.bg-swatch::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
+
+/* Dark angle card head, in the form of the tables above: No. over the card
+   number, Sample environment over its select, and Remove. */
+.sidebar .dark-asset-head{grid-template-columns:var(--sidebar-no-w) minmax(0,1fr) var(--sidebar-remove-w)!important;align-items:end}
+.dark-asset-no-cell{display:flex;flex-direction:column;font-size:calc(16px * var(--tas-density));color:#333;min-width:0}
+.dark-asset-no{font-size:calc(18px * var(--tas-density));color:#111;display:flex;align-items:center;
+  min-height:calc(40px * var(--tas-density))}
+
+.remove-propagation-vector,
+.remove-background{
+  min-width:0;
+  min-height:calc(30px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
+  font-size:calc(16px * var(--tas-density));
+  line-height:1.2;
+}

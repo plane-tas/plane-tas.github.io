@@ -1,5 +1,7 @@
 // Resolution: single / scan calculation, warnings and results.
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
+import {magneticSymbolSvg} from '../../qe/magnetic-symbols.js';
+
 export function installResolutionCalculation(ctx){
   const {deps:{
     $, clearError, linspace, markResolutionScanDirty, num,
@@ -207,17 +209,13 @@ function bindResolutionManualCalculation(){
 
 // Display-only terminology: magnetic propagation vectors are k1, k2, ...
 function updatePropagationVectorLabels(){
-  const symbols=["●","×","★","◆","+","▲","■","◇","▼","⬟"];
   for(const i of propagationVectorIndices()){
-    const enable=$(`q_enable${i}`);
-    const row=enable?.closest('.propagation-row');
+    const row=document.querySelector(`.propagation-row[data-q-index="${i}"]`);
     if(!row) continue;
-    const span=enable.closest('label')?.querySelector('span');
-    if(span) span.textContent=`k${i} (${symbols[(i-1)%symbols.length]})`;
-    const labels=[...row.querySelectorAll('label')].filter(x=>x!==enable.closest('label'));
-    ['h','k','l'].forEach((c,j)=>{
-      if(labels[j] && labels[j].firstChild) labels[j].firstChild.nodeValue=`k${i}_${c}`;
-    });
+    const no=row.querySelector('.propagation-no');
+    if(no) no.textContent=`k${i}`;
+    const symbol=row.querySelector('.propagation-symbol');
+    if(symbol) symbol.innerHTML=magneticSymbolSvg(i);
   }
 }
 }

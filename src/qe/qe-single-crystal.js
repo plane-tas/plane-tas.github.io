@@ -114,7 +114,7 @@ export function createQESingleCrystal(deps){
     const darkKF=[],darkKI=[],darkFixed=[];
     // Dark angles follow the TAS S1 wedge; they are not mapped for the
     // four-circle (free phi) geometry.
-    const addDark=$("addDark").checked && darkAssets.length>0 && !fourCircle;
+    const addDark=darkAssets.length>0 && !fourCircle;
     const sense=convention.sense;
 
     // One physical convention drives the S1/Q mapping for both scattering senses.

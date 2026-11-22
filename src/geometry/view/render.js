@@ -221,12 +221,12 @@ function renderGeometry(cache,index=0){
   else { addLine(sample,analyzer,flightColor,4); addLine(analyzer,detector,flightColor,4); }
 
   // Fixed, compact display radius: independent of instrument/angle auto-scaling.
-  // The guide circle belongs to the dark-angle overlay, so hide it together
-  // with the dark-angle sectors when the left-panel "show" checkbox is off.
+  // The guide circle of the dark-angle overlay is always drawn (TAS, single
+  // crystal), with or without dark angles.
   // 4-circle: dark angles are not available yet (the TAS sectors do not apply).
   let fourCircleInstrument=false;
   try{ fourCircleInstrument=currentInstrument()?.instrument_type==='four-circle'; }catch(_e){}
-  const showDarkGeometry=!isPowder && !fourCircleInstrument && Boolean($("addDark")?.checked);
+  const showDarkGeometry=!isPowder && !fourCircleInstrument;
   const darkRadius=1.0*SAMPLE_REGION_SCALE;
   if(showDarkGeometry){
     const circle=linspace(0,2*Math.PI,181);
