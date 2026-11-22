@@ -147,7 +147,7 @@
 <div class="instrument-json-row">
 <button id="instrumentJsonSave" type="button" title="Save the selected instrument with the current settings as an instrument JSON file">Save JSON</button>
 <button id="instrumentJsonLoad" type="button" title="Load an instrument JSON file and add it to the Instrument list (the last loaded one is kept in this browser)">Load JSON</button>
-<input id="instrumentJsonFile" type="file" accept=".json,application/json" hidden/>
+<input id="instrumentJsonFile" type="file" accept=".json" hidden/>
 </div>
 </section>
 <section id="sidebarSample">
@@ -165,7 +165,7 @@
 <button id="cifSelectButton" type="button">Select CIF/mCIF</button>
 <input aria-label="Selected CIF file" class="cif-file-name" id="cifFileName" readonly="" type="text" value="No file selected"/>
 <button disabled="" id="cifClearButton" type="button">Clear</button>
-<input accept=".cif,.mcif,text/plain" hidden="" id="cifFileInput" type="file"/>
+<input accept=".cif,.mcif" hidden="" id="cifFileInput" type="file"/>
 </div>
 <h3 class="lattice-parameters-heading">Lattice parameters</h3>
 <div class="grid3">
@@ -444,7 +444,7 @@
 <option value="index-pair">index, h, k, l, E1, I1, … En, In</option>
 <option value="plain-pair">h, k, l, E1, I1, … En, In</option>
 </select></label>
-<input id="convFile" type="file" accept=".txt,.dat,.csv,text/plain,text/csv" hidden/>
+<input id="convFile" type="file" accept=".txt,.dat,.csv" hidden/>
 </div>
 <div class="convolution-note"><div class="convolution-summary" id="convSummary">Intensities are S(Q,ω); R0/Rmon (normalisation to monitor counts) is applied automatically.</div>
 <div class="convolution-summary convolution-guide">Dispersion table (resolution FWHM): range ≥ calculation range ± 1.5 FWHM, step ≤ FWHM/6.</div></div>
@@ -461,7 +461,7 @@
 <section class="convolution-tab-pane" id="convPane2D" role="tabpanel" aria-labelledby="convTab2D">
 <section class="convolution-box">
 <div class="convolution-box-top">
-<button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv,text/csv" hidden/>
+<button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
 <button id="convLoad2DClear" type="button" disabled>Clear</button>
 </div>
@@ -509,7 +509,7 @@
 <section class="convolution-tab-pane" id="convPane1D" role="tabpanel" aria-labelledby="convTab1D" hidden>
 <section class="convolution-box">
 <div class="convolution-box-top">
-<button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv,text/csv" hidden/>
+<button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
 <button id="convLoad1DClear" type="button" disabled>Clear</button>
 </div>
@@ -620,7 +620,7 @@
 <div class="absorption-cif-row" id="absorptionCifInputs">
 <label>Selected CIF/mCIF<input id="absorptionCifStatus" readonly="" type="text" value="No CIF/mCIF selected"/></label>
 <button id="absorptionCifSelectButton" type="button">Select CIF/mCIF</button>
-<input accept=".cif,.mcif,text/plain,chemical/x-cif" hidden="" id="absorptionCifFileInput" type="file"/>
+<input accept=".cif,.mcif" hidden="" id="absorptionCifFileInput" type="file"/>
 </div>
 </div>
 <div class="absorption-beam-row">
@@ -675,7 +675,7 @@
 <button id="cifLoadExisting" type="button">Select CIF/mCIF</button>
 <input aria-label="Selected CIF or mCIF for CIF Generator" class="cif-file-name" id="cifGeneratorSourceName" readonly="" type="text" value="No file selected"/>
 <button disabled="" id="cifGeneratorSourceClear" type="button">Clear</button>
-<input accept=".cif,.mcif,text/plain,chemical/x-cif" class="hidden" id="cifLoadFile" type="file"/>
+<input accept=".cif,.mcif" class="hidden" id="cifLoadFile" type="file"/>
 </div></section><div class="cif-generator-input-pane">
 <section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated" disabled title="Show the CIF/mCIF made with Generate in CIF/mCIF Preview">Show generated file</button></div></div>
 <div class="cif-unified-output-line">

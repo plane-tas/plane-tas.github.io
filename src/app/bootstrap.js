@@ -45,7 +45,16 @@ function mergeLegacyRangeData(){
     if(legacy) inst.qe_range=legacy;
   }
 }
+// File pickers list only the expected extensions (accept=".cif,.mcif" etc.).
+// iOS/iPadOS cannot map unknown extensions such as .cif to a file type and
+// would grey out every file, so there the CIF pickers are left unrestricted.
+function relaxUnknownFileTypesOnIOS(){
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  if(!ios) return;
+  for(const input of document.querySelectorAll('input[type=file][accept*=".cif"]')) input.removeAttribute('accept');
+}
 async function initialize(){
+  relaxUnknownFileTypesOnIOS();
   setFixedBeamControls(createFixedBeamControls());
   clearError(); fillCrystal('monoCrystal','dMono');fillCrystal('anaCrystal','dAna');initializeSidebarCrystalSelectors();updateModeVisibility();updateEnergyLabel();updateCalcMode();updateSupermirrorUI();updateAutoW();
   initializeScriptWorkspaceUI();
