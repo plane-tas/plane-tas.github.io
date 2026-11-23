@@ -104,7 +104,6 @@
   gap:calc(4px * var(--tas-density));
 }
 .script-aset-table-header{
-  font-size:calc(11px * var(--tas-density));
   font-weight:650;
   color:#222;
   padding:0 calc(2px * var(--tas-density)) calc(3px * var(--tas-density));

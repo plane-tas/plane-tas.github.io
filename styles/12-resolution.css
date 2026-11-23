@@ -59,8 +59,6 @@
   padding:0;
   background:#fff;
   border:0;
-  font-size:calc(16px * var(--tas-density));
-  font-weight:650;
 }
 #resolutionInstrumentDetails h3{margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}
 #resolutionInstrumentDetails input[type=number],#resolutionInstrumentDetails input[data-fraction],
@@ -129,11 +127,7 @@
 }
 #resolutionPanel label,
 #resolutionInstrumentDetails label {
-  font-size: calc(15.5px * var(--tas-density));
   line-height: 1.3;
-}
-#resolutionInstrumentDetails h3 {
-  font-size: calc(15.5px * var(--tas-density));
 }
 #resolutionPanel .summary {
   font-size: calc(16.5px * var(--tas-density));
@@ -229,7 +223,6 @@
    Instrument configuration card in the sidebar, including collapsed sections. */
 #resolutionInstrumentDetails :is(.resolution-detail-title, .instrument-fixed-heading),
 #resolutionInstrumentDetails details > summary {
-  font-size: var(--plane-tab-heading-font) !important;
   font-weight: 650 !important;
   line-height: 1.3;
 }
@@ -239,7 +232,7 @@
   font-weight: 400 !important;
 }
 #resolutionInstrumentDetails label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
+  font-size: var(--plane-tab-label-font) !important;
 }
 /* Inside Resolution Instrument details, Crystal and d must be equivalent. */
 /* The unit text is part of the heading, not a small footnote. */

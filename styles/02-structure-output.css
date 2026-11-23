@@ -46,7 +46,6 @@
 #cifPreviewPanel,#cifReflectionsPanel{min-height:0}
 .cif-reflection-toolbar{flex:0 0 auto;margin-bottom:calc(10px * var(--tas-density))}
 .cif-reflection-table th,.cif-reflection-table td{padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))}
-.cif-reflection-table th{font-size:calc(14px * var(--tas-density))}
 
 /* View: six equal direction buttons and six equal min/max entry boxes. */
 #structurePanel .cif-structure-view-buttons.structure-view-buttons-six{

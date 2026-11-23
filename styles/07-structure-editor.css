@@ -597,7 +597,7 @@
 }
 #structurePanel .generator-structure-view-controls label:has(> select),
 #structurePanel .structure-plot-toolbar label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
+  font-size: var(--plane-tab-label-font) !important;
 }
 /* The generated filename suffix should read at least as clearly as the
    output format / filename controls, including at compact UI densities. */

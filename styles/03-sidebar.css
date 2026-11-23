@@ -18,7 +18,6 @@
 .uv-vector-v{grid-column:1;grid-row:2;}
 .sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
 .sidebar select{padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
-.sidebar .auto-vector,.sidebar .status{font-size:calc(13px * var(--tas-density))}
 
 /* v22: stable compact sidebar sizing and linked Powder Angle inputs. */
 .sample-spacegroup-row{

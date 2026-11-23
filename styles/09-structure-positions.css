@@ -352,7 +352,6 @@
   align-self:start;
 }
 #cifGeneratorPanel .cif-thermal-header{
-  font-size:max(14px,calc(15px * var(--tas-density)))!important;
   line-height:1.3;
   white-space:normal;overflow-wrap:normal;
   padding:calc(8px * var(--tas-density)) calc(3px * var(--tas-density));

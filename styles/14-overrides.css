@@ -227,7 +227,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .time-estimate-message{white-space:pre-line}
 .sidebar label,
 .sidebar .checkbox-label {
-  font-size: calc(16px * var(--tas-density));
   line-height: 1.3;
 }
 
@@ -235,7 +234,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
    Plotly hit-testing geometry, or the existing responsive grid layout. */
 /* Automatic W vector beside the scattering plane input. */
 .sidebar .auto-row .auto-vector{
-  font-size:calc(17px * var(--tas-density));
   line-height:1.4;
   font-weight:500;
   overflow-wrap:anywhere;
@@ -410,12 +408,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   font-weight: 400 !important;
   line-height: 1.35;
 }
-/* Selects get the same caption size as the Instrument select in the sidebar;
-   their option/selected-value type is left unchanged. */
-.tab-panel label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
-  font-weight: 400 !important;
-}
 /* A few compound controls carry the bold weight on their inner caption. */
 .tab-panel label :is(span, b, strong),
 .tab-panel .checkbox-label :is(span, b, strong),
@@ -442,7 +434,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 /* Field/select captions are uniformly sidebar-sized in every tab even when an
    older, ID-qualified Toolbox or Resolution layout rule specified larger text. */
 .tab-panel[id] label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
+  font-size: var(--plane-tab-label-font) !important;
   font-weight: 400 !important;
 }
 
@@ -900,8 +892,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* Narrow screens: 2D data above 1D data (each full width) so the range
    values and the 1D "ini fin bin" entries stay readable on one row. */
 .convolution-file-card{container-type:inline-size}
-@container (max-width:860px){
-}
 /* Convolution: estimated time, Stop state, data curves. */
 .convolution-box-foot>*{flex:none}
 .convolution-estimate{margin-left:auto;color:inherit;font-size:max(13px,calc(16px * var(--tas-density)));white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -1115,7 +1105,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .sidebar{--sidebar-remove-w:calc(84px * var(--tas-density));--sidebar-no-w:calc(52px * var(--tas-density))}
 .propagation-vectors,.background-rows{display:grid;gap:0}
 .propagation-vectors:empty,.background-rows:empty{display:none}
-.sidebar-table-head{margin-bottom:calc(2px * var(--tas-density));font-size:calc(16px * var(--tas-density));color:#333}
+.sidebar-table-head{margin-bottom:calc(2px * var(--tas-density));color:#333}
 .sidebar :is(.sidebar-table-head,.propagation-row,.background-row,.dark-asset-head,.dark-table,.bragg-row){
   display:grid;gap:calc(5px * var(--tas-density));align-items:center;min-width:0;width:100%}
 .sidebar :is(.propagation-head,.propagation-row){
@@ -1161,8 +1151,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w);
   margin-top:calc(5px * var(--tas-density))}
 /* (!important: the shared table text size of 00-base.css is !important.) */
-.sidebar .dark-table input{font-size:calc(18px * var(--tas-density))!important}
-.sidebar .dark-table .remove-dark-range{font-size:calc(16px * var(--tas-density))!important}
 
 /* Propagation vectors, Background materials and the Dark-angle ranges as
    tables like the legend tables of Resolution / Convolution: one frame,

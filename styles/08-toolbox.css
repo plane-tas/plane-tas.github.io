@@ -26,7 +26,7 @@
 .s2-conversion-grid input,.s2-conversion-grid select{width:100%;}
 
 /* Stable Toolbox / CIF Generator UI transplant */
-.harmonic-table>div{font-size:calc(12px * var(--tas-density));font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg)}
+.harmonic-table>div{font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg)}
 .toolbox-card{width:100%}
 .toolbox-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:end}
 .toolbox-grid input[type=number]{width:100%;min-width:0;max-width:none}
@@ -37,8 +37,8 @@
 .absorption-warning{margin-top:calc(10px * var(--tas-density));padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d9b55b;border-radius:calc(6px * var(--tas-density));background:#fff8df;font-size:calc(14px * var(--tas-density))}
 .absorption-workspace{display:grid;grid-template-columns:minmax(calc(440px * var(--tas-density)),.95fr) minmax(calc(430px * var(--tas-density)),1.05fr);gap:calc(18px * var(--tas-density));align-items:stretch}
 .absorption-left{display:grid;align-content:start;gap:calc(12px * var(--tas-density));}
-.absorption-left>label,.absorption-cif-row label,.absorption-thickness-control label{display:grid;gap:calc(5px * var(--tas-density));font-size:calc(15px * var(--tas-density));font-weight:600}
-.absorption-left input[type="text"],.absorption-left input[type="number"]{font-size:calc(16px * var(--tas-density));min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
+.absorption-left>label,.absorption-cif-row label,.absorption-thickness-control label{display:grid;gap:calc(5px * var(--tas-density));}
+.absorption-left input[type="text"],.absorption-left input[type="number"]{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
 .absorption-cif-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:calc(8px * var(--tas-density));align-items:end}
 .absorption-cif-row button{min-height:calc(38px * var(--tas-density));white-space:nowrap}
 .absorption-thickness-control{display:grid;align-items:end}
@@ -90,8 +90,8 @@
 .absorption-beam-controls{
   display:grid;
 }
-.absorption-beam-controls label{display:grid;gap:calc(5px * var(--tas-density));font-size:calc(15px * var(--tas-density));font-weight:600}
-.absorption-beam-controls input{font-size:calc(16px * var(--tas-density));min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
+.absorption-beam-controls label{display:grid;gap:calc(5px * var(--tas-density));}
+.absorption-beam-controls input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-summary-card,
 .absorption-summary-subgrid>div{background:#fff!important;}
 .absorption-summary-label{font-size:calc(15px * var(--tas-density))!important;font-weight:700!important;color:#222!important;}
@@ -156,21 +156,18 @@
   width:100%!important;
 }
 .absorption-input-mode-row{display:grid;gap:calc(8px * var(--tas-density));align-items:end}
-.absorption-input-mode-row select,.absorption-manual-row input{font-size:calc(16px * var(--tas-density));min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
+.absorption-input-mode-row select,.absorption-manual-row input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-manual-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(calc(150px * var(--tas-density)),.6fr);gap:calc(8px * var(--tas-density));align-items:end}
 .absorption-input-mode-row label,
 .absorption-manual-row label,
 .absorption-cif-row label{
   display:grid;
   gap:calc(5px * var(--tas-density));
-  font-size:calc(15px * var(--tas-density));
-  font-weight:600;
   min-width:0;
 }
 .absorption-input-mode-row select{
   width:100%;
   min-height:calc(38px * var(--tas-density));
-  font-size:calc(16px * var(--tas-density));
   padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
 }
 .absorption-source-row #absorptionCifSelectButton{
@@ -519,11 +516,8 @@
   font-weight: 400 !important;
   line-height: 1.35;
 }
-#toolboxAttenuationPane label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
-}
 #toolboxAttenuationPane .absorption-input-mode-row label:has(> select) {
-  font-size: var(--plane-tab-select-caption-font) !important;
+  font-size: var(--plane-tab-label-font) !important;
   font-weight: 400 !important;
 }
 /* Magnetic ion: searchable combobox (type "N" -> Ni, Nb, Nd, Np). The native
