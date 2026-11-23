@@ -412,8 +412,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 }
 /* Selects get the same caption size as the Instrument select in the sidebar;
    their option/selected-value type is left unchanged. */
-.tab-panel label:has(> select),
-#qeDisplayControls .qe-path-snap-label:has(> select) {
+.tab-panel label:has(> select) {
   font-size: var(--plane-tab-select-caption-font) !important;
   font-weight: 400 !important;
 }
@@ -491,8 +490,9 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 /* Snap 1/n entry and the Constant E map HKL path box (same path as Q vector–E). */
 #qePathSnap{width:calc(64px * var(--tas-density))!important;min-width:0!important;text-align:center;}
 .qe-path-snap-label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(3px * var(--tas-density));}
-/* Greyed out with the path tools (diffractometer, 4-circle). */
-#qeDisplayControls .qe-path-snap-label:has(> input:disabled){color:#aaa}
+/* Snap first (it also snaps the dragged Angle-calculation point), then a
+   wider gap before Select Path / Undo / Clear. */
+#qeDisplayControls .qe-path-tools > .qe-path-snap-label{margin-right:calc(10px * var(--tas-density))}
 .qe-constant-path-input{margin-top:calc(6px * var(--tas-density));display:flex!important;align-items:center;gap:calc(6px * var(--tas-density));}
 .qe-constant-path-input label{flex:none;}
 .qe-constant-path-input input{flex:1 1 auto;width:auto!important;min-width:0!important;}

@@ -215,16 +215,17 @@ function qePathPointXY(cache,hkl){
   return [dot(q,cache.ex),dot(q,cache.ey)];
 }
 // Diffractometers and 4-circle mode have no Q vector–E map, so the path
-// tools (Snap included) are greyed out and the path is not drawn; the path
-// and the Snap value are kept and come back with a TAS.  Meanwhile the
-// dragged Angle-calculation point moves freely (no snapping).
+// tools are greyed out and the path is not drawn; the path is kept and comes
+// back with a TAS.  Snap stays: it also snaps the dragged Angle-calculation
+// point.
 let qePathAvailable=true;
 function setQEPathAvailable(on){
   on=!!on;
   if(on===qePathAvailable) return;
   qePathAvailable=on;
   if(!on) qeSelectingPath=false;
-  for(const el of [qePathMirror(),$('qePathSnap')]) if(el) el.disabled=!on;
+  const mirror=qePathMirror();
+  if(mirror) mirror.disabled=!on;
   updateQEPathControls();
 }
 function updateQEPathControls(){
@@ -377,7 +378,7 @@ function installQETargetDrag(){
     if(!cache||!xy) return;
     let [u,v]=qePhysicalRluCoordinates(cache,xy);
     if(!Number.isFinite(u)||!Number.isFinite(v)) return;
-    const mode=qePathAvailable ? ($('qePathSnap')?.value||'') : '';
+    const mode=$('qePathSnap')?.value||'';
     u=qeSnapReciprocalCoordinate(u,mode); v=qeSnapReciprocalCoordinate(v,mode);
     const {U,V}=cache;
     // Exact simple fractions stay fractions (e.g. a kept L = 1/3).

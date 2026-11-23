@@ -35,7 +35,23 @@ async function legendItems(legend){
   return items;
 }
 
-export async function saveQEFigure({plotId,legendId,filename}){
+// Text lines above the plot ({text, color}), e.g. the Angle calculation
+// result over the TAS geometry.  A line wider than the figure is broken
+// after a comma.
+function wrapHeaderLines(lines,measure,maxW){
+  const out=[];
+  for(const {text,color} of lines){
+    let current='';
+    for(const part of text.split(/(?<=,)\s+/)){
+      const next=current ? `${current} ${part}` : part;
+      if(current && measure.measureText(next).width>maxW){ out.push({text:current,color}); current=part; }
+      else current=next;
+    }
+    if(current) out.push({text:current,color});
+  }
+  return out;
+}
+export async function saveQEFigure({plotId,legendId,filename,headerLines=[]}){
   const gd=document.getElementById(plotId);
   if(!gd?.data || !window.Plotly) return;
   const S=2, w=Math.round(gd.clientWidth), h=Math.round(gd.clientHeight);
@@ -53,13 +69,17 @@ export async function saveQEFigure({plotId,legendId,filename}){
   }
   if(row.length) rows.push({row,rowW});
   const legendH=rows.length ? rows.length*lineH+12 : 0;
-  const cv=document.createElement('canvas'); cv.width=w*S; cv.height=(h+legendH)*S;
+  const header=wrapHeaderLines(headerLines.filter(l=>l?.text),measure,w-2*padX);
+  const headerLineH=Math.round(fs*1.6), headerH=header.length ? header.length*headerLineH+16 : 0;
+  const cv=document.createElement('canvas'); cv.width=w*S; cv.height=(headerH+h+legendH)*S;
   const ctx=cv.getContext('2d'); ctx.scale(S,S);
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h+legendH);
-  ctx.drawImage(plot,0,0,w,h);
-  ctx.font=font; ctx.textBaseline='middle'; ctx.fillStyle='#222';
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,headerH+h+legendH);
+  ctx.font=font; ctx.textBaseline='middle';
+  header.forEach(({text,color},r)=>{ ctx.fillStyle=color||'#222'; ctx.fillText(text,padX,10+r*headerLineH+headerLineH/2); });
+  ctx.drawImage(plot,0,headerH,w,h);
+  ctx.fillStyle='#222';
   rows.forEach(({row,rowW},r)=>{
-    let x=(w-rowW)/2; const y=h+6+r*lineH+lineH/2;
+    let x=(w-rowW)/2; const y=headerH+h+6+r*lineH+lineH/2;
     for(const it of row){ it.draw(ctx,x,y); ctx.fillStyle='#222'; ctx.fillText(it.text,x+sw,y); x+=it.iw+gap; }
   });
   const blob=await new Promise(res=>cv.toBlob(res,'image/png'));

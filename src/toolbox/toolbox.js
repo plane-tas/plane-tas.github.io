@@ -223,7 +223,7 @@ export function createToolbox({
   // Photon relations for the X-ray beam.  Keep these separate from the
   // neutron conversions above: E(lambda) and f(lambda) are different for
   // photons and massive neutrons.
-  const XRAY_MEV_ANGSTROM=12398419.843320026; // E[meV] = hc/lambda
+  const XRAY_MEV_ANGSTROM=12398419.843320025; // E[meV] = hc/lambda (the same double as 12398419.843320026)
   const XRAY_THz_ANGSTROM=2997924.58;         // f[THz] = c/lambda
   const XRAY_CM1_ANGSTROM=1e8;                // wavenumber[cm^-1] = 1/lambda[cm]
 
@@ -469,7 +469,8 @@ export function createToolbox({
     }
     function group(stopChar=''){
       const out=new Map();
-      while(i<text.length && (!stopChar || text[i]!==stopChar)){
+      while(i<text.length){
+        if(stopChar && text[i]===stopChar) break;
         if(text[i]==='('){
           i++; const sub=group(')');
           if(text[i]!==')') throw new Error('Unmatched parenthesis in chemical formula.');

@@ -2,7 +2,8 @@
 // own: the plot as on screen (current zoom, colorbars, its own legend) as a
 // PNG.  The Q–E maps and the 1D cut keep their existing buttons (same place);
 // the four Resolution ellipses are saved together by the Save figure of
-// their results table.
+// their results table.  The TAS geometry also gets the Angle calculation
+// result above the drawing.
 import {saveQEFigure} from '../qe/qe-save-figure.js';
 
 const FIGURES=[
@@ -15,6 +16,16 @@ const FIGURES=[
   ['absorptionPlot','absorption-transmission']
 ];
 
+// The TAS geometry is saved with the Angle calculation result above it
+// ((h,k,l), Ei / Ef / Q, the motor angles and any warning), in its colours.
+function headerLinesFor(id){
+  if(id!=='geometryPlot') return [];
+  const box=document.getElementById('geometryAngles');
+  if(!box || box.closest('.hidden')) return [];
+  const lines=[...box.querySelectorAll('.geometry-result-line')];
+  const source=lines.length ? lines : [box];
+  return source.map(el=>({text:el.textContent.replace(/\s+/g,' ').trim(),color:getComputedStyle(el).color}));
+}
 function attachSaveButton(id,filename,onError){
   const plot=document.getElementById(id);
   if(!plot || plot.querySelector(':scope > .plot-save-figure')) return;
@@ -26,7 +37,7 @@ function attachSaveButton(id,filename,onError){
   button.title='Save this figure as a PNG';
   button.addEventListener('click',()=>{
     if(!plot._fullLayout || !Array.isArray(plot.data)) return;
-    saveQEFigure({plotId:id,legendId:null,filename:`${filename}.png`})
+    saveQEFigure({plotId:id,legendId:null,filename:`${filename}.png`,headerLines:headerLinesFor(id)})
       .catch(err=>onError(`Save figure: ${err?.message||err}`));
   });
   // After Plotly's own container, so Plotly never replaces it.
