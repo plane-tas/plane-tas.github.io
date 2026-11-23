@@ -973,9 +973,9 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #resolutionConvolutionPane button.convolution-calc{min-width:6.5em}
 
 /* Calculate row: equal columns — approximation, integration, range / points,
-   estimate, Calculate, progress bar, Keep (2D: empty).  The progress bar is
-   always there (empty frame), so nothing moves when it fills. */
-#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) max-content max-content repeat(3,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
+   estimate, Calculate, progress bar (Keep is in the table of curves).  The
+   progress bar is always there (empty frame), so nothing moves when it fills. */
+#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) max-content max-content repeat(2,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
 /* (The third and fourth columns, Grid spacing / Monte Carlo points with their accuracy and the estimated time, take the width of their text.) */
 .convolution-box-head .convolution-integration{display:contents}
 .convolution-box-head>select,.convolution-box-head .convolution-integration>select,.convolution-box-head>button{width:100%;min-width:0}
