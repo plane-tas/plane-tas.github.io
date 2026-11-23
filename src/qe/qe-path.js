@@ -214,30 +214,30 @@ function qePathPointXY(cache,hkl){
   }
   return [dot(q,cache.ex),dot(q,cache.ey)];
 }
-// Four-circle: W of the displayed layer for a map click.  With Snap on, a
-// value within one W step (0.01) of a simple fraction n/d (d <= 12) is
-// taken as that fraction, so W = 0.33 adds L = 1/3, not 0.33.
-function qeLayerWForPath(cache){
-  if(!(cache?.fourCircle && cache.Whkl)) return 0;
-  const w=Number(cache.layerW)||0;
-  const mode=String($('qePathSnap')?.value??'').trim();
-  if(!mode || !Number.isInteger(Number(mode)) || Number(mode)<1) return w;
-  for(let d=1;d<=12;d++){
-    const n=Math.round(w*d);
-    if(Math.abs(w-n/d)<=0.01+1e-9) return n/d;
-  }
-  return w;
+// Diffractometers and 4-circle mode have no Q vector–E map, so the path
+// tools (Snap included) are greyed out and the path is not drawn; the path
+// and the Snap value are kept and come back with a TAS.  Meanwhile the
+// dragged Angle-calculation point moves freely (no snapping).
+let qePathAvailable=true;
+function setQEPathAvailable(on){
+  on=!!on;
+  if(on===qePathAvailable) return;
+  qePathAvailable=on;
+  if(!on) qeSelectingPath=false;
+  for(const el of [qePathMirror(),$('qePathSnap')]) if(el) el.disabled=!on;
+  updateQEPathControls();
 }
 function updateQEPathControls(){
   const button=$('qePathPickToggle'),overlay=$('qePathHitLayer');
   if(button){
+    button.disabled=!qePathAvailable;
     button.classList.toggle('active',qeSelectingPath);
     button.setAttribute('aria-pressed',String(qeSelectingPath));
     button.textContent=qeSelectingPath?'Finish Path':'Select Path';
   }
   overlay?.classList.toggle('active',qeSelectingPath);
-  if($('qePathUndo')) $('qePathUndo').disabled=!qeSelectedPathHKL.length;
-  if($('qePathClear')) $('qePathClear').disabled=!qeSelectedPathHKL.length;
+  if($('qePathUndo')) $('qePathUndo').disabled=!qePathAvailable || !qeSelectedPathHKL.length;
+  if($('qePathClear')) $('qePathClear').disabled=!qePathAvailable || !qeSelectedPathHKL.length;
 
 }
 function redrawQEPathDisplay(){
@@ -287,10 +287,9 @@ function addQEPathPointFromPhysical(x,y){
   const mode=$('qePathSnap')?.value||'';
   const us=qeSnapReciprocalCoordinate(u,mode);
   const vs=qeSnapReciprocalCoordinate(v,mode);
-  // Four-circle: the point lies on the displayed W layer.
-  const cache=getSingleCache();
-  const w=qeLayerWForPath(cache);
-  const hkl=U.map((val,i)=>val*us+V[i]*vs+(w&&cache.Whkl?w*cache.Whkl[i]:0));
+  // Paths are picked only with an analyzer (not in 4-circle mode): the
+  // point lies in the U–V plane.
+  const hkl=U.map((val,i)=>val*us+V[i]*vs);
   // The generated startup path is visible, but is not a user-picked path.
   // Replace it on the first *valid map click*, not when Select Path is toggled.
   if(!qePathWasEdited){
@@ -378,7 +377,7 @@ function installQETargetDrag(){
     if(!cache||!xy) return;
     let [u,v]=qePhysicalRluCoordinates(cache,xy);
     if(!Number.isFinite(u)||!Number.isFinite(v)) return;
-    const mode=$('qePathSnap')?.value||'';
+    const mode=qePathAvailable ? ($('qePathSnap')?.value||'') : '';
     u=qeSnapReciprocalCoordinate(u,mode); v=qeSnapReciprocalCoordinate(v,mode);
     const {U,V}=cache;
     // Exact simple fractions stay fractions (e.g. a kept L = 1/3).
@@ -520,6 +519,6 @@ qeSyncPathMirror();
     currentQEMapUnit, qeCommitPathText, qeDefaultPathText, qeFormatPathNumber, qePathAxisCoordinateLabel,
     qePathInput, qePathMapLabel, qePathPointXY, qePhysicalRluCoordinates, qePlaneRluBasis,
     qeSelectedPathHKL, qeSpurionWarnings, qeXYForUnit, updateQESpurionWarning, bindQEPathControls,
-    syncQEPathSnapDefault
+    syncQEPathSnapDefault, setQEPathAvailable
   };
 }

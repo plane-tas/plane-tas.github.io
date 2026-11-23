@@ -476,7 +476,8 @@ function renderSingle(cache,index=0){
 
   // Path is drawn over the physical Q map, even when Q unit is r.l.u.;
   // selections remain visible while the energy slider or Q unit changes.
-  if(qeSelectedPathHKL.length){
+  // Not drawn without an analyzer (diffractometer, 4-circle): kept for a TAS.
+  if(qeSelectedPathHKL.length && !cache.analyzerFree){
     const points=qeSelectedPathHKL.map(hkl=>qePathPointXY(cache,hkl));
     traces.push({type:'scatter',mode:'lines+markers+text',showlegend:true,name:'Selected path',meta:'qe-selected-path',zorder:100,
       x:points.map(p=>p[0]),y:points.map(p=>p[1]),text:points.map((_,j)=>qePathMapLabel(j,cache)),

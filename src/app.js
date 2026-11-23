@@ -124,7 +124,7 @@ const {
 const {
   currentQEMapUnit, qeCommitPathText, qeDefaultPathText, qeFormatPathNumber, qePathAxisCoordinateLabel,
   qePathInput, qePathMapLabel, qePathPointXY, qePhysicalRluCoordinates, qePlaneRluBasis,
-  qeSelectedPathHKL, qeSpurionWarnings, qeXYForUnit, updateQESpurionWarning, bindQEPathControls,
+  qeSelectedPathHKL, qeSpurionWarnings, qeXYForUnit, updateQESpurionWarning, bindQEPathControls, setQEPathAvailable,
   syncQEPathSnapDefault
 }=createQEPath({
   $, checkedValue, hklToQ, num, parseNumericValue,
@@ -178,7 +178,7 @@ const {
   scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args), selectedBackgrounds,
   setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
   getSingleCache:()=>singleCache, getPowderCache:()=>powderCache,
-  hklToQ:(...args)=>hklToQ(...args), singleColorbarTicks, singleMapBraggHoverAngles
+  singleColorbarTicks, singleMapBraggHoverAngles
 });
 
 const {
@@ -312,7 +312,9 @@ function syncAnalyzerFreeUI(){
   for(const id of ['geomSliderHW','powderSliderHW']) $(id)?.closest('.geometry-slider-row')?.classList.toggle('hidden',analyzerFree);
   $('geomHW')?.closest('.grid4')?.classList.toggle('geometry-target-no-hw',analyzerFree);
   $('powderGeometryTarget')?.classList.toggle('powder-target-no-hw',analyzerFree);
-  // Without an analyzer the Q vector–E map tab stays in place, greyed out.
+  // Without an analyzer the Q vector–E map tab stays in place, greyed out,
+  // and so do the path tools (the path is kept but not drawn).
+  setQEPathAvailable(!analyzerFree);
   const vectorTab=$('qeMapTabVector');
   if(vectorTab){
     vectorTab.classList.toggle('hidden',!single);

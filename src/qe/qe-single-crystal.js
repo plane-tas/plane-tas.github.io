@@ -442,6 +442,7 @@ export function createQESingleCrystal(deps){
       // Elastic wave vector of the Bragg peaks (fixed energy): Lorentz factor.
       braggK:2*PI/wavelength,
       Gpoints,magPoints,magneticIntensity,ringData,darkAssets,QrefXY,sense,
+      analyzerFree:fourCircle || inst?.instrument_type==="diffractometer",
       fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,chiFactor,
       cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };
