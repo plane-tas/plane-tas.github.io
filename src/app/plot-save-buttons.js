@@ -64,6 +64,11 @@ function attachSaveButton(id,filename,onError){
   });
   // After Plotly's own container, so Plotly never replaces it.
   plot.appendChild(button);
+  // Usable only while a figure is drawn (not before a calculation, nor
+  // after it failed and the plot was cleared).
+  const sync=()=>{ button.disabled=!(plot._fullLayout && Array.isArray(plot.data) && plot.data.length); };
+  sync();
+  new MutationObserver(()=>{ sync(); requestAnimationFrame(sync); }).observe(plot,{childList:true,subtree:false});
 }
 
 export function initializePlotSaveButtons(onError=()=>{}){

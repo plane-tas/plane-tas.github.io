@@ -682,6 +682,8 @@ export function createToolbox({
     absorptionCsvRows=[];
     if(download)download.disabled=true;
     if(!host || !status || !energyField || !lambdaField || !thicknessEntry || !thicknessSlider || !transmissionOut) return;
+    // The thickness slider works only with a result (enabled again below).
+    thicknessSlider.disabled=true;
 
     const lambda=attenuationWavelengthA();
     status.value=selectedCifFileName || selectedCifStructure?.name || 'No CIF/mCIF selected';
@@ -758,6 +760,7 @@ export function createToolbox({
       const x=Array.from({length:n},(_,i)=>sliderMax*i/(n-1));
       const y=x.map(mm=>seTransPct*Math.exp(-muAtt*mm/10));
       absorptionCsvRows=x.map((mm,i)=>[mm,y[i]]);
+      thicknessSlider.disabled=false;
       const num=v=>Number.isFinite(Number(v)) ? String(Number(Number(v).toPrecision(8))) : 'inf';
       absorptionCsvHeader=[
         '# Neutron attenuation (PLANE-TAS)',

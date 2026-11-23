@@ -376,6 +376,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .s2-conversion-info.warning,
 .tab-panel .qe-spurion-warning,
 .tab-panel .time-estimate-message,
+.tab-panel .absorption-warning,
 .tab-panel #cifSpinIndividualInfo {
   font-size: var(--plane-tab-warning-font) !important;
   line-height: 1.45;
@@ -929,6 +930,8 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Calculation entries at the top of the 2D slice and 1D cut tabs, with a
    line under them (Save / Load CSV row). */
 .convolution-tab-pane>.convolution-box{flex:0 0 auto;margin-bottom:calc(8px * var(--tas-density));border:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd;border-radius:0;padding:0 0 calc(8px * var(--tas-density))}
+/* Save CSV first under the line (it saves the result), then Show and the plots. */
+.convolution-tab-pane>.convolution-box-foot{flex:0 0 auto;margin-bottom:calc(8px * var(--tas-density))}
 
 /* Convolution labels the same size as the labels of the other tabs
    (the control text size, as in Q-E Range and Toolbox); the curve list uses
@@ -1039,9 +1042,9 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   #resolutionPanel #resolutionDetailsBody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
 }
 #resolutionPanel #resolutionScanGraph{width:auto}
-/* Simulation: Save CSV under the calculation entries, the name filling the
-   row (as Save CSV in Convolution). */
-#resolutionCalculation .resolution-csv-row{margin-top:calc(8px * var(--tas-density))}
+/* Simulation: Save CSV first under the line (it saves the results), the
+   name filling the row (as Save CSV in Convolution). */
+#resolutionSimulationPane > .resolution-csv-row{margin:0 0 calc(8px * var(--tas-density))}
 #resolutionPanel .resolution-csv-name{flex:1 1 0;min-width:0}
 #resolutionPanel .resolution-csv-name input{width:100%;min-width:0}
 #resolutionPanel .resolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
