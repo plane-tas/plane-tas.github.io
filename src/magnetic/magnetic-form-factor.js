@@ -1,5 +1,6 @@
 // Magnetic form factors ported from FormFactor.jl (Sunny dipole approximation).
 // Q is |momentum transfer| in Å^-1; the plot shows f(Q) and |f(Q)|², not full magnetic intensity.
+import {applyWhileTyping} from '../core/live-entry.js';
 import {csvNameFromEntry, syncCsvNameTemplate} from '../core/csv-name.js';
 import { MAGNETIC_ION_DATA } from './magnetic-form-factor-data.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
@@ -205,8 +206,9 @@ export function initializeMagneticFormFactorUI(){
       syncWeightField(opts.j2Weight);
       showModel(opts,{q,f,j0,j2});
       qSlider.value=String(q);
-      intensityField.value=fmt(fSquared);
-      if(fField)fField.value=fmt(f);
+      // (Not the box being typed in: f(Q) or |f(Q)|² entered to find Q.)
+      if(document.activeElement!==intensityField) intensityField.value=fmt(fSquared);
+      if(fField && document.activeElement!==fField) fField.value=fmt(f);
       exportRows=grid.map((x,i)=>[x,curve[i].f,values[i]]);
       download.disabled=false;
       syncCsvNameTemplate($('magffCsvName'),magffCsvBase());
@@ -342,6 +344,7 @@ export function initializeMagneticFormFactorUI(){
   for(const [field,which] of [[intensityField,'fSquared'],[fField,'f']]){
     if(!field)continue;
     field.addEventListener('change',()=>setQFromValue(field.value,which));
+    applyWhileTyping(field,text=>setQFromValue(text,which));
     field.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();field.blur();}});
   }
   download.addEventListener('click',()=>{

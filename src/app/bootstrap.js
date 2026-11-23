@@ -1,5 +1,6 @@
 // Start-up: load the data directories, restore saved state and draw the first view.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
+import {applyWhileTyping} from '../core/live-entry.js';
 import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {saveQEFigure} from '../qe/qe-save-figure.js';
@@ -150,12 +151,17 @@ async function initialize(){
   for(const id of ['energy','energyMode','sense','s1sign']) $(id)?.addEventListener('change',()=>{
     if(checkedValue('sampleMode')==='powder') syncPowderLinkedInputs();
   });
-  $('hwEntry').addEventListener('change',()=>{if(getSingleCache()){const i=nearestHWIndex(getSingleCache(),Number($('hwEntry').value));setTargetHWFromMap(i);renderSingle(getSingleCache(),i);saveRightPanelState();}});
+  // ħω of the Constant E map: on change and while typing (as the Angle
+  // calculation entries).
+  const applyMapHW=value=>{if(getSingleCache()){const i=nearestHWIndex(getSingleCache(),Number(value));setTargetHWFromMap(i);renderSingle(getSingleCache(),i);saveRightPanelState();}};
+  $('hwEntry').addEventListener('change',()=>applyMapHW($('hwEntry').value));
+  applyWhileTyping($('hwEntry'),applyMapHW);
   // Four-circle: W layer of the Constant E map (recalculates the map).
   // The Angle calculation target follows the map's W layer (and vice versa).
   const applyMapW=w=>{ getGeometrySliders()?.setTargetW(w); recalculate(); };
   $('qeWSlider')?.addEventListener('input',()=>{const w=Number($('qeWSlider').value);$('qeWEntry').value=String(Number(w.toFixed(4)));applyMapW(w);});
   $('qeWEntry')?.addEventListener('change',()=>applyMapW(Number($('qeWEntry').value)));
+  applyWhileTyping($('qeWEntry'),text=>applyMapW(Number(text)));
   // Constant E map: Save figure (plot with its colour bars, and the legend).
   // The UI density changed: the Powder map is drawn again from its last
   // calculation (keeps its legend choices; ui-shell redraws the others).
@@ -182,6 +188,13 @@ async function initialize(){
     return powder ? data.find(t=>t.marker?.showscale && t.legendgroup===(meta==='nuclear-data'?'powder-nuclear':'powder-magnetic'))
       : data.find(t=>t.meta===meta);
   };
+  // While typing a colour-scale end, redraw only when both ends make a
+  // range (0…1, max above min); leaving the box tidies it as before.
+  const usableColorRange=(minId,maxId)=>{
+    const v=id=>{ const t=String($(id)?.value??'').trim(); return t==='' ? null : Number(t); };
+    const lo=v(minId)??0, hi=v(maxId)??1;
+    return Number.isFinite(lo) && Number.isFinite(hi) && lo>=0 && hi<=1 && hi-lo>=1e-4;
+  };
   for(const [id,source] of [['sfColorMaxEntry','max'],['sfColorMinEntry','min']]){
     const field=$(id);
     field?.addEventListener('focus',()=>field.select());
@@ -201,6 +214,7 @@ async function initialize(){
       refreshPeakScale();
       saveRightPanelState();
     });
+    applyWhileTyping(field,()=>{ refreshPeakScale(); saveRightPanelState(); },{valid:()=>usableColorRange('sfColorMinEntry','sfColorMaxEntry')});
   }
   // Magnetic colorbar endpoints (single-k magnetic structure): 0...1, max > min.
   const syncMagneticColorbar=source=>{
@@ -229,6 +243,7 @@ async function initialize(){
       refreshPeakScale();
       saveRightPanelState();
     });
+    applyWhileTyping(field,()=>{ refreshPeakScale(); saveRightPanelState(); },{valid:()=>usableColorRange('mfColorMinEntry','mfColorMaxEntry')});
   }
   // Lorentz factor of the Q-E peak shading (1/sin 2θ or none).
   const qeLorentz=$('qeLorentz');

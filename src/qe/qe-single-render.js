@@ -565,7 +565,7 @@ function nearestHWIndex(cache,value){
 function syncSingleNavigation(cache,index){
   const i=Math.max(0,Math.min(index,cache.hwList.length-1));
   if($('hwSlider')) $('hwSlider').value=i;
-  if($('hwEntry')) $('hwEntry').value=formatHwSlice(cache.hwList[i]);
+  if($('hwEntry') && document.activeElement!==$('hwEntry')) $('hwEntry').value=formatHwSlice(cache.hwList[i]);
 }
 function qeWVectorText(v){
   return v.map(x=>{const n=Number(x);return Math.abs(n-Math.round(n))<1e-9?String(Math.round(n)):String(Number(n.toFixed(3)));}).join(', ');

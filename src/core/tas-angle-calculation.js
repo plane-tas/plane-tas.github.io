@@ -217,7 +217,7 @@ function tasMotorAngles(calc,b){
   const cosRef=(2*k0*k0-QrNorm*QrNorm)/(2*k0*k0);
   if(cosRef<-1-1e-10 || cosRef>1+1e-10){
     return {Ei,Ef,m1,m2,s1:null,s2,a1,a2,
-      warning:'Reference Q is outside the measurable range at the selected reference energy; S1 is unavailable.'};
+      warning:'Reference Q not reachable at the reference energy: no S1.'};
   }
 
   // S1 is a physical sample-axis encoder calibration and must not change when

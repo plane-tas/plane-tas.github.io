@@ -185,7 +185,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   // reached by tilting the sample: rotate it into the plane, keeping |Q|.
   const qInPlane=Math.hypot(qRaw[0],qRaw[1]);
   const tiltDeg=Math.atan2(Math.abs(qRaw[2]),qInPlane)/D2R;
-  if(tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Calculation Q is out of plane: the requested resolution point lies ${tiltDeg.toFixed(2)}° outside the scattering plane defined by U and V (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
+  if(tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Q is ${tiltDeg.toFixed(2)}° out of the U–V plane (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
   const Qsample=tiltDeg>0 ? [qRaw[0]*qnorm/qInPlane,qRaw[1]*qnorm/qInPlane,0] : qRaw;
   const kiCal=Math.sqrt(Ei/E2K2), kfCal=Math.sqrt(Ef/E2K2);
   let cosPhi=(kiCal*kiCal+kfCal*kfCal-qnorm*qnorm)/(2*kiCal*kfCal);
@@ -312,7 +312,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
       const Lu=Number(geom.sample_u)>0 ? Math.max(Number(geom.sample_u),1e-4) : 0.01;
       const Lv=Number(geom.sample_v)>0 ? Math.max(Number(geom.sample_v),1e-4) : 0.01;
       const qOutS=Qsample[2], qPlane=[Qsample[0],Qsample[1],0];
-      if(Math.abs(qOutS)>1e-8*Math.max(qnorm,1)) throw new Error('Calculation Q is out of plane: the requested resolution point lies outside the scattering plane defined by U and V.');
+      if(Math.abs(qOutS)>1e-8*Math.max(qnorm,1)) throw new Error('Q is out of the U–V plane.');
       const ex=normalize(qPlane), ey=normalize(cross([0,0,1],ex));
       const uS=normalize(qFromUB(UB,lc.sv1));
       const vS=normalize(qFromUB(UB,inferOrthogonalInPlaneHKL(rl,lc.sv1,lc.sv2)));
@@ -406,7 +406,7 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   const qxNorm=norm(Qx), qyNorm=norm(Qy), qzNorm=norm(Qz), qvNorm=norm(Qsample);
   if(Math.min(qxNorm,qyNorm,qzNorm)<1e-12) throw new Error('U, V and W reciprocal-space directions must be non-zero.');
   const sampleNormal=[0,0,1], qOut=dot(Qsample,sampleNormal);
-  if(Math.abs(qOut)>1e-8*Math.max(qvNorm,1)) throw new Error('Calculation Q is out of plane: the requested resolution point lies outside the scattering plane defined by U and V. Reference Q may be out of plane because it is used only for the S1 offset.');
+  if(Math.abs(qOut)>1e-8*Math.max(qvNorm,1)) throw new Error('Q is out of the U–V plane (Reference Q may be: it only sets the S1 offset).');
   const Qplane=Qsample.map((x,i)=>x-qOut*sampleNormal[i]), eX=normalize(Qplane), eZ=sampleNormal, eY=normalize(cross(eZ,eX));
   if(dot(cross(eX,eY),eZ)<1-1e-10) throw new Error('Failed to construct a right-handed local resolution basis.');
 

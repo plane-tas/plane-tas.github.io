@@ -67,7 +67,7 @@ function updateResolutionPlaneWarning(){}
 // Why a point cannot be calculated: a sentence (under the point entries) and
 // a few words (a row of the scan table).
 var FAIL_REASONS=[
-  [/out of plane/i,'Not reachable: Q is out of the scattering plane.','out of the scattering plane'],
+  [/out of (the U–V )?plane/i,'Not reachable: Q is out of the scattering plane.','out of the scattering plane'],
   [/kinematically inaccessible/i,'Not reachable: the scattering triangle does not close.','not reachable (triangle does not close)'],
   [/Bragg condition is inaccessible/i,'Not reachable: the Bragg angle of the monochromator or analyzer.','Bragg angle not reachable (mono/ana)'],
   [/Ei and Ef must be positive/i,'Not calculable: Ei or Ef is not positive.','Ei or Ef not positive'],

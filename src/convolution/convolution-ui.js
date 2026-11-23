@@ -5,6 +5,7 @@
 // 1D: a scan with each of H, K, L, E given as a value or ini fin bin.
 // Every point is multiplied by the intensity prefactor R0 selected in the
 // file card (R0/Rmon, normalisation to monitor counts).
+import {applyWhileTyping} from '../core/live-entry.js';
 import {parseDispersionTable, createDispersionInterpolator, standardNormalSamples, convolvePoint, convolvePointGrid, nearDispersion, gaussianGrid, autoGridSize} from './convolution-core.js';
 import {readTasSense} from '../core/tas-conventions.js';
 import {inverse, matvec} from '../core/matrix.js';
@@ -888,15 +889,15 @@ export function createConvolutionUI(deps){
       {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B,'convMapUV'),
        shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);
-    // Entries: a value typed in fixes that end (black); an empty box is
-    // automatic and shows in grey the value in use (the whole calculation).
-    // "auto" only before there is a result.
-    const autoEnds={min:auto[0],max:auto[1]};
+    // Entries: the value in use is always written in the box (automatic:
+    // the whole calculation), ready to be edited; a value typed in fixes
+    // that end, and clearing the box returns it to automatic.  "auto" (grey)
+    // only before there is a result.
     for(const [end,v] of [['min',zmin],['max',zmax]]){
       const el=$(`convZ${end}`); if(!el) continue;
-      el.placeholder=String(Number(autoEnds[end].toPrecision(3)));
+      el.placeholder='auto';
       if(document.activeElement===el) continue;
-      el.value=zlim[end]===null ? '' : String(Number(v.toPrecision(3)));
+      el.value=String(Number(v.toPrecision(3)));
     }
   }
   // log I: [smallest positive I (not below 10⁻⁶ of the maximum), maximum].
@@ -1699,7 +1700,10 @@ export function createConvolutionUI(deps){
       try{
         const g=load2DText(await file.text());
         volume.source=file.name; setLoaded('2D',file.name);
-        message('convMessage2D',[`Loaded${g.restored ? ' with its settings' : ` ${file.name}`}.`,...g.notes].join(' '),g.notes.length>0);
+        // One short line in the progress bar; any notes (another
+        // dispersion file, an instrument not in the list) on hovering it.
+        message('convMessage2D',`Loaded${g.restored ? ' with its settings' : ` ${file.name}`}.`,g.notes.length>0);
+        if($('convMessage2D')) $('convMessage2D').title=g.notes.join(' ');
       }
       catch(err){ message('convMessage2D',`${file.name}: ${err.message||err}`,true); }
     });
@@ -1747,6 +1751,7 @@ export function createConvolutionUI(deps){
       };
       el?.addEventListener('change',apply);
       el?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); apply(); el.blur(); } });
+      applyWhileTyping(el,apply,{allowEmpty:true});
     }
     for(const [key,input,arr] of [['U','convValueU','A'],['V','convValueV','B'],['E','convValueE','E']]){
       $(`convSlider${key}`)?.addEventListener('input',()=>{ if(!volume) return; $(input).value=fmt(volume[arr][sliderIndex(key)],3); drawMaps(); storeSliders(); });
@@ -1754,6 +1759,12 @@ export function createConvolutionUI(deps){
         if(!volume) return;
         const i=nearest(volume[arr],num(input));
         $(`convSlider${key}`).value=String(i); $(input).value=fmt(volume[arr][i],3); drawMaps(); storeSliders();
+      });
+      // While typing: move the slider to the nearest grid value (the box is
+      // tidied when it is left).
+      applyWhileTyping($(input),text=>{
+        if(!volume) return;
+        $(`convSlider${key}`).value=String(nearest(volume[arr],Number(text))); drawMaps(); storeSliders();
       });
     }
     $('convTableScroll')?.addEventListener('scroll',()=>renderTableRows(),{passive:true});

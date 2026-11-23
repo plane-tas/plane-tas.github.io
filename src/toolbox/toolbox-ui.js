@@ -2,6 +2,7 @@
 // Keeps toolbox.js focused on conversion/absorption logic while this module
 // owns DOM event binding and the two-phase startup needed by restored UI state.
 
+import {applyWhileTyping} from '../core/live-entry.js';
 import {createToolbox} from "./toolbox.js";
 
 export function createToolboxUI({
@@ -73,6 +74,7 @@ export function createToolboxUI({
       try{ setAbsorptionThicknessFromTransmissionPercent(field?.value); }
       catch(err){ showError(err); updateAbsorptionCalculator(); }
     });
+    applyWhileTyping($('absorptionTransmission'),text=>{ try{ setAbsorptionThicknessFromTransmissionPercent(text); }catch(_e){} });
     $('absorptionTransmission')?.addEventListener('keydown',event=>{
       if(event.key==='Enter'){ event.preventDefault(); event.currentTarget.blur(); }
     });

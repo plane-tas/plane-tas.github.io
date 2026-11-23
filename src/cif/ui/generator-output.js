@@ -178,7 +178,7 @@ function loadParsedCifIntoGenerator(parsed,fileName="selected_structure.cif",{me
   fn.updateCifSpaceGroupInfo();
   if(parsed.magnetic) for(const [key,id] of Object.entries(cifState.CIF_LATTICE_FIELDS)) if($(id)) $(id).value=String(Number(Number(lattice[key]).toPrecision(10)));
   fn.invalidateGeneratedCif("");
-  if(message) fn.setCifGeneratorMessage(`Loaded ${fileName} for editing: #${sg.number} ${sg.hm}, ${parsed.asymmetricSites.length} asymmetric site(s). Open Structure to view it immediately, or press Generate to review the regenerated CIF and reflection table.`);
+  if(message) fn.setCifGeneratorMessage(`Loaded ${fileName}: #${sg.number} ${sg.hm}, ${parsed.asymmetricSites.length} site(s).`);
   fn.renderCifStructureIfVisible();
   return true;
 }
@@ -205,7 +205,7 @@ async function loadCifIntoGenerator(file){
     cifState.loadedGeneratorCifStructure=parsed;
     cifState.loadedGeneratorCifName=file.name;
     cifState.cifStructureSourcePreference="loaded";
-    fn.setCifGeneratorMessage(`Selected ${file.name} for Sample, CIF Generator, mCIF Generator and Neutron Attenuation. Loaded #${sg.number} ${sg.hm} for editing.`);
+    fn.setCifGeneratorMessage(`Selected ${file.name}: #${sg.number} ${sg.hm}.`);
   }else{
     // A CIF with an unusual space group can still be a valid shared source,
     // even if the standard-setting CIF Generator cannot edit it automatically.
