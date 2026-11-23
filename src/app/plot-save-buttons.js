@@ -5,6 +5,7 @@
 // their results table.  The TAS geometry also gets the Angle calculation
 // result above the drawing, and the Toolbox plots their conditions.
 import {saveQEFigure} from '../qe/qe-save-figure.js';
+import {enableWithPlot} from '../core/plot-bound-button.js';
 
 const FIGURES=[
   ['convMapEU','convolution-2d-E-U'],
@@ -64,11 +65,7 @@ function attachSaveButton(id,filename,onError){
   });
   // After Plotly's own container, so Plotly never replaces it.
   plot.appendChild(button);
-  // Usable only while a figure is drawn (not before a calculation, nor
-  // after it failed and the plot was cleared).
-  const sync=()=>{ button.disabled=!(plot._fullLayout && Array.isArray(plot.data) && plot.data.length); };
-  sync();
-  new MutationObserver(()=>{ sync(); requestAnimationFrame(sync); }).observe(plot,{childList:true,subtree:false});
+  enableWithPlot(button,plot);
 }
 
 export function initializePlotSaveButtons(onError=()=>{}){

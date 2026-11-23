@@ -75,6 +75,15 @@ export function createConvolutionUI(deps){
   // not overwrite them).
   const RANGE_IDS=['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
   const SCAN_INPUT_IDS=['convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1','convPoints1D'];
+  // Format: E1 … En, I1 … In ('block') or E1, I1, … En, In ('pair'); the
+  // index column is found from the column count.  Names of earlier versions
+  // (index / plain, -pair) are read by their -pair ending.
+  const normalFormat=v=>/pair$/.test(String(v||'')) ? 'pair' : 'block';
+  function formatValue(){
+    const el=$('convFormat'); if(!el) return 'block';
+    const v=normalFormat(el.value); if(el.value!==v) el.value=v;
+    return v;
+  }
   const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convGrid2D','convGrid1D','convIntegration2D','convIntegration1D','convCsvName2D','convCsvName1D'];
   // Calculation settings written into Save CSV and put back by Load CSV:
   // instrument (sidebar and Resolution instrument details), lattice,
@@ -92,7 +101,7 @@ export function createConvolutionUI(deps){
   const controlValue=el=>el.type==='checkbox' ? !!el.checked : el.value;
   function settingsSnapshot(dim){
     const pick=ids=>Object.fromEntries(ids.filter(id=>$(id)).map(id=>[id,controlValue($(id))]));
-    return {instrument:pick(INSTRUMENT_SETTING_IDS),convolution:pick(BOX_SETTING_IDS[dim]),dispersion:{file:fileName,format:$('convFormat')?.value||''}};
+    return {instrument:pick(INSTRUMENT_SETTING_IDS),convolution:pick(BOX_SETTING_IDS[dim]),dispersion:{file:fileName,format:formatValue()}};
   }
   // Put a snapshot back.  The instrument (and its type) first: selecting it
   // applies its defaults, which the saved values then overwrite.  Returns
@@ -109,6 +118,14 @@ export function createConvolutionUI(deps){
       el.value=String(v); fire(el); return true;
     };
     const inst={...(set.instrument||{})};
+    // The loaded CIF/mCIF stays only when its lattice is the one of the file
+    // (a, b, c, α, β, γ to three decimals); otherwise it is cleared, so its
+    // name is not shown with the lattice of the file.
+    const LATTICE=['a','b','c','alpha','beta','gamma'], cifClear=$('cifClearButton');
+    if(cifClear && !cifClear.disabled && LATTICE.every(id=>Number.isFinite(Number(inst[id])))){
+      const same=LATTICE.every(id=>Number(inst[id]).toFixed(3)===Number($(id)?.value).toFixed(3));
+      if(!same){ cifClear.click(); notes.push('CIF/mCIF cleared: its lattice differs from the file.'); }
+    }
     // Files saved with a Geometry (W / anti-W): it is part of the Sense now.
     if(inst.sense!==undefined && inst.geometry!==undefined){ inst.sense=readTasSense(inst.sense,inst.geometry); delete inst.geometry; }
     { const m=movedInstrument(inst.instrument,inst.instrumentType,[...($('instrument')?.options||[])].map(o=>o.value)); if(m){ inst.instrument=m.key; inst.instrumentType=m.type; } }
@@ -195,7 +212,7 @@ export function createConvolutionUI(deps){
     if(rec && typeof rec.text==='string' && !text){
       text=rec.text; fileName=rec.name||'';
       $('convFileName').value=fileName;
-      if(rec.format && [...$('convFormat').options].some(o=>o.value===rec.format)) $('convFormat').value=rec.format;
+      if(rec.format) $('convFormat').value=normalFormat(rec.format);
       restoring=true;
       try{ loadText(); }finally{ restoring=false; }
     }
@@ -233,7 +250,7 @@ export function createConvolutionUI(deps){
   function loadText(){
     if(!text) return;
     try{
-      data=parseDispersionTable(text,$('convFormat')?.value||'index');
+      data=parseDispersionTable(text,formatValue());
       interp=createDispersionInterpolator(data);
       tableKey++;
       // A 2D result or 1D scan already shown (calculated or loaded from a CSV)
@@ -243,11 +260,11 @@ export function createConvolutionUI(deps){
       // After a reload the saved entries win over the table defaults.
       if(!(restoring && savedInputsComplete(RANGE_IDS))) fillRanges();
       $('convResetRanges').disabled=false;
-      renderTableHead(); renderTableRows(true);
       const kind=interp.grid ? 'regular grid, trilinear interpolation' : 'scattered points, nearest point';
       $('convSummary').textContent=NOTE;
       $('convSummary').classList.remove('conv-error');
-      $('convTableInfo').textContent=`${fileName}: ${data.points.length} Q points, ${data.nBranch} branch${data.nBranch>1?'es':''} (${kind}); ${data.rows.length} rows × ${data.rows[0].length} columns.`;
+      fileInfo=`${fileName}: ${data.points.length} Q points, ${data.nBranch} branch${data.nBranch>1?'es':''} (${kind}); ${data.rows.length} rows × ${data.rows[0].length} columns.`;
+      exampleShown=false; showPreview();
       if(fileTag!==fileName){
         fileTag=fileName;
         const keep=restoring && savedInputsComplete(SCAN_INPUT_IDS);
@@ -284,8 +301,8 @@ export function createConvolutionUI(deps){
       $('convResetRanges').disabled=true;
       $('convSummary').textContent=err.message||String(err);
       $('convSummary').classList.add('conv-error');
-      $('convTableHead').replaceChildren(); $('convTableBody').replaceChildren();
-      $('convTableInfo').textContent='The file does not match the selected columns.';
+      fileInfo='The file does not match the selected columns.';
+      exampleShown=false; showPreview();
     }
   }
   async function loadFile(file){
@@ -293,8 +310,9 @@ export function createConvolutionUI(deps){
     if(!/\.(txt|dat|csv)$/i.test(file.name)){ $('convSummary').textContent='Select a .txt, .dat or .csv file.'; $('convSummary').classList.add('conv-error'); return; }
     text=await file.text(); fileName=file.name;
     $('convFileName').value=file.name;
+    exampleShown=false;
     loadText();
-    storeFile({name:fileName,format:$('convFormat')?.value,text});
+    storeFile({name:fileName,format:formatValue(),text});
   }
   // H, K, L: the loaded grid; ħω: the branch energies with a margin.
   function fillRanges(){
@@ -304,28 +322,136 @@ export function createConvolutionUI(deps){
       const bin=ax.length>1 ? (r.max-r.min)/(ax.length-1) : 0;
       $(`conv${n}min`).value=fmt(r.min,6); $(`conv${n}max`).value=fmt(r.max,6); $(`conv${n}bin`).value=fmt(bin,6);
     });
-    const pad=Math.max(1,0.2*(data.eMax-data.eMin));
-    $('convEmin').value=fmt(Math.floor((data.eMin-pad)*2)/2,3);
-    $('convEmax').value=fmt(Math.ceil((data.eMax+pad)*2)/2,3);
-    $('convEbin').value='0.2';
+    const e=energyDefaults();
+    $('convEmin').value=fmt(e.min,3); $('convEmax').value=fmt(e.max,3); $('convEbin').value=fmt(e.bin,3);
   }
+  // ħω range and bin (a guide): from the lowest branch energy − 1.5 FWHM to
+  // the highest + 1.5 FWHM (FWHM: energy resolution of the instrument now
+  // set, at the Q and ħω of that lowest / highest point), bin FWHM/3 at the
+  // lowest point (to three decimals).  min and max are multiples of the bin.
+  // Without a resolution there (point out of reach): a margin of 20 % of the
+  // energy span (at least 1 meV) and a bin of 0.2 meV.
+  function energyDefaults(){
+    let lo=null, hi=null;
+    for(const p of data.points) p.E.forEach(e=>{
+      if(!Number.isFinite(e)) return;
+      if(!lo || e<lo.E) lo={hkl:p.hkl,E:e};
+      if(!hi || e>hi.E) hi={hkl:p.hkl,E:e};
+    });
+    let fLo=NaN, fHi=NaN;
+    try{
+      const base=collectResolutionBase();
+      fLo=resolutionAt(base,lo.hkl,lo.E,{})?.widths?.E;
+      fHi=resolutionAt(base,hi.hkl,hi.E,{})?.widths?.E;
+    }catch(_e){}
+    const ok=w=>Number.isFinite(w) && w>0;
+    const pad=Math.max(1,0.2*(data.eMax-data.eMin));
+    const bin=ok(fLo) ? Math.max(0.001,Number((fLo/3).toFixed(3))) : 0.2;
+    const r3=v=>Number(v.toFixed(3));
+    const min=r3(Math.floor(((ok(fLo) ? lo.E-1.5*fLo : data.eMin-pad))/bin+1e-9)*bin);
+    const max=r3(Math.ceil(((ok(fHi) ? hi.E+1.5*fHi : data.eMax+pad))/bin-1e-9)*bin);
+    return {min,max,bin};
+  }
+  // A range that the bin does not divide: min and bin are kept and max is
+  // moved up to the next multiple of the bin (calculated range; max0: the
+  // entry).
   function ranges(){
     const out={};
     for(const n of ['H','K','L','E']){
       const lo=num(`conv${n}min`), hi=num(`conv${n}max`), bin=num(`conv${n}bin`);
       if(![lo,hi].every(Number.isFinite) || hi<lo) throw new Error(`Check the ${n==='E'?'ħω':n.toLowerCase()} min / max.`);
-      out[n]={min:lo,max:hi,bin:bin>0 ? bin : 0};
+      const steps=bin>0 ? Math.ceil((hi-lo)/bin-1e-6) : 0;
+      out[n]={min:lo,max:bin>0 ? Number((lo+steps*bin).toPrecision(12)) : hi,max0:hi,bin:bin>0 ? bin : 0};
     }
     if(!(out.E.bin>0) || !(out.E.max>out.E.min)) throw new Error('ħω needs max > min and a positive bin.');
     return out;
   }
 
-  // -------------------------------------------------------- table viewer --
-  function columnNames(){
-    const n=data.nBranch;
+  // ------------------------------------------------------------ example --
+  // Show example (next to Format): an example dispersion file (MnF2, (H,0,L)
+  // plane) in File preview, with its columns in the order selected in Format
+  // and without the optional index column.  It is only shown; Load example
+  // makes it the dispersion file, Save example downloads it.  Leaving File
+  // preview (or reading a file) ends it: File preview shows the file again.
+  const EXAMPLE_URL='examples/MnF2_disp_H0L.txt', EXAMPLE_NAME='MnF2_disp_H0L.txt';
+  const example={comments:null,rows:null,n:0,data:null,format:''};
+  let exampleShown=false, fileInfo='No file loaded.';
+  // The example text in a format: its comment lines (columns line rewritten)
+  // and the rows reordered from blocks (E1 … En, I1 … In) to pairs.
+  function exampleText(format){
+    const n=example.n, paired=format==='pair';
     const b=Array.from({length:n},(_,i)=>i+1);
-    const branches=data.paired ? b.flatMap(i=>[`E${i}`,`I${i}`]) : [...b.map(i=>`E${i}`),...b.map(i=>`I${i}`)];
-    return [data.offset ? 'index' : '#','H','K','L',...branches];
+    const names=paired ? b.flatMap(i=>[`E${i}`,`I${i}`]) : [...b.map(i=>`E${i}`),...b.map(i=>`I${i}`)];
+    const head=example.comments.map(l=>/^#\s*columns:/i.test(l) ? `# columns: h k l ${names.join(' ')}${n>1 ? '  (an index column first is also accepted)' : ''}` : l);
+    const body=example.rows.map(r=>{
+      const q=r.slice(0,3), E=r.slice(3,3+n), I=r.slice(3+n,3+2*n);
+      return [...q,...(paired ? E.flatMap((e,k)=>[e,I[k]]) : [...E,...I])].join('\t');
+    });
+    return [...head,...body].join('\n')+'\n';
+  }
+  async function readExample(){
+    if(example.rows) return;
+    const res=await fetch(EXAMPLE_URL);
+    if(!res.ok) throw new Error(`Example not found (${res.status}).`);
+    const lines=(await res.text()).split(/\r?\n/);
+    example.comments=lines.filter(l=>/^#/.test(l));
+    // Kept as the strings of the file (no rounding when reordered).
+    example.rows=lines.filter(l=>l.trim() && !/^#/.test(l)).map(l=>l.trim().split(/\s+/));
+    example.n=(example.rows[0].length-3)/2;
+  }
+  function exampleData(){
+    const f=formatValue();
+    if(example.format!==f){ example.data=parseDispersionTable(exampleText(f),f); example.format=f; }
+    return example.data;
+  }
+  // File preview: the information line and the table of what is shown.
+  function showPreview(){
+    const info=$('convTableInfo');
+    if(!info) return;
+    if(exampleShown){
+      exampleData();
+      const line=document.createElement('div');
+      line.className='convolution-example-line';
+      const say=document.createElement('span');
+      say.textContent=`Example ${EXAMPLE_NAME} (not loaded): ${example.rows.length} rows, columns as selected in Format.`;
+      const load=document.createElement('button'); load.type='button'; load.textContent='Load example';
+      load.addEventListener('click',loadExample);
+      const save=document.createElement('button'); save.type='button'; save.textContent='Save example';
+      save.addEventListener('click',()=>downloadText(exampleText(formatValue()),EXAMPLE_NAME,'text/plain'));
+      line.append(say,load,save);
+      const notes=document.createElement('div');
+      notes.className='convolution-example-notes';
+      notes.textContent=exampleText(formatValue()).split('\n').filter(l=>/^#/.test(l)).join('\n');
+      info.replaceChildren(line,notes);
+    }else info.textContent=fileInfo;
+    if(shown()){ renderTableHead(); renderTableRows(true); }
+    else{ $('convTableHead')?.replaceChildren(); $('convTableBody')?.replaceChildren(); }
+  }
+  async function showExample(){
+    try{ await readExample(); }
+    catch(err){ $('convTableInfo').textContent=`Show example: ${err.message||err}`; return; }
+    exampleShown=true;
+    showConvTab('data');
+    showPreview();
+  }
+  // Load example: the example (in the selected format) becomes the
+  // dispersion file, as if it had been selected.
+  function loadExample(){
+    text=exampleText(formatValue()); fileName=EXAMPLE_NAME;
+    $('convFileName').value=fileName;
+    exampleShown=false;
+    loadText();
+    storeFile({name:fileName,format:formatValue(),text});
+  }
+
+  // -------------------------------------------------------- table viewer --
+  // File preview: the loaded table, or the example while it is shown.
+  const shown=()=>exampleShown ? example.data : data;
+  function columnNames(){
+    const d=shown(), n=d.nBranch;
+    const b=Array.from({length:n},(_,i)=>i+1);
+    const branches=d.paired ? b.flatMap(i=>[`E${i}`,`I${i}`]) : [...b.map(i=>`E${i}`),...b.map(i=>`I${i}`)];
+    return [d.offset ? 'index' : '#','H','K','L',...branches];
   }
   function renderTableHead(){
     const tr=document.createElement('tr');
@@ -334,18 +460,18 @@ export function createConvolutionUI(deps){
   }
   const cell=v=>{ const a=Math.abs(v); return v===0 ? '0' : (a>=1e-3 && a<1e5 ? String(Number(v.toPrecision(6))) : v.toExponential(3)); };
   function renderTableRows(reset=false){
-    const body=$('convTableBody'), box=$('convTableScroll');
-    if(!data || !body || !box) return;
+    const body=$('convTableBody'), box=$('convTableScroll'), d=shown();
+    if(!d || !body || !box) return;
     if(reset) box.scrollTop=0;
-    const total=data.rows.length, cols=columnNames().length;
+    const total=d.rows.length, cols=columnNames().length;
     const first=Math.max(0,Math.floor(box.scrollTop/ROW_HEIGHT)-10);
     const count=Math.ceil((box.clientHeight||400)/ROW_HEIGHT)+20;
     const last=Math.min(total,first+count);
     const spacer=h=>{ const tr=document.createElement('tr'); tr.className='convolution-spacer'; const td=document.createElement('td'); td.colSpan=cols; td.style.height=`${h}px`; tr.appendChild(td); return tr; };
     const rows=[spacer(first*ROW_HEIGHT)];
     for(let i=first;i<last;i++){
-      const r=data.rows[i], tr=document.createElement('tr');
-      const values=data.offset ? r : [i+1,...r];
+      const r=d.rows[i], tr=document.createElement('tr');
+      const values=d.offset ? r : [i+1,...r];
       for(const v of values){ const td=document.createElement('td'); td.textContent=cell(v); tr.appendChild(td); }
       rows.push(tr);
     }
@@ -508,13 +634,28 @@ export function createConvolutionUI(deps){
     message(id,text);
     if(keepFill && fill){ el.style.setProperty('--conv-progress',fill); el.classList.add('convolution-progress-on'); }
   }
-  // Stop: the 2D result is discarded (the previous maps stay).
-  function stop2D(){ run2D++; cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); statusEnd('convMessage2D','Stopped',true); }
+  // No 2D result (failed or stopped run): the maps of the previous
+  // conditions are not left on screen, and Save CSV and the slice sliders
+  // go off with them.  A warning (part of the map out of reach, ...) still
+  // keeps its result.
+  function clear2DResult(){
+    volume=null;
+    for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(plotly()) Plotly.purge(id); }catch(_e){} }
+    $('convDownload2D').disabled=true;
+    for(const key of ['U','V','E']){ const s=$(`convSlider${key}`); if(s) s.disabled=true; }
+    // No result: the colour-scale boxes are automatic again.
+    for(const end of ['min','max']){ const el=$(`convZ${end}`); if(el){ el.placeholder='auto'; if(zlim[end]===null) el.value=''; } }
+  }
+  // Stop: the 2D result is discarded, and so are the previous maps.
+  function stop2D(){ run2D++; cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); clear2DResult(); statusEnd('convMessage2D','Stopped',true); }
   async function calculate2D(){
     if(busy2D){ stop2D(); return; }
     const id=++run2D;
     try{
       const P=prepare2D();
+      // A max moved up to a multiple of the bin is shown in its entry.
+      for(const n of ['H','K','L','E']) if(P.rg[n].max!==P.rg[n].max0){ const el=$(`conv${n}max`); if(el) el.value=fmt(P.rg[n].max,6); }
+      saveInputs();
       const {A,Bv,E,plane}=P;
       const settings=settingsSnapshot('2D');
       busy2D=true; setRunning('convCalculate2D',true);
@@ -534,7 +675,7 @@ export function createConvolutionUI(deps){
       if(!out) out=await run2DOn(id,pageRunner(id),P);
       if(id!==run2D || !out) return;
       finish2D(A,Bv,E,out,plane,settings);
-    }catch(err){ if(id===run2D){ cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); message('convMessage2D',err.message||String(err),true); } }
+    }catch(err){ if(id===run2D){ cancelJobs(); busy2D=false; setRunning('convCalculate2D',false); clear2DResult(); message('convMessage2D',err.message||String(err),true); } }
   }
   function finish2D(A,Bv,E,I,plane,settings){
     busy2D=false; setRunning('convCalculate2D',false);
@@ -632,7 +773,7 @@ export function createConvolutionUI(deps){
   async function run2DOn(id,R,P){
     const {base,rg,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
     const gridMode=integrationMode('2D')==='grid';
-    R.broadcast({type:'table',key:tableKey,text,format:$('convFormat')?.value||'index'});
+    R.broadcast({type:'table',key:tableKey,text,format:formatValue()});
     R.broadcast({type:'base',base});
     const items=[];  // per row: [{ia,hkl}] inside the range
     for(let ib=0;ib<Bv.length;ib++){
@@ -1198,7 +1339,7 @@ export function createConvolutionUI(deps){
       busy1D=false; setRunning('convCalculate1D',false);
       // Stop: the points calculated so far become the current scan.
       if(stopped){
-        if(!I.length){ statusEnd('convStatus1D','Stopped',true); return; }
+        if(!I.length){ clearCurrentScan(); statusEnd('convStatus1D','Stopped',true); return; }
         const total=sc.pts.length;
         sc.pts=sc.pts.slice(0,I.length);
         sc.label+=` (stopped at ${I.length} of ${total} points)`;
@@ -1214,8 +1355,12 @@ export function createConvolutionUI(deps){
       message('convMessage1D',notes.join(' '),stats.outside>0.05 || off.length>0);
       if(stopped) statusEnd('convStatus1D',`Stopped (${I.length} points)`,true);
       else{ message('convStatus1D','Completed'); setFill('convStatus1D',1); $('convStatus1D')?.classList.add('convolution-progress-on'); }
-    }catch(err){ if(id===run1D){ busy1D=false; setRunning('convCalculate1D',false); message('convStatus1D',''); message('convMessage1D',err.message||String(err),true); } }
+    }catch(err){ if(id===run1D){ busy1D=false; setRunning('convCalculate1D',false); clearCurrentScan(); message('convStatus1D',''); message('convMessage1D',err.message||String(err),true); } }
   }
+  // No 1D result (failed run, or stopped before the first point): the curve
+  // of the previous conditions goes; the kept curves stay (Save CSV and Save
+  // figure follow the curves left).  A warning still keeps its curve.
+  function clearCurrentScan(){ if(!scan) return; scan=null; refreshKept(); }
   const AXIS_NAMES=['H (r.l.u.)','K (r.l.u.)','L (r.l.u.)','ħω (meV)'];
   const PALETTE=['#1f77b4','#d62728','#2ca02c','#9467bd','#ff7f0e','#8c564b','#e377c2','#17becf','#7f7f7f','#bcbd22'];
   // Normalize (check box under the 1D plot): every curve divided by its own
@@ -1466,8 +1611,8 @@ export function createConvolutionUI(deps){
     downloadText(lines.join('\n')+'\n',csvName(curves.find(c=>c.settings?.dispersion?.file)?.settings.dispersion.file||fileName,'1d'),'text/csv');
   }
 
-  // 2D volume: one row per (h, k, l, ħω) point inside the range, with the
-  // index column when the selected Format has one.
+  // 2D volume: one row per (h, k, l, ħω) point inside the range, with an
+  // index column when the dispersion file has one.
   function downloadVolume(){
     if(!volume) return;
     const {A,B,E,I,plane}=volume, nA=A.length, nE=E.length;
@@ -1597,12 +1742,8 @@ export function createConvolutionUI(deps){
     const name=$(`convLoad${dim}Name`)?.title||'';
     if(dim==='2D'){
       if(volume && volume.source===name){
-        volume=null;
-        for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(plotly()) Plotly.purge(id); }catch(_e){} }
-        $('convDownload2D').disabled=true;
+        clear2DResult();
         message('convMessage2D','');
-        // No result: the colour-scale boxes are automatic again.
-        for(const end of ['min','max']){ const el=$(`convZ${end}`); if(el){ el.placeholder='auto'; if(zlim[end]===null) el.value=''; } }
       }
     }else{
       const n=kept.length;
@@ -1645,6 +1786,8 @@ export function createConvolutionUI(deps){
   function showConvTab(name){
     const tabs={data:['convTabData','convPaneData'],'2d':['convTab2D','convPane2D'],'1d':['convTab1D','convPane1D']};
     if(!tabs[name]) name='2d';
+    // The example is shown only until File preview is left.
+    if(name!=='data' && exampleShown){ exampleShown=false; showPreview(); }
     for(const [key,[tab,pane]] of Object.entries(tabs)){
       const on=key===name;
       $(tab)?.classList.toggle('active',on); $(tab)?.setAttribute('aria-selected',String(on));
@@ -1682,7 +1825,13 @@ export function createConvolutionUI(deps){
     const file=$('convFile');
     $('convSelectFile')?.addEventListener('click',()=>file?.click());
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; loadFile(f); });
-    $('convFormat')?.addEventListener('change',()=>{ loadText(); if(text) storeFile({name:fileName,format:$('convFormat').value,text}); });
+    $('convFormat')?.addEventListener('change',()=>{
+      const wasExample=exampleShown;
+      loadText(); if(text) storeFile({name:fileName,format:formatValue(),text});
+      // The example follows the selected order while it is shown.
+      if(wasExample){ exampleShown=true; showPreview(); }
+    });
+    $('convShowExample')?.addEventListener('click',showExample);
     restoreFile();
     $('convResetRanges')?.addEventListener('click',()=>{ if(interp){ fillRanges(); saveInputs(); } });
     // Approximation: the same setting as Simulation.

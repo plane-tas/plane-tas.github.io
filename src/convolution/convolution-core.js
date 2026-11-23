@@ -19,12 +19,14 @@ const TWO_PI=2*Math.PI;
 
 // ---------------------------------------------------------------- parsing --
 // One row per Q point (comment lines start with # % ! ;):
-//   'index':      index h k l E1 … En I1 … In
-//   'plain':      h k l E1 … En I1 … In
-//   'index-pair': index h k l E1 I1 … En In
-//   'plain-pair': h k l E1 I1 … En In
-// n (the number of branches) follows from the column count.
-export function parseDispersionTable(text,format='index'){
+//   'block': [index] h k l E1 … En I1 … In
+//   'pair':  [index] h k l E1 I1 … En In
+// The index column (ignored) is optional: with it the row has 4 + 2n
+// columns (even), without it 3 + 2n (odd), so the column count tells.
+// n (the number of branches) follows from the column count.  Earlier format
+// names ('index', 'plain', 'index-pair', 'plain-pair') are still read: only
+// their -pair ending counts.
+export function parseDispersionTable(text,format='block'){
   const rows=[];
   for(const raw of String(text).split(/\r?\n/)){
     const line=raw.trim();
@@ -37,12 +39,13 @@ export function parseDispersionTable(text,format='index'){
     rows.push(nums);
   }
   if(!rows.length) throw new Error('No numeric rows found.');
-  const off=format.startsWith('plain') ? 0 : 1, paired=format.endsWith('-pair');
+  const paired=/pair$/.test(String(format));
   const ncol=rows[0].length;
   if(rows.some(r=>r.length!==ncol)) throw new Error('All rows must have the same number of columns.');
+  const off=ncol%2===0 ? 1 : 0;
   const rest=ncol-off-3;
-  const layout=`${off ? 'index, ' : ''}h, k, l, ${paired ? 'E1, I1, … En, In' : 'E1 … En, I1 … In'}`;
-  if(rest<2 || rest%2) throw new Error(`${ncol} columns do not match "${layout}" (needs ${off+3} + 2n columns).`);
+  const layout=`(index,) h, k, l, ${paired ? 'E1, I1, … En, In' : 'E1 … En, I1 … In'}`;
+  if(rest<2) throw new Error(`${ncol} columns do not match "${layout}" (needs at least 5 columns).`);
   const n=rest/2;
   const points=rows.map(r=>({hkl:r.slice(off,off+3),
     E:paired ? Array.from({length:n},(_,b)=>r[off+3+2*b]) : r.slice(off+3,off+3+n),

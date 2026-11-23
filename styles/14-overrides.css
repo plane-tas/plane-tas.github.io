@@ -779,10 +779,16 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* One card: file row, note, then the Preview / 2D slice / 1D cut tabs
    (each with its calculation condition) filling the rest. */
 .convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column}
-.convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
+/* Dispersion file | Format | Show example. */
+.convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr) auto;gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
 .convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
 .convolution-file button{white-space:nowrap;flex:0 0 auto}
 .convolution-file input{flex:1 1 auto;min-width:0}
+/* File preview of the example: what it is, Load / Save, then its comment
+   lines (model, lattice, scattering plane, grid, columns). */
+.convolution-example-line{display:flex;flex-wrap:wrap;align-items:center;gap:calc(8px * var(--tas-density))}
+.convolution-example-line button{flex:none}
+.convolution-example-notes{white-space:pre-wrap;margin-top:calc(4px * var(--tas-density));color:inherit}
 .convolution-summary{font-size:max(13px,calc(16px * var(--tas-density)));color:inherit;margin:0 0 calc(6px * var(--tas-density))}
 .convolution-summary.conv-error,.convolution-message.conv-error{color:#b00020}
 .convolution-box{min-width:0;margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));display:flex;flex-direction:column;gap:calc(6px * var(--tas-density))}
@@ -870,7 +876,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-table td{padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;line-height:22px}
 .convolution-table tr.convolution-spacer td{padding:0;line-height:0}
 @media(max-width:1100px){
-  .convolution-row{grid-template-columns:1fr 1fr}
+  .convolution-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
   .convolution-plots{grid-template-columns:1fr}
   .convolution-plot{height:calc(360px * var(--tas-density))}
   .convolution-scan-layout>.convolution-scan-plotbox{flex:none}
@@ -882,6 +888,15 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* Narrow screens: 2D data above 1D data (each full width) so the range
    values and the 1D "ini fin bin" entries stay readable on one row. */
 .convolution-file-card{container-type:inline-size}
+/* Show example beside Format: one height for the boxes and buttons of the
+   row (that of the Format box). */
+#resolutionConvolutionPane .convolution-file-row :is(select,button,input){height:2.25em;box-sizing:border-box}
+#resolutionConvolutionPane .convolution-file-row>button{white-space:nowrap}
+/* Narrow: Dispersion file above Format and Show example. */
+@container (max-width:560px){
+  .convolution-file-card .convolution-row{grid-template-columns:minmax(0,1fr) auto}
+  .convolution-file-card .convolution-row>label:first-child{grid-column:1/-1}
+}
 /* Convolution: estimated time, Stop state, data curves. */
 .convolution-box-foot>*{flex:none}
 .convolution-estimate{margin-left:auto;color:inherit;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -957,16 +972,19 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Calculate and Stop the same width, so the progress bar does not move. */
 #resolutionConvolutionPane button.convolution-calc{min-width:6.5em}
 
-/* Calculate row: equal columns — approximation, integration, range / points,
-   estimate, Calculate, progress bar (Keep is in the table of curves).  The
-   progress bar is always there (empty frame), so nothing moves when it fills. */
-#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) max-content max-content repeat(2,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
-/* (The third and fourth columns, Grid spacing / Monte Carlo points with their accuracy and the estimated time, take the width of their text.) */
+/* Calculate row: six equal columns — approximation, integration, spacing /
+   points, estimate, Calculate, progress bar (Keep is in the table of
+   curves).  Equal widths that do not depend on the text, so nothing moves
+   when Grid / Monte Carlo or the estimate changes.  The progress bar is
+   always there (empty frame), so nothing moves when it fills. */
+#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:center}
 .convolution-box-head .convolution-integration{display:contents}
 .convolution-box-head>select,.convolution-box-head .convolution-integration>select,.convolution-box-head>button{width:100%;min-width:0}
 .convolution-box-head .convolution-integration-detail{min-width:0}
 .convolution-box-head .convolution-integration-detail>*{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .convolution-box-head .convolution-integration-detail label{display:flex;align-items:center;gap:calc(4px * var(--tas-density));min-width:0}
+/* Spacing / points: the select fills its column after the caption. */
+#resolutionConvolutionPane .convolution-box-head .convolution-integration-detail select{flex:1 1 0;width:auto;min-width:0}
 .convolution-box-head .convolution-integration-detail input{flex:1 1 0;width:auto;min-width:2.5em}
 .convolution-box-head .convolution-estimate{margin:0;min-width:0;white-space:normal;line-height:1.2}
 #resolutionConvolutionPane .convolution-box-head .convolution-status{min-width:0;width:100%;text-align:center;padding:calc(2px * var(--tas-density)) calc(6px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums;min-height:calc(1.6em);box-sizing:border-box}
@@ -974,10 +992,17 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Save figure at the top-left of the 1D plot. */
 .convolution-scan-layout{position:relative}
 .convolution-scan-plotbox>.convolution-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:2}
-/* Narrow: the Calculate row in two lines (4 equal columns). */
+/* Narrower: the Calculate row in two lines (3 equal columns), as soon as
+   six columns would cut the spacing text ("σ/4 (29³) 0.2–3%"); very
+   narrow: two columns. */
 .convolution-tab-pane>.convolution-box{container-type:inline-size}
-@container (max-width:720px){
-  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(2,minmax(0,1fr)) max-content minmax(0,1fr)}
+@container (max-width:1140px){
+  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@container (max-width:560px){
+  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* Spacing / points and the progress bar take a whole line. */
+  #resolutionConvolutionPane .convolution-box-head :is(.convolution-integration-detail,.convolution-status){grid-column:1/-1}
 }
 /* ".csv" at the same size as the CIF output ".cif". */
 #resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}

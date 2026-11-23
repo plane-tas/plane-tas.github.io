@@ -190,6 +190,7 @@ export function installResolutionComparison(ctx){
     if(nav){
       nav.classList.toggle('scan-nav-off',singleMode() || scanGraph!=='slider');
       nav.classList.remove('hidden');
+      // Also when every point failed: each point shows its own reason.
       const has=!singleMode() && (shared.scanResults||[]).length>0;
       for(const id of ['prev','next','scanSlider']) if($(id)) $(id).disabled=!has;
       if(!has && $('scanIndex')) $('scanIndex').textContent='– / –';

@@ -1,6 +1,7 @@
 // CIF Generator startup (space-group data, restore) and event wiring.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {fetchJsonOnce} from '../../app/data-loader.js';
+import {enableWithPlot} from '../../core/plot-bound-button.js';
 export function installGeneratorInit(ctx){
   const {deps:{
     $, getSelectedCifFileName, getSelectedCifStructure, getSelectedCifText, updateModeVisibility
@@ -268,6 +269,7 @@ async function initializeCifGenerator(){
     fn.initializeReflectionTable();
     fn.initializeGeneratorTableOutsideClick();
     $("tabCifGenerator")?.addEventListener("click",()=>requestAnimationFrame(fn.renderCifStructureIfVisible));
+    enableWithPlot($("cifSaveFigure"),$("cifStructurePlot"));
     if($("cifSaveFigure")) $("cifSaveFigure").onclick=()=>fn.saveStructureFigure().catch(err=>{fn.setCifGeneratorMessage?.(`Save figure failed: ${err?.message||err}`,true);});
     
     const unitCellSelect=$("cifUnitCellMode");

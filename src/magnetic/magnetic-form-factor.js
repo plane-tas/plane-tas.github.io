@@ -211,6 +211,7 @@ export function initializeMagneticFormFactorUI(){
       if(fField && document.activeElement!==fField) fField.value=fmt(f);
       exportRows=grid.map((x,i)=>[x,curve[i].f,values[i]]);
       download.disabled=false;
+      qSlider.disabled=false;
       syncCsvNameTemplate($('magffCsvName'),magffCsvBase());
       if(window.Plotly && plot && !plot.closest('.hidden')){
         // f(Q) can turn negative at large Q; extend the axis below 0 only then.
@@ -236,6 +237,9 @@ export function initializeMagneticFormFactorUI(){
       }
     }catch(error){
       exportRows=[];setError(error);
+      // The Q slider reads a value off the curve: usable only with a curve.
+      // (Set only here and on success, never toggled during a drag.)
+      qSlider.disabled=true;
       if(window.Plotly&&plot&&!plot.closest('.hidden'))window.Plotly.purge(plot);
     }
   }

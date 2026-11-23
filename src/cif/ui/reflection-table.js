@@ -378,6 +378,9 @@ function renderReflectionPowderPlot(){
   const xs=tth.map(conv);
   const hkl=h=>`(${h.map(v=>Number(Number(v).toFixed(4))).join(' ')})`;
   const hover=label=>`${xTitle.split(' ')[0]} = %{x:.4f}<br>${label} = %{y:.4g}<extra></extra>`;
+  // Every peak outside the displayed 2θ range: nothing to draw or save (not
+  // an empty frame with an all-zero pattern behind Save CSV).
+  if(!hasN && !hasM){ setPowderPattern(null); window.Plotly.purge(plot); plot.textContent='No powder reflections in the selected range.'; return; }
   // Patterns: total (N + M), nuclear and magnetic, overlaid.
   const traces=[];
   if(hasN && hasM) traces.push({x:xs,y:shown(yT),type:'scatter',mode:'lines',name:'N + M',line:{width:2,color:'#1f4e8c'},hovertemplate:hover('I')});

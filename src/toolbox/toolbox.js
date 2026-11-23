@@ -682,13 +682,13 @@ export function createToolbox({
     absorptionCsvRows=[];
     if(download)download.disabled=true;
     if(!host || !status || !energyField || !lambdaField || !thicknessEntry || !thicknessSlider || !transmissionOut) return;
-    // The thickness slider works only with a result (enabled again below).
-    thicknessSlider.disabled=true;
 
     const lambda=attenuationWavelengthA();
     status.value=selectedCifFileName || selectedCifStructure?.name || 'No CIF/mCIF selected';
 
     if(inputMode==='cif' && !selectedCifStructure){
+      // No result: the thickness slider has nothing to read off.
+      thicknessSlider.disabled=true;
       transmissionOut.value='';
       host.innerHTML='';
       if(plot && window.Plotly) Plotly.purge(plot);
@@ -795,6 +795,7 @@ export function createToolbox({
         },{responsive:true,displaylogo:false});
       }
     }catch(err){
+      thicknessSlider.disabled=true;
       transmissionOut.value='';
       host.innerHTML=`<div class="absorption-warning">${String(err?.message||err)}</div>`;
       if(plot && window.Plotly) Plotly.purge(plot);

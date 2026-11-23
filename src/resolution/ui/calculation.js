@@ -146,21 +146,17 @@ function doScanResolution(){
     });
     const valid=shared.scanResults.filter(e=>!e.failed);
     $('calcScanResolution')?.classList.remove('needs-calc');
-    if(!valid.length){
-      $('scanNav')?.classList.add('hidden');
-      shared.scanResolutionPlotLimits=null;
-      showResolutionNotCalculable(`No point of this scan can be calculated: ${shared.scanResults[0].message}`,shared.scanResults[0].calc,'(no point of the scan)');
-      return;
-    }
     // Use the largest required extent across the complete scan.  This is
     // especially important for constant-E Q scans, where the ellipse shape can
     // change strongly with Q; the slider must not rescale the plot underneath it.
-    shared.scanResolutionPlotLimits=fn.resolutionFrameLimits(valid);
+    // No point calculable: the scan still opens (empty graphs), so that the
+    // slider shows each point and its own reason.
+    shared.scanResolutionPlotLimits=valid.length ? fn.resolutionFrameLimits(valid) : null;
     $('scanSlider').min=1;
     $('scanSlider').max=n;
     $('scanNav').classList.remove('hidden');
     // Open on the first point that could be calculated.
-    renderResolutionScan(shared.scanResults.indexOf(valid[0])+1);
+    renderResolutionScan(valid.length ? shared.scanResults.indexOf(valid[0])+1 : 1);
   }catch(e){
     shared.scanResolutionPlotLimits=null;
     showResolutionCalculationWarning(e);

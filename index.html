@@ -440,18 +440,17 @@
 <div class="convolution-row convolution-file-row">
 <label for="convFileName">Dispersion file<span class="convolution-file"><button id="convSelectFile" type="button">Select file</button><input id="convFileName" data-no-persist="" type="text" readonly placeholder=".txt, .dat or .csv" aria-label="Dispersion file name"/></span></label>
 <label>Format<select id="convFormat">
-<option value="index">index, h, k, l, E1 … En, I1 … In</option>
-<option value="plain">h, k, l, E1 … En, I1 … In</option>
-<option value="index-pair">index, h, k, l, E1, I1, … En, In</option>
-<option value="plain-pair">h, k, l, E1, I1, … En, In</option>
+<option value="block">(index,) h, k, l, E1 … En, I1 … In</option>
+<option value="pair">(index,) h, k, l, E1, I1, … En, In</option>
 </select></label>
+<button id="convShowExample" type="button" title="Show an example dispersion file (MnF2) in File preview">Show example</button>
 <input id="convFile" type="file" accept=".txt,.dat,.csv" hidden/>
 </div>
 <div class="convolution-note"><div class="convolution-summary" id="convSummary">Intensities are S(Q,ω); R0/Rmon (normalisation to monitor counts) is applied automatically.</div>
 <div class="convolution-summary convolution-guide">Dispersion table (resolution FWHM): range ≥ calculation range ± 1.5 FWHM, step ≤ FWHM/6.</div></div>
 <div class="convolution-tab-wrap">
 <div aria-label="Convolution view" class="geometry-card-tabs convolution-tabs" role="tablist">
-<button aria-controls="convPaneData" aria-selected="false" class="geometry-card-tab" id="convTabData" data-conv-tab="data" role="tab" type="button">Preview file</button>
+<button aria-controls="convPaneData" aria-selected="false" class="geometry-card-tab" id="convTabData" data-conv-tab="data" role="tab" type="button">File preview</button>
 <button aria-controls="convPane2D" aria-selected="true" class="geometry-card-tab active" id="convTab2D" data-conv-tab="2d" role="tab" type="button">2D slice</button>
 <button aria-controls="convPane1D" aria-selected="false" class="geometry-card-tab" id="convTab1D" data-conv-tab="1d" role="tab" type="button">1D cut</button>
 </div>
