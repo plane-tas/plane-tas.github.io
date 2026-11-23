@@ -11,7 +11,7 @@ export const fmt=fixedText;
 // Columns, in display order.  `on`: shown by default.
 export const LEGEND_COLS=[
   {id:'pos',head:'(H, K, L)',on:true},{id:'hw',head:'ħω',on:true},
-  {id:'inst',head:'Instrument',on:false},{id:'sense',head:'Sense',on:true},
+  {id:'inst',head:'Inst.',on:false},{id:'sense',head:'Sense',on:true},
   {id:'fixed',head:'Fixed',on:true},
   {id:'mono',head:'Mono',on:false},{id:'ana',head:'Ana',on:false},
   {id:'focus',head:'Ana HF',on:true},{id:'col',head:'Collimator',on:true},

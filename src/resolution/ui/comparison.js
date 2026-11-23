@@ -339,8 +339,8 @@ export function installResolutionComparison(ctx){
     body.closest('table')?.classList.toggle('scan',scan);
     const cell=(tag,text,attrs={})=>{ const c=document.createElement(tag); c.textContent=text; for(const [k,v] of Object.entries(attrs)) c.setAttribute(k,v); return c; };
     const show=shown();
-    // The position (h, k, l, ħω) is always shown, right of the colour; the
-    // groups condition / resolution / R matrix as chosen in Show.
+    // The position (h, k, l, ħω) right of the colour, then the groups
+    // resolution / condition / R matrix as chosen in Show.
     const nPos=show.position ? 1 : 0, nCond=show.condition ? 4 : 0, nRes=show.widths ? 4 : 0, nMat=show.matrix ? 1 : 0, nData=nCond+nRes+nMat;
     // Columns after the button and colour, for Save figure: [group, label, monospace].
     tableColumns=nPos ? [['','position',false]] : [];
@@ -364,15 +364,16 @@ export function installResolutionComparison(ctx){
       }
       r1.appendChild(cell('th','',{rowspan:span,class:'cmp-index'}));
       if(nPos) r1.appendChild(cell('th','position',{rowspan:span,class:'cmp-position'}));
-      if(nCond){
-        r1.appendChild(cell('th','condition',{colspan:'4',class:'cmp-group'}));
-        for(const name of ['Inst.','monochromator','analyzer','collimator']){ r2.appendChild(cell('th',name)); tableColumns.push(['condition',name,false]); }
-      }
       if(nRes){
         r1.appendChild(cell('th',`resolution (${qUnit})`,{colspan:'4',class:'cmp-group cmp-res-start'}));
         // U, V, E, W: the order of the R matrix (Q∥, Q⊥in, E, Q⊥out).
         const names=[axis(ax?.U,'U'),axis(ax?.V,'V'),'δħω (meV)',axis(ax?.W,'W')];
         names.forEach((name,i)=>{ r2.appendChild(cell('th',name,i ? {} : {class:'cmp-res-start'})); tableColumns.push([`resolution (${qUnit})`,name,false]); });
+      }
+      // After the widths (what is compared), the condition that gave them.
+      if(nCond){
+        r1.appendChild(cell('th','condition',{colspan:'4',class:'cmp-group cmp-res-start'}));
+        ['Inst.','monochromator','analyzer','collimator'].forEach((name,i)=>{ r2.appendChild(cell('th',name,i ? {} : {class:'cmp-res-start'})); tableColumns.push(['condition',name,false]); });
       }
       if(nMat){
         r1.appendChild(cell('th','R matrix (Å⁻¹, meV)',{class:'cmp-group cmp-res-start'}));
@@ -428,13 +429,13 @@ export function installResolutionComparison(ctx){
       tr.appendChild(idx);
       if(nPos) tr.appendChild(td(k.condition.point,'cmp-cond cmp-col cmp-position'));
       }
-      if(nCond){
-        tr.appendChild(td(k.condition.inst||k.instrumentName,'cmp-cond cmp-col'));
-        for(const key of ['mono','ana','col']) tr.appendChild(td(k.condition[key],'cmp-cond cmp-col'));
-      }
       if(nRes){
         const d=frameFor(k.entry.result,k.coords).display, w=(a,b)=>`${a.toFixed(4)} (${b.toFixed(4)})`;
         tr.append(td(w(d.U,d.Ucoh),'cmp-num cmp-res cmp-res-start'),td(w(d.V,d.Vcoh),'cmp-num cmp-res'),td(w(d.E,d.Ecoh),'cmp-num cmp-res'),td(w(d.W,d.Wcoh),'cmp-num cmp-res'));
+      }
+      if(nCond){
+        tr.appendChild(td(k.condition.inst||k.instrumentName,'cmp-cond cmp-col cmp-res-start'));
+        for(const key of ['mono','ana','col']) tr.appendChild(td(k.condition[key],'cmp-cond cmp-col'));
       }
       if(nMat) tr.appendChild(td(matrixCell(matrixFor(k.entry.result)),'cmp-mat cmp-res-start'));
       body.appendChild(tr);
