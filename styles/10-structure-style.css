@@ -69,42 +69,27 @@
 
 /* v54 patch: match Structure settings to View, and emphasize all tab labels. */
 #structurePanel .structure-config-section > .structure-section-title{
-  font-size:calc(15px * var(--tas-density));
   font-weight:700;
   line-height:normal;
   margin:0 0 calc(8px * var(--tas-density));
 }
 #cifGeneratorPanel .cif-generator-source-section .cif-generator-file-name{
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
   line-height:1.35;
 }
 #structurePanel .generator-shared-file button{
   box-sizing:border-box;
   min-height:calc(36px * var(--tas-density));
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
 }
-#structurePanel .generator-shared-file .cif-file-name{min-width:0;font-size:calc(14px * var(--tas-density));}
-#structurePanel .generator-mode-pane .cif-generator-file-name{
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
-}
+#structurePanel .generator-shared-file .cif-file-name{min-width:0;}
 #structurePanel .generator-unified-output-tabs > .cif-output-tab{
   display:flex;align-items:center;justify-content:center;
   min-height:calc(46px * var(--tas-density));
   padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
   white-space:normal;
   overflow-wrap:anywhere;
-  font-size:calc(14px * var(--tas-density));
   line-height:1.25;
-  font-weight:700;
   border:calc(1px * var(--tas-density)) solid transparent;
   border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
-}
-#structurePanel .generator-structure-view-controls .structure-entry-label{
-  font-size:calc(12px * var(--tas-density));
-  font-weight:600;
 }
 @container generator-unified (max-width:660px){
   #structurePanel .generator-structure-view-controls .cif-structure-view-buttons,
@@ -141,10 +126,10 @@
 #structurePanel .atoms-table-head span:not(:first-child){text-align:center;}
 #structurePanel .atoms-table-row{padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #e8ebef;min-height:calc(36px * var(--tas-density));}
 #structurePanel .atoms-row-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font:inherit;}
-#structurePanel button.atoms-row-name{background:none;border:0;padding:calc(3px * var(--tas-density));cursor:pointer;font-weight:650;color:inherit;}
+#structurePanel button.atoms-row-name{background:none;border:0;padding:calc(3px * var(--tas-density));cursor:pointer;color:inherit;}
 #structurePanel .atoms-visible{justify-self:center;margin:0;}
 #structurePanel .atoms-color{width:calc(33px * var(--tas-density));height:calc(27px * var(--tas-density));min-width:0;padding:calc(1px * var(--tas-density));justify-self:center;cursor:pointer;}
-#structurePanel .atoms-size{width:100%;min-width:0;box-sizing:border-box;font-size:calc(12px * var(--tas-density));padding:calc(4px * var(--tas-density));}
+#structurePanel .atoms-size{width:100%;min-width:0;box-sizing:border-box;padding:calc(4px * var(--tas-density));}
 
 /* Atoms: twelve always-visible preset colors (6 x 2), plus independent RGB picker. */
 #structurePanel .atoms-color-cell{
@@ -229,8 +214,6 @@
   line-height:1.3;
 }
 
-@container structure-viewer (max-width:360px){
-}
 
 /* Style: preserve the original select/distance/width allocations.  Only the
    colour swatch and Remove column need adjustment.  The old stable scrollbar
@@ -503,7 +486,6 @@
 #cifGeneratorPanel .cif-thermal-atom-name{
   display:block;max-width:100%;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-size:calc(13px * var(--tas-density));
 }
 
 /* Atomic positions shares the Spins Mode / Display control conventions. */

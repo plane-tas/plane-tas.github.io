@@ -36,7 +36,6 @@
 
 /* Magnetic ion site labels: match Atoms label sizing, but use normal weight. */
 #structurePanel .structure-moment-site{
-  font-size:inherit!important;
   font-weight:400!important;
 }
 
@@ -110,7 +109,7 @@
 }
 #structurePanel #cifSpinTable .structure-spin-bulk-header label {
   display:flex;align-items:center;justify-content:center;gap:calc(3px * var(--tas-density));
-  margin:0;cursor:pointer;font-size:inherit;font-weight:inherit;
+  margin:0;cursor:pointer;
 }
 #structurePanel #cifSpinTable .structure-spin-bulk-header input[type=checkbox] {
   min-width:0;margin:0;cursor:pointer;
@@ -166,7 +165,6 @@
   box-sizing:border-box;
   min-width:0;
   max-width:100%;
-  font-size:calc(13px * var(--tas-density)) !important;
   padding:calc(4px * var(--tas-density)) calc(4px * var(--tas-density));
 }
 #structurePanel .structure-style-table .structure-rows-empty {
@@ -201,24 +199,18 @@
    All select/input/pointer interactions are unchanged. */
 #structurePanel #cifSpinTable .structure-spin-table-header,
 #structurePanel .structure-style-table .structure-style-header{
-  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
   min-height:max(26.25px,calc(27px * var(--tas-density)));
   padding:calc(5px * var(--tas-density)) calc(3px * var(--tas-density));
 }
 #structurePanel #cifSpinTable .structure-spin-cell,
 #structurePanel .structure-style-table .structure-style-cell{
-  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
   min-height:max(31.5px,calc(31.5px * var(--tas-density)));
   padding:calc(3px * var(--tas-density));
 }
 #structurePanel #cifSpinTable .structure-spin-index,
 #structurePanel #cifSpinTable .structure-moment-site,
-#structurePanel .structure-style-table .structure-style-index{
-  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
-}
 #structurePanel #cifSpinTable .structure-spin-value input[type=number],
 #structurePanel .structure-style-table .structure-style-cell :is(select,input[type=number]){
-  font-size:max(11.25px,calc(12.75px * var(--tas-density)))!important;
   min-height:max(24px,calc(24.75px * var(--tas-density)));
   padding:calc(3.75px * var(--tas-density))!important;
 }

@@ -133,16 +133,12 @@
    Section headings match View / Structure settings: 15px bold.
    File actions and labels use the same sizes in both generators. */
 #cifGeneratorPanel .cif-generator-input-pane :is(.cif-pane-heading h3, .cif-atom-heading h3){
-  font-size:calc(15px * var(--tas-density));
-  font-weight:700;
   line-height:1.3;
 }
 #cifGeneratorPanel .cif-generator-input-pane .cif-heading-actions button,
 #cifGeneratorPanel .cif-generator-source-section .cif-generator-source-row > button,
 #cifGeneratorPanel .cif-generator-source-section .cif-source-button-row > button{
   box-sizing:border-box;
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
   line-height:1.3;
   min-height:calc(36px * var(--tas-density));
 }
@@ -261,7 +257,6 @@
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
   min-width:0;
-  font-size:calc(12px * var(--tas-density));
   overflow-wrap:anywhere;
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
@@ -269,7 +264,6 @@
   width:100%;
   padding-left:calc(5px * var(--tas-density));
   padding-right:calc(3px * var(--tas-density));
-  font-size:calc(13px * var(--tas-density));
 }
 #structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel){
   flex:0 0 auto;
@@ -378,13 +372,13 @@
 /* Reflections: Mode / Reflections / Lorentz / form-factor selectors in one equal-width row. */
 .magnetic-options{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:calc(10px * var(--tas-density));margin:0 0 calc(9px * var(--tas-density))}
 .magnetic-ion-selectors{display:contents}
-.magnetic-options label{display:flex;flex-direction:column;align-items:stretch;gap:calc(3px * var(--tas-density));min-width:0;font-size:calc(12px * var(--tas-density))}
+.magnetic-options label{display:flex;flex-direction:column;align-items:stretch;gap:calc(3px * var(--tas-density));min-width:0;}
 .magnetic-options select{width:100%;max-width:none;min-width:0}
 @media (max-width:640px){.magnetic-options{grid-auto-flow:row}}
 /* Powder pattern (Reflections, Mode = Powder). */
 #structurePanel .reflection-powder-section{flex:0 0 auto;margin:0 0 calc(8px * var(--tas-density));min-width:0}
 #structurePanel .reflection-powder-section[hidden]{display:none!important}
-#structurePanel .reflection-plot-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density)) calc(24px * var(--tas-density));margin-top:calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density))}
+#structurePanel .reflection-plot-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density)) calc(24px * var(--tas-density));margin-top:calc(4px * var(--tas-density));}
 #structurePanel .reflection-plot-fwhm{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap}
 #structurePanel .reflection-plot-fwhm input{width:calc(70px * var(--tas-density))}
 #structurePanel .reflection-plot-uvw input{width:calc(62px * var(--tas-density))}

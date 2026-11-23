@@ -84,8 +84,6 @@
 }
 .structure-moment-site{
   display:block;
-  font-size:calc(12px * var(--tas-density));
-  font-weight:700;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -106,7 +104,6 @@
 }
 .structure-range-grid>label{
   margin:0;
-  font-weight:600;
 }
 .structure-range-grid input{
   width:100%!important;
@@ -300,8 +297,6 @@
 .cif-output-tabs .cif-output-tab:last-child{border-right:0;}
 /* Larger Save figure action, including on narrow screens. */
 #structurePanel #cifSaveFigure{
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
   line-height:1.3;
   min-height:calc(36px * var(--tas-density));
   padding:calc(7px * var(--tas-density)) calc(12px * var(--tas-density));
@@ -315,8 +310,6 @@
   width:100%;min-width:0;min-height:calc(36px * var(--tas-density));
   padding:calc(7px * var(--tas-density)) calc(3px * var(--tas-density));
   box-sizing:border-box;
-  font-size:calc(14px * var(--tas-density));
-  font-weight:700;
 }
 #structurePanel .generator-structure-view-controls .structure-range-six input[type=number]{
   box-sizing:border-box;
@@ -324,7 +317,6 @@
   min-width:0;
   min-height:calc(36px * var(--tas-density));
   padding:calc(5px * var(--tas-density)) calc(6px * var(--tas-density));
-  font-size:calc(14px * var(--tas-density));
 }
 /* The previous status line has been replaced by the shared view controls.
    Keep status announcements available to assistive technology. */

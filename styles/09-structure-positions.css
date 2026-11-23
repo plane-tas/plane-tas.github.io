@@ -55,8 +55,6 @@
 }
 /* Use the same button typography in CIF and mCIF generation actions. */
 #cifGeneratorPanel .cif-source-button-row > button{
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
   white-space:normal;
   overflow-wrap:anywhere;
   line-height:1.25;
@@ -185,12 +183,12 @@
   background:#fff;min-width:0;
 }
 #cifGeneratorPanel .cif-atom-detailed>summary{
-  cursor:pointer;font-size:calc(15px * var(--tas-density));font-weight:700;padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
+  cursor:pointer;padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density));
   background:#fff;list-style-position:inside;
 }
 #cifGeneratorPanel .cif-thermal-list{gap:calc(9px * var(--tas-density));padding:0 calc(12px * var(--tas-density)) calc(12px * var(--tas-density));min-width:0}
 #cifGeneratorPanel .cif-thermal-row{border-radius:calc(5px * var(--tas-density));min-width:0}
-#cifGeneratorPanel .cif-thermal-toggle{flex-direction:row;font-weight:600}
+#cifGeneratorPanel .cif-thermal-toggle{flex-direction:row;}
 #cifGeneratorPanel .cif-thermal-toggle input{width:auto;min-height:0;flex-shrink:0}
 #cifGeneratorPanel .cif-thermal-row input[type=number]{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
 #cifGeneratorPanel .cif-thermal-row input:disabled{opacity:.65;background:#f3f5f7}
@@ -210,7 +208,7 @@
   border-left:calc(1px * var(--tas-density)) solid #ccc;
   border-top:calc(1px * var(--tas-density)) solid #ccc;
 }
-#cifGeneratorPanel .cif-thermal-header{font-weight:var(--table-head-weight);color:var(--table-head-color);text-align:center;background:var(--table-head-bg);
+#cifGeneratorPanel .cif-thermal-header{color:var(--table-head-color);text-align:center;background:var(--table-head-bg);
   position:sticky;top:0;z-index:2;
 }
 #cifGeneratorPanel .cif-thermal-list,
@@ -222,8 +220,7 @@
 }
 #cifGeneratorPanel .cif-thermal-toggle input{margin:0;flex:0 0 auto;}
 #cifGeneratorPanel .cif-thermal-cell input[type=number]{
-  box-sizing:border-box;width:100%;max-width:none;min-width:0;
-  font-size:calc(13px * var(--tas-density));padding:calc(5px * var(--tas-density)) calc(4px * var(--tas-density));
+  box-sizing:border-box;width:100%;max-width:none;min-width:0;padding:calc(5px * var(--tas-density)) calc(4px * var(--tas-density));
 }
 #cifGeneratorPanel .cif-atom-detailed{overflow:hidden;}
 #cifGeneratorPanel .cif-atom-detailed > summary{background:#fff;}
@@ -360,7 +357,6 @@
   background:#fafafa;
   color:#222;
   font-weight:650;
-  font-size:calc(13px * var(--tas-density));
 }
 #cifGeneratorPanel .cif-thermal-use{
   padding:calc(3px * var(--tas-density));
@@ -391,8 +387,6 @@
 /* One shared section-heading type size for Positions and Anisotropic Uij. */
 #structurePanel .cif-atom-heading h3,
 #structurePanel #cifAtomDetailed > summary{
-  font-size:calc(15px * var(--tas-density))!important;
-  font-weight:700;
   line-height:1.3;
 }
 

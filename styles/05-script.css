@@ -3,7 +3,7 @@
 
 /* v37 Script tab: Time estimate <-> SPICE macro */
 .script-card{margin-top:0;min-width:0;overflow:hidden}
-.script-pane-heading{font-size:calc(16px * var(--tas-density));font-weight:650;margin:0 0 calc(8px * var(--tas-density));min-height:calc(30px * var(--tas-density));display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
+.script-pane-heading{margin:0 0 calc(8px * var(--tas-density));min-height:calc(30px * var(--tas-density));display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
 .script-actions{display:flex;gap:calc(6px * var(--tas-density));margin-left:auto}
 .script-time-mount{min-width:0}
 .script-time-mount>.time-estimate-pane{display:block!important;min-width:0;width:100%}
@@ -39,7 +39,7 @@
 .script-command-heading,.script-spice-heading{justify-content:space-between;flex-wrap:nowrap}
 .script-command-heading button,.script-actions button{width:auto;white-space:nowrap}
 .script-aset-help{color:#222;margin:calc(-2px * var(--tas-density)) 0 calc(8px * var(--tas-density))}
-.script-aset-item>span{font-size:calc(12px * var(--tas-density));font-weight:650}
+.script-aset-item>span{font-weight:650}
 .script-spice-editor{position:relative;width:100%;height:calc(620px * var(--tas-density));min-height:calc(620px * var(--tas-density));max-height:calc(620px * var(--tas-density));resize:none;overflow:hidden}
 .script-spice-backdrop,.script-spice-text{
   position:absolute;
@@ -116,13 +116,13 @@
   padding:0;
   background:transparent;
 }
-.script-aset-index{font-size:calc(12px * var(--tas-density));text-align:center;color:#222;font-variant-numeric:tabular-nums}
+.script-aset-index{text-align:center;color:#222;font-variant-numeric:tabular-nums}
 .script-aset-item input{
   width:100%;min-width:0;
   font:calc(12px * var(--tas-density))/1.35 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
 }
 .script-aset-item [data-aset-target]{font-family:inherit}
-.script-aset-remove{width:calc(26px * var(--tas-density));height:calc(26px * var(--tas-density));padding:0;font-size:calc(13px * var(--tas-density));line-height:1}
+.script-aset-remove{width:calc(26px * var(--tas-density));height:calc(26px * var(--tas-density));padding:0;line-height:1}
 @media(max-width:760px){
   .time-scan-table{grid-template-columns:calc(38px * var(--tas-density)) calc(100px * var(--tas-density)) calc(82px * var(--tas-density)) minmax(calc(130px * var(--tas-density)),1fr) calc(60px * var(--tas-density)) calc(40px * var(--tas-density))!important}
   .script-aset-pane{overflow-x:auto}
@@ -173,11 +173,9 @@
 }
 .script-aset-item input[data-aset-target]{
   font-family:inherit;
-  font-size:calc(14px * var(--tas-density));
   line-height:1.35;
 }
 .script-aset-item textarea[data-aset-template]{
-  font-size:calc(14px * var(--tas-density));
   line-height:1.35;
 }
 @media(max-width:1180px){
@@ -302,17 +300,13 @@
 /* v84: larger Script help controls and editor text. */
 .info-toggle-button{
   padding:calc(6px * var(--tas-density)) calc(11px * var(--tas-density))!important;
-  font-size:calc(14px * var(--tas-density))!important;
   line-height:1.35!important;
-  font-weight:650;
 }
 .script-command-actions{display:flex;align-items:center;gap:calc(6px * var(--tas-density))}
 .script-aset-help{
-  font-size:calc(14px * var(--tas-density))!important;
   line-height:1.5!important;
 }
 .script-spice-line-numbers{
-  font-size:calc(15px * var(--tas-density))!important;
   line-height:1.55!important;
 }
 

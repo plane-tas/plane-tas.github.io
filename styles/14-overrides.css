@@ -57,7 +57,6 @@
   flex:1 0 auto;
   white-space:nowrap;
   padding:calc(9px * var(--tas-density)) calc(11px * var(--tas-density));
-  font-size:calc(16px * var(--tas-density));
   line-height:1.25;
   border:calc(1px * var(--tas-density)) solid transparent;
   background:#f3f5f7;
@@ -87,7 +86,6 @@ main > .main-tabs > .tab-button:disabled{color:#aaa;background:#f3f5f7;cursor:de
   border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
   background:#f3f5f7;
   color:#222;
-  font-size:calc(14px * var(--tas-density));
   line-height:1.25;
   padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
   box-shadow:none;
@@ -208,7 +206,7 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
   display:inline-flex;gap:calc(6px * var(--tas-density));align-items:center;
   border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(4px * var(--tas-density));
   padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));background:transparent;color:#202a37;
-  cursor:pointer;font-size:calc(13px * var(--tas-density));line-height:1.25;text-align:left;
+  cursor:pointer;line-height:1.25;text-align:left;
 }
 .qe-external-legend .qe-legend-item:hover,
 .qe-external-legend .qe-legend-item:focus-visible{background:#f2f5f9;border-color:#b7c2d0}
@@ -355,7 +353,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 .tab-panel .cif-reflection-plane-toggle,
 .tab-panel .structure-entry-label,
 .tab-panel .cif-unified-preview-label {
-  font-size: var(--plane-tab-label-font) !important;
   line-height: 1.35;
 }
 
@@ -540,8 +537,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   display:flex;align-items:center;justify-content:center;gap:calc(6px * var(--tas-density));
   padding:calc(10px * var(--tas-density)) 0!important;
   border:1px solid var(--tas-accent)!important;
-  background:#e8eef5!important;color:#2f4d6e!important;
-  font-weight:650;font-size:max(12px,calc(14px * var(--tas-density)))!important;
+  background:#e8eef5!important;color:#2f4d6e!important;font-size:max(12px,calc(14px * var(--tas-density)))!important;
   line-height:1;cursor:pointer;white-space:nowrap;
 }
 #scriptPanel .script-aset-tab{
@@ -592,10 +588,10 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
   padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density)) 0;
   font-size:max(12px,calc(15px * var(--tas-density)));
 }
-#structurePanel .reflection-plot-xaxis-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:inherit}
-#structurePanel .reflection-plot-controls .reflection-plot-xaxis{position:static;transform:none;width:auto;min-width:0;font-size:inherit}
-#structurePanel .reflection-plot-controls .reflection-plot-fwhm{position:static;font-size:inherit}
-#structurePanel .reflection-plot-log{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;font-size:inherit}
+#structurePanel .reflection-plot-xaxis-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;}
+#structurePanel .reflection-plot-controls .reflection-plot-xaxis{position:static;transform:none;width:auto;min-width:0;}
+#structurePanel .reflection-plot-controls .reflection-plot-fwhm{position:static;}
+#structurePanel .reflection-plot-log{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-controls{justify-content:flex-start;align-self:stretch}
 #structurePanel .reflection-plot-controls :is(.reflection-plot-log,.reflection-plot-fwhm,.reflection-plot-xaxis-label){
   font-size:max(12px,calc(15px * var(--tas-density)))!important;font-weight:400;margin:0;
@@ -777,7 +773,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .sidebar-heading-row>h2{margin:0!important}
 .sidebar section > .sidebar-heading-row > h2{line-height:1.25}
 #resolutionInstrumentDetails .resolution-detail-title.sidebar-heading-row{display:flex}
-:is(.sidebar,#resolutionInstrumentDetails) .sidebar-heading-row>button{flex:0 0 auto;width:auto;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));font-size:calc(12px * var(--tas-density))}
+:is(.sidebar,#resolutionInstrumentDetails) .sidebar-heading-row>button{flex:0 0 auto;width:auto;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));}
 
 /* Resolution › Simulation / Convolution. */
 .resolution-mode-tabs{margin-bottom:calc(8px * var(--tas-density))}
@@ -787,7 +783,6 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    (each with its calculation condition) filling the rest. */
 .convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column}
 .convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
-#resolutionConvolutionPane :is(.convolution-row label,.convolution-box .checkbox-label){font-size:max(13px,calc(16px * var(--tas-density)))!important}
 .convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
 .convolution-file button{white-space:nowrap;flex:0 0 auto}
 .convolution-file input{flex:1 1 auto;min-width:0}
@@ -796,7 +791,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-box{min-width:0;margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));padding:calc(9px * var(--tas-density));display:flex;flex-direction:column;gap:calc(6px * var(--tas-density))}
 .convolution-box-head{display:flex;flex-wrap:wrap;gap:calc(8px * var(--tas-density));align-items:center}
 .convolution-integration{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
-.convolution-integration select{font-size:max(13px,calc(16px * var(--tas-density)));width:auto}
+.convolution-integration select{width:auto}
 /* Fixed-width slot right of the select: "within ±1.5 FWHM" (Grid) or
    "[N] points" (Monte Carlo), so the select does not move. */
 .convolution-integration-detail{display:inline-grid;align-items:center;white-space:nowrap}
@@ -804,31 +799,29 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* Both stay in the same cell (the slot is as wide as the wider one); the
    inactive one is only made invisible. */
 .convolution-integration-detail>[hidden]{display:flex!important;visibility:hidden}
-#resolutionConvolutionPane .convolution-integration .convolution-field{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;color:inherit}
+#resolutionConvolutionPane .convolution-integration .convolution-field{flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));color:inherit}
 .convolution-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
 .convolution-integration .convolution-field input{width:calc(90px * var(--tas-density));flex:none}
 /* Grid spacing and Monte Carlo points: choices with their accuracy, shown in full. */
 .convolution-integration .convolution-field select{width:auto;flex:none}
-.convolution-range-table>button{justify-self:start;font-size:max(13px,calc(15px * var(--tas-density)))}
-#resolutionConvolutionPane .convolution-field{flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))!important;white-space:nowrap}
+.convolution-range-table>button{justify-self:start;}
+#resolutionConvolutionPane .convolution-field{flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));white-space:nowrap}
 .convolution-field input{flex:1 1 auto;width:auto;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)))}
-.convolution-keep-empty{color:inherit;font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
-.convolution-box button{font-size:max(13px,calc(16px * var(--tas-density)))}
-#resolutionConvolutionPane button.convolution-calc{background:linear-gradient(#3a7bc8,#1f5fa8);color:#fff;border-color:#174c88;font-weight:650;box-shadow:0 1px 1px rgba(0,0,0,.18)}
+.convolution-keep-empty{color:inherit;padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
+#resolutionConvolutionPane button.convolution-calc{background:linear-gradient(#3a7bc8,#1f5fa8);color:#fff;border-color:#174c88;box-shadow:0 1px 1px rgba(0,0,0,.18)}
 #resolutionConvolutionPane button.convolution-calc:hover{background:linear-gradient(#2f6db6,#174c88)}
 #resolutionConvolutionPane button.convolution-calc:active{background:#174c88;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
 .convolution-box .checkbox-label{align-self:flex-start;min-height:0}
 .convolution-range-table{display:grid;grid-template-columns:max-content repeat(4,minmax(0,1fr));gap:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));align-items:center;font-size:max(14px,calc(18px * var(--tas-density)))}
-.convolution-range-table input{width:100%;max-width:none;min-width:0;font-size:max(13px,calc(16px * var(--tas-density)));padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
-.convolution-range-name,.convolution-range-head{font-weight:600;font-size:max(14px,calc(18px * var(--tas-density)))}
+.convolution-range-table input{width:100%;max-width:none;min-width:0;padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
 .convolution-range-name{padding-right:calc(6px * var(--tas-density))}
 .convolution-range-head{text-align:center}
 .convolution-tab-wrap{flex:1 1 auto;min-height:0;margin-top:calc(2px * var(--tas-density));display:flex;flex-direction:column;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));overflow:hidden}
 .convolution-tabs{flex:0 0 auto;grid-template-columns:repeat(3,minmax(0,1fr))!important}
-.convolution-tabs .geometry-card-tab{flex:1 1 0!important;width:auto!important;max-width:none!important;font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-tabs .geometry-card-tab{flex:1 1 0!important;width:auto!important;max-width:none!important;}
 .convolution-tab-pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:calc(9px * var(--tas-density))}
 .convolution-tab-pane[hidden]{display:none}
-.convolution-message{font-size:max(13px,calc(16px * var(--tas-density)));color:inherit}
+.convolution-message{color:inherit}
 /* 1D message under the cut box: room for one line kept, as in the CIF
    generator, so a note does not move the plot (the notes are kept short).
    The 2D message sits in the box head, next to Calculate. */
@@ -852,12 +845,12 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* The legend column boxes take part in the Show row's wrapping. */
 .convolution-legend-columns{display:contents}
 .convolution-show-sep{align-self:stretch;width:0;border-left:calc(1px * var(--tas-density)) solid #c8ced6;margin:0 calc(2px * var(--tas-density))}
-.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
+.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));width:100%;border-collapse:collapse;}
 .convolution-curve-table :is(th,td){white-space:nowrap;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density))}
 .convolution-curve-table th{position:sticky;top:0;z-index:1;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
 .convolution-curve-table td{border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:middle}
 .convolution-curve-table td.convolution-curve-field{min-width:3.2em}
-.convolution-curve-table button{font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
+.convolution-curve-table button{padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
 .convolution-curve-table tbody tr{cursor:pointer}
 .convolution-curve-table tbody tr:hover td{background:#f6f9fc}
 .convolution-curve-current td{background:#f7f9fb}
@@ -873,9 +866,9 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}
 .convolution-color-pick::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
 .convolution-color-pick::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
-.convolution-table-info{flex:0 0 auto;font-size:max(13px,calc(16px * var(--tas-density)));color:inherit;margin-bottom:calc(4px * var(--tas-density))}
+.convolution-table-info{flex:0 0 auto;color:inherit;margin-bottom:calc(4px * var(--tas-density))}
 .convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
-.convolution-table{border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)));font-variant-numeric:tabular-nums;white-space:nowrap}
+.convolution-table{border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap}
 .convolution-table th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;border-bottom:1px solid #d8dde3}
 .convolution-table td{padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;line-height:22px}
 .convolution-table tr.convolution-spacer td{padding:0;line-height:0}
@@ -894,7 +887,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-file-card{container-type:inline-size}
 /* Convolution: estimated time, Stop state, data curves. */
 .convolution-box-foot>*{flex:none}
-.convolution-estimate{margin-left:auto;color:inherit;font-size:max(13px,calc(16px * var(--tas-density)));white-space:nowrap;font-variant-numeric:tabular-nums}
+.convolution-estimate{margin-left:auto;color:inherit;white-space:nowrap;font-variant-numeric:tabular-nums}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop{background:linear-gradient(#d23b2f,#b42318);border-color:#912018}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop:hover{background:linear-gradient(#c02f24,#912018)}
 #resolutionConvolutionPane button.convolution-calc.convolution-stop:active{background:#912018}
@@ -902,7 +895,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* 2D maps: colour-bar end values edited in place (as in the Q-E map). */
 .convolution-plot-frame{position:relative;min-width:0;min-height:calc(340px * var(--tas-density))}
 .convolution-plot-frame>.convolution-plot{height:100%}
-.convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-ell-kinds{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;}
 .convolution-ell-kinds .checkbox-label{min-height:0}
 /* 2D: each map has the one slider that changes it right above it. */
 .convolution-plot-col{display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -913,7 +906,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* 2D slice tab: display switches above the maps. */
 .convolution-show-row{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(12px * var(--tas-density));margin-bottom:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
 .convolution-show-row>*{flex:none}
-.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;font-size:inherit!important;align-self:center}
+.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;align-self:center}
 /* Labels inside the brackets on the same baseline as the others (the base
    .checkbox-label rule aligns to the end of its line; the brackets used a
    larger font). */
@@ -947,7 +940,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    The estimate has a fixed width so Calculate does not move. */
 .convolution-box-head .convolution-estimate{margin-left:calc(4px * var(--tas-density));text-align:left}
 
-.convolution-box-head select.convolution-method{width:auto;font-size:var(--tas-control-text-size)}
+.convolution-box-head select.convolution-method{width:auto;}
 
 /* Status right after Calculate (not stretched), then Keep. */
 .convolution-box-head .convolution-status{flex:0 1 auto;min-width:0}
@@ -1086,8 +1079,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .jump-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:calc(5px * var(--tas-density));
   margin:0 0 calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0;background:#fff;
   box-shadow:0 calc(4px * var(--tas-density)) calc(4px * var(--tas-density)) calc(-4px * var(--tas-density)) rgba(0,0,0,.12)}
-.jump-bar > button{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  font-size:max(12px,calc(14px * var(--tas-density)));font-weight:400;line-height:1.3;
+.jump-bar > button{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;
   padding:calc(3px * var(--tas-density)) calc(11px * var(--tas-density));
   border:calc(1px * var(--tas-density)) solid #d3dae3;border-radius:999px;background:#eef2f7;color:#2d4a6b}
 .jump-bar > button:hover{background:#e1e8f0;border-color:#b9c4d1}
@@ -1124,7 +1116,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .bragg-check-message[data-state="warn"]{color:#b4441f}
 .bragg-check-message[data-state="pending"]{color:#999}
 .bragg-check-row > button{flex:none;width:auto;min-height:calc(30px * var(--tas-density));
-  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));font-size:calc(16px * var(--tas-density));line-height:1.2}
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));line-height:1.2}
 .sidebar :is(.background-row,.dark-asset-head) select{width:100%;min-width:0}
 :is(.propagation-no,.background-label,.dark-asset-no,.dark-range-number,.bragg-no){font-size:calc(18px * var(--tas-density));color:#111}
 
@@ -1146,11 +1138,10 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   padding:calc(7px * var(--tas-density));margin-top:calc(7px * var(--tas-density))}
 .sidebar .dark-asset-head{grid-template-columns:var(--sidebar-no-w) minmax(0,1fr) var(--sidebar-remove-w);align-items:end;
   margin-bottom:calc(5px * var(--tas-density))}
-.dark-asset-no-cell{display:flex;flex-direction:column;font-size:calc(16px * var(--tas-density));color:#333;min-width:0}
+.dark-asset-no-cell{display:flex;flex-direction:column;color:#333;min-width:0}
 .dark-asset-no{display:flex;align-items:center;min-height:calc(40px * var(--tas-density))}
 .sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w);
   margin-top:calc(5px * var(--tas-density))}
-/* (!important: the shared table text size of 00-base.css is !important.) */
 
 /* Propagation vectors, Background materials and the Dark-angle ranges as
    tables like the legend tables of Resolution / Convolution: one frame,
@@ -1181,8 +1172,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   padding:calc(7px * var(--tas-density)) calc(10px * var(--tas-density))}
 :is(.remove-propagation-vector,.remove-background,.remove-dark-asset,.remove-dark-range){
   width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
-  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
-  font-size:calc(16px * var(--tas-density));line-height:1.2;white-space:nowrap}
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));line-height:1.2;white-space:nowrap}
 
 /* Toolbox (Neutron attenuation, Magnetic form factor): Save CSV with the
    file name entry and a grey ".csv", as in the other Save CSV rows. */

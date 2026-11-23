@@ -1,7 +1,7 @@
 /* Application header and main tab bar.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}h1{font-size:calc(22px * var(--tas-density));margin:0}
+header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}h1{margin:0}
 /* Keep the existing header links accessible on very narrow phones. */
 @media(max-width:360px){
   header{flex-wrap:wrap!important;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density))!important;align-items:center!important;padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));}
