@@ -52,11 +52,9 @@
 /* Readability tuning (native compact UI; no transform/zoom).
    Adjust typography only. Existing responsive columns and graph geometry stay intact. */
 .sidebar section > h2 {
-  font-size: calc(19px * var(--tas-density));
   line-height: 1.25;
 }
 .sidebar h3 {
-  font-size: calc(16px * var(--tas-density));
   line-height: 1.3;
 }
 .sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),

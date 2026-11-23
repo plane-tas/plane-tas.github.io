@@ -1,3 +1,4 @@
+import {syncCsvNameTemplate} from '../../core/csv-name.js';
 import {inferOrthogonalInPlaneHKL} from '../resolution-core.js';
 import {selectedTasSense} from '../../app/dom-utils.js';
 import {downloadBlob, downloadText} from '../../core/download.js';
@@ -179,7 +180,7 @@ export function installResolutionComparison(ctx){
     const last=shared.lastResolutionRender;
     currentFail=singleMode() && last && !last.scan && last.entry?.failed ? last.entry : null;
     if(view!=='comparison') setView('comparison');
-    if($('resolutionCsvName')) $('resolutionCsvName').placeholder=csvDefault();
+    syncCsvNameTemplate($('resolutionCsvName'),csvDefault());
     if($('resolutionSingleNote')) $('resolutionSingleNote').hidden=!singleMode();
     // Display (slider / overwrite): scan only, shown with the results.
     $('resolutionScanGraphWrap')?.classList.toggle('hidden',singleMode());
@@ -708,8 +709,8 @@ export function installResolutionComparison(ctx){
     });
     return lines.join('\n')+'\n';
   }
-  // Save CSV file name: the entry next to it (without .csv), or the default
-  // shown there as the placeholder.
+  // Save CSV file name: the entry next to it (without .csv), which is filled
+  // with the default for the mode (editable), or that default if emptied.
   const csvDefault=()=>singleMode() ? 'comparison-table' : 'scan-table';
   const csvFileName=()=>{
     const typed=String($('resolutionCsvName')?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');

@@ -3,7 +3,7 @@
 // PNG.  The Q–E maps and the 1D cut keep their existing buttons (same place);
 // the four Resolution ellipses are saved together by the Save figure of
 // their results table.  The TAS geometry also gets the Angle calculation
-// result above the drawing.
+// result above the drawing, and the Toolbox plots their conditions.
 import {saveQEFigure} from '../qe/qe-save-figure.js';
 
 const FIGURES=[
@@ -18,7 +18,29 @@ const FIGURES=[
 
 // The TAS geometry is saved with the Angle calculation result above it
 // ((h,k,l), Ei / Ef / Q, the motor angles and any warning), in its colours.
+const fieldValue=id=>String(document.getElementById(id)?.value??'').trim();
+const shownLabel=id=>{ const el=document.getElementById(id); return el ? (el.selectedOptions?.[0]?.textContent||el.value||'').trim() : ''; };
+const line=text=>({text,color:'#222'});
+// Neutron attenuation: the sample (CIF/mCIF or formula and density), the
+// beam and the transmissions entered on the left.
+function attenuationHeaderLines(){
+  const manual=fieldValue('absorptionInputMode')==='manual';
+  const sample=manual
+    ? `Formula: ${fieldValue('absorptionFormula')||'–'}, density = ${fieldValue('absorptionDensity')||'–'} g/cm³`
+    : `Sample: ${fieldValue('absorptionCifStatus')||'–'}`;
+  return [line(sample),
+    line(`E = ${fieldValue('absorptionEnergy')} meV, λ = ${fieldValue('absorptionLambda')} Å, k = ${fieldValue('absorptionK')} Å⁻¹`),
+    line(`SE transmission = ${fieldValue('absorptionSETransmission')} %, sample thickness = ${fieldValue('absorptionThickness')} mm, overall transmission = ${fieldValue('absorptionTransmission')} %`)];
+}
+// Magnetic form factor: the ion and the j2 weight, and the selected Q.
+function formFactorHeaderLines(){
+  const config=document.getElementById('magffConfigLabel')?.classList.contains('hidden') ? '' : ` (${shownLabel('magffConfig')})`;
+  return [line(`Magnetic ion: ${fieldValue('magffIonSearch')}${config}, j2 contribution: ${shownLabel('magffWeightMode')}, c = ${fieldValue('magffWeight')}`),
+    line(`Q = ${fieldValue('magffQPoint')} Å⁻¹, f(Q) = ${fieldValue('magffValue')}, |f(Q)|² = ${fieldValue('magffIntensity')}`)];
+}
 function headerLinesFor(id){
+  if(id==='absorptionPlot') return attenuationHeaderLines();
+  if(id==='magffPlot') return formFactorHeaderLines();
   if(id!=='geometryPlot') return [];
   const box=document.getElementById('geometryAngles');
   if(!box || box.closest('.hidden')) return [];

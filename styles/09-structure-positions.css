@@ -210,7 +210,7 @@
   border-left:calc(1px * var(--tas-density)) solid #ccc;
   border-top:calc(1px * var(--tas-density)) solid #ccc;
 }
-#cifGeneratorPanel .cif-thermal-header{font-weight:700;text-align:center;background:#f7f7f7;
+#cifGeneratorPanel .cif-thermal-header{font-weight:var(--table-head-weight);color:var(--table-head-color);text-align:center;background:var(--table-head-bg);
   position:sticky;top:0;z-index:2;
 }
 #cifGeneratorPanel .cif-thermal-list,

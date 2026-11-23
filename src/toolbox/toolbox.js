@@ -1,6 +1,7 @@
 // Toolbox feature module extracted from app.js.
 // DOM behavior is preserved; app.js injects the small UI/state boundary.
 
+import {csvNameFromEntry, syncCsvNameTemplate} from '../core/csv-name.js';
 import {deg2rad, rad2deg, clamp} from "../core/tas-core.js";
 import {E_LAMBDA} from "../core/neutron-units.js";
 import {PLOT_FONTS} from "../core/plot-fonts.js";
@@ -26,6 +27,8 @@ export function createToolbox({
   let toolboxUpdating=false;
   let toolboxTabsBound=false;
   let absorptionCsvRows=[];
+  // Comment lines (#) at the top of the CSV: every input and result shown.
+  let absorptionCsvHeader=[];
   function initializeToolboxSubtabs(){
     if(toolboxTabsBound) return;
     toolboxTabsBound=true;
@@ -37,9 +40,9 @@ export function createToolbox({
     });
     $('absorptionDownload')?.addEventListener('click',()=>{
       if(!absorptionCsvRows.length)return;
-      const content=['sample_thickness_mm,overall_transmission_percent',
+      const content=[...absorptionCsvHeader,'sample_thickness_mm,overall_transmission_percent',
         ...absorptionCsvRows.map(row=>row.map(v=>Number(v).toPrecision(12)).join(','))].join('\n')+'\n';
-      downloadText(content,'neutron_attenuation.csv','text/csv;charset=utf-8');
+      downloadText(content,csvNameFromEntry($('absorptionCsvName'),absorptionCsvBase()),'text/csv;charset=utf-8');
     });
     const buttons=[...document.querySelectorAll('#toolboxPanel [data-toolbox-target]')];
     const panes=[...document.querySelectorAll('#toolboxPanel .toolbox-subpanel')];
@@ -653,7 +656,16 @@ export function createToolbox({
     updateAbsorptionCalculator();
   }
 
+  // The sample for the title and the Save CSV name: the formula, or the
+  // CIF/mCIF file without its extension.
+  function absorptionSampleName(){
+    if(absorptionInputMode()==='manual') return String($('absorptionFormula')?.value||'').trim();
+    return String(getSelectedCifFileName?.()||'').trim().replace(/\.(m?cif)$/i,'');
+  }
+  // Automatic Save CSV name: the sample + _attenuation.
+  function absorptionCsvBase(){ return `${absorptionSampleName()||'neutron'}_attenuation`; }
   function updateAbsorptionCalculator(){
+    syncCsvNameTemplate($('absorptionCsvName'),absorptionCsvBase());
     const selectedCifStructure=getSelectedCifStructure();
     const selectedCifFileName=getSelectedCifFileName();
     const inputMode=absorptionInputMode();
@@ -746,13 +758,33 @@ export function createToolbox({
       const x=Array.from({length:n},(_,i)=>sliderMax*i/(n-1));
       const y=x.map(mm=>seTransPct*Math.exp(-muAtt*mm/10));
       absorptionCsvRows=x.map((mm,i)=>[mm,y[i]]);
+      const num=v=>Number.isFinite(Number(v)) ? String(Number(Number(v).toPrecision(8))) : 'inf';
+      absorptionCsvHeader=[
+        '# Neutron attenuation (PLANE-TAS)',
+        r.mode==='manual'
+          ? `# sample: formula ${String($('absorptionFormula')?.value||'').trim()}, density ${num(r.densityGcm3)} g/cm^3, molar mass ${num(r.molarMassGmol)} g/mol`
+          : `# sample: ${status.value}, cell volume ${num(r.volumeA3)} A^3`,
+        `# energy_meV: ${num(energyField.value)}, wavelength_A: ${num(lambda)}, wave_vector_A^-1: ${num($('absorptionK')?.value)}`,
+        `# macroscopic_cross_section_cm^-1: abs ${num(r.muAbsCmInv)}, coh ${num(r.muCohCmInv)}, incoh ${num(r.muIncohCmInv)}`,
+        `# penetration_depth_1/e_cm: abs ${num(r.absorptionLengthCm)}, abs+incoh ${num(r.attenuationLengthCm)}, abs+incoh+coh ${num(r.fullLengthCm)}`,
+        `# SE_transmission_percent: ${num(seTransPct)}, sample_thickness_mm: ${num(thicknessMm)}`,
+        `# transmission_percent at that thickness: abs ${num(absTransPct)}, sample total ${num(transPct)}, overall ${num(overallTransPct)}`,
+        `# element, ${r.mode==='manual'?'atoms_per_formula':'atoms_per_cell'}, abs_cm^-1, scat_total_cm^-1, ratio_percent`,
+        ...r.elements.map(e=>{
+          const absMu=r.mode==='manual' ? Number(e.absMuCmInv)||0 : (Number(e.absContributionBarn)||0)/r.volumeA3;
+          const scatMu=r.mode==='manual' ? Number(e.scatMuCmInv)||0 : (Number(e.scatContributionBarn)||0)/r.volumeA3;
+          const ratioDen=(r.muAbsCmInv+r.muScatCmInv) || 1;
+          return `# ${e.element}, ${num(e.count)}, ${num(absMu)}, ${num(scatMu)}, ${num(100*(absMu+scatMu)/ratioDen)}`;
+        }),
+        '# curve: overall transmission (SE x sample) against sample thickness'];
       if(download)download.disabled=false;
       if(plot && window.Plotly){
         Plotly.react(plot,[
           {x,y,mode:'lines',name:'Overall transmission',hovertemplate:'Thickness %{x:.3f} mm<br>Transmission %{y:.3f}%<extra></extra>'},
           {x:[thicknessMm],y:[overallTransPct],mode:'markers',name:'Selected thickness',marker:{size:10},hovertemplate:'Thickness %{x:.3f} mm<br>Transmission %{y:.3f}%<extra></extra>'}
         ],{
-          margin:{l:68,r:20,t:40,b:58}, // t: room for Save figure
+          margin:{l:68,r:20,t:74,b:58}, // t: the title under the Save figure / mode bar row
+          title:{text:`Neutron transmission of ${absorptionSampleName()}`,font:{size:PLOT_FONTS.axis},x:0.5,xanchor:'center',y:1,yref:'paper',yanchor:'bottom',pad:{b:8}},
           xaxis:{title:{text:'Sample thickness (mm)',font:{size:PLOT_FONTS.axis}},range:[0,sliderMax],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
           yaxis:{title:{text:'Transmission (%)',font:{size:PLOT_FONTS.axis}},range:[0,100],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
           showlegend:false,

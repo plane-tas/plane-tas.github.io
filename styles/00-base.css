@@ -93,7 +93,7 @@ textarea:disabled {
 .cif-space-group-picker select,.cif-space-group-picker input{width:100%;max-width:none}
 .cif-atom-table-wrap{overflow:auto;margin-top:calc(8px * var(--tas-density));max-height:calc(232px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ccc}
 .cif-atom-table{display:grid;border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc}
-.cif-atom-header{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7;padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center;position:sticky;top:0;z-index:2}
+.cif-atom-header{font-size:calc(12px * var(--tas-density));font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg);padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center;position:sticky;top:0;z-index:2}
 .cif-atom-cell{padding:calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
 .cif-atom-cell button{width:100%;padding:calc(4px * var(--tas-density)) calc(7px * var(--tas-density));}
 .cif-atom-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#222;background:#fafafa}
@@ -394,7 +394,10 @@ html { font-size: calc(16px * var(--tas-density)); }
 
 /* 2026-10-11: shared readable controls and Plotly panel refinements.
    Native compact density remains unchanged; no CSS zoom or transforms. */
-:root{--tas-control-text-size:max(12px,calc(17px * var(--tas-density)));}
+/* Header cells of every table (and the row labels of the harmonic table):
+   one background, text colour and weight. */
+:root{--tas-control-text-size:max(12px,calc(17px * var(--tas-density)));
+  --table-head-bg:#f4f6f8;--table-head-color:#222;--table-head-weight:650}
 /* Navigation tabs are headings, not form controls; preserve their hierarchy.
    Form field text, select options and ordinary button labels share one size. */
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=hidden]),
@@ -453,7 +456,9 @@ input[type="number"]::-webkit-outer-spin-button{
   --plane-tab-label-font: max(12px, calc(16px * var(--tas-density)));
   --plane-tab-heading-font: calc(19px * var(--tas-density));
   --plane-tab-warning-font: var(--tas-font-control, 13px);
-  --plane-tab-select-caption-font: calc(16px * var(--tas-density));
+  /* Captions of selects at the size of the other entry captions (they
+     were smaller on a desktop, e.g. "j2 contribution" next to "c"). */
+  --plane-tab-select-caption-font: var(--plane-tab-label-font);
 }
 /* Buttons are actions, not titles.  Navigation tabs remain visually separate
    because they function as headings. */

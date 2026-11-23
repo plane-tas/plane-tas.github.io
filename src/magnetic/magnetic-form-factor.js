@@ -1,5 +1,6 @@
 // Magnetic form factors ported from FormFactor.jl (Sunny dipole approximation).
 // Q is |momentum transfer| in Å^-1; the plot shows f(Q) and |f(Q)|², not full magnetic intensity.
+import {csvNameFromEntry, syncCsvNameTemplate} from '../core/csv-name.js';
 import { MAGNETIC_ION_DATA } from './magnetic-form-factor-data.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {downloadText} from '../core/download.js';
@@ -84,6 +85,8 @@ export function magneticFormFactorRoots(label,target,opts={},maxQ=GRAPH_Q_MAX,wh
   return roots.filter((v,i)=>roots.findIndex(r=>Math.abs(v-r)<1e-5)===i);
 }
 
+// Automatic Save CSV name, e.g. Fe3+_form_factor (shown as the placeholder).
+function magffCsvBaseFor(label){ return `${displayIon(label)}_form_factor`; }
 function displayIon(label){
   const m=label.match(/^([A-Za-z]+)(\d+)$/);
   return m?`${m[1]}${m[2]}${Number(m[2])===0?'':'+'}`:label;
@@ -102,6 +105,7 @@ export function initializeMagneticFormFactorUI(){
   for(const label of ionNames)ion.add(new Option(displayIon(label),label));
   ion.value='Fe3';
   let exportRows=[];
+  const magffCsvBase=()=>magffCsvBaseFor(ion.value);
   const fmt=n=>Number(n).toFixed(5).replace(/0+$/,'').replace(/\.$/,'');
   const curvePoints=301;
   const grid=Array.from({length:curvePoints},(_,i)=>GRAPH_Q_MAX*i/(curvePoints-1));
@@ -205,6 +209,7 @@ export function initializeMagneticFormFactorUI(){
       if(fField)fField.value=fmt(f);
       exportRows=grid.map((x,i)=>[x,curve[i].f,values[i]]);
       download.disabled=false;
+      syncCsvNameTemplate($('magffCsvName'),magffCsvBase());
       if(window.Plotly && plot && !plot.closest('.hidden')){
         // f(Q) can turn negative at large Q; extend the axis below 0 only then.
         const fValues=curve.map(point=>point.f);
@@ -219,7 +224,8 @@ export function initializeMagneticFormFactorUI(){
            line:{color:'#000000',width:2.5},hovertemplate:hover},
           {x:[q,q],y:[fSquared,f],customdata:[[f,fSquared],[f,fSquared]],type:'scatter',mode:'markers',name:'Selected Q',
            marker:{size:10,color:['#1f77b4','#000000']},hovertemplate:hover,showlegend:false}
-        ],{autosize:true,margin:{l:65,r:22,t:40,b:57}, // t: room for Save figure
+        ],{autosize:true,margin:{l:65,r:22,t:74,b:57}, // t: the title under the Save figure / mode bar row
+            title:{text:`Magnetic form factor of ${displayIon(ion.value)}`,font:{size:PLOT_FONTS.axis},x:0.5,xanchor:'center',y:1,yref:'paper',yanchor:'bottom',pad:{b:8}},
             xaxis:{title:{text:'Q (Å⁻¹)',font:{size:PLOT_FONTS.axis}},range:[0,GRAPH_Q_MAX],zeroline:false,showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
             yaxis:{title:{text:'f(Q), |f(Q)|²',font:{size:PLOT_FONTS.axis}},range:[yLow,1],autorange:false,zeroline:yLow<0,zerolinecolor:'#b8c0c8',showline:true,mirror:true,linecolor:'#586472',linewidth:1,tickfont:{size:PLOT_FONTS.tick}},
             showlegend:true,legend:{x:0.99,y:0.99,xanchor:'right',yanchor:'top',bgcolor:'rgba(255,255,255,0.85)',bordercolor:'#d5dde5',borderwidth:1,font:{size:PLOT_FONTS.tick}},
@@ -340,8 +346,17 @@ export function initializeMagneticFormFactorUI(){
   }
   download.addEventListener('click',()=>{
     if(!exportRows.length)return;
-    const rows=['Q_A^-1,f(Q),abs_f(Q)^2',...exportRows.map(row=>row.map(v=>v.toPrecision(12)).join(','))];
-    downloadText(rows.join('\n')+'\n',`magnetic_form_factor_${ion.value}.csv`,'text/csv;charset=utf-8');
+    // The conditions first, as comment lines (#), in ASCII (⟨ ⟩ as < >, Landé
+    // as Lande) so that every program reads them alike.
+    const configText=configLabel.classList.contains('hidden') ? '' : ` (${config.value})`;
+    const weightMode=$('magffWeightMode');
+    const header=['# Magnetic form factor (PLANE-TAS)',
+      `# magnetic_ion: ${displayIon(ion.value)}${configText}`,
+      `# j2_contribution: ${String(weightMode?.selectedOptions?.[0]?.textContent||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')}, c: ${$('magffWeight')?.value??''}`,
+      `# model: ${String($('magffModel')?.textContent||'').replace(/\s+/g,' ').trim().replace(/\.$/,'').replace(/⟨/g,'<').replace(/⟩/g,'>')} (at Q = ${qField.value} A^-1)`,
+      `# selected: Q = ${qField.value} A^-1, f(Q) = ${fField?.value??''}, |f(Q)|^2 = ${intensityField.value}`];
+    const rows=[...header,'Q_A^-1,f(Q),abs_f(Q)^2',...exportRows.map(row=>row.map(v=>v.toPrecision(12)).join(','))];
+    downloadText(rows.join('\n')+'\n',csvNameFromEntry($('magffCsvName'),magffCsvBase()),'text/csv;charset=utf-8');
   });
   syncConfig();render();
   // Restore the selected plot on the first visible frame after a page reload.

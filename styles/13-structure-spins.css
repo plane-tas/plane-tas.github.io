@@ -152,9 +152,9 @@
 #structurePanel #cifSpinTable .structure-spin-table-header,
 #structurePanel .structure-style-table .structure-style-header {
   box-sizing:border-box;
-  font-weight:650 !important;
-  color:#222;
-  background:#f7f7f7;
+  font-weight:var(--table-head-weight) !important;
+  color:var(--table-head-color);
+  background:var(--table-head-bg);
 }
 #structurePanel #cifSpinTable .structure-spin-cell,
 #structurePanel .structure-style-table .structure-style-cell {

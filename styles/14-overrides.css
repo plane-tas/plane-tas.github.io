@@ -475,7 +475,6 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 
 /* Sidebar: Lattice parameters and Scattering plane use the same heading size. */
 .sidebar h3.lattice-parameters-heading{
-  font-size:calc(16px * var(--tas-density))!important;
   line-height:1.3;
 }
 
@@ -534,7 +533,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 #scriptPanel.script-height-limited #scriptTimeMount .time-scan-table-wrap{
   flex:0 1 auto;min-height:calc(130px * var(--tas-density));max-height:none;overflow-y:auto;scrollbar-gutter:stable;
 }
-#scriptPanel.script-height-limited #scriptTimeMount .time-scan-table-wrap .time-scan-header{position:sticky;top:0;z-index:3;background:#f7f7f7}
+#scriptPanel.script-height-limited #scriptTimeMount .time-scan-table-wrap .time-scan-header{position:sticky;top:0;z-index:3;background:var(--table-head-bg)}
 #scriptPanel.script-height-limited .script-spice-editor{flex:1 1 0;height:auto;min-height:0;max-height:none}
 #scriptPanel.script-height-limited :is(.script-pane-heading,.script-message){flex:0 0 auto}
 
@@ -784,7 +783,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* Instrument configuration heading with the Set default button on the right. */
 .sidebar-heading-row{display:flex;align-items:center;justify-content:space-between;gap:calc(6px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
 .sidebar-heading-row>h2{margin:0!important}
-.sidebar section > .sidebar-heading-row > h2{font-size:calc(19px * var(--tas-density));line-height:1.25}
+.sidebar section > .sidebar-heading-row > h2{line-height:1.25}
 #resolutionInstrumentDetails .resolution-detail-title.sidebar-heading-row{display:flex}
 :is(.sidebar,#resolutionInstrumentDetails) .sidebar-heading-row>button{flex:0 0 auto;width:auto;padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));font-size:calc(12px * var(--tas-density))}
 
@@ -863,7 +862,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-show-sep{align-self:stretch;width:0;border-left:calc(1px * var(--tas-density)) solid #c8ced6;margin:0 calc(2px * var(--tas-density))}
 .convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));width:100%;border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)))}
 .convolution-curve-table :is(th,td){white-space:nowrap;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density))}
-.convolution-curve-table th{position:sticky;top:0;z-index:1;background:#f4f6f8;font-weight:650;border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
+.convolution-curve-table th{position:sticky;top:0;z-index:1;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
 .convolution-curve-table td{border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:middle}
 .convolution-curve-table td.convolution-curve-field{min-width:3.2em}
 .convolution-curve-table button{font-size:max(12px,calc(14px * var(--tas-density)));padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
@@ -872,7 +871,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-curve-current td{background:#f7f9fb}
 .convolution-curve-table tbody tr.selected td{background:#e3eefb}
 .convolution-curve-table :is(th,td):nth-child(-n+2){position:sticky;z-index:1;background:#fff;box-sizing:border-box}
-.convolution-curve-table th:nth-child(-n+2){z-index:2;background:#f4f6f8}
+.convolution-curve-table th:nth-child(-n+2){z-index:2;background:var(--table-head-bg)}
 .convolution-curve-table .convolution-curve-current td:nth-child(-n+2){background:#f7f9fb}
 .convolution-curve-table tbody tr.selected td:nth-child(-n+2){background:#e3eefb}
 .convolution-curve-table :is(th,td):nth-child(1){left:0;width:var(--c1);min-width:var(--c1);max-width:var(--c1)}
@@ -885,7 +884,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-table-info{flex:0 0 auto;font-size:max(13px,calc(16px * var(--tas-density)));color:inherit;margin-bottom:calc(4px * var(--tas-density))}
 .convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
 .convolution-table{border-collapse:collapse;font-size:max(12px,calc(15px * var(--tas-density)));font-variant-numeric:tabular-nums;white-space:nowrap}
-.convolution-table th{position:sticky;top:0;background:#f4f6f8;padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;border-bottom:1px solid #d8dde3}
+.convolution-table th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;border-bottom:1px solid #d8dde3}
 .convolution-table td{padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;line-height:22px}
 .convolution-table tr.convolution-spacer td{padding:0;line-height:0}
 @media(max-width:1100px){
@@ -1063,7 +1062,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Toolbox, unit conversion: a row is highlighted by a click (the table is
    wide); the λ multiple column stays in view when it scrolls sideways. */
 #toolboxUnitPane .harmonic-table > *{cursor:pointer}
-#toolboxUnitPane .harmonic-table > .harmonic-row-label{position:sticky;left:0;z-index:2;background:#f7f7f7}
+#toolboxUnitPane .harmonic-table > .harmonic-row-label{position:sticky;left:0;z-index:2;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight)}
 #toolboxUnitPane .harmonic-table > .harmonic-row-hover{background:#f6f9fc}
 #toolboxUnitPane .harmonic-table > .harmonic-row-selected{background:#e3eefb}
 
@@ -1162,15 +1161,14 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .sidebar .dark-table{grid-template-columns:var(--sidebar-no-w) repeat(3,minmax(0,1fr)) var(--sidebar-remove-w);
   margin-top:calc(5px * var(--tas-density))}
 /* (!important: the shared table text size of 00-base.css is !important.) */
-.sidebar .dark-table > div{font-size:calc(16px * var(--tas-density))!important;color:#333}
-.sidebar .dark-table > input{font-size:calc(18px * var(--tas-density))!important}
+.sidebar .dark-table input{font-size:calc(18px * var(--tas-density))!important}
 .sidebar .dark-table .remove-dark-range{font-size:calc(16px * var(--tas-density))!important}
 
 /* Propagation vectors, Background materials and the Dark-angle ranges as
    tables like the legend tables of Resolution / Convolution: one frame,
-   the header row on grey, a line between cells.  An entry fills its cell
-   (no frame of its own; a blue ring while it has the focus); Remove sits
-   in the last cell. */
+   the header row on grey, a line between cells.  Each entry sits in its
+   cell with the usual entry frame (as in Positions); Remove sits in the
+   last cell. */
 .sidebar{--sidebar-line:calc(1px * var(--tas-density)) solid #d8dde3}
 .sidebar :is(.propagation-head,.background-head){margin-bottom:0}
 .sidebar :is(.propagation-head,.propagation-row,.background-head,.background-row,.dark-table){gap:0;align-items:stretch}
@@ -1180,16 +1178,13 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .sidebar :is(.propagation-head,.propagation-row,.background-head,.background-row) > :first-child,
 .sidebar .dark-table > :nth-child(5n+1){border-left:var(--sidebar-line)}
 .sidebar :is(.propagation-head,.background-head) > *,
-.sidebar .dark-table > div{border-top:var(--sidebar-line);background:#f4f6f8;font-weight:600;
+.sidebar .dark-table > div{border-top:var(--sidebar-line);background:var(--table-head-bg);color:var(--table-head-color);
+  font-weight:var(--table-head-weight);font-size:var(--tas-table-text-size)!important;
   display:flex;align-items:center;justify-content:center;min-height:calc(30px * var(--tas-density))}
-.sidebar :is(.propagation-no,.background-label,.dark-range-number,.sidebar-action-cell,.bg-swatch-cell){
+.sidebar :is(.propagation-no,.background-label,.dark-range-number,.sidebar-action-cell,.bg-swatch-cell,.sidebar-entry-cell){
   display:flex;align-items:center;justify-content:center;background:#fff}
-.sidebar :is(.propagation-row,.background-row,.dark-table) > :is(input,select){
-  width:100%;height:auto;background:#fff;box-shadow:none;outline:0;
-  padding:calc(3px * var(--tas-density)) calc(6px * var(--tas-density))}
-.sidebar :is(.propagation-row,.background-row,.dark-table) > :is(input,select):focus{
-  box-shadow:inset 0 0 0 calc(2px * var(--tas-density)) #4a90d9}
-.sidebar .sidebar-action-cell{padding:calc(3px * var(--tas-density))}
+.sidebar :is(.sidebar-entry-cell,.sidebar-action-cell){padding:calc(3px * var(--tas-density))}
+.sidebar .sidebar-entry-cell > :is(input,select){width:100%;min-width:0;margin:0}
 .sidebar .sidebar-action-cell > button{width:100%;min-height:calc(26px * var(--tas-density));
   padding:calc(2px * var(--tas-density)) calc(4px * var(--tas-density))}
 
@@ -1200,3 +1195,28 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
   padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));
   font-size:calc(16px * var(--tas-density));line-height:1.2;white-space:nowrap}
+
+/* Toolbox (Neutron attenuation, Magnetic form factor): Save CSV with the
+   file name entry and a grey ".csv", as in the other Save CSV rows. */
+.toolbox-csv-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
+#toolboxPanel .toolbox-csv-row{justify-content:flex-start}
+.toolbox-csv-row > button{flex:none;white-space:nowrap}
+.toolbox-csv-row > .toolbox-csv-name{flex:1 1 0;min-width:0}
+.toolbox-csv-name input{width:100%;min-width:0}
+.toolbox-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
+
+/* Type scale of the sidebar and of the Resolution Instrument details.  On a
+   desktop nothing is smaller than the captions of the tabs (12px):
+   panel title > card title > subheading (label size, bold) and labels
+   (regular).  Units in a subheading, e.g. "(m)", are a little smaller. */
+:root{--ui-title-font:max(16px,calc(19px * var(--tas-density)));
+  --ui-card-title-font:max(14px,calc(17px * var(--tas-density)))}
+.sidebar section > h2,.sidebar section > .sidebar-heading-row > h2,
+#resolutionInstrumentDetails .resolution-detail-title{font-size:var(--ui-title-font)!important;font-weight:650!important}
+#resolutionInstrumentDetails :is(.instrument-fixed-heading,details > summary){font-size:var(--ui-card-title-font)!important}
+.sidebar h3,.sidebar h3.lattice-parameters-heading,
+#resolutionInstrumentDetails :is(h3,.focus-name){font-size:var(--plane-tab-label-font)!important;font-weight:650!important}
+#resolutionInstrumentDetails :is(h3,.focus-name) small{font-size:.9em;font-weight:400}
+.sidebar :is(label,.checkbox-label,.motor-limit-name,.motor-limit-head,.motor-sign-display,.sidebar-table-head,.dark-asset-no-cell,.auto-vector,.status,.vector > span),
+#resolutionInstrumentDetails label{font-size:var(--plane-tab-label-font)!important}
+

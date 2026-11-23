@@ -10,7 +10,7 @@
 .cif-reflection-plane-toggle input{margin:0}
 .cif-reflection-table th,.cif-reflection-table td{border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap}
 .cif-reflection-table th:first-child,.cif-reflection-table td:first-child{text-align:center}
-.cif-reflection-table th{position:sticky;top:0;z-index:1;background:#f3f3f3;font-weight:700}
+.cif-reflection-table th{position:sticky;top:0;z-index:1;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight)}
 .cif-reflection-table th:last-child,.cif-reflection-table td:last-child{border-right:0}
 .cif-reflection-table tbody tr:last-child td{border-bottom:0}
 .cif-reflection-table tbody tr:nth-child(even) td{background:#fafafa}

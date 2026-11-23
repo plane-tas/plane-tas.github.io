@@ -33,7 +33,7 @@
 .time-estimate-pane{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(12px * var(--tas-density))}
 .time-scan-table-wrap{overflow-x:visible;max-width:100%;min-width:0}
 .time-scan-table{display:grid;width:100%;min-width:0;border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
-.time-scan-header{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7;padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center}
+.time-scan-header{font-size:calc(12px * var(--tas-density));font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg);padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center}
 .time-scan-rows,.time-scan-row{display:contents}
 .time-scan-cell{border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff;min-width:0}
 .time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#222;background:#fafafa}

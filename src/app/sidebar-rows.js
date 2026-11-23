@@ -81,7 +81,7 @@ function createPropagationVectorRow(index,values={}){
   // marker on the maps, the components and Remove.
   row.innerHTML=`<span class="propagation-no">k${index}</span>`+
     `<span class="propagation-symbol">${magneticSymbolSvg(index)}</span>`+
-    ["h","k","l"].map(c=>`<input id="q${index}_${c}" type="text" inputmode="text" data-fraction="" value="0" aria-label="k${index} ${c}">`).join("")+
+    ["h","k","l"].map(c=>`<span class="sidebar-entry-cell"><input id="q${index}_${c}" type="text" inputmode="text" data-fraction="" value="0" aria-label="k${index} ${c}"></span>`).join("")+
     `<span class="sidebar-action-cell"><button type="button" class="remove-propagation-vector" data-q-index="${index}">Remove</button></span>`;
   for(const c of ["h","k","l"]){
     const raw=values[c] ?? 0;
@@ -150,7 +150,10 @@ function makeDarkRangeCells(slot,index,values={}){
     input.type="number";
     const value=Number(values[kind]);
     input.value=Number.isFinite(value)?String(value):"0";
-    frag.appendChild(input);
+    const cell=document.createElement("span");
+    cell.className="sidebar-entry-cell";
+    cell.appendChild(input);
+    frag.appendChild(cell);
   }
   const remove=document.createElement("button");
   remove.type="button";

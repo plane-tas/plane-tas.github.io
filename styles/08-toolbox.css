@@ -26,14 +26,14 @@
 .s2-conversion-grid input,.s2-conversion-grid select{width:100%;}
 
 /* Stable Toolbox / CIF Generator UI transplant */
-.harmonic-table>div{font-size:calc(12px * var(--tas-density));font-weight:650;background:#f7f7f7}
+.harmonic-table>div{font-size:calc(12px * var(--tas-density));font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg)}
 .toolbox-card{width:100%}
 .toolbox-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:calc(10px * var(--tas-density));align-items:end}
 .toolbox-grid input[type=number]{width:100%;min-width:0;max-width:none}
 .absorption-card{margin-top:calc(16px * var(--tas-density))}
 .absorption-table-wrap{margin-top:calc(12px * var(--tas-density));overflow:auto;max-height:calc(320px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(6px * var(--tas-density))}
 .absorption-table{font-size:calc(15px * var(--tas-density))}
-.absorption-table thead th{position:sticky;top:0;background:#f1f1f1;z-index:1}
+.absorption-table thead th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);z-index:1}
 .absorption-warning{margin-top:calc(10px * var(--tas-density));padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d9b55b;border-radius:calc(6px * var(--tas-density));background:#fff8df;font-size:calc(14px * var(--tas-density))}
 .absorption-workspace{display:grid;grid-template-columns:minmax(calc(440px * var(--tas-density)),.95fr) minmax(calc(430px * var(--tas-density)),1.05fr);gap:calc(18px * var(--tas-density));align-items:stretch}
 .absorption-left{display:grid;align-content:start;gap:calc(12px * var(--tas-density));}
@@ -43,7 +43,7 @@
 .absorption-cif-row button{min-height:calc(38px * var(--tas-density));white-space:nowrap}
 .absorption-thickness-control{display:grid;align-items:end}
 .absorption-thickness-control input[type="range"]{width:100%;align-self:center;margin-bottom:calc(8px * var(--tas-density))}
-.absorption-right{min-height:calc(430px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(6px * var(--tas-density));background:#fff}
+.absorption-right{min-height:calc(430px * var(--tas-density));background:#fff} /* no frame, as the form factor plot */
 .absorption-plot{height:100%;min-height:calc(430px * var(--tas-density))}
 .absorption-results{margin-top:0}
 .absorption-table{table-layout:fixed;border-collapse:collapse;width:100%}
@@ -275,7 +275,7 @@
 /* v40: compact magnetic form factor; same text size as the main tabs. */
 .magff-info{min-height:0;margin:calc(4px * var(--tas-density)) 0;font-size:calc(13px * var(--tas-density));}
 .magff-info:empty{display:none;}
-.magff-plot{min-height:calc(340px * var(--tas-density));}
+.magff-plot{min-height:calc(380px * var(--tas-density));} /* + the title above the plot */
 .magff-footer{justify-content:flex-end;}
 .magff-extra-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(12px * var(--tas-density));}
 .magff-plot-slider,.absorption-plot-slider{
