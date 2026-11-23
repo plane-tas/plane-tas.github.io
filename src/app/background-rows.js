@@ -113,8 +113,8 @@ function createBackgroundRow(index,value={}){
   row.className="background-row";
   row.dataset.backgroundIndex=String(index);
   // One row of the table under the No. / Material header.
-  row.innerHTML=`<span class="background-label">BG${index}</span><input type="color" class="bg-swatch" id="backgroundColor${index}" title="BG${index} color" aria-label="BG${index} color"><select id="backgroundSelect${index}" aria-label="BG${index} material"><option value="">None</option></select>`+
-    `<button type="button" class="remove-background" data-background-index="${index}">Remove</button>`;
+  row.innerHTML=`<span class="background-label">BG${index}</span><span class="bg-swatch-cell"><input type="color" class="bg-swatch" id="backgroundColor${index}" title="BG${index} color" aria-label="BG${index} color"></span><select id="backgroundSelect${index}" aria-label="BG${index} material"><option value="">None</option></select>`+
+    `<span class="sidebar-action-cell"><button type="button" class="remove-background" data-background-index="${index}">Remove</button></span>`;
   const picker=row.querySelector(`#backgroundColor${index}`);
   picker.value=rgbToHex(slot.rgb);
   picker.addEventListener("input",()=>{

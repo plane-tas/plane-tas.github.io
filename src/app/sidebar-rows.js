@@ -82,7 +82,7 @@ function createPropagationVectorRow(index,values={}){
   row.innerHTML=`<span class="propagation-no">k${index}</span>`+
     `<span class="propagation-symbol">${magneticSymbolSvg(index)}</span>`+
     ["h","k","l"].map(c=>`<input id="q${index}_${c}" type="text" inputmode="text" data-fraction="" value="0" aria-label="k${index} ${c}">`).join("")+
-    `<button type="button" class="remove-propagation-vector" data-q-index="${index}">Remove</button>`;
+    `<span class="sidebar-action-cell"><button type="button" class="remove-propagation-vector" data-q-index="${index}">Remove</button></span>`;
   for(const c of ["h","k","l"]){
     const raw=values[c] ?? 0;
     const value=parseNumericValue(raw);
@@ -158,7 +158,10 @@ function makeDarkRangeCells(slot,index,values={}){
   remove.dataset.darkSlot=String(slot);
   remove.dataset.darkRange=String(index);
   remove.textContent="Remove";
-  frag.appendChild(remove);
+  const cell=document.createElement("span");
+  cell.className="sidebar-action-cell";
+  cell.appendChild(remove);
+  frag.appendChild(cell);
   return frag;
 }
 
