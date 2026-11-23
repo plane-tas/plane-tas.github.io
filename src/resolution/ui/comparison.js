@@ -46,7 +46,7 @@ export function installResolutionComparison(ctx){
   const singleMode=()=>$('calcMode')?.value!=='scan';
   // All kept results share the unit and coordinates of the first one; they are
   // shown in that unit / frame whatever the current selection is.
-  const COORD_NAMES={q:'Q∥, Q⊥in, E, Q⊥out',orthogonal:'U, U⊥in, E, U⊥out',lattice:'U, V, E, W'};
+  const COORD_NAMES={q:'Q∥, Q⊥in, E, Q⊥out',lattice:'U, V, E, W'};
   const unitName=u=>u==='rlu'?'r.l.u.':'Å⁻¹';
   const frameFor=(r,c)=>c==='lattice'&&r?.lattice ? r.lattice : c==='q'&&r?.qframe ? r.qframe : r;
   const keptSetting=()=>shared.keptResolutions.length ? {unit:shared.keptResolutions[0].unit,coords:shared.keptResolutions[0].coords} : null;
@@ -725,17 +725,20 @@ export function installResolutionComparison(ctx){
   // Q∥, Q⊥in, E, Q⊥out: the widths along Q have no fixed r.l.u. direction, so
   // the unit is Å⁻¹; the unit chosen before comes back with the other frames.
   let unitBeforeQ=null;
-  function syncUnitForCoordinates(){
+  // {silent:true} at start-up: Q∥ is the default frame, so the unit is set to
+  // Å⁻¹ before the instruments are loaded, without a change event (that would
+  // ask for a calculation with no instrument selected yet).
+  function syncUnitForCoordinates({silent=false}={}){
     const unit=$('unit'); if(!unit) return;
     const q=fn.resolutionCoordinates()==='q';
     let changed=false;
     if(q && unit.value!=='ainv'){ unitBeforeQ=unit.value; unit.value='ainv'; changed=true; }
     else if(!q && unitBeforeQ){ unit.value=unitBeforeQ; unitBeforeQ=null; changed=true; }
     lockFrame();
-    if(changed) unit.dispatchEvent(new Event('change',{bubbles:true}));
+    if(changed && !silent) unit.dispatchEvent(new Event('change',{bubbles:true}));
   }
-  $('resolutionCoordinates')?.addEventListener('change',syncUnitForCoordinates);
-  syncUnitForCoordinates();
+  $('resolutionCoordinates')?.addEventListener('change',()=>syncUnitForCoordinates());
+  syncUnitForCoordinates({silent:true});
   // The plots follow their boxes whenever these change size: also when the
   // window was resized while they were hidden (another tab or the
   // Convolution pane), which the window resize handlers skip.

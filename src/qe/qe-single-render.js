@@ -383,8 +383,8 @@ function renderSingle(cache,index=0){
       zorder:0
     });
   }
-  // Keep propagation vectors visually distinct by marker shape (circle,
-  // triangle, square, star for k1..k4) while retaining one magnetic-peak color.
+  // Keep propagation vectors visually distinct by marker shape (MAGNETIC_SYMBOLS
+  // for k1..k6) while retaining one magnetic-peak color.
   const magneticIndices=[...new Set(transformedMag.map(p=>Number(p.qIndex)).filter(Number.isFinite))].sort((a,b)=>a-b);
   for(const qIndex of magneticIndices){
     const pts=transformedMag.filter(p=>p.qIndex===qIndex);

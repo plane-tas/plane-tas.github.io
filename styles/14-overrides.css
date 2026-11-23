@@ -999,16 +999,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    three significant digits, e.g. 1.32e-8 or 0.0132, which still fits. */
 .convolution-zrange input{width:calc(66px * var(--tas-density));min-width:calc(7ch + 10px)}
 
-/* Sample orientation > Bragg peak position: peak 2 (check only) and the
-   Reset / check-message row.  The message always fits on one line. */
-/* The check of peak 2 on the left, Reset on the right (one line). */
-.bragg-check-row{display:flex;align-items:center;gap:calc(6px * var(--tas-density));margin-top:calc(4px * var(--tas-density))}
-.bragg-check-message{flex:1 1 auto;min-width:0;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
-.bragg-check-row > button{flex:none;width:auto;min-height:calc(30px * var(--tas-density));
-  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));font-size:calc(16px * var(--tas-density));line-height:1.2}
-.bragg-check-message[data-state="warn"]{color:#b4441f}
-.bragg-check-message[data-state="pending"]{color:#999}
-
 /* Resolution results (Mode = single): Show row with Save figure, then the
    four plots on the left and the table on the right; on a narrow panel the
    table above the plots. */
@@ -1131,10 +1121,17 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   grid-template-columns:var(--sidebar-no-w) calc(24px * var(--tas-density)) minmax(0,1fr) var(--sidebar-remove-w)}
 .sidebar :is(.propagation-row,.dark-table,.bragg-row) input{width:100%;min-width:0;max-width:100%}
 /* Sample orientation > Bragg peak position: Peak 1 (sets the orientation)
-   and Peak 2 (only checked; Add / Remove). */
+   and the optional Peak 2 (only checked), then one line with the check of
+   peak 2 on the left and Reset on the right. */
 .sidebar :is(.bragg-head,.bragg-row){
   grid-template-columns:var(--sidebar-no-w) repeat(4,minmax(0,1fr))}
 .sidebar .bragg-row + .bragg-row{margin-top:calc(5px * var(--tas-density))}
+.bragg-check-row{display:flex;align-items:center;gap:calc(6px * var(--tas-density));margin-top:calc(4px * var(--tas-density))}
+.bragg-check-message{flex:1 1 auto;min-width:0;font-size:var(--plane-tab-label-font,calc(13px * var(--tas-density)))}
+.bragg-check-message[data-state="warn"]{color:#b4441f}
+.bragg-check-message[data-state="pending"]{color:#999}
+.bragg-check-row > button{flex:none;width:auto;min-height:calc(30px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));font-size:calc(16px * var(--tas-density));line-height:1.2}
 .sidebar :is(.background-row,.dark-asset-head) select{width:100%;min-width:0}
 :is(.propagation-no,.background-label,.dark-asset-no,.dark-range-number,.bragg-no){font-size:calc(18px * var(--tas-density));color:#111}
 

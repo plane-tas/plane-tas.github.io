@@ -16,8 +16,8 @@ shared.scanResults=[];
 shared.scanResolutionPlotLimits=null;
 shared.lastResolutionRender=null;
 // Display frame: 'q' (Q∥, Q⊥in, E, Q⊥out) or 'lattice' (U, V, E, W). The
-// former U, U⊥in, E, U⊥out frame ('orthogonal', the core's own frame) is no
-// longer offered; kept results that used it are shown in the Q frame.
+// core's own U, U⊥in, E, U⊥out frame is not offered as a display frame (it
+// remains in Copy matrices); any other saved value falls back to 'q'.
 function resolutionCoordinates(){
   return $('resolutionCoordinates')?.value==='lattice' ? 'lattice' : 'q';
 }
