@@ -288,6 +288,8 @@ function initializeResponsivePlotResize(){
 }
 
 function setActiveTab(name){
+  // Resolution is greyed out for diffractometers and 4-circle mode.
+  if(name==='resolution' && $('tabResolution')?.disabled) name='qe';
   const isQE=name==='qe', isResolution=name==='resolution', isToolbox=name==='toolbox', isGenerator=name==='cif-generator'||name==='structure', isScript=name==='script';
   mountTimeEstimateForScript(isScript);
   const sampleMode=$('sampleMode');

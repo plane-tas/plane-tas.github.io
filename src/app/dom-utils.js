@@ -68,9 +68,22 @@ export function userFacingTasMessage(value){
   return String(value??'').replace(/\bsv1\b/g,'U').replace(/\bsv2\b/g,'V');
 }
 
+// Messages of the matrix routines (src/core/matrix.js) and JavaScript's own
+// errors mean nothing to the user: they get a plain sentence, and the
+// original error goes to the browser console.
+const INTERNAL_MATH_ERROR=/^(Singular matrix|inverse requires square matrix|matmul shape mismatch)/;
+const INTERNAL_JS_ERRORS=new Set(['TypeError','ReferenceError','RangeError','SyntaxError']);
 export function showError(err){
   const raw=err instanceof Error ? err.message : String(err);
-  $("errorBox").textContent = userFacingTasMessage(raw);
+  let text=userFacingTasMessage(raw);
+  if(INTERNAL_MATH_ERROR.test(raw)){
+    console.warn(err);
+    text='These settings cannot be calculated (a matrix of the calculation is singular). Check the lattice parameters, U and V, and the target Q.';
+  }else if(err instanceof Error && INTERNAL_JS_ERRORS.has(err.name)){
+    console.error(err);
+    text='Unexpected internal error: the calculation was stopped. Details are in the browser console.';
+  }
+  $("errorBox").textContent = text;
   $("errorBox").classList.remove("hidden");
 }
 

@@ -70,7 +70,7 @@ function instrumentForType(base,type){
 }
 function currentInstrument(){
   const key=$("instrument").value;
-  if(!key || !instruments.has(key)) throw new Error("Instrument を選択してください。");
+  if(!key || !instruments.has(key)) throw new Error("Select an instrument.");
   const base=instruments.get(key);
   return instrumentForType(base,selectedInstrumentType(base));
 }
@@ -652,11 +652,18 @@ function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
     'resolutionAnalyzerCrystalSection','resolutionAnalyzerSizeSection']){
     $(id)?.classList.toggle('hidden',diffraction);
   }
-  $('diffractometerResolutionNote')?.classList.toggle('hidden',!diffraction);
-  // Only the TAS resolution model is implemented. Diffractometers must not
-  // display even a previously calculated TAS ellipse or matrix.
-  $('resolutionCalculation')?.classList.toggle('resolution-unavailable',diffraction);
-  if(diffraction) clearResolutionResults?.();
+  // Only the TAS resolution model is implemented: for a diffractometer or a
+  // 4-circle the Resolution tab (and the jump to it from Angle calculation) is
+  // greyed out, and no previously calculated TAS ellipse or matrix is kept.
+  for(const id of ['tabResolution','geomToResolution']){
+    const button=$(id); if(!button) continue;
+    button.disabled=diffraction;
+    button.title=diffraction ? 'Not available for diffractometers and 4-circle mode.' : '';
+  }
+  if(diffraction){
+    clearResolutionResults?.();
+    if(!$('resolutionPanel')?.classList.contains('hidden')) $('tabQe')?.click();
+  }
   $('resolutionFocusingGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
   $('resolutionDistanceGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
   for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))

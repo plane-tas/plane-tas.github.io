@@ -196,7 +196,6 @@
 }
 
 /* Instrument type: omit analyzer controls for diffractometers. */
-.diffractometer-resolution-note{color:#8a5317;background:#fff8e9;border:1px solid #edd8ad;border-radius:6px;padding:8px 10px;margin:0 0 12px}
 
 /* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
 #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -227,10 +226,6 @@
 #resolutionPanel #result #summary > div > b{
   font-size:var(--tas-tab-text-size);
 }
-
-/* Diffractometers have no supported TAS resolution model: display the notice only.
-   Keep calculation input visibility states unchanged for a later TAS selection. */
-#resolutionCalculation.resolution-unavailable > :not(#diffractometerResolutionNote){display:none!important;}
 
 /* Resolution Instrument details uses the same section-heading size as the
    Instrument configuration card in the sidebar, including collapsed sections. */

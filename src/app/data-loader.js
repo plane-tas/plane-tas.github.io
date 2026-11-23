@@ -44,7 +44,7 @@ export async function fetchJson(url){
   const response = await fetch(url, {cache: DATA_CACHE_MODE});
 
   if(!response.ok){
-    throw new Error(`${url} を読み込めませんでした (HTTP ${response.status})。`);
+    throw new Error(`${url} could not be loaded (HTTP ${response.status}).`);
   }
 
   return await response.json();
@@ -61,7 +61,7 @@ export function normalizeJsonFileList(value){
     return value.files.map(String);
   }
 
-  throw new Error("index.json は JSON ファイル名の配列、または {files:[...]} である必要があります。");
+  throw new Error("index.json must be an array of JSON filenames or {files:[...]}.");
 }
 
 export function isGitHubPages(){ return window.location.hostname.endsWith("github.io"); }
@@ -122,8 +122,8 @@ export async function discoverJsonFilesFromDirectoryListing(directory){
 
   if(!response.ok){
     throw new Error(
-      `${directory}/ を読み込めませんでした。` +
-      ` ディレクトリがプロジェクト内にあるか確認してください。`
+      `${directory}/ could not be loaded.` +
+      ` Check that the directory is in the project.`
     );
   }
 
@@ -152,7 +152,7 @@ async function discoverJsonFilesNow(directory){
   // Local development with python -m http.server exposes directory listings.
   if(isLocalDirectoryListingHost()){
     const files=await discoverJsonFilesFromDirectoryListing(directory);
-    if(files.length===0) throw new Error(`${directory}/ に JSON ファイルを見つけられませんでした。`);
+    if(files.length===0) throw new Error(`No JSON files were found in ${directory}/.`);
     await checkManifestAgainstListing(directory,/\.json$/i,files);
     return files;
   }
@@ -163,7 +163,7 @@ async function discoverJsonFilesNow(directory){
     const listed=await readManifest(directory,/\.json$/i);
     if(listed) return listed;
     const files=await discoverJsonFilesFromGitHub(directory);
-    if(files.length===0) throw new Error(`${directory}/ に JSON ファイルがありません。`);
+    if(files.length===0) throw new Error(`${directory}/ has no JSON files.`);
     return files;
   }
 
@@ -180,7 +180,7 @@ async function discoverJsonFilesNow(directory){
   }catch(_err){}
 
   const files=await discoverJsonFilesFromDirectoryListing(directory);
-  if(files.length===0) throw new Error(`${directory}/ に JSON ファイルを見つけられませんでした。`);
+  if(files.length===0) throw new Error(`No JSON files were found in ${directory}/.`);
   return files;
 }
 
@@ -322,7 +322,7 @@ export function prefetchStartupData(){
       for(const name of list){
         const url=`${directory}/${name}`;
         putEarly(`json:${url}`,fetch(url,{cache:DATA_CACHE_MODE}).then(async response=>{
-          if(!response.ok) throw new Error(`${url} を読み込めませんでした (HTTP ${response.status})。`);
+          if(!response.ok) throw new Error(`${url} could not be loaded (HTTP ${response.status}).`);
           return await response.json();
         }));
       }

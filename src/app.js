@@ -312,7 +312,13 @@ function syncAnalyzerFreeUI(){
   for(const id of ['geomSliderHW','powderSliderHW']) $(id)?.closest('.geometry-slider-row')?.classList.toggle('hidden',analyzerFree);
   $('geomHW')?.closest('.grid4')?.classList.toggle('geometry-target-no-hw',analyzerFree);
   $('powderGeometryTarget')?.classList.toggle('powder-target-no-hw',analyzerFree);
-  $('qeMapTabVector')?.classList.toggle('hidden',!single || analyzerFree);
+  // Without an analyzer the Q vector–E map tab stays in place, greyed out.
+  const vectorTab=$('qeMapTabVector');
+  if(vectorTab){
+    vectorTab.classList.toggle('hidden',!single);
+    vectorTab.disabled=analyzerFree;
+    vectorTab.title=analyzerFree ? 'Not available for diffractometers and 4-circle mode.' : '';
+  }
   if((!single || analyzerFree) && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
   if(!analyzerFree) return;
   const lambdaHalf=$('lambdaHalf');
