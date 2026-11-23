@@ -488,15 +488,11 @@ main > .main-tabs{grid-template-columns:repeat(5,minmax(0,1fr));}
 #qePanel .qe-map-tabs.hidden,
 #qePanel .qe-constant-path-input.hidden{display:none!important;}
 
-/* Q-E Range fitted to the visible workspace height (see ui-shell.js). */
-#qePanel.qe-fit-left #singlePlot,
-#qePanel.qe-fit-left #powderPlot,
-#qePanel.qe-fit-left #qeVectorPlot{
-  height:var(--qe-fit-left)!important;
-  min-height:0!important;
-}
-#qePanel.qe-fit-right #geometryPlot{
-  height:var(--qe-fit-right)!important;
+/* Q-E Range fitted to the visible workspace height (see ui-shell.js): one
+   height per plot, so a map keeps its own when the other map tab is shown. */
+#qePanel #singlePlot.qe-fit,#qePanel #powderPlot.qe-fit,#qePanel #qeVectorPlot.qe-fit,
+#qePanel #geometryPlot.qe-fit{
+  height:var(--qe-fit)!important;
   min-height:0!important;
 }
 

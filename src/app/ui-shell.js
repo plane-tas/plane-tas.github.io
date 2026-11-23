@@ -151,13 +151,21 @@ function visibleElement(el){ return !!(el && el.getClientRects().length); }
 function syncQEViewportHeight(){
   const panel=$('qePanel'), grid=document.querySelector('#singleMain .chart-grid'), main=scrollAreaOf(panel);
   if(!panel || !grid || !main) return;
-  const fitVars=['--qe-fit-left','--qe-fit-right'];
-  const prev=fitVars.map(name=>panel.style.getPropertyValue(name)).join('|');
+  // While another tab is shown, keep the last fit: clearing it there made the
+  // plots come back at their full height for a moment (the page scrolled)
+  // before they were fitted again.
+  if(!visibleElement(panel)) return;
+  // Each plot keeps its own fitted height (class qe-fit, --qe-fit on the
+  // plot), so the Constant E map comes back at its height after the Q
+  // vector–E map (and the reverse).  Only the visible plots are measured.
+  const leftPlot=['singlePlot','powderPlot','qeVectorPlot'].map(id=>$(id)).find(visibleElement);
+  const rightPlot=$('geometryPlot');
+  const plots=[leftPlot,visibleElement(rightPlot) ? rightPlot : null].filter(Boolean);
+  const prev=plots.map(p=>p.style.getPropertyValue('--qe-fit')).join('|');
   // Measure the stylesheet (natural) heights first.
-  panel.classList.remove('qe-fit-left','qe-fit-right');
-  for(const name of fitVars) panel.style.removeProperty(name);
+  for(const p of plots){ p.classList.remove('qe-fit'); p.style.removeProperty('--qe-fit'); }
   const twoColumns=getComputedStyle(grid).gridTemplateColumns.split(/\s+/).filter(Boolean).length>=2;
-  if(visibleElement(panel) && twoColumns){
+  if(twoColumns){
     const mainRect=main.getBoundingClientRect(), ms=getComputedStyle(main);
     const available=main.clientHeight-(parseFloat(ms.paddingBottom)||0);
     // Bottom of the column's own content (the grid stretches the columns).
@@ -170,19 +178,17 @@ function syncQEViewportHeight(){
         +(parseFloat(cs.paddingBottom)||0)+(parseFloat(cs.borderBottomWidth)||0)+(parseFloat(cs.marginBottom)||0);
       return end-available;
     };
-    const fit=(column,plots,side)=>{
-      const name=`--qe-${side}`;
-      const plot=plots.map(id=>$(id)).find(visibleElement);
+    const fit=(column,plot)=>{
       if(!column || !plot) return;
       const over=columnOverflow(column);
       if(!(over>1)) return;
       const height=Math.max(QE_FIT_MIN_PLOT,Math.floor(plot.offsetHeight-over));
-      if(height<plot.offsetHeight){ panel.style.setProperty(name,`${height}px`); panel.classList.add(`qe-${side}`); }
+      if(height<plot.offsetHeight){ plot.style.setProperty('--qe-fit',`${height}px`); plot.classList.add('qe-fit'); }
     };
-    fit(grid.querySelector('.qe-main-plot-column'),['singlePlot','powderPlot','qeVectorPlot'],'fit-left');
-    fit(grid.querySelector('.geometry-card'),['geometryPlot'],'fit-right');
+    fit(grid.querySelector('.qe-main-plot-column'),leftPlot);
+    fit(grid.querySelector('.geometry-card'),plots.includes(rightPlot) ? rightPlot : null);
   }
-  const next=fitVars.map(name=>panel.style.getPropertyValue(name)).join('|');
+  const next=plots.map(p=>p.style.getPropertyValue('--qe-fit')).join('|');
   if(next!==prev) scheduleVisiblePlotResize();
 }
 function gridColumnCount(el){
@@ -208,6 +214,8 @@ function syncResolutionViewportHeight(){
     if(h>0) panel.style.setProperty('--res-details-max',`${Math.floor(h)}px`);
   }
   if(!panel || !plots || !main) return;
+  // (Hidden: keep the last fit, as for Q-E Range.)
+  if(!visibleElement(panel)) return;
   const prev=panel.style.getPropertyValue('--res-fit-plot');
   panel.classList.remove('res-fit');
   panel.style.removeProperty('--res-fit-plot');
@@ -245,6 +253,8 @@ function syncScriptViewportHeight(){
   const panel=$('scriptPanel'), ws=panel?.querySelector('.script-workspace'), card=panel?.querySelector('.script-card');
   const main=scrollAreaOf(panel);
   if(!panel || !ws || !card || !main) return;
+  // (Hidden: keep the last fit, as for Q-E Range.)
+  if(!visibleElement(panel)) return;
   panel.classList.remove('script-height-limited');
   panel.style.removeProperty('--script-fit-height');
   const columns=getComputedStyle(ws).gridTemplateColumns.split(/\s+/).filter(Boolean).length;

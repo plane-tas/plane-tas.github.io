@@ -147,6 +147,44 @@ function bindSingleRluGrid(cache){
   gd.on('plotly_relayout',handler);
 }
 
+// Accessible region of one ħω along the path: the same answer as
+// qePointInPolygon for every sample, found per path leg from the points where
+// the leg's line crosses the polygon edges (inside after an odd number of
+// crossings), instead of testing every sample against every edge (the
+// region has hundreds of vertices: that took most of the time of the map).
+// A sample at (or very near) a crossing, or a leg through a vertex, is
+// tested with qePointInPolygon.
+function insideAlongPath(samples,paths,polygon){
+  const out=new Array(samples.length);
+  if(!Array.isArray(polygon) || polygon.length<3){ samples.forEach((s,i)=>{ out[i]=false; }); return out; }
+  const bySeg=paths.map(()=>[]);
+  samples.forEach((s,i)=>bySeg[s.seg]?.push(i));
+  for(const [j,path] of paths.entries()){
+    const idx=bySeg[j]; if(!idx.length) continue;
+    const ux=path.ux, uy=path.uy, x0=path.p0[0], y0=path.p0[1];
+    const ts=[]; let exact=false;
+    for(let a=0,b=polygon.length-1;a<polygon.length;b=a++){
+      const ax=polygon[b][0], ay=polygon[b][1], dx=polygon[a][0]-ax, dy=polygon[a][1]-ay;
+      const den=ux*dy-uy*dx;
+      if(Math.abs(den)<1e-14) continue;  // parallel to the leg
+      const wx=ax-x0, wy=ay-y0;
+      const s=(wx*uy-wy*ux)/den;
+      if(s<-1e-9 || s>1+1e-9) continue;
+      if(Math.abs(s)<1e-9 || Math.abs(s-1)<1e-9){ exact=true; break; }  // through a vertex
+      ts.push((wx*dy-wy*dx)/den);
+    }
+    if(exact){ for(const i of idx) out[i]=qePointInPolygon(samples[i].xy,polygon); continue; }
+    ts.sort((p,q)=>p-q);
+    const tol=1e-9*Math.max(1,path.length);
+    let k=0;
+    for(const i of idx){  // samples of a leg are in increasing t
+      const t=samples[i].t;
+      while(k<ts.length && ts[k]<t-tol) k++;
+      out[i]=(k<ts.length && Math.abs(ts[k]-t)<=tol) ? qePointInPolygon(samples[i].xy,polygon) : (k%2===1);
+    }
+  }
+  return out;
+}
 function qePointInPolygon(point,polygon){
   const x=point[0], y=point[1];
   let inside=false;
@@ -390,7 +428,7 @@ function renderQEVectorMap(cache){
         const t=n/steps;
         samples.push({x:(path.start+t*path.length)*xScale,
           xy:[path.p0[0]+t*path.length*path.ux,path.p0[1]+t*path.length*path.uy],
-          hkl:path.a.map((v,k)=>v+t*(path.b[k]-v))});
+          hkl:path.a.map((v,k)=>v+t*(path.b[k]-v)),seg:j,t:t*path.length});
       }
     }
     const xVals=samples.map(p=>p.x),hMin=0,hMax=totalDistance*xScale;
@@ -486,9 +524,10 @@ function renderQEVectorMap(cache){
       const row=[], kiRow=[], kfRow=[], fixedRow=[], hrow=[];
       const region=cache.regions[i];
       const darkKi=cache.darkKI[i]||[], darkKf=cache.darkKF[i]||[], darkFixed=cache.darkFixed[i]||[];
-      for(const sample of samples){
+      const regionInside=insideAlongPath(samples,paths,region);
+      for(const [si,sample] of samples.entries()){
         const pt=sample.xy;
-        const geometric=qePointInPolygon(pt,region);
+        const geometric=regionInside[si];
         // Dark-angle geometry is an independent display layer.  Do not clip it
         // to the Accessible-Q polygon: a blocked motor geometry can lie outside
         // the currently reachable S1 envelope and should still be visible on
