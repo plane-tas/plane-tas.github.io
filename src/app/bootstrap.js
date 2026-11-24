@@ -284,7 +284,14 @@ async function initialize(){
   $('braggReset')?.addEventListener('click',resetBraggPeaks);
   $('flipUV')?.addEventListener('click',flipScatteringPlaneUV);
   updateOrientationReferenceUI(); updateGeometryQuickTargetButtons();
-  $('orientationReference')?.addEventListener('change',()=>{
+  $('orientationReference')?.addEventListener('change',ev=>{
+    // Choosing "Bragg peak position" (by hand, not a restore) starts from
+    // the scattering plane: peak 1 = U, peak 2 = V (as Reset).  Peaks that
+    // are already U and V keep their S1 values.
+    if(ev.isTrusted && $('orientationReference').value==='bragg'){
+      const same=(ids,src)=>ids.every((id,i)=>Number($(id)?.value)===Number($(src[i])?.value));
+      if(!(same(['refh','refk','refl'],['Uh','Uk','Ul']) && same(['refh2','refk2','refl2'],['Vh','Vk','Vl']))) resetBraggPeaks();
+    }
     updateOrientationReferenceUI();
     updateGeometryQuickTargetButtons();
 
