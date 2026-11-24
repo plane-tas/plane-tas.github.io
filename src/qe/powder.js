@@ -30,7 +30,7 @@ function powderSfText(sf2){
   if(!Number.isFinite(sf2)) return "N/A";
   const a=Math.abs(sf2);
   const s=(a!==0 && (a>=1e5 || a<1e-3)) ? sf2.toExponential(4) : sf2.toFixed(4).replace(/\.?0+$/,"");
-  return `|F_N|² = ${s} fm²`;
+  return `|F<sub>N</sub>|² = ${s} fm²`;
 }
 
 function groupPowderReflectionsByQ(entries){
@@ -281,7 +281,7 @@ function drawPowder(state){
     if(nuclearShaded) traces.push({x:[null],y:[null],mode:"markers",name:"Nuclear Bragg peaks",legendgroup:"powder-nuclear",
       showlegend:false,hoverinfo:"skip",
       marker:{color:[0],colorscale:plotlyScale(NUCLEAR_LINE_SCALE),cmin,cmax,showscale:true,
-        colorbar:colorbarFor('Σ|F_N|²L / max',nuclearBar,cmin,cmax)}});
+        colorbar:colorbarFor('Σ|F<sub>N</sub>|²L / max',nuclearBar,cmin,cmax)}});
   }
 
   if(magneticGroups.length){
@@ -315,7 +315,7 @@ function drawPowder(state){
     if(magneticShaded) traces.push({x:[null],y:[null],mode:"markers",name:"Magnetic Bragg peaks",legendgroup:"powder-magnetic",
       showlegend:false,hoverinfo:"skip",
       marker:{color:[0],colorscale:plotlyScale(MAGNETIC_LINE_SCALE),cmin,cmax,showscale:true,
-        colorbar:colorbarFor('Σ|F_M|²L / max',magneticBar,cmin,cmax)}});
+        colorbar:colorbarFor('Σ|F<sub>M</sub>|²L / max',magneticBar,cmin,cmax)}});
   }
 
   // Scale row (F_N / F_M min and max, M = x N) under the powder legend; its

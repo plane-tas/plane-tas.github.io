@@ -347,7 +347,7 @@ function renderSingle(cache,index=0){
         colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(205,205,205)"],[0.5,"rgb(150,150,150)"],[0.75,"rgb(85,85,85)"],[1,"rgb(0,0,0)"]],
         cmin:Number($("sfColorMinEntry")?.value ?? 0),cmax:Number($("sfColorMaxEntry")?.value ?? 1),
         showscale:true,
-        colorbar:{title:{text:`|F_N|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:nuclearBar.len,x:1.01,xanchor:"left",y:nuclearBar.y,
+        colorbar:{title:{text:`|F<sub>N</sub>|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:nuclearBar.len,x:1.01,xanchor:"left",y:nuclearBar.y,
           ...singleColorbarTicks(Number($("sfColorMinEntry")?.value ?? 0),Number($("sfColorMaxEntry")?.value ?? 1))},
         size:initialMarkerSizes.nuclear,
         // A dark rim keeps weak (near-white) peaks visible on any background
@@ -401,7 +401,7 @@ function renderSingle(cache,index=0){
         marker:{color:pts.map(magneticRelative),
           colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(255,200,200)"],[0.5,"rgb(250,130,130)"],[0.75,"rgb(225,55,55)"],[1,"rgb(180,0,0)"]],
           cmin:Number($("mfColorMinEntry")?.value ?? 0),cmax:Number($("mfColorMaxEntry")?.value ?? 1),showscale:true,
-          colorbar:{title:{text:`|F_M|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
+          colorbar:{title:{text:`|F<sub>M</sub>|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
             ...singleColorbarTicks(Number($("mfColorMinEntry")?.value ?? 0),Number($("mfColorMaxEntry")?.value ?? 1))},
           size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol,
           line:{color:"rgb(110,0,0)",width:1.3}},

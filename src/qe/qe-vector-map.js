@@ -282,7 +282,7 @@ function addPathBraggTraces(cache,traces,paths,xScale){
         color:onlyBar?[0]:nuclear.map(o=>nuclearRelative(o.p)),
         colorscale:[[0,'rgb(255,255,255)'],[0.25,'rgb(205,205,205)'],[0.5,'rgb(150,150,150)'],[0.75,'rgb(85,85,85)'],[1,'rgb(0,0,0)']],
         cmin:sfMin,cmax:sfMax,showscale:true,
-        colorbar:colorbar(`|F_N|${iSymbol} / max`,nuclearBar,sfMin,sfMax),
+        colorbar:colorbar(`|F<sub>N</sub>|${iSymbol} / max`,nuclearBar,sfMin,sfMax),
         size:sizes.nuclear,line:{color:'rgb(25,25,25)',width:1.3}
       } : {color:'black',size:sizes.nuclear},
       hovertext:onlyBar?['']:nuclear.map(({p})=>{
@@ -324,7 +324,7 @@ function addPathBraggTraces(cache,traces,paths,xScale){
         marker:{color:onlyBar?[0]:pts.map(o=>magneticRelative(o.p)),
           colorscale:[[0,'rgb(255,255,255)'],[0.25,'rgb(255,200,200)'],[0.5,'rgb(250,130,130)'],[0.75,'rgb(225,55,55)'],[1,'rgb(180,0,0)']],
           cmin:mfMin,cmax:mfMax,showscale:true,
-          colorbar:colorbar(`|F_M|${iSymbol} / max`,magneticBar,mfMin,mfMax),
+          colorbar:colorbar(`|F<sub>M</sub>|${iSymbol} / max`,magneticBar,mfMin,mfMax),
           size,symbol,line:{color:'rgb(110,0,0)',width:1.3}},
         hovertext,hovertemplate:'%{hovertext}<extra></extra>'
       });
