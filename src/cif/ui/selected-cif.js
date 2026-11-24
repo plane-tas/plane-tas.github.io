@@ -273,9 +273,11 @@ function clearSelectedCif(){
     if($("sampleSpaceGroup")) $("sampleSpaceGroup").value="1";
     if($("sampleSpaceGroupNumber")) $("sampleSpaceGroupNumber").value="1";
   }
-  // The Structure editor and the lattice start over as well (as after a
-  // reload without a file): P1, the default cell, no atoms.
-  for(const id of ["a","b","c","alpha","beta","gamma",...Object.values(cifState.CIF_LATTICE_FIELDS)]){
+  // The Structure editor starts over (as after a reload without a file):
+  // P1, the default cell, no atoms.  The Sample lattice (a … γ) keeps the
+  // values of the cleared file; its space group is P1 again, so every
+  // value can be edited.
+  for(const id of Object.values(cifState.CIF_LATTICE_FIELDS)){
     const el=$(id); if(el) el.value=el.defaultValue;
   }
   cifState.positionModeDrafts={sites:null,individual:null};

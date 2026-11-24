@@ -423,7 +423,7 @@ export function createConvolutionUI(deps){
       notes.className='convolution-example-notes';
       notes.textContent=exampleText(formatValue()).split('\n').filter(l=>/^#/.test(l)).join('\n');
       info.replaceChildren(line,notes);
-    }else info.textContent=fileInfo;
+    }else{ info.textContent=fileInfo; info.removeAttribute('title'); }
     if(shown()){ renderTableHead(); renderTableRows(true); }
     else{ $('convTableHead')?.replaceChildren(); $('convTableBody')?.replaceChildren(); }
   }
@@ -436,12 +436,45 @@ export function createConvolutionUI(deps){
   }
   // Load example: the example (in the selected format) becomes the
   // dispersion file, as if it had been selected.
+  // The sample of the example: MnF2 (P4₂/mnm), scattering plane (H, 0, L).
+  const EXAMPLE_SAMPLE={a:4.873,b:4.873,c:3.311,alpha:90,beta:90,gamma:90,Uh:1,Uk:0,Ul:0,Vh:0,Vk:0,Vl:1};
+  const EXAMPLE_SPACE_GROUP=136;
+  // Load example also sets the Sample to MnF2 (before the table is read, so
+  // the ħω defaults use its resolution).  A loaded CIF/mCIF of MnF2 (lattice
+  // within 0.1 %, e.g. c = 3.3099 Å) stays with its own lattice and only the
+  // scattering plane is set; one with another lattice is cleared.
+  function setExampleSample(){
+    const LATTICE=['a','b','c','alpha','beta','gamma'], cifClear=$('cifClearButton');
+    const near=LATTICE.every(id=>{ const v=Number($(id)?.value), w=EXAMPLE_SAMPLE[id]; return Number.isFinite(v) && Math.abs(v-w)<=1e-3*w; });
+    const notes=[];
+    if(cifClear && !cifClear.disabled){
+      if(near){
+        notes.push(...applySettings({instrument:Object.fromEntries(['Uh','Uk','Ul','Vh','Vk','Vl'].map(k=>[k,EXAMPLE_SAMPLE[k]]))},'2D'));
+        return {notes,keptCif:true};
+      }
+      cifClear.click(); notes.push('CIF/mCIF cleared: its lattice differs from the example.');
+    }
+    // Without a CIF the space group first, so its lattice constraints do not
+    // change the values put next.
+    if(!cifClear || cifClear.disabled){
+      const sg=$('sampleSpaceGroupNumber');
+      if(sg && Number(sg.value)!==EXAMPLE_SPACE_GROUP){ sg.value=String(EXAMPLE_SPACE_GROUP); sg.dispatchEvent(new Event('change',{bubbles:true})); }
+    }
+    notes.push(...applySettings({instrument:{...EXAMPLE_SAMPLE}},'2D'));
+    return {notes,keptCif:false};
+  }
   function loadExample(){
+    const {notes,keptCif}=setExampleSample();
     text=exampleText(formatValue()); fileName=EXAMPLE_NAME;
     $('convFileName').value=fileName;
     exampleShown=false;
     loadText();
     storeFile({name:fileName,format:formatValue(),text});
+    // Say what was changed in the Sample (the notes in the hover text).
+    fileInfo+=keptCif ? ' Scattering plane set to (H, 0, L) (the loaded MnF2 CIF/mCIF kept).'
+      : ' Sample set to MnF2 (a = b = 4.873 Å, c = 3.311 Å, P4₂/mnm), scattering plane (H, 0, L).';
+    const info=$('convTableInfo');
+    if(info){ info.textContent=fileInfo; info.title=notes.join(' '); }
   }
 
   // -------------------------------------------------------- table viewer --
