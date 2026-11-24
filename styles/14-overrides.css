@@ -951,7 +951,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Convolution labels the same size as the labels of the other tabs
    (the control text size, as in Q-E Range and Toolbox); the curve list uses
    the table size like every other table. */
-#resolutionConvolutionPane :is(.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}
+#resolutionConvolutionPane :is(.convolution-head-field,.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}
 
 /* Calculate row under the table, left to right in the order of use:
    integration (method, range or points), estimated time, Calculate, status.
@@ -985,6 +985,17 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .convolution-box-head .convolution-integration-detail label{display:flex;align-items:center;gap:calc(4px * var(--tas-density));min-width:0}
 /* Spacing / points: the select fills its column after the caption. */
 #resolutionConvolutionPane .convolution-box-head .convolution-integration-detail select{flex:1 1 0;width:auto;min-width:0}
+/* Approximation, Method and Spacing / Points: the caption above the box
+   (the size of the other captions); Estimated time, Calculate and the
+   progress bar have none and line up with the boxes. */
+#resolutionConvolutionPane .convolution-box-head{align-items:end}
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-head-field,.convolution-integration-detail label){display:flex;flex-direction:column;align-items:stretch;gap:calc(2px * var(--tas-density));min-width:0;white-space:nowrap}
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-head-field,.convolution-integration-detail label) select{width:100%;min-width:0;flex:none}
+#resolutionConvolutionPane .convolution-box-head .convolution-caption{overflow:hidden;text-overflow:ellipsis}
+/* Without a caption: the height of the boxes, at their level. */
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-estimate,button.convolution-calc,.convolution-status){min-height:2.25em}
+#resolutionConvolutionPane .convolution-box-head .convolution-estimate{display:flex;align-items:center}
+#resolutionConvolutionPane .convolution-box-head .convolution-status{display:flex;align-items:center;justify-content:center}
 .convolution-box-head .convolution-integration-detail input{flex:1 1 0;width:auto;min-width:2.5em}
 .convolution-box-head .convolution-estimate{margin:0;min-width:0;white-space:normal;line-height:1.2}
 #resolutionConvolutionPane .convolution-box-head .convolution-status{min-width:0;width:100%;text-align:center;padding:calc(2px * var(--tas-density)) calc(6px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums;min-height:calc(1.6em);box-sizing:border-box}
