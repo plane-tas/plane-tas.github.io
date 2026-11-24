@@ -247,7 +247,12 @@ function pathBraggPositions(points,paths,xScale){
 }
 
 function addPathBraggTraces(cache,traces,paths,xScale){
-  const nuclear=pathBraggPositions(cache.Gpoints||[],paths,xScale);
+  // The origin (direct beam) is drawn without hover, in the legend trace:
+  // an empty hover text still shows an empty hover box.
+  const isOriginG=o=>Array.isArray(o.p?.hkl) && o.p.hkl.every(v=>Math.abs(v)<1e-10);
+  const allNuclear=pathBraggPositions(cache.Gpoints||[],paths,xScale);
+  const originG=allNuclear.filter(isOriginG);
+  const nuclear=allNuclear.filter(o=>!isOriginG(o));
   const magnetic=pathBraggPositions(cache.magPoints||[],paths,xScale);
   // Same intensity definition and normalization as the Constant E map:
   // I = |F|^2 L (L = 1/sin 2θ at the elastic wave vector, or 1), each
@@ -269,10 +274,12 @@ function addPathBraggTraces(cache,traces,paths,xScale){
   // Nuclear: black circles without a CIF; |F_N|² shading and colorbar with one.
   // With a CIF the colorbar stays even when no peak is on the path (Plotly
   // drops the colorbar of an empty trace, so carry one unplotted point).
-  if(nuclear.length || hasCif){
+  if(nuclear.length || originG.length || hasCif){
     const onlyBar=!nuclear.length;
-    legendTraces.push({x:[null],y:[null],mode:'markers',name:'Nuclear Bragg peaks',
-      marker:{color:'black',size:sizes.nuclear},hoverinfo:'skip',meta:'nuclear-legend'});
+    legendTraces.push({x:originG.length?originG.map(o=>o.x):[null],y:originG.length?originG.map(()=>0):[null],mode:'markers',name:'Nuclear Bragg peaks',
+      cliponaxis:false,
+      marker:hasCif ? {color:'white',size:sizes.nuclear,line:{color:'rgb(25,25,25)',width:1.3}} : {color:'black',size:sizes.nuclear},
+      hoverinfo:'skip',meta:'nuclear-legend'});
     const sfMin=entry('sfColorMinEntry',0), sfMax=entry('sfColorMaxEntry',1);
     dataTraces.push({
       type:'scatter',mode:'markers',name:'Nuclear Bragg peaks',showlegend:false,meta:'nuclear-data',

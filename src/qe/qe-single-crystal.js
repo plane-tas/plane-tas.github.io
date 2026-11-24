@@ -367,7 +367,9 @@ export function createQESingleCrystal(deps){
           const Gm=hklToQ(rl,hm);
 
           const xyM=(fourCircle && Whkl) ? layerXY(Gm) : [dot(Gm,ex),dot(Gm,ey)];
-          if(xyM && norm(Gm)<=QplotLattice){
+          // Not at Q = 0 (k = 0 around the origin): the direct beam, as for
+          // the nuclear origin (and the powder pattern).
+          if(xyM && norm(Gm)>1e-8 && norm(Gm)<=QplotLattice){
             magPoints.push({
               x:xyM[0],
               y:xyM[1],

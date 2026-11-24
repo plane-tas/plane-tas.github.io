@@ -294,7 +294,12 @@ function renderSingle(cache,index=0){
   const initialMarkerSizes=singleMarkerSizes(2*QplotX,2*QplotX,cache.Gpoints.length+cache.magPoints.length);
 
   // Show every calculated nuclear peak. The unused intensity-threshold filter was removed.
-  const visibleGpoints=transformedG;
+  // The origin (direct beam) is drawn without hover: it is moved to the
+  // legend trace (hoverinfo skip), since an empty hover text still shows an
+  // empty hover box.
+  const isOriginG=p=>Array.isArray(p.hkl) && p.hkl.every(v=>Math.abs(v)<1e-10);
+  const originG=transformedG.find(isOriginG);
+  const visibleGpoints=transformedG.filter(p=>!isOriginG(p));
   // Keep the |F_N|² colorbar (and its min/max entries) even when the current
   // slice has no nuclear peak, e.g. a four-circle W layer between lattice planes.
   // Plotly drops the colorbar of an empty trace, so carry one unplotted point.
@@ -328,8 +333,9 @@ function renderSingle(cache,index=0){
       }:{})
     },
     {
-      x:[null], y:[null], mode:"markers", name:"Nuclear Bragg peaks",
-      marker:{color:"black",size:initialMarkerSizes.nuclear},
+      x:originG?[originG.x]:[null], y:originG?[originG.y]:[null], mode:"markers", name:"Nuclear Bragg peaks",
+      marker:cache.cifStructure ? {color:"white",size:initialMarkerSizes.nuclear,line:{color:"rgb(25,25,25)",width:1.3}}
+        : {color:"black",size:initialMarkerSizes.nuclear},
       hoverinfo:"skip",
       meta:"nuclear-legend",
       zorder:0
