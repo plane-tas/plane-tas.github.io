@@ -992,17 +992,10 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Save figure at the top-left of the 1D plot. */
 .convolution-scan-layout{position:relative}
 .convolution-scan-plotbox>.convolution-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:2}
-/* Narrower: the Calculate row in two lines (3 equal columns), as soon as
-   six columns would cut the spacing text ("σ/4 (29³) 0.2–3%"); very
-   narrow: two columns. */
+/* Narrow: the same six items in two lines of three equal columns. */
 .convolution-tab-pane>.convolution-box{container-type:inline-size}
-@container (max-width:1140px){
+@container (max-width:720px){
   #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@container (max-width:560px){
-  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(2,minmax(0,1fr))}
-  /* Spacing / points and the progress bar take a whole line. */
-  #resolutionConvolutionPane .convolution-box-head :is(.convolution-integration-detail,.convolution-status){grid-column:1/-1}
 }
 /* ".csv" at the same size as the CIF output ".cif". */
 #resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
