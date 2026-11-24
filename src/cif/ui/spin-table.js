@@ -399,9 +399,7 @@ function updateMagneticMomentRows(structure){
   if(cifState.spinSelectionAnchorKey && !displayedKeys.has(cifState.spinSelectionAnchorKey))cifState.spinSelectionAnchorKey=null;
   const siteIndices=new Map(allSites.map((site,index)=>[site.individualKey||momentKey(site),index+1]));
   if(!sites.length){
-    const div=document.createElement("div"); div.className="structure-spin-table-empty";
-    div.textContent=allSites.length ? "No atoms match the selected element." : "No atomic sites were found.";
-    host.appendChild(div);
+    // No sites (none at all, or none of the selected element): no rows, no note.
     fn.syncSpinTableBulkCheckbox(structure,allSites);
     return;
   }

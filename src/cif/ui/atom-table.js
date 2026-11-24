@@ -164,7 +164,7 @@ function updateStructureAtomColorRows(elements,structure=null){
   header.className="atoms-table-head";
   for(const text of ["Element / Site","Visible","Color","Size"]){const cell=document.createElement("span");cell.textContent=text;header.appendChild(cell);}
   host.appendChild(header);
-  if(!elements.length){const empty=document.createElement("div");empty.className="structure-rows-empty";empty.textContent="No atoms available.";host.appendChild(empty);return;}
+  if(!elements.length) return; // No atoms: the header only (no note).
   function makeRow(label,key,element,isSite){
     const row=document.createElement("div");row.className="atoms-table-row"+(isSite?" atoms-site-row":" atoms-element-row");
     const name=document.createElement(isSite?"span":"button");name.className="atoms-row-name";

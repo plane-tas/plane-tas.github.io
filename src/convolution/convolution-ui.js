@@ -96,7 +96,7 @@ export function createConvolutionUI(deps){
     'dAna','mosAnaH','mosAnaV','anaHF','anaVF','anaHB','anaVB','anaWcm','anaHcm','anaTcm',
     'mosSamH','mosSamV','sampleShape','sampleUcm','sampleVcm','sampleDcm','sampleHcm',
     'L0','L1','L2','L3','srcWcm','srcHcm','sourceShape','detWcm','detHcm','detectorShape',
-    'a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','unit'];
+    'sampleSpaceGroupNumber','a','b','c','alpha','beta','gamma','Uh','Uk','Ul','Vh','Vk','Vl','unit'];
   const BOX_SETTING_IDS={'2D':[...RANGE_IDS,'convIntegration2D','convSamples2D','convGrid2D'],'1D':[...SCAN_INPUT_IDS,'convIntegration1D','convSamples1D','convGrid1D']};
   const controlValue=el=>el.type==='checkbox' ? !!el.checked : el.value;
   function settingsSnapshot(dim){
@@ -119,12 +119,17 @@ export function createConvolutionUI(deps){
     };
     const inst={...(set.instrument||{})};
     // The loaded CIF/mCIF stays only when its lattice is the one of the file
-    // (a, b, c, α, β, γ to three decimals); otherwise it is cleared, so its
-    // name is not shown with the lattice of the file.
-    const LATTICE=['a','b','c','alpha','beta','gamma'], cifClear=$('cifClearButton');
-    if(cifClear && !cifClear.disabled && LATTICE.every(id=>Number.isFinite(Number(inst[id])))){
+    // (a, b, c, α, β, γ to three decimals); otherwise it is unset, so its
+    // name is not shown with the lattice of the file.  The space group is
+    // put before the lattice (its constraints would change the values); a
+    // file without one, with another lattice, gets P1.
+    const LATTICE=['a','b','c','alpha','beta','gamma'], cifUnset=$('cifClearButton');
+    if(LATTICE.every(id=>Number.isFinite(Number(inst[id])))){
       const same=LATTICE.every(id=>Number(inst[id]).toFixed(3)===Number($(id)?.value).toFixed(3));
-      if(!same){ cifClear.click(); notes.push('CIF/mCIF cleared: its lattice differs from the file.'); }
+      if(!same){
+        if(cifUnset && !cifUnset.disabled){ cifUnset.click(); notes.push('CIF/mCIF unset: its lattice differs from the file.'); }
+        if(inst.sampleSpaceGroupNumber===undefined) inst.sampleSpaceGroupNumber=1;
+      }
     }
     // Files saved with a Geometry (W / anti-W): it is part of the Sense now.
     if(inst.sense!==undefined && inst.geometry!==undefined){ inst.sense=readTasSense(inst.sense,inst.geometry); delete inst.geometry; }
@@ -444,23 +449,15 @@ export function createConvolutionUI(deps){
   // within 0.1 %, e.g. c = 3.3099 Å) stays with its own lattice and only the
   // scattering plane is set; one with another lattice is cleared.
   function setExampleSample(){
-    const LATTICE=['a','b','c','alpha','beta','gamma'], cifClear=$('cifClearButton');
+    const LATTICE=['a','b','c','alpha','beta','gamma'], cifUnset=$('cifClearButton');
     const near=LATTICE.every(id=>{ const v=Number($(id)?.value), w=EXAMPLE_SAMPLE[id]; return Number.isFinite(v) && Math.abs(v-w)<=1e-3*w; });
-    const notes=[];
-    if(cifClear && !cifClear.disabled){
-      if(near){
-        notes.push(...applySettings({instrument:Object.fromEntries(['Uh','Uk','Ul','Vh','Vk','Vl'].map(k=>[k,EXAMPLE_SAMPLE[k]]))},'2D'));
-        return {notes,keptCif:true};
-      }
-      cifClear.click(); notes.push('CIF/mCIF cleared: its lattice differs from the example.');
+    if(cifUnset && !cifUnset.disabled && near){
+      const notes=applySettings({instrument:Object.fromEntries(['Uh','Uk','Ul','Vh','Vk','Vl'].map(k=>[k,EXAMPLE_SAMPLE[k]]))},'2D');
+      return {notes,keptCif:true};
     }
-    // Without a CIF the space group first, so its lattice constraints do not
-    // change the values put next.
-    if(!cifClear || cifClear.disabled){
-      const sg=$('sampleSpaceGroupNumber');
-      if(sg && Number(sg.value)!==EXAMPLE_SPACE_GROUP){ sg.value=String(EXAMPLE_SPACE_GROUP); sg.dispatchEvent(new Event('change',{bubbles:true})); }
-    }
-    notes.push(...applySettings({instrument:{...EXAMPLE_SAMPLE}},'2D'));
+    // Another CIF/mCIF is unset there (its lattice differs); the space group
+    // goes in before the lattice.
+    const notes=applySettings({instrument:{sampleSpaceGroupNumber:EXAMPLE_SPACE_GROUP,...EXAMPLE_SAMPLE}},'2D');
     return {notes,keptCif:false};
   }
   function loadExample(){

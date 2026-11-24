@@ -9,7 +9,7 @@ export function installSelectedCif(ctx){
     setSelectedCifState, updateAbsorptionCalculator, updateAutoW
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    clearSelectedCif, loadCifText, restoreSelectedCifLocal, selectCifFile, syncSfColorMaxControl,
+    clearSelectedCif, clearStructureEditor, loadCifText, restoreSelectedCifLocal, selectCifFile, syncSfColorMaxControl,
     updateCifUI, updateImportedUnitCellPanels
   });
 
@@ -52,9 +52,6 @@ function updateCifUI(){
   for(const id of ["cifFileName","cifGeneratorSourceName"]) showFileName($(id),fileName);
   const clearButton=$("cifClearButton");
   if(clearButton) clearButton.disabled=!getSelectedCifStructure();
-  // All three file selectors display the same shared, parsed CIF/mCIF state.
-  const generatorClear=$("cifGeneratorSourceClear");
-  if(generatorClear) generatorClear.disabled=!getSelectedCifStructure();
   const showCurrentButton=$("cifShowCurrent");
   if(showCurrentButton) showCurrentButton.disabled=!getSelectedCifText();
   if($("cifReloadCurrent")) $("cifReloadCurrent").disabled=!getSelectedCifText();
@@ -132,13 +129,17 @@ function updateImportedUnitCellPanels(parsed,text){
     if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(Number(Number(parsed.lattice[key]).toPrecision(10))):'';
   }
 }
-function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
+function loadCifText(text,fileName="generated_structure.cif",{persist=true,newFile=false}={}){
   cifState.liveEditorNuclearSource=null;
   cifState.liveEditorNuclearInvalid=false;
   const parsed=parseCifStructure(text);
   const cifText=String(text??"");
   const importedQ=fn.propagationVectorsFromMcif(cifText,parsed);
-  if(importedQ.length) setPropagationVectorsFromFile?.(importedQ);
+  // A file selected from disk is a new sample: its propagation vectors (an
+  // mCIF's) or none (a CIF) replace those entered for the previous one.
+  // Set CIF, Reload and the restore on start keep the entered ones unless
+  // the file has its own.
+  if(newFile || importedQ.length) setPropagationVectorsFromFile?.(importedQ);
   cifState.importedMagneticEditMode=false;
   cifState.restoredMomentStructureType=null;
   cifState.structureModifyLocked=false;
@@ -247,54 +248,65 @@ function loadCifText(text,fileName="generated_structure.cif",{persist=true}={}){
 
 async function selectCifFile(file){
   if(!file) return;
-  return loadCifText(await file.text(),file.name);
+  return loadCifText(await file.text(),file.name,{newFile:true});
 }
 
+// Unset (Sample, next to Select CIF/mCIF): the file is no longer used --
+// as if none had been loaded.  The Q-E maps lose their |F|² shading and the
+// Reflections their file; everything entered stays: the lattice and space
+// group (extinctions) of the Sample and the Structure editor (Cell,
+// Positions, Atoms, Spins, Bonds), which the Generator keeps showing.
 function clearSelectedCif(){
-  cifState.liveEditorNuclearSource=null;
-  cifState.liveEditorNuclearInvalid=false;
-  fn.discardStructureEditingSession();
   setSelectedCifState(null,"","");
   updateImportedUnitCellPanels(null,"");
-  // Clear the separate Generator-only viewer cache as well: a later tab
-  // switch must not resurrect a CIF that was explicitly cleared.
+  // The separate Generator-only cache of the file as well: a later tab
+  // switch must not bring back a file that was unset.
   cifState.loadedGeneratorCifStructure=null;
   cifState.loadedGeneratorCifName="";
-  fn.resetStructureViewerStateToDefaults();
+  cifState.importedMagneticEditMode=false;
   try{ localStorage.removeItem(SELECTED_CIF_STORAGE_KEY); }catch(_e){}
   cifState.cifStructureSourcePreference="selected";
   if($("cifFileInput")) $("cifFileInput").value="";
   if($("cifLoadFile")) $("cifLoadFile").value="";
-  // Do not leave save/Set actions enabled for an obsolete reviewed file.
-  fn.invalidateGeneratedCif("");
-  fn.invalidateGeneratedMcif();
-  if(cifState.cifSpaceGroups.length) fn.setSampleSpaceGroup(1,{recalc:false});
-  else{
-    if($("sampleSpaceGroup")) $("sampleSpaceGroup").value="1";
-    if($("sampleSpaceGroupNumber")) $("sampleSpaceGroupNumber").value="1";
-  }
-  // The Structure editor starts over (as after a reload without a file):
-  // P1, the default cell, no atoms.  The Sample lattice (a … γ) keeps the
-  // values of the cleared file; its space group is P1 again, so every
-  // value can be edited.
-  for(const id of Object.values(cifState.CIF_LATTICE_FIELDS)){
-    const el=$(id); if(el) el.value=el.defaultValue;
-  }
+  // The Generator calculates from the editor from now on.
+  cifState.liveNuclearCellReference="editor";
+  fn.updateLiveEditorNuclearSource?.();
+  updateCifUI();
+  clearError();
+  saveLeftPanelState();
+  scheduleRecalc();
+  fn.recalculateGeneratedReflections?.();
+  fn.renderCifStructureIfVisible();
+}
+// Clear all (Structure editor): a new, empty structure.  Positions, Atoms,
+// Spins and Bonds are emptied and the moments entered are forgotten; the
+// Cell and the propagation vectors stay (they are the Sample's).  The file
+// is unset too, so it is not used in place of the empty editor.
+function clearStructureEditor(){
+  if(getSelectedCifStructure()) clearSelectedCif();
+  fn.discardStructureEditingSession();
+  fn.resetStructureViewerStateToDefaults();
   cifState.positionModeDrafts={sites:null,individual:null};
   cifState.structurePositionEditingMode="sites";
   cifState.structurePositionTableElement="*";
   cifState.positionManualSourceSignature=null;
   cifState.positionSavedSourcePreference=null;
-  if($("cifCrystalSystem")) $("cifCrystalSystem").value="custom";
-  if(cifState.cifSpaceGroups.length) fn.selectCifSpaceGroup(1,{syncSystem:true});
-  if($("cifSpaceGroupNumber")) $("cifSpaceGroupNumber").value="1";
-  if($("cifGeneratedName")) $("cifGeneratedName").value="generated_structure";
   fn.replaceCifAtomRows([]);
+  // Rebuild the (empty) Atoms / Spins / Bonds tables with their headers.
+  cifState.structureControlSignature=null;
+  fn.syncStructureControlRows?.(null);
+  cifState.structureMomentSettings?.clear?.();
+  // Output generated from the old content is no longer valid.
+  fn.invalidateGeneratedCif("");
+  fn.invalidateGeneratedMcif();
+  cifState.liveEditorNuclearSource=null;
+  cifState.liveEditorNuclearInvalid=false;
   fn.refreshPositionTableToolbar?.();
+  fn.saveCifGeneratorAtomsState?.();
   updateCifUI();
   clearError();
-  saveLeftPanelState();
   scheduleRecalc();
+  fn.recalculateGeneratedReflections?.();
   fn.renderCifStructureIfVisible();
 }
 }

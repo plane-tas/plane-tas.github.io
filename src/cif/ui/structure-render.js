@@ -90,7 +90,7 @@ function renderCifStructureView(){
   if(typeof Plotly==="undefined"){ status.textContent="Plotly is unavailable, so the structure view cannot be drawn."; return; }
   const source=fn.currentStructureForViewer();
   fn.syncImportedMomentStructureType();
-  if(!source?.structure){ status.textContent="No CIF structure is available yet. Load/select a CIF or enter a valid CIF Generator structure."; Plotly.purge(plot); return; }
+  if(!source?.structure){ status.textContent="No CIF structure is available yet. Load/select a CIF or enter a valid CIF Generator structure."; Plotly.purge(plot); fn.syncStructureControlRows(null); return; }
   const basis=fn.directLatticeBasis(source.structure.lattice);
   if(!basis){ status.textContent="The CIF lattice parameters are invalid, so the structure view cannot be drawn."; Plotly.purge(plot); return; }
   // A browser OOM can kill JS without running an error handler. Leave an

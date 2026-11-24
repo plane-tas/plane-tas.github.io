@@ -191,7 +191,7 @@ async function loadCifIntoGenerator(file){
   // continued to reference a different CIF.  Import through the SAME shared
   // loader used by the Sample and mCIF Set actions, preserving the original
   // CIF/mCIF text (magnetic loops, propagation vectors, etc.).
-  const parsed=fn.loadCifText(text,file.name);
+  const parsed=fn.loadCifText(text,file.name,{newFile:true});
   const nuclearEditor=fn.crystallographicStructureFromMcif(parsed,text)||parsed;
   const sg=findGeneratorSpaceGroup(nuclearEditor);
   const lattice=nuclearEditor?.lattice||{};

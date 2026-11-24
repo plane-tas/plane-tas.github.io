@@ -164,7 +164,7 @@
 <div class="cif-select-row" id="cifSelectRow">
 <button id="cifSelectButton" type="button">Select CIF/mCIF</button>
 <input aria-label="Selected CIF file" class="cif-file-name" id="cifFileName" readonly="" type="text" value="No file selected"/>
-<button disabled="" id="cifClearButton" type="button">Clear</button>
+<button disabled="" id="cifClearButton" type="button" title="Stop using this file (as if none had been loaded); the lattice, space group and Structure editor stay">Unset</button>
 <input accept=".cif,.mcif" hidden="" id="cifFileInput" type="file"/>
 </div>
 <h3 class="lattice-parameters-heading">Lattice parameters</h3>
@@ -673,7 +673,6 @@
 </div><div class="cif-generator-source-row">
 <button id="cifLoadExisting" type="button">Select CIF/mCIF</button>
 <input aria-label="Selected CIF or mCIF for CIF Generator" class="cif-file-name" id="cifGeneratorSourceName" readonly="" type="text" value="No file selected"/>
-<button disabled="" id="cifGeneratorSourceClear" type="button">Clear</button>
 <input accept=".cif,.mcif" class="hidden" id="cifLoadFile" type="file"/>
 </div></section><div class="cif-generator-input-pane">
 <section class="cif-generator-section cif-generator-source-section"><div class="cif-pane-heading"><h3 class="generator-output-heading">Output file</h3><div class="cif-heading-actions"><button type="button" id="cifShowGenerated" disabled title="Show the CIF/mCIF made with Generate in CIF/mCIF Preview">Show generated file</button></div></div>
@@ -694,7 +693,7 @@
 </section>
 
 </div><div class="structure-control-section structure-config-section">
-<h3 class="structure-section-title">Structure editor</h3>
+<div class="structure-section-heading"><h3 class="structure-section-title">Structure editor</h3><button id="cifStructureClearAll" type="button" title="Empty Positions, Atoms, Spins and Bonds (the Cell and the propagation vectors stay; a loaded file is unset)">Clear all</button></div>
 <div aria-label="Structure display controls" class="structure-config-tabs" role="tablist"><button aria-selected="true" class="active" data-structure-config-tab="cell" role="tab" type="button">Cell</button><button aria-selected="false" data-structure-config-tab="positions" role="tab" type="button">Positions</button>
 <button aria-selected="false" class="" data-structure-config-tab="appearance" role="tab" type="button">Atoms</button>
 <button aria-selected="false" data-structure-config-tab="spins" role="tab" type="button">Spins</button>

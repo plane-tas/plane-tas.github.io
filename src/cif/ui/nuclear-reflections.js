@@ -87,7 +87,10 @@ function currentCifReflectionFilters(){
 
 function reflectionInCurrentScatteringPlane(rl,hkl){
   const U=[num("Uh"),num("Uk"),num("Ul")], V=[num("Vh"),num("Vk"),num("Vl")];
-  const {ez}=makeSpiceScatteringPlaneBasis(rl,U,V);
+  // U or V zero / parallel (e.g. half-way while U and V are being changed):
+  // no plane, so no reflection is in it (instead of an error).
+  let ez;
+  try{ ({ez}=makeSpiceScatteringPlaneBasis(rl,U,V)); }catch(_e){ return false; }
   const q=hklToQ(rl,hkl), qn=norm(q);
   return qn>1e-12 && Math.abs(dot(q,ez)) <= 1e-9*Math.max(1,qn);
 }

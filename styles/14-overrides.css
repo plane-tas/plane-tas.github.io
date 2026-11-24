@@ -1240,3 +1240,8 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .sidebar :is(label,.checkbox-label,.motor-limit-name,.motor-limit-head,.motor-sign-display,.sidebar-table-head,.dark-asset-no-cell,.auto-vector,.status,.vector > span),
 #resolutionInstrumentDetails label{font-size:var(--plane-tab-label-font)!important}
 
+
+/* Structure editor heading with Clear all at its right end. */
+#structurePanel .structure-config-section > .structure-section-heading{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+#structurePanel .structure-section-heading > .structure-section-title{margin:0}
+#structurePanel .structure-section-heading > button{flex:none;white-space:nowrap}

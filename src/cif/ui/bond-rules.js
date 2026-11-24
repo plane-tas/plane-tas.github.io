@@ -289,10 +289,8 @@ function updateStructureBondRows(elements,seedRules=null){
   const rules=Array.isArray(seedRules)?seedRules:readStructureBondRules();
   host.replaceChildren();
   structureBondSelectionAnchor=null;
-  if(!elements.length){
-    const div=document.createElement('div');div.className='structure-rows-empty';
-    div.textContent='No atoms available.';host.appendChild(div);refreshStructureBondSelection();syncStructureBondBulkCheckbox();return;
-  }
+  // No atoms: no rows (and no note; the empty table says it).
+  if(!elements.length){ refreshStructureBondSelection();syncStructureBondBulkCheckbox();return; }
   for(const rule of rules)host.appendChild(createBondRuleRow(rule,elements));
   refreshStructureBondIndices();refreshStructureBondSelection();syncStructureBondBulkCheckbox();
 }

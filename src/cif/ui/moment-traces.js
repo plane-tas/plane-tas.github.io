@@ -121,8 +121,10 @@ const STRUCTURE_K1_SIDES={h:'cifMomentK1H',k:'cifMomentK1K',l:'cifMomentK1L'};
 function syncStructureK1FromSidebar(){
   for(const [axis,id] of Object.entries(STRUCTURE_K1_SIDES)){
     const target=$(id),sidebar=$(`q1_${axis}`);
-    if(target && sidebar && target!==document.activeElement && target.value!==sidebar.value)
-      target.value=sidebar.value;
+    // No k1 in the sidebar (no propagation vector): the boxes are empty too.
+    const value=sidebar ? sidebar.value : '';
+    if(target && target!==document.activeElement && target.value!==value)
+      target.value=value;
   }
   try{ updateStructureEditorKNote(); }catch(_e){}
 }
@@ -132,7 +134,12 @@ function bindStructureK1Inputs(){
     if(!target || target.dataset.k1Bound)continue;
     target.dataset.k1Bound='1';
     const commit=event=>{
-      const sidebar=$(`q1_${axis}`);
+      let sidebar=$(`q1_${axis}`);
+      // Typing k1 here without any propagation vector adds k1 in the sidebar.
+      if(!sidebar && String(target.value).trim()){
+        $('addPropagationVector')?.click();
+        sidebar=$(`q1_${axis}`);
+      }
       if(!sidebar)return;
       sidebar.value=target.value;
       // Delegate to the existing propagation-vector handlers, including the

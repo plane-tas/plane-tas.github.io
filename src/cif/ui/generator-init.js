@@ -194,7 +194,7 @@ async function initializeCifGenerator(){
     $("cifAddAtom")?.addEventListener("click",()=>fn.addCifAtomRow());
     $("cifLoadExisting")?.addEventListener("click",()=>$("cifLoadFile")?.click());
     // Clear is shared, too: all three filename fields and attenuation reset.
-    $("cifGeneratorSourceClear")?.addEventListener("click",fn.clearSelectedCif);
+    $("cifStructureClearAll")?.addEventListener("click",fn.clearStructureEditor);
     $("cifLoadFile")?.addEventListener("change",async ev=>{
       const file=ev.target.files?.[0];
       try{ await fn.loadCifIntoGenerator(file); }
