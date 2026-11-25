@@ -198,7 +198,6 @@
   #cifGeneratorPanel .cif-lattice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   #cifGeneratorPanel .cif-generator-source-row .cif-file-name{grid-column:1/-1;grid-row:2}
   #cifGeneratorPanel .cif-generator-source-row #cifLoadExisting{grid-column:1;grid-row:1}
-  #cifGeneratorPanel .cif-generator-source-row #cifGeneratorSourceClear{grid-column:2;grid-row:1}
   #cifGeneratorPanel .cif-source-button-row{grid-template-columns:repeat(3,minmax(0,1fr))}
   #cifGeneratorPanel .cif-source-button-row button{min-width:0;white-space:normal;overflow-wrap:anywhere}
   #cifGeneratorPanel .cif-output-tab{min-width:0;padding:calc(10px * var(--tas-density)) calc(5px * var(--tas-density));}
@@ -261,21 +260,17 @@
 #toolboxPanel .toolbox-subpanel.hidden{display:none!important;}
 .magff-info{margin-top:calc(9px * var(--tas-density));color:#222;}
 .magff-plot{width:100%;min-width:0;}
-.magff-footer{display:flex;align-items:center;gap:calc(12px * var(--tas-density));flex-wrap:wrap;color:#222;font-size:calc(12px * var(--tas-density));}
-.magff-footer button{white-space:nowrap;}
 @container (max-width:700px){.toolbox-subtabs{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 /* v40: compact magnetic form factor; same text size as the main tabs. */
 .magff-info{min-height:0;margin:calc(4px * var(--tas-density)) 0;font-size:calc(13px * var(--tas-density));}
 .magff-info:empty{display:none;}
 .magff-plot{min-height:calc(380px * var(--tas-density));} /* + the title above the plot */
-.magff-footer{justify-content:flex-end;}
 .magff-extra-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(12px * var(--tas-density));}
 .magff-plot-slider,.absorption-plot-slider{
   display:block;width:100%;min-width:0;box-sizing:border-box;
   accent-color:var(--tas-accent);cursor:pointer;margin:calc(3px * var(--tas-density)) 0 calc(12px * var(--tas-density));
 }
-.absorption-plot-actions{display:flex;justify-content:flex-end;margin:calc(4px * var(--tas-density)) 0 calc(10px * var(--tas-density));}
 /* Neutron attenuation: first row E, wavelength, k; second row SE, thickness, overall. */
 #toolboxAttenuationPane .absorption-beam-controls,
 #toolboxAttenuationPane .absorption-thickness-control{
@@ -328,12 +323,6 @@
   width:100%;
   margin:0 0 calc(2px * var(--tas-density));
 }
-#toolboxAttenuationPane .absorption-plot-actions{
-  display:flex;
-  flex:0 0 auto;
-  justify-content:flex-end;
-  margin:0;
-}
 @media (max-width:760px){
   #toolboxAttenuationPane .absorption-plot{height:calc(310px * var(--tas-density))!important;}
 }
@@ -366,8 +355,6 @@
 }
 @container (max-width:700px){
   .toolbox-subtabs{display:flex;grid-template-columns:none;}
-}
-@media(max-width:700px){
 }
 
 /* v47: give the selected item a visible frame at every tab level. */

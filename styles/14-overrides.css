@@ -1006,8 +1006,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 @container (max-width:720px){
   #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-/* ".csv" at the same size as the CIF output ".cif". */
-#resolutionConvolutionPane .convolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
 
 /* Colour scale of the 2D maps, at the end of the Show row. */
 .convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
@@ -1072,9 +1070,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 /* Simulation: Save CSV first under the line (it saves the results), the
    name filling the row (as Save CSV in Convolution). */
 #resolutionSimulationPane > .resolution-csv-row{margin:0 0 calc(8px * var(--tas-density))}
-#resolutionPanel .resolution-csv-name{flex:1 1 0;min-width:0}
-#resolutionPanel .resolution-csv-name input{width:100%;min-width:0}
-#resolutionPanel .resolution-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
 /* Simulation: one frame around the calculation and the results, with a line
    between them (as the 2D slice / 1D cut of Convolution). */
 #resolutionSimulationPane{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));
@@ -1214,15 +1209,6 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   width:100%;min-width:0;min-height:calc(30px * var(--tas-density));
   padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density));line-height:1.2;white-space:nowrap}
 
-/* Toolbox (Neutron attenuation, Magnetic form factor): Save CSV with the
-   file name entry and a grey ".csv", as in the other Save CSV rows. */
-.toolbox-csv-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density))}
-#toolboxPanel .toolbox-csv-row{justify-content:flex-start}
-.toolbox-csv-row > button{flex:none;white-space:nowrap}
-.toolbox-csv-row > .toolbox-csv-name{flex:1 1 0;min-width:0}
-.toolbox-csv-name input{width:100%;min-width:0}
-.toolbox-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
-
 /* Type scale of the sidebar and of the Resolution Instrument details.  On a
    desktop nothing is smaller than the captions of the tabs (12px):
    panel title > card title > subheading (label size, bold) and labels
@@ -1268,38 +1254,11 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
    buttons (Select Path, Undo, …). */
 .save-name-row>button{flex:none;white-space:nowrap;min-height:calc(36px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(12px * var(--tas-density))!important}
 .save-name-row .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
-#toolboxPanel .save-name-row,#structurePanel .reflection-save-row.save-name-row{justify-content:flex-start}
-#toolboxAttenuationPane .absorption-plot-actions.save-name-row{justify-content:flex-start;margin:0}
 #toolboxFormFactorPane .magff-footer.save-name-row{margin:calc(6px * var(--tas-density)) 0}
 /* Figure-only rows: a little space below, so the row is not read as part of
    the figure. */
 .qe-vector-save-row{margin:calc(6px * var(--tas-density)) 0}
 .geometry-save-row{margin:0 0 calc(6px * var(--tas-density))}
-
-/* Constant E map: row 1 the file name and Save figure; row 2 the slider row
-   (ħω: slider, entry, λ/2; or the 4-circle W) and the spurion warning. */
-#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,3fr) minmax(0,1fr);row-gap:calc(8px * var(--tas-density))}
-#qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1 / -1;grid-row:1;justify-self:stretch}
-#qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:1;grid-row:2}
-#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:2;grid-row:2}
-#qeConstantMapPane .qe-range-control{display:flex;flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density))}
-#qeConstantMapPane .qe-range-control.hidden{display:none}
-#qeConstantMapPane .qe-range-control > :is(.qe-hw-control-entry,.qe-s2-control-entry){display:contents}
-#qeConstantMapPane .qe-range-control > :is(.qe-hw-control-entry,.qe-s2-control-entry) > span:first-child{order:1;white-space:nowrap}
-#qeConstantMapPane .qe-range-control > input[type=range]{order:2;flex:1 1 auto;min-width:calc(80px * var(--tas-density))}
-#qeConstantMapPane .qe-range-control #hwEntry,#qeConstantMapPane .qe-range-control #qeWEntry{order:3;flex:none;width:calc(82px * var(--tas-density))}
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{order:4;flex:none;white-space:nowrap}
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{white-space:nowrap!important}
-/* λ/2 centred on the row, its caption the size of "ħω (meV)", and its
-   check box the size of the other check boxes (Show, labels, …). */
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{align-self:center!important;align-items:center!important;gap:calc(5px * var(--tas-density))}
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle,
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{font-size:var(--plane-tab-label-font)!important;line-height:1.35!important}
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > input[type="checkbox"]{width:13px!important;height:13px!important;margin:0!important;vertical-align:middle}
-@media(max-width:760px){
-  #qeConstantMapPane > .qe-range-control-grid > .qe-range-control,
-  #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:1 / -1 !important}
-}
 
 /* Structure view: Unit cell | Cell | file name | Save figure above the
    range row (outside the figure). */
@@ -1310,19 +1269,5 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #structurePanel .structure-figure-row > button{flex:none;align-self:end}
 #structurePanel .structure-figure-row > label{flex:none;display:grid;gap:calc(3px * var(--tas-density));margin:0}
 #structurePanel .structure-figure-row > .cif-filename-entry input{min-height:calc(32px * var(--tas-density))}
-/* Spurion warning: one line in a column of fixed width, the width of
-   "Spurion: 2ki-3kf" (an invisible copy sizes it), so the slider keeps its
-   width and the row its height whether a warning is shown or not.  A longer
-   text ends in "…" (full text on hover). */
-#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr) auto}
-#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{display:grid;justify-self:end;align-self:center;text-align:right}
-#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell.hidden{display:none}
-#qeConstantMapPane .qe-spurion-cell::before{content:"Spurion: 2ki-3kf";grid-area:1 / 1;visibility:hidden;height:0;overflow:hidden;white-space:nowrap;font-weight:700;font-size:var(--plane-tab-warning-font)}
-#qeConstantMapPane .qe-spurion-cell > .qe-spurion-warning{grid-area:1 / 1;display:block;width:0;min-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset;line-clamp:unset}
-@media(max-width:760px){
-  /* Its own line, kept (empty) when there is no warning: the map does not
-     move when one appears. */
-  #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{justify-self:start;text-align:left;min-height:calc(var(--plane-tab-warning-font) * 1.45)}
-}
 /* Neutron attenuation: Select CIF/mCIF, then the file name (as in Sample). */
 #toolboxAttenuationPane .absorption-cif-row:not(.hidden){grid-template-columns:auto minmax(0,1fr)!important}

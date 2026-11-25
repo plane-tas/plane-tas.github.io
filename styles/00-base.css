@@ -74,13 +74,6 @@ textarea:disabled {
 .cif-file-name{width:100%;min-width:0;color:#222;background:#f7f7f7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sample-spacegroup-row{display:grid;align-items:end}
 
-/* Keep the nuclear structure-factor color control on one line and mirror the
-   hbar-omega / S2 controls with a numeric entry on the right. */
-
-.qe-range-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(12px * var(--tas-density));padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density)) calc(12px * var(--tas-density));align-items:end}
-.qe-range-control{display:flex;flex-direction:column;gap:calc(6px * var(--tas-density));min-width:0}
-.qe-range-control input[type=range]{width:100%;padding:0}
-
 /* CIF generator */
 .cif-pane-heading,.cif-atom-heading{display:flex;justify-content:space-between;gap:calc(12px * var(--tas-density));align-items:flex-end}
 .cif-space-group-picker{display:grid;grid-template-columns:calc(78px * var(--tas-density)) minmax(0,1fr);gap:calc(8px * var(--tas-density));align-items:end}

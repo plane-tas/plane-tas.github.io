@@ -12,10 +12,6 @@
    `constrain:domain` from shrinking the x domain to fit the 580 px box. */
 @media(max-width:1250px){.geometry-target-row{grid-template-columns:1fr}}
 
-/* Q-E range: larger reciprocal-space map and three compact control columns. */
-.qe-range-control .qe-control-entry{display:grid;grid-template-columns:minmax(0,1fr) calc(88px * var(--tas-density));align-items:center;gap:calc(8px * var(--tas-density));min-height:calc(28px * var(--tas-density))}
-@media(max-width:760px){.qe-range-control-grid{grid-template-columns:1fr;gap:calc(8px * var(--tas-density))}}
-
 /* Keep h / k / l / hbar-omega on one row in Angle calculation. */
 #singleMain .geometry-card .geometry-target .grid4{
   grid-template-columns:repeat(4,minmax(0,1fr));

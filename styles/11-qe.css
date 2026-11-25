@@ -3,7 +3,6 @@
 
 .nuclear-label-control .checkbox-label{min-height:calc(24px * var(--tas-density));margin:0}
 #sfColorMaxEntry{width:calc(88px * var(--tas-density))}
-.qe-range-control .qe-control-entry input[type=number]{width:calc(88px * var(--tas-density));min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
 
 /* Time estimate: widen the geometry card only while this tab is active. */
 @media(min-width:1501px){
@@ -107,15 +106,6 @@
     min-width:calc(740px * var(--tas-density));
   }
 }
-
-/* Constant E map: controls are discoverable before scrolling into the plot.
-   No frame around them (like the 2D Convolution sliders). */
-#qeConstantMapPane > .qe-range-control-grid{
-  padding:calc(4px * var(--tas-density)) 0;
-  margin:calc(6px * var(--tas-density)) 0;
-}
-#qeConstantMapPane .qe-range-control{justify-content:start}
-#qeConstantMapPane .qe-range-control input[type=range]{accent-color:var(--tas-accent)}
 #singlePlot{height:calc(760px * var(--tas-density));min-height:calc(760px * var(--tas-density))}
 #qeDisplayControls{
   /* No partial border below the plot: keep controls on the same white background. */
@@ -149,7 +139,6 @@
 #qePlotLegend .qe-legend-line{height:0;border:0;border-top:calc(3px * var(--tas-density)) solid var(--legend-color);border-radius:0;background:transparent}
 @media(max-width:1050px){#singlePlot{height:calc(670px * var(--tas-density));min-height:calc(670px * var(--tas-density))}}
 @media(max-width:760px){
-  #qeConstantMapPane > .qe-range-control-grid{gap:calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0}
   #singlePlot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
 }
 
@@ -338,44 +327,6 @@
   align-items:center;
   gap:calc(5px * var(--tas-density));
 }
-/* S2 ring toggle belongs beside the S2 label, BEFORE the numeric entry. */
-#qeConstantMapPane .qe-range-control .qe-s2-control-entry{
-  display:grid;
-  grid-template-columns:max-content minmax(0,1fr) calc(82px * var(--tas-density));
-  gap:calc(5px * var(--tas-density));
-  align-items:center;
-  min-width:0;
-}
-#qeConstantMapPane .qe-s2-control-entry .qe-s2-ring-toggle{
-  display:inline-flex;
-  align-items:center;
-  gap:calc(4px * var(--tas-density));
-  min-width:0;
-  white-space:nowrap;
-  margin:0;
-  cursor:pointer;
-}
-#qeConstantMapPane .qe-s2-control-entry .qe-s2-ring-toggle input{
-  width:calc(14px * var(--tas-density));
-  height:calc(14px * var(--tas-density));
-  margin:0;
-  flex:0 0 auto;
-}
-@media(max-width:460px){
-  #qeConstantMapPane .qe-range-control .qe-s2-control-entry{
-    grid-template-columns:max-content minmax(0,1fr) calc(73px * var(--tas-density));
-  }
-}
-
-/* Center the S2 ring control in the space between its caption and entry.
-   Use exactly the same type styling as the surrounding S2 (deg) caption. */
-#qeConstantMapPane .qe-s2-control-entry .qe-s2-ring-toggle{
-  justify-content:center;
-  font-size:calc(14px * var(--tas-density));
-  font-weight:600;
-  line-height:normal;
-  text-align:center;
-}
 
 /* 2026-10-13 Constant E map toolbar and Resolution unit headings.
    Display settings and path tools occupy two centered rows, never a
@@ -409,81 +360,12 @@
 #qeDisplayControls .qe-path-tools > :is(button,label) {
   flex: 0 0 auto;
 }
-/* λ/2 uses the same middle-column placement and caption styling as the
-   Show S2 ring checkbox.  Both sit between their caption and number entry. */
-#qeConstantMapPane .qe-range-control .qe-hw-control-entry {
-  display: grid;
-  grid-template-columns: max-content minmax(0,1fr) calc(82px * var(--tas-density));
-  align-items: center;
-  gap: calc(5px * var(--tas-density));
-  min-width: 0;
-}
-#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  justify-self: stretch;
-  gap: calc(4px * var(--tas-density));
-  min-width: 0;
-  min-height: 0;
-  margin: 0;
-  cursor: pointer;
-  text-align: center;
-  white-space: normal;
-  line-height: 1.35;
-  font-size: var(--plane-tab-label-font) !important;
-  font-weight: 400 !important;
-}
-#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label > span {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal !important;
-  overflow-wrap: anywhere;
-  font-size: inherit !important;
-  font-weight: inherit !important;
-}
-#qeConstantMapPane :is(.qe-hw-control-entry,.qe-s2-control-entry) > .checkbox-label input[type="checkbox"] {
-  flex: 0 0 auto;
-  width: calc(14px * var(--tas-density));
-  height: calc(14px * var(--tas-density));
-  margin: 0;
-}
-#qeConstantMapPane .qe-hw-control-entry #hwEntry {
-  justify-self: end;
-  width: calc(82px * var(--tas-density));
-  min-width: 0;
-  box-sizing: border-box;
-}
-@media (max-width: 460px) {
-  #qeConstantMapPane .qe-range-control .qe-hw-control-entry {
-    grid-template-columns: max-content minmax(0,1fr) calc(73px * var(--tas-density));
-  }
-  #qeConstantMapPane .qe-hw-control-entry #hwEntry {
-    width: calc(73px * var(--tas-density));
-  }
-}
 /* Keep the Snap value fully visible with the sidebar-matched caption size. */
 #qeDisplayControls #qePathSnap {
   height: max(30px, calc(34px * var(--tas-density)));
   min-height: max(30px, calc(34px * var(--tas-density)));
   line-height: normal;
   padding-block: calc(2px * var(--tas-density));
-}
-
-/* Constant E map: enforce the requested visual order independent of any
-   earlier CSS rules: ħω caption | λ/2 checkbox | numeric entry. */
-#qeConstantMapPane .qe-hw-control-entry > span:first-child {
-  grid-column: 1 !important;
-  grid-row: 1;
-}
-#qeConstantMapPane .qe-hw-control-entry > .qe-lambda-half-toggle {
-  grid-column: 2 !important;
-  grid-row: 1;
-}
-#qeConstantMapPane .qe-hw-control-entry > #hwEntry {
-  grid-column: 3 !important;
-  grid-row: 1;
 }
 
 /* 2026-10-13: enlarge the three Constant E map path-edit buttons to match
@@ -494,21 +376,6 @@
   height: auto;
   padding: calc(6px * var(--tas-density)) calc(12px * var(--tas-density));
   line-height: 1.25;
-}
-
-/* Four-circle W layer card: entry at the right edge, like ħω and S2. */
-#qeConstantMapPane .qe-range-control .qe-s2-control-entry > #qeWEntry {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: end;
-  width: calc(82px * var(--tas-density));
-  min-width: 0;
-  box-sizing: border-box;
-}
-@media (max-width: 460px) {
-  #qeConstantMapPane .qe-range-control .qe-s2-control-entry > #qeWEntry {
-    width: calc(73px * var(--tas-density));
-  }
 }
 
 /* Magnetic scale only for a single-k magnetic structure. */
@@ -530,31 +397,42 @@
 
 /* Reflections: Save CSV, file name and ".csv" in one row filling the width,
    right above the table / the powder graph. */
-.reflection-save-row{display:flex;align-items:center;gap:calc(8px * var(--tas-density));margin:calc(6px * var(--tas-density)) 0}
+.reflection-save-row{margin:calc(6px * var(--tas-density)) 0}
 .reflection-save-row.hidden{display:none}
-.reflection-save-row>.reflection-csv-name{flex:1 1 0;min-width:0}
-.reflection-csv-name input{width:100%;min-width:0}
-/* ".csv" at the size of ".cif" / ".mcif" of the CIF/mCIF output name. */
-.reflection-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
-
-/* Control rows above the Constant E map (final layout in 14-overrides.css):
-   file name | Save figure, then the slider row and the spurion warning of
-   the current slice (right end). */
-#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center}
-#qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1;grid-row:1;justify-self:start;min-width:0}
-#qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:2;grid-row:1}
-#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:3;grid-row:1}
-.qe-spurion-cell{align-self:center;justify-self:end;min-width:0;max-width:100%;text-align:right}
-/* The warning wraps within its column (at most two lines, the height of
-   the slider card), so the row keeps its height. */
-.qe-spurion-warning{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;color:#b00020;font-weight:700;overflow:hidden}
-.qe-spurion-term{white-space:nowrap}
-.qe-spurion-warning:empty{display:none}
 /* Diffractometer / 4-circle: no ħω in the Angle calculation target rows. */
 #singleMain .geometry-card .geometry-target .grid4.geometry-target-no-hw{grid-template-columns:repeat(3,minmax(0,1fr))}
 .powder-geometry-target.powder-target-no-hw{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* ---- Constant E map: control rows above the map --------------------------
+   Row 1: file name | Save figure (a .save-name-row).
+   Row 2: the slider row -- ħω: caption, slider, entry, λ/2 (4-circle: W
+   caption, slider, entry) -- and the spurion warning in a column of fixed
+   width: an invisible copy of "Spurion: 2ki-3kf" sizes it, so the slider
+   keeps its width and the row its height whether a warning is shown or not
+   (a longer text ends in "…", in full on hover).
+   Narrow: one column; the warning has its own line, kept (empty) when there
+   is none, so the map does not move. */
+#qeConstantMapPane > .qe-range-control-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:calc(12px * var(--tas-density));row-gap:calc(8px * var(--tas-density));padding:calc(4px * var(--tas-density)) 0;margin:calc(6px * var(--tas-density)) 0}
+#qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1 / -1;grid-row:1}
+#qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:1;grid-row:2;display:flex;flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));min-width:0}
+#qeConstantMapPane > .qe-range-control-grid > .qe-range-control.hidden{display:none}
+#qeConstantMapPane .qe-range-control > .qe-control-entry{display:contents}
+#qeConstantMapPane .qe-control-entry > span:first-child{order:1;white-space:nowrap}
+#qeConstantMapPane .qe-range-control > input[type=range]{order:2;flex:1 1 auto;width:100%;min-width:calc(80px * var(--tas-density));padding:0;accent-color:var(--tas-accent)}
+#qeConstantMapPane .qe-range-control :is(#hwEntry,#qeWEntry){order:3;flex:none;box-sizing:border-box;width:calc(82px * var(--tas-density));min-width:0;min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
+/* λ/2: centred on the row, its caption the size of "ħω (meV)", its check
+   box the size of the other check boxes (Show, labels, …). */
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{order:4;flex:none;display:inline-flex;align-items:center;align-self:center;gap:calc(5px * var(--tas-density));margin:0;min-height:0;white-space:nowrap;cursor:pointer}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle,
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{font-size:var(--plane-tab-label-font)!important;line-height:1.35!important;white-space:nowrap!important}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > input[type="checkbox"]{width:13px;height:13px;margin:0;flex:none}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:2;grid-row:2;display:grid;justify-self:end;align-self:center;min-width:0;text-align:right}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell.hidden{display:none}
+#qeConstantMapPane .qe-spurion-cell::before{content:"Spurion: 2ki-3kf";grid-area:1 / 1;visibility:hidden;height:0;overflow:hidden;white-space:nowrap;font-weight:700;font-size:var(--plane-tab-warning-font)}
+#qeConstantMapPane .qe-spurion-cell > .qe-spurion-warning{grid-area:1 / 1;display:block;width:0;min-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#b00020;font-weight:700}
+.qe-spurion-term{white-space:nowrap}
 @media(max-width:760px){
-  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:1fr}
-  #qeConstantMapPane > .qe-range-control-grid > *{grid-column:1 !important;grid-row:auto !important}
-  .qe-spurion-cell{justify-self:start;text-align:left}
+  #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr);column-gap:calc(8px * var(--tas-density))}
+  #qeConstantMapPane > .qe-range-control-grid > :is(.qe-save-cell,.qe-range-control,.qe-spurion-cell){grid-column:1;grid-row:auto}
+  #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{justify-self:start;text-align:left;min-height:calc(var(--plane-tab-warning-font) * 1.45)}
 }
