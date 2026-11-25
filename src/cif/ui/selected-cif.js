@@ -10,7 +10,7 @@ export function installSelectedCif(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     clearSelectedCif, clearStructureEditor, loadCifText, restoreSelectedCifLocal, selectCifFile, syncSfColorMaxControl,
-    updateCifUI, updateImportedUnitCellPanels
+    updateCifUI, updateImportedUnitCellPanels, updateMagneticCellPanel
   });
 
 function hasSelectedCif(){
@@ -104,39 +104,50 @@ function restoreSelectedCifLocal(){
     return false;
   }
 }
-function updateImportedUnitCellPanels(parsed,text){
-  const box=$("cifMagneticCellBox");
-  // Malformed/unsupported multi-q input may have no moments after parsing,
-  // but it is still a magnetic file whose limitation must be visible.
-  const magneticTags=/(?:_atom_site_moment(?:[._]|\s)|_cell_wave_vector_[xyz]|_space_group_symop_magn_ssg_)/i.test(String(text||''));
-  if(box)box.hidden=!(parsed?.magnetic||magneticTags);
-  const magneticNotice=$('cifMagneticCellNotice');
-  if(magneticNotice){magneticNotice.hidden=true;magneticNotice.textContent='';}
-  if(!parsed?.magnetic && !magneticTags)return;
-  // Incommensurate / superspace input: one short note (the parser's own
-  // remarks follow it).
-  if(magneticNotice){
-    const alerts=(parsed.warnings||[]).filter(w=>/incommensurate|superspace|single.q|fourier|wave vectors|modulat/i.test(String(w)));
-    if(parsed.incommensurateSingleQ || alerts.length){
-      magneticNotice.hidden=false;
-      magneticNotice.textContent=(parsed.incommensurateSingleQ
-        ?'Note: Incommensurate single-k mCIF: no finite magnetic supercell; the Fourier modulation is shown.'
-        :'Note: Magnetic modulation/superspace symmetry may be incomplete.')
-        +(alerts.length?' '+alerts.join(' '):'');
-    }
+// Magnetic unit cell box (Structure editor > Cell): the magnetic cell of the
+// magnetic structure now drawn, as a multiple of the Cell.  It reads the ONE
+// magnetic model (see magnetic-model.js), so it always agrees with the 3-D
+// view: a loaded mCIF gives the multiple fixed by the file; CIF + k (also
+// after Unset) the supercell of k; an incommensurate k has no finite
+// supercell (a note instead); no spin, no box.
+function magneticModelHasSpin(model){
+  const nonzero=v=>Array.isArray(v) && v.some(x=>Math.abs(Number(x))>1e-9);
+  return !!model?.sites?.some(s=>nonzero(s.moment)||nonzero(s.m1)||nonzero(s.m2)||nonzero(s.m0));
+}
+function updateMagneticCellPanel(){
+  const box=$("cifMagneticCellBox"), line=$('cifMagneticCellText'), note=$('cifMagneticCellNotice');
+  if(!box) return;
+  const selected=getSelectedCifStructure(), text=getSelectedCifText();
+  let model=null;
+  try{ model=fn.currentMagneticModel?.()||null; }catch(_e){ model=null; }
+  let viewer=null;
+  try{ viewer=fn.currentStructureForViewer?.()?.structure||null; }catch(_e){ viewer=null; }
+  const fromFile=!!selected?.magnetic && !viewer?.fromMcifParent;
+  // Remarks of the parser on an mCIF it cannot read in full stay visible.
+  const alerts=fromFile ? (selected.warnings||[]).filter(w=>/incommensurate|superspace|single.q|fourier|wave vectors|modulat/i.test(String(w))) : [];
+  const spin=magneticModelHasSpin(model);
+  const incommensurate=!!model?.incommensurate;
+  let noteText='';
+  if(spin && incommensurate) noteText=fromFile
+    ? 'Note: Incommensurate single-k mCIF: no finite magnetic supercell; the Fourier modulation is shown.'
+    : 'Note: Incommensurate k: no finite magnetic supercell; the modulation is shown.';
+  else if(alerts.length) noteText='Note: Magnetic modulation/superspace symmetry may be incomplete.';
+  if(noteText && alerts.length) noteText+=' '+alerts.join(' ');
+  if(note){ note.hidden=!noteText; note.textContent=noteText; }
+  let rep=null;
+  if(spin && !incommensurate){
+    rep=model.source?.startsWith('mCIF') ? fn.magneticCellMultiplicity(selected,text) : (model.parentReplication||model.replication||null);
+    if(!(Array.isArray(rep) && rep.length===3 && rep.every(n=>Number.isInteger(n) && n>=1))) rep=null;
   }
-  // Commensurate: the magnetic cell as a multiple of the Cell (one line).
-  // Incommensurate: no finite supercell; only the note above is shown.
-  const line=$('cifMagneticCellText');
-  const rep=parsed?.magnetic?fn.magneticCellMultiplicity(parsed,text):null;
-  const incommensurate=!!parsed?.incommensurateSingleQ || fn.selectedCifIsIncommensurate?.(parsed,text);
   if(line){
-    line.hidden=!rep || incommensurate;
+    line.hidden=!rep;
     line.textContent=!rep?'':rep.every(n=>n===1)?'a × b × c (same as Cell)':
       rep.map((n,i)=>`${n>1?n:''}${'abc'[i]}`).join(' × ');
   }
-  if(box && line?.hidden!==false && magneticNotice?.hidden) box.hidden=true;
+  box.hidden=!rep && !noteText;
 }
+// Kept for the callers on loading / unsetting a file.
+function updateImportedUnitCellPanels(){ updateMagneticCellPanel(); }
 function loadCifText(text,fileName="generated_structure.cif",{persist=true,newFile=false}={}){
   cifState.liveEditorNuclearSource=null;
   cifState.liveEditorNuclearInvalid=false;

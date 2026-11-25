@@ -55,7 +55,15 @@ function parseStructureRangeEntry(value){
 }
 // The UI range is always expressed in the *selected* cell's fractional
 // coordinates. Rendering uses the loaded magnetic-cell fractional coordinates.
+// The a/b/c min–max entries are fractions of the selected cell.  The atoms
+// are placed in the cell of the source structure: an mCIF shown in its parent
+// (crystallographic) cell divides by the parent multiple; a CIF + k shown in
+// its magnetic (k supercell) cell multiplies by the multiple of k, so 0–1
+// draws one whole magnetic cell.
 function structureRenderRange(uiRange,source,parent){
+  const kRep=cifState.structureKSupercell;
+  if(!source?.structure?.magnetic && cifState.structureUnitCellReference==='magnetic' && kRep)
+    return Object.fromEntries(['x','y','z'].map((axis,i)=>[axis,{min:uiRange[axis].min*kRep[i],max:uiRange[axis].max*kRep[i]}]));
   if(!source?.structure?.magnetic || cifState.structureUnitCellReference!=='crystallographic' || !parent)return uiRange;
   return Object.fromEntries(['x','y','z'].map((axis,i)=>[
     axis,{min:uiRange[axis].min/parent.rep[i],max:uiRange[axis].max/parent.rep[i]}

@@ -109,6 +109,8 @@ async function saveStructureFigure(){
 }
 function renderCifStructureView(){
   syncCsvNameTemplate($("cifFigureName"),structureFigureAuto());
+  // The Magnetic unit cell box follows the magnetic structure drawn.
+  fn.updateMagneticCellPanel?.();
   const plot=$("cifStructurePlot"),status=$("cifStructureStatus");
   if(!plot||!status) return;
   if(typeof Plotly==="undefined"){ status.textContent="Plotly is unavailable, so the structure view cannot be drawn."; return; }
@@ -225,6 +227,7 @@ function renderCifStructureView(){
       cifState.structureUnitCellMode!=='none' && source.structure.magnetic && !parentFrame ?
       ' Parent-cell setting unavailable: showing magnetic cell.':
       cellFrame.parent && cifState.structureUnitCellMode!=='none' ? ' Crystallographic unit cell shown.':
+      !source.structure.magnetic && cifState.structureUnitCellReference==='magnetic' && cifState.structureKSupercell && cifState.structureUnitCellMode!=='none' ? ' Magnetic (k supercell) unit cell shown.':
       source.structure.magnetic && cifState.structureUnitCellMode!=='none' ? ' Magnetic unit cell shown.':'')+
     (bondRules.length?` ${bondRules.length} bond rule${bondRules.length===1?"":"s"}.`:"")+
     (source.structure.magnetic?" mCIF moments from magnetic symmetry/Fourier modulation.":enabledMoments?` ${enabledMoments} magnetic site setting${enabledMoments===1?"":"s"}; ${cifState.structureMomentStructureType}${cifState.structureMomentStructureType==="helical"?` about ${cifState.structureMomentRotationAxis} (${cifState.structureMomentChirality})`:""}, k${effectiveK.index||1}=(${[effectiveK.h,effectiveK.k,effectiveK.l].map(fn.formatStructureKComponent).join(', ')})${effectiveK.snapped?' (nearest fraction of the entered decimal)':''}${effectiveK.count>1?" (selected propagation vector)":""}.`:"")+ (polyhedralWarning ? ` ${polyhedralWarning}` : "")+

@@ -79,9 +79,39 @@ function resolvedViewerParent(source){
   if(!fn.directLatticeBasis(lattice))return null;
   return {lattice,rep,structure:parentStructure};
 }
+// CIF + k (also an mCIF after Unset): the magnetic cell is the supercell of
+// k given by the magnetic model drawn (the same model as the spins), or null
+// when there is none (no spin enabled, or an incommensurate k).
+function kSupercellReplication(){
+  let model=null;
+  try{ model=fn.currentMagneticModel?.()||null; }catch(_e){ model=null; }
+  const nonzero=v=>Array.isArray(v) && v.some(x=>Math.abs(Number(x))>1e-9);
+  if(!model?.sites?.some(s=>nonzero(s.moment))) return null;
+  if(model.incommensurate) return {incommensurate:true};
+  const rep=model.parentReplication||model.replication;
+  return Array.isArray(rep) && rep.length===3 && rep.every(n=>Number.isInteger(n) && n>=1) ? {rep} : null;
+}
 function updateStructureUnitCellReference(source){
   const select=$("cifUnitCellReference");
   const magnetic=!!source?.structure?.magnetic;
+  cifState.structureKSupercell=null;
+  if(!magnetic && source?.structure && select){
+    // A CIF: Crystallographic always; Magnetic when the structure drawn has a
+    // finite magnetic (k) supercell.
+    const k=kSupercellReplication();
+    const parentOption=select.querySelector('option[value="crystallographic"]');
+    const magneticOption=select.querySelector('option[value="magnetic"]');
+    if(parentOption){parentOption.disabled=false;parentOption.title='';}
+    if(magneticOption){
+      magneticOption.disabled=!k?.rep;
+      magneticOption.title=k?.incommensurate?'An incommensurate structure has no finite magnetic cell.':k?.rep?'':'No magnetic structure: enable a spin (Spins).';
+    }
+    if(k?.rep) cifState.structureKSupercell=k.rep;
+    else cifState.structureUnitCellReference='crystallographic';
+    select.value=cifState.structureUnitCellReference;
+    select.title='';
+    return null;
+  }
   const parent=magnetic?resolvedViewerParent(source):null;
   if(!select)return parent;
   // Incommensurate (superspace) mCIF: its cell is the basic, crystallographic
@@ -114,6 +144,22 @@ function updateStructureUnitCellReference(source){
 }
 function structureUnitCellFrame(source,basis,range,parent){
   const fallback={basis,range,parent:false};
+  // CIF + k: the frame of the k supercell (Cell × the multiple of k).
+  const kRep=cifState.structureKSupercell;
+  if(cifState.structureUnitCellReference==='magnetic' && kRep && !source?.structure?.magnetic){
+    const L=source.structure.lattice;
+    const superBasis=fn.directLatticeBasis({...L,a:Number(L.a)*kRep[0],b:Number(L.b)*kRep[1],c:Number(L.c)*kRep[2]});
+    if(!superBasis) return fallback;
+    const superRange=Object.fromEntries(['x','y','z'].map((axis,i)=>[axis,{min:range[axis].min/kRep[i],max:range[axis].max/kRep[i]}]));
+    if(cifState.structureUnitCellMode==='one'){
+      for(const axis of ['x','y','z']){
+        const bounds=superRange[axis];
+        const first=bounds.min<=0 && bounds.max>=0 ? 0 : Math.floor(bounds.min);
+        superRange[axis]={min:first,max:first+1};
+      }
+    }
+    return {basis:superBasis,range:superRange,parent:false};
+  }
   if(cifState.structureUnitCellReference!=='crystallographic'||!parent)return fallback;
   const parentBasis=fn.directLatticeBasis(parent.lattice),rep=parent.rep;
   if(!parentBasis)return fallback;
