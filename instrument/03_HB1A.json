@@ -19,8 +19,8 @@
   },
   "monochromator": {
     "crystal": "PG002",
-    "mosaic_h": 30,
-    "mosaic_v": 30,
+    "mosaic_h": 60,
+    "mosaic_v": 60,
     "width": 10,
     "height": 18,
     "thickness": 0.25,
@@ -57,9 +57,9 @@
   },
   "distance": {
     "L0": 4.745,
-    "L1": 2.276,
-    "L2": 1.4313,
-    "L3": 0.74
+    "L1": 1.4313,
+    "L2": 0.74,
+    "L3": 0.5
   },
   "beam": {
     "width": 15,
@@ -80,6 +80,15 @@
   "four_circle": {
     "configuration": {
       "Ei": 14.45
+    },
+    "collimator": {
+      "1st_h": 50
+    },
+    "monochromator": {
+      "mosaic_h": 60
+    },
+    "analyzer": {
+      "mosaic_h": 60
     },
     "S2_min": -92,
     "M2_min": 41.3,
