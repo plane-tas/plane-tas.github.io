@@ -277,9 +277,6 @@
 /* Widths may wrap as "0.0216" / "(0.0176)" when the panel is narrow. */
 #resolutionPanel .resolution-compare-table td.cmp-res{white-space:normal;min-width:5.2em}
 #resolutionPanel .resolution-compare-table tbody tr{cursor:pointer}
-/* Motor-scan FWHM line under the widths of a row. */
-#resolutionPanel .resolution-compare-table td.cmp-scan{white-space:normal;color:#333}
-#resolutionPanel .resolution-compare-table .cmp-scan-part{white-space:nowrap}
 #resolutionPanel .resolution-compare-table tbody tr:hover{background:#f6f9fc}
 #resolutionPanel .resolution-compare-table tbody tr.selected{background:#e3eefb}
 #resolutionPanel .resolution-compare-chip{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px}
