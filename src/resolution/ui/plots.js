@@ -114,8 +114,8 @@ function resolutionWidthsHtml(r,unitMode,lc){
   const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis, d=fn.resolutionFrame(r).display;
   return `<b>Resolution</b> δQ//${fmtAxis(ax.U)}=${d.U.toFixed(4)} (${d.Ucoh.toFixed(4)}) ${qUnit}, `+
     `δQ//${fmtAxis(ax.V)}=${d.V.toFixed(4)} (${d.Vcoh.toFixed(4)}) ${qUnit}, `+
-    `δQ//${fmtAxis(ax.W)}=${d.W.toFixed(4)} (${d.Wcoh.toFixed(4)}) ${qUnit}, `+
-    `δħω=${d.E.toFixed(4)} (${d.Ecoh.toFixed(4)}) meV`;
+    `δQ//${fmtAxis(ax.W)}=${d.W.toFixed(4)} (${d.Wcoh.toFixed(4)}) ${qUnit}`+
+    (r.diffraction ? '' : `, δħω=${d.E.toFixed(4)} (${d.Ecoh.toFixed(4)}) meV`);
 }
 // Plotly's built-in double-click "reset" returns to the axis ranges of the
 // plot's first draw (an earlier point), which looks like a random scale.
@@ -147,6 +147,13 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_I
   const ax=resolutionDisplayAxes(r,lc), fmtAxis=formatResolutionAxis;
   const frame=fn.resolutionFrame(r), el=frame.ellipses;
   const qeTitle=v=>`δQ ∥ ${fmtAxis(v)} vs δħω`;
+  // Diffractometer (no energy axis): U–W and V–W in place of U–E and V–E.
+  if(r.diffraction){
+    const qw=(a,key,lim)=>reactResolutionPlot(ids[key],resultEllipses(el[`proj${a}W`],el[`slice${a}W`]),
+      baseLayout(`δQ ∥ ${fmtAxis(ax[a])} vs δQ ∥ ${fmtAxis(ax.W)}`,`δQ ∥ ${fmtAxis(ax[a])} (${qUnit})`,`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,lim,limits.W,false,ids[key],fonts,true));
+    qw('U','UE',limits.U); qw('V','VE',limits.V);
+    const weGd=$(ids.WE); if(weGd && window.Plotly){ try{ Plotly.purge(weGd); }catch(_e){} }
+  }else{
   reactResolutionPlot(
     ids.UE,
     resultEllipses(el.projUE,el.sliceUE),
@@ -164,6 +171,7 @@ function renderResolutionPlots(r,unitMode,lc,limits,ids=shared.RESOLUTION_PLOT_I
     resultEllipses(el.projWE,el.sliceWE),
     baseLayout(qeTitle(ax.W),`δQ ∥ ${fmtAxis(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,false,ids.WE,fonts),
   );
+  }
 
   const lattice=fn.resolutionCoordinates()==='lattice' && r.lattice;
   const oblique=!!lattice && Math.abs(r.lattice.vDirection.cos)>1e-6;

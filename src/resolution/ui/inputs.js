@@ -1,5 +1,7 @@
 // Resolution: coordinate frames, lattice / W, and the instrument and sample inputs (collectResolutionBase, calcOne).
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
+import {calcDiffractionResolution, calcFourCircleAnalyzerResolution} from '../resolution-core.js';
+import {instrumentHasAnalyzer, instrumentIsElasticOnly} from '../../app/analyzer-mode.js';
 export function installResolutionInputs(ctx){
   const {deps:{
     $, RLRes, calcResolution, currentInstrument, inferOutOfPlaneHKL, latticeParams, num,
@@ -9,7 +11,7 @@ export function installResolutionInputs(ctx){
   Object.assign(fn,{
     buildResolutionLattice, calcOne, clearResolutionResults, collectResolutionBase,
     flipScatteringPlaneUV, formatResolutionCoordinate, matrixText,
-    resolutionCoordinates, resolutionFrame, resolutionIsUnavailable, traceEllipse, updateAutoW
+    resolutionCoordinates, resolutionFrame, resolutionIsDiffraction, resolutionIsFourCircle, resolutionIsTwoAxis, resolutionIsUnavailable, traceEllipse, updateAutoW
   });
 
 shared.scanResults=[];
@@ -19,6 +21,7 @@ shared.lastResolutionRender=null;
 // core's own U, U⊥in, E, U⊥out frame is not offered as a display frame (it
 // remains in Copy matrices); any other saved value falls back to 'q'.
 function resolutionCoordinates(){
+  // (4-circle: U, V, W are the crystal directions at the point's chi, phi.)
   return $('resolutionCoordinates')?.value==='lattice' ? 'lattice' : 'q';
 }
 // Results of one calculation in the chosen frame (same fields as the core's
@@ -34,16 +37,26 @@ function resolutionFrame(r){
 shared.RESOLUTION_UV_VIEW_KEY='tas-resolution-uv-view-v1';
 shared.resolutionUVView=(()=>{ try{ return localStorage.getItem(shared.RESOLUTION_UV_VIEW_KEY)==='coefficients'?'coefficients':'shape'; }catch(_e){ return 'shape'; } })();
 function resolutionIsUnavailable(){
-  // updateCalcMode() calls this during startup before instrument JSON files
-  // have been loaded.  An instrument is not selectable at that point.
-  // Avoid aborting initialize() while still disabling TAS resolution once a
-  // diffractometer has actually been selected.
-  try{
-    const type=currentInstrument()?.instrument_type;
-    return type==='diffractometer' || type==='four-circle';
-  }catch(_err){
-    return false;
-  }
+  // Every instrument type has a resolution: TAS (Cooper-Nathans / Popovici)
+  // and, analyzer-free, the diffractometer and the 4-circle (elastic,
+  // Cooper-Nathans).  Kept as a hook for the callers.
+  return false;
+}
+// Q-only resolution (no energy axis): no analyzer (diffractometer, Ana =
+// none).  A 4-circle with the analyzer has the TAS (4D) resolution at ħω = 0.
+function resolutionIsDiffraction(){
+  try{ return !instrumentHasAnalyzer(currentInstrument()); }catch(_err){ return false; }
+}
+// Only ħω = 0: no analyzer, or 4-circle.
+function resolutionIsElasticOnly(){
+  try{ return instrumentIsElasticOnly(currentInstrument()); }catch(_err){ return false; }
+}
+// 2-axis (no analyzer): the detector takes every final energy.
+function resolutionIsTwoAxis(){
+  try{ return !instrumentHasAnalyzer(currentInstrument()); }catch(_err){ return false; }
+}
+function resolutionIsFourCircle(){
+  try{ return currentInstrument()?.instrument_type==='four-circle'; }catch(_err){ return false; }
 }
 function clearResolutionResults(){
   shared.scanResults=[];
@@ -114,6 +127,8 @@ function collectResolutionBase(){
     geom.ana_height=geom.mono_height;
     geom.ana_thickness=geom.mono_thickness;
   }
+  // No analyzer: the sample-detector distance (L4) takes the place of L2.
+  if(resolutionIsTwoAxis() && num('sampleDetectorDistance')>0) geom.L2=num('sampleDetectorDistance');
   // Four-circle (Eulerian cradle) instruments: the angle calculation adds
   // chi / phi (bisecting mode) and accepts out-of-plane Q.
   let fourCircle=false;
@@ -132,9 +147,10 @@ function calcOne(calc){
     throw new Error('Resolution unavailable: this diffractometer has no configured monochromator crystal/d-spacing. Specify it in the instrument JSON.');
   }
   // TAS: a blank collimator means "none" (geometry-limited).  Diffractometer
-  // JSONs leave unknown values blank, so there a blank stays an error.
-  if(currentInstrument()?.instrument_type==='diffractometer' &&
-     ['div_1st_h','div_1st_v','div_2nd_h','div_2nd_v','div_3rd_h','div_3rd_v','div_4th_h','div_4th_v'].some(k=>!(b.col[k]>0))) {
+  // JSONs leave unknown values blank, so without an analyzer a blank stays an
+  // error.
+  if(resolutionIsTwoAxis() &&
+     (b.col.gm_1st ? [] : ['div_1st_h','div_1st_v']).concat(['div_2nd_h','div_2nd_v','div_3rd_h','div_3rd_v']).some(k=>!(b.col[k]>0))) {
     throw new Error('Collimation and crystal mosaic values must be non-zero for the resolution calculation.');
   }
 
@@ -146,7 +162,14 @@ function calcOne(calc){
   // encoder polarity.  Deliberately omit s1sign from the resolution config.
   const {...resolutionBaseConfig}=b.config;
   const resolutionConfig={...resolutionBaseConfig,sense:selectedTasSense(),sign_config:selectedTasSense()};
-  const result=calcResolution(b.lc,b.rl,b.col,b.mos,resolutionConfig,b.approximation,b.focusing,b.geom,calc,b.unitMode);
+  // Elastic only (ħω = 0).  No analyzer: 2-axis Cooper-Nathans.  4-circle
+  // with the analyzer: the TAS resolution at ħω = 0 in the Q frame.
+  if(resolutionIsElasticOnly()) calc={...calc,hw:0};
+  const result=resolutionIsTwoAxis()
+    ? calcDiffractionResolution(b.lc,b.rl,b.col,b.mos,resolutionConfig,b.geom,calc,b.unitMode,{fourCircle:resolutionIsFourCircle()})
+    : resolutionIsFourCircle()
+      ? calcFourCircleAnalyzerResolution(b.lc,b.rl,b.col,b.mos,resolutionConfig,b.approximation,b.focusing,b.geom,calc,b.unitMode)
+      : calcResolution(b.lc,b.rl,b.col,b.mos,resolutionConfig,b.approximation,b.focusing,b.geom,calc,b.unitMode);
   let angles;
   try{
     angles=tasMotorAngles(calc,b);

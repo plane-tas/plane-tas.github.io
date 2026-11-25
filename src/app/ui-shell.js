@@ -393,6 +393,9 @@ function setupAppHeader(){
   if(status) status.style.marginLeft='auto';
 }
 
+// A control fixed by the analyzer mode (Resolution approximation, mode, ħω,
+// ...) is saved with the value it has for a TAS (kept aside while fixed).
+function persistedValue(el){ return el.dataset?.tasValue ?? el.value; }
 function rightPanelControls(){
   return [...document.querySelectorAll('#qePanel input[id], #qePanel select[id], #resolutionPanel input[id], #resolutionPanel select[id], #toolboxPanel input[id], #toolboxPanel select[id]')]
     .filter(el=>!el.closest?.('.time-estimate-pane') && el.type!=='button' && el.type!=='submit' && el.type!=='file'
@@ -404,7 +407,7 @@ function saveRightPanelState(){
   try{
     const values={};
     for(const el of rightPanelControls()){
-      values[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : el.value;
+      values[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : persistedValue(el);
     }
     localStorage.setItem(RIGHT_PANEL_STORAGE_KEY,JSON.stringify({version:2,values}));
   }catch(_e){ /* localStorage may be unavailable in a restricted browser context. */ }
@@ -496,7 +499,7 @@ function saveGlobalUIState(){
   try{
     const controls={};
     for(const el of globalUIPersistentControls()){
-      controls[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : el.value;
+      controls[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : persistedValue(el);
     }
     const tabs={
       main:['qe','resolution','toolbox','cif-generator','structure','script'].find(name=>{
@@ -604,7 +607,7 @@ function saveLeftPanelState(){
   try{
     const values={};
     for(const el of leftPanelControls()){
-      values[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : el.value;
+      values[el.id]=(el.type==='checkbox'||el.type==='radio') ? !!el.checked : persistedValue(el);
     }
     // Background-material rows are dynamic.  Persist their ordered selections
     // explicitly so add/remove/rebuild operations cannot lose the user's BG

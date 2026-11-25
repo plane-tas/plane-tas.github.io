@@ -31,8 +31,8 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   const {Ei,Ef}=r.energies;
   const g=v=>{ const x=Number(Number(v).toFixed(3)); return String(Object.is(x,-0)?0:x); };
   $('summary').innerHTML=
-    `<div><b>Calculation point</b> (${g(calc.h)}, ${g(calc.k)}, ${g(calc.l)}), ħω=${g(calc.hw)} meV, `+
-    `Ei=${g(Ei)} meV, Ef=${g(Ef)} meV ${indexInfo}</div>`+
+    `<div><b>Calculation point</b> (${g(calc.h)}, ${g(calc.k)}, ${g(calc.l)}), `+
+    (r.diffraction ? `elastic, Ei=${g(Ei)} meV (${r.fourCircle ? `4-circle, ${r.analyzer ? "analyzer" : "no analyzer"}` : "no analyzer"}) ` : `ħω=${g(calc.hw)} meV, Ei=${g(Ei)} meV, Ef=${g(Ef)} meV `)+`${indexInfo}</div>`+
     `<div>${fn.resolutionWidthsHtml(r,unitMode,lc)}</div>`;
   // Motor angles are in the Angle calculation; only a failure is shown here.
   const angleWarning=$('resolutionAngleWarning');
@@ -42,7 +42,7 @@ function renderResolution(entry,indexInfo='',plotLimits=null){
   // RM is the original TAS local matrix (Q_parallel,Q_perp,E,Q_out).
   // RM_U is the same matrix rotated to the U-based orthogonal frame.
   // In this display V denotes the automatically orthogonalized in-plane V.
-  $('matrix').textContent=
+  $('matrix').textContent=(r.diffraction ? `${r.analyzer ? 'Elastic Q resolution (the ΔE = 0 section)' : 'Elastic Q resolution'}; the E row and column are a placeholder (not used).\n\n` : '')+
     `Local matrix order (Q∥, Q⊥, E, Qout)\n${fn.matrixText(r.RM)}\n\n`+
     `U-based matrix order (U, U⊥in, E, U⊥out)\n${fn.matrixText(r.RM_U)}`+
     (r.lattice ? `\n\nLattice matrix order (U, V, E, W), oblique coordinates along unit U, V, W\n${fn.matrixText(r.lattice.RM)}` : '');

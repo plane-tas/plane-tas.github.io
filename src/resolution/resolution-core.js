@@ -151,6 +151,30 @@ function coherentFwhm(RM,idx){
   const a=RM[idx][idx]; if(!(a>0)) throw new Error(`RM[${idx},${idx}] must be positive.`);
   return 2*Math.sqrt(2*Math.log(2)/a);
 }
+// FWHM (deg) of motor scans through a Bragg peak (a point in Q and ħω; the
+// energies stay fixed): the section of the ellipsoid along the line each
+// scan moves Q in the local frame (Q∥, Q⊥, E, Qout).
+//   S1 (rocking): Q⊥ by |Q| per rad.
+//   S2 alone: the kf direction turns, Q moves normal to kf by kf per rad
+//     (the kf angle column of the TAS B matrix).
+//   θ–2θ (S1 half of S2, in the sense that keeps an elastic scan radial).
+//   χ (4-circle): Qout by |Q| per rad.
+function scanWidths(RM,angles,energies,fourCircle=false){
+  try{
+    const R=symmetrize(RM), ki=Math.sqrt(energies.Ei/E2K2), kf=Math.sqrt(energies.Ef/E2K2);
+    const {phi,thetaS}=angles;
+    const q=Math.sqrt(Math.max(0,ki*ki+kf*kf-2*ki*kf*cosd(2*thetaS)));
+    const fwhm=u=>{
+      const v=[u[0],u[1],0,u[2]], Rv=matvec(R,v), a=v.reduce((s,x,i)=>s+x*Rv[i],0);
+      return a>0 ? 2*Math.sqrt(2*Math.log(2)/a)*R2D : null;
+    };
+    const b0=-sind(phi-2*thetaS), b1=-cosd(phi-2*thetaS), sense=-(Math.sign(b1)||1);
+    const tt=fwhm([kf*b0,kf*b1+sense*q/2,0]);
+    return {S1:fwhm([0,q,0]),S2:fwhm([kf*b0,kf*b1,0]),
+      thetaTwoTheta:tt===null ? null : {S1:tt/2,S2:tt},
+      chi:fourCircle ? fwhm([0,0,q]) : null};
+  }catch(_e){ return null; }
+}
 function rot4(theta,tilt=0){
   const ct=Math.cos(theta), st=Math.sin(theta), cp=Math.cos(tilt), sp=Math.sin(tilt);
   const Rt=[[ct,-st,0,0],[st,ct,0,0],[0,0,1,0],[0,0,0,1]];
@@ -158,7 +182,7 @@ function rot4(theta,tilt=0){
   return matmul(Rp,Rt);
 }
 
-export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,calc,unitMode='rlu'){
+export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,calc,unitMode='rlu',{fourCircle=false}={}){
   const gm1=!!col.gm_1st;
   // 3rd horizontal collimator: Soller (entered value) or radial (the angular
   // size of the analyzer seen from the sample).
@@ -183,10 +207,13 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   if(qnorm<1e-12) throw new Error('Q = 0 cannot define the local TAS resolution coordinate system.');
   // A Q slightly out of the U-V plane (within OUT_OF_PLANE_TOLERANCE_DEG) is
   // reached by tilting the sample: rotate it into the plane, keeping |Q|.
+  // 4-circle: chi and phi bring any Q into the scattering plane; the sample
+  // (Popovici shape) is taken along the in-plane direction of Q (U when Q is
+  // along W).
   const qInPlane=Math.hypot(qRaw[0],qRaw[1]);
   const tiltDeg=Math.atan2(Math.abs(qRaw[2]),qInPlane)/D2R;
-  if(tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Q is ${tiltDeg.toFixed(2)}° out of the U–V plane (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
-  const Qsample=tiltDeg>0 ? [qRaw[0]*qnorm/qInPlane,qRaw[1]*qnorm/qInPlane,0] : qRaw;
+  if(!fourCircle && tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Q is ${tiltDeg.toFixed(2)}° out of the U–V plane (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
+  const Qsample=!(tiltDeg>0) ? qRaw : qInPlane>1e-9*qnorm ? [qRaw[0]*qnorm/qInPlane,qRaw[1]*qnorm/qInPlane,0] : [qnorm,0,0];
   const kiCal=Math.sqrt(Ei/E2K2), kfCal=Math.sqrt(Ef/E2K2);
   let cosPhi=(kiCal*kiCal+kfCal*kfCal-qnorm*qnorm)/(2*kiCal*kfCal);
   if(cosPhi < -1-1e-10 || cosPhi > 1+1e-10) throw new Error('The requested Q and ħω are kinematically inaccessible.');
@@ -401,13 +428,38 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   let RM=swapRowsCols(inverse(Minv),[0,1,3,2]);
   let RMinv=inverse(RM); RMinv[1][1]+=Q*Q*etaS*etaS; RMinv[3][3]+=Q*Q*etaSp*etaSp; RM=inverse(RMinv);
 
+  if(fourCircle){
+    // The full 4D ellipsoid (as for a TAS at ħω = 0) in the 4-circle Q frame.
+    return {...fourCircleFrames(symmetrize(RM),lc,rl,UB,qRaw,hkl,unitMode),
+      fourCircle:true, analyzer:true,
+      scans:scanWidths(RM,{thetaS,phi},{Ei,Ef},true),
+      angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
+      collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}, prefactor};
+  }
+  return {...resolutionFrames(RM,lc,rl,UB,Qsample,qnorm,hkl,unitMode),
+    scans:scanWidths(RM,{thetaS,phi},{Ei,Ef}),
+    angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
+    collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}, prefactor};
+}
+
+// Widths, ellipses and the display frames (U-based, lattice, Q) of a local
+// resolution matrix RM in the order (Q∥, Q⊥, E, Qout).
+// basis: the crystal directions (UB frame) of the local axes Q∥, Q⊥, Qout;
+// by default Q in the U–V plane with Qout along W (TAS).  A 4-circle gives
+// its own (Q, W × Q, Q × (W × Q)): chi and phi turn the crystal.
+function resolutionFrames(RM,lc,rl,UB,Qsample,qnorm,hkl,unitMode,basis=null){
   const sv2Orth=inferOrthogonalInPlaneHKL(rl,lc.sv1,lc.sv2);
   const Qx=qFromUB(UB,lc.sv1), Qy=qFromUB(UB,sv2Orth), Qz=qFromUB(UB,lc.sv3);
   const qxNorm=norm(Qx), qyNorm=norm(Qy), qzNorm=norm(Qz), qvNorm=norm(Qsample);
   if(Math.min(qxNorm,qyNorm,qzNorm)<1e-12) throw new Error('U, V and W reciprocal-space directions must be non-zero.');
-  const sampleNormal=[0,0,1], qOut=dot(Qsample,sampleNormal);
-  if(Math.abs(qOut)>1e-8*Math.max(qvNorm,1)) throw new Error('Q is out of the U–V plane (Reference Q may be: it only sets the S1 offset).');
-  const Qplane=Qsample.map((x,i)=>x-qOut*sampleNormal[i]), eX=normalize(Qplane), eZ=sampleNormal, eY=normalize(cross(eZ,eX));
+  let eX, eY, eZ;
+  if(basis){ ({eX,eY,eZ}=basis); }
+  else{
+    const sampleNormal=[0,0,1], qOut=dot(Qsample,sampleNormal);
+    if(Math.abs(qOut)>1e-8*Math.max(qvNorm,1)) throw new Error('Q is out of the U–V plane (Reference Q may be: it only sets the S1 offset).');
+    const Qplane=Qsample.map((x,i)=>x-qOut*sampleNormal[i]);
+    eX=normalize(Qplane); eZ=sampleNormal; eY=normalize(cross(eZ,eX));
+  }
   if(dot(cross(eX,eY),eZ)<1-1e-10) throw new Error('Failed to construct a right-handed local resolution basis.');
 
   // RM is expressed in the TAS-local coordinates
@@ -520,7 +572,9 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
           projUE, sliceUE,
           projVE:ellipsePoints(schur2(RM_VF,[0,2]),nV,1), sliceVE:ellipsePoints(submatrix(RM_VF,[0,2],[0,2]),nV,1),
           projWE, sliceWE,
-          projUV:ellipsePoints(schur2(RM_L,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(RM_L,[0,1],[0,1]),nU,nV)
+          projUV:ellipsePoints(schur2(RM_L,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(RM_L,[0,1],[0,1]),nU,nV),
+          projUW:ellipsePoints(schur2(RM_U,[0,3]),nU,nW), sliceUW:ellipsePoints(submatrix(RM_U,[0,3],[0,3]),nU,nW),
+          projVW:ellipsePoints(schur2(RM_VF,[0,3]),nV,nW), sliceVW:ellipsePoints(submatrix(RM_VF,[0,3],[0,3]),nV,nW)
         },
         qNorms:{U:qxNorm,V:qvLatNorm,W:qzNorm},
         displayAxes:{U:lc.sv1.slice(),V:lc.sv2.slice(),W:lc.sv3.slice()},
@@ -559,7 +613,9 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
           projUE:ellipsePoints(schur2(RM_Q,[0,2]),nU,1), sliceUE:ellipsePoints(submatrix(RM_Q,[0,2],[0,2]),nU,1),
           projVE:ellipsePoints(schur2(RM_Q,[1,2]),nV,1), sliceVE:ellipsePoints(submatrix(RM_Q,[1,2],[1,2]),nV,1),
           projWE:ellipsePoints(schur2(RM_Q,[3,2]),nW,1), sliceWE:ellipsePoints(submatrix(RM_Q,[3,2],[3,2]),nW,1),
-          projUV:ellipsePoints(schur2(RM_Q,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(RM_Q,[0,1],[0,1]),nU,nV)
+          projUV:ellipsePoints(schur2(RM_Q,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(RM_Q,[0,1],[0,1]),nU,nV),
+          projUW:ellipsePoints(schur2(RM_Q,[0,3]),nU,nW), sliceUW:ellipsePoints(submatrix(RM_Q,[0,3],[0,3]),nU,nW),
+          projVW:ellipsePoints(schur2(RM_Q,[1,3]),nV,nW), sliceVW:ellipsePoints(submatrix(RM_Q,[1,3],[1,3]),nV,nW)
         },
         qNorms:{U:nQ,V:nP,W:qzNorm},
         displayAxes:{U:qAxis,V:pAxis,W:lc.sv3.slice()}
@@ -567,10 +623,142 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
     }
   }catch(_e){ qframe=null; }
   return {RM,RM_U,RM_V,RM_W, widths,display,lim,
-    ellipses:{projUE,sliceUE,projVE,sliceVE,projWE,sliceWE,projUV,sliceUV},
+    ellipses:{projUE,sliceUE,projVE,sliceVE,projWE,sliceWE,projUV,sliceUV,
+      projUW:ellipsePoints(schur2(RM_U,[0,3]),normU,normW), sliceUW:ellipsePoints(submatrix(RM_U,[0,3],[0,3]),normU,normW),
+      projVW:ellipsePoints(schur2(RM_U,[1,3]),normV,normW), sliceVW:ellipsePoints(submatrix(RM_U,[1,3],[1,3]),normV,normW)},
     qNorms:{U:qxNorm,V:qyNorm,W:qzNorm},
     displayAxes:{U:lc.sv1.slice(),V:sv2Orth,W:lc.sv3.slice()},
-    lattice, qframe,
-    angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
-    collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}, prefactor};
+    lattice, qframe};
+}
+
+
+// Two-axis diffractometer (no analyzer), Cooper-Nathans: the elastic
+// resolution in Q (Cooper & Nathans 1967, 1968).  The monochromator side is
+// that of the TAS calculation (collimators 1st and 2nd, monochromator mosaic);
+// the detector takes every final energy, so for elastic scattering
+// |kf| = |ki| (Delta kf = Delta ki) and the scattered direction is limited by
+// the 3rd (sample-detector) collimator only.  The sample mosaic is added as for
+// the TAS.  The returned matrices keep the TAS layout (Q∥, Q⊥, E, Qout) with an
+// uncoupled placeholder E row (diffraction:true), so the display frames and
+// widths are shared with the TAS calculation; E is not shown.
+// 4-circle with the analyzer: the TAS resolution (Cooper-Nathans or
+// Popovici) at ħω = 0, in the 4-circle Q frame (Q may be out of the U–V
+// plane).
+export function calcFourCircleAnalyzerResolution(lc,rl,col,mos,config,approximation,focusing,geom,calc,unitMode='rlu'){
+  return calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,{...calc,hw:0},unitMode,{fourCircle:true});
+}
+export function calcDiffractionResolution(lc,rl,col,mos,config,geom,calc,unitMode='rlu',{fourCircle=false}={}){
+  const E=Number(config.energy_mode==='Ef fixed' ? config.Ef : config.Ei);
+  if(!(E>0)) throw new Error(`The incident energy must be positive. Ei=${E}`);
+  const ub=UB_calc(lc,rl), UB=ub.UB;
+  if(det3(ub.U)<=0) throw new Error('Orientation matrix U is not right handed.');
+  const hkl=[calc.h,calc.k,calc.l], qRaw=qFromUB(UB,hkl), qnorm=norm(qRaw);
+  if(qnorm<1e-12) throw new Error('Q = 0 cannot define the local resolution coordinate system.');
+  // 4-circle (bisecting): chi and phi bring any Q into the horizontal
+  // scattering plane, so Q may lie out of the U–V plane.
+  const qInPlane=Math.hypot(qRaw[0],qRaw[1]);
+  const tiltDeg=Math.atan2(Math.abs(qRaw[2]),qInPlane)/D2R;
+  if(!fourCircle && tiltDeg>OUT_OF_PLANE_TOLERANCE_DEG+1e-9) throw new Error(`Q is ${tiltDeg.toFixed(2)}° out of the U–V plane (tolerance ${OUT_OF_PLANE_TOLERANCE_DEG}°).`);
+  const Qsample=tiltDeg>0 ? [qRaw[0]*qnorm/qInPlane,qRaw[1]*qnorm/qInPlane,0] : qRaw;
+  const k=Math.sqrt(E/E2K2);
+  if(qnorm>2*k*(1+1e-10)) throw new Error('The requested Q and ħω are kinematically inaccessible.');
+  const monoArg=(2*PI/mos.d_mono)/(2*k);
+  if(!(Math.abs(monoArg)<=1)) throw new Error('Monochromator/analyzer Bragg condition is inaccessible for the selected energy.');
+  const sense=String(config.sign_config||'');
+  if(!/^[+-]{3}$/.test(sense)) throw new Error(`Unsupported TAS sign configuration: ${sense}`);
+  const [sm,ss]=[...sense].map(c=>c==='-' ? -1 : +1);
+  const thetaM=sm*asind(monoArg), twoThetaS=ss*2*asind(Math.min(1,qnorm/(2*k))), thetaS=twoThetaS/2;
+  const phi=Math.atan2(-k*sind(2*thetaS),k-k*cosd(2*thetaS))*R2D;
+
+  // Collimators (sigma, rad).  A blank entry: the geometric divergence of the
+  // two components it connects, as for the TAS (Cooper-Nathans).
+  const isOpen=v=>!(Number(v)>0)||!Number.isFinite(Number(v));
+  const toSigma=arcmin=>arcmin/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
+  const {L0,L1,L2,beam_width,beam_height,mono_width,mono_height,det_width,det_height}=geom;
+  const sD=geom.sample_shape==='box'
+    ? Math.max(Number(geom.sample_u)>0?Number(geom.sample_u):0.01, Number(geom.sample_v)>0?Number(geom.sample_v):0.01)
+    : (Number(geom.sample_diameter)>0 ? Number(geom.sample_diameter) : 0.01);
+  const sH=Number(geom.sample_height)>0 ? Number(geom.sample_height) : 0.02;
+  const mW=mono_width*Math.abs(sind(thetaM)), mH=mono_height;
+  const geomSigma=(a,b,L)=>{ const ta=2*Math.atan(a/(2*L)), tb=2*Math.atan(b/(2*L)); return Math.sqrt((ta*ta+tb*tb)/12); };
+  const sig=(v,a,b,L)=>isOpen(v) ? geomSigma(a,b,L) : toSigma(v);
+  let alpha1, beta1;
+  if(col.gm_1st){
+    const NA=6.022e23, ro=8.908, MNi=58.69, bc=1.03e-12, lambda=Math.sqrt(81.81/E)*1e-8;
+    const thetaC=Math.asin(Math.min(1,lambda*Math.sqrt(NA*ro/MNi*bc/PI)));
+    alpha1=col.div_1st_m*thetaC/Math.sqrt(3); beta1=alpha1;
+  }else{
+    alpha1=sig(col.div_1st_h,beam_width,mW,L0); beta1=sig(col.div_1st_v,beam_height,mH,L0);
+  }
+  const alpha2=sig(col.div_2nd_h,mW,sD,L1), beta2=sig(col.div_2nd_v,mH,sH,L1);
+  const alpha3=sig(col.div_3rd_h,sD,det_width,L2), beta3=sig(col.div_3rd_v,sH,det_height,L2);
+  const eta=v=>v/60/180*PI*GAUSS_SIGMA_FROM_FWHM;
+  const etaM=eta(mos.mos_mono_h), etaMp=eta(mos.mos_mono_v), etaS=eta(mos.mos_sam_h), etaSp=eta(mos.mos_sam_v);
+  if([alpha1,alpha2,alpha3,beta1,beta2,beta3,etaM,etaMp].some(x=>!Number.isFinite(x)||Math.abs(x)<1e-15))
+    throw new Error('Collimation and crystal mosaic values must be non-zero for the resolution calculation.');
+
+  // Monochromator side, angles U = (g0, g1, d0, d1): H = G + C^T F C and
+  // Y_M = (Delta ki, k g1, k d1) = A U (the TAS matrices, monochromator part).
+  const Gm=diag([alpha1,alpha2,beta1,beta2].map(x=>1/(x*x)));
+  const Fm=diag([etaM,etaMp].map(x=>1/(x*x)));
+  const Cm=[[0.5,0.5,0,0],[0,0,1/(2*sind(thetaM)),-1/(2*sind(thetaM))]];
+  const Am=[[k/(2*tand(thetaM)),-k/(2*tand(thetaM)),0,0],[0,k,0,0],[0,0,0,k]];
+  const covM=matmul(matmul(Am,inverse(add(Gm,matmul(matmul(transpose(Cm),Fm),Cm)))),transpose(Am));
+  // Z = (Delta ki, k g1, k d1, k g2, k d2); Y = (Delta ki, k g1, k d1, Delta kf, k g2, k d2) with Delta kf = Delta ki.
+  const covZ=blockDiag(covM,diag([(k*alpha3)**2,(k*beta3)**2]));
+  const T=zeros(6,5); T[0][0]=1; T[1][1]=1; T[2][2]=1; T[3][0]=1; T[4][3]=1; T[5][4]=1;
+  const B=zeros(3,6);
+  B[0][0]=cosd(phi); B[0][1]=sind(phi); B[0][3]=-cosd(phi-2*thetaS); B[0][4]=-sind(phi-2*thetaS);
+  B[1][0]=-B[0][1]; B[1][1]=B[0][0]; B[1][3]=-B[0][4]; B[1][4]=B[0][3]; B[2][2]=1; B[2][5]=-1;
+  const BT=matmul(B,T);
+  const covQ=symmetrize(matmul(matmul(BT,covZ),transpose(BT)));
+  covQ[1][1]+=qnorm*qnorm*etaS*etaS; covQ[2][2]+=qnorm*qnorm*etaSp*etaSp;
+  const R3=symmetrize(inverse(covQ));
+  // TAS layout (Q∥, Q⊥, E, Qout) with an uncoupled E row (1 meV, not shown).
+  const RM=[[R3[0][0],R3[0][1],0,R3[0][2]],[R3[1][0],R3[1][1],0,R3[1][2]],[0,0,1,0],[R3[2][0],R3[2][1],0,R3[2][2]]];
+  return {...(fourCircle ? fourCircleFrames(RM,lc,rl,UB,qRaw,hkl,unitMode) : resolutionFrames(RM,lc,rl,UB,Qsample,qnorm,hkl,unitMode)),
+    diffraction:true, fourCircle,
+    scans:scanWidths(RM,{thetaS,phi},{Ei:E,Ef:E},fourCircle),
+    angles:{A1:2*thetaM,A2:twoThetaS,A3:null,thetaM,thetaS,thetaA:null,phi}, energies:{Ei:E,Ef:E}, UB,
+    collimation3:{radial:false,fwhmArcmin:null}, prefactor:null};
+}
+
+// 4-circle: the local matrix is already in the Q frame (Q∥ along Q, Q⊥in
+// horizontal, Q⊥out vertical in the laboratory).  With the crystal in the
+// bisecting position, Q⊥in is along W × Q and Q⊥out along Q × Q⊥in (W: the
+// normal of the U–V plane, vertical at chi = 0), which gives their (h, k, l)
+// directions.  The U-based and lattice frames follow from the same basis.
+function fourCircleFrames(RM,lc,rl,UB,qRaw,hkl,unitMode){
+  const UBinv=inverse(UB), toHKL=q=>matvec(UBinv,q).map(x=>x/(2*PI));
+  const qHat=normalize(qRaw), wHat=normalize(qFromUB(UB,lc.sv3));
+  let pVec=cross(wHat,qHat);
+  if(norm(pVec)<1e-9) pVec=cross(qHat,normalize(qFromUB(UB,lc.sv1)));   // Q along W: any horizontal direction
+  const pHat=normalize(pVec), oHat=normalize(cross(qHat,pHat));
+  const qAxis=compactDirectionHKL(hkl.map(Number)), pAxis=compactDirectionHKL(toHKL(pHat)), oAxis=compactDirectionHKL(toHKL(oHat));
+  const rlu=unitMode==='rlu';
+  const nU=rlu?norm(qFromUB(UB,qAxis)):1, nV=rlu?norm(qFromUB(UB,pAxis)):1, nW=rlu?norm(qFromUB(UB,oAxis)):1;
+  const R=symmetrize(RM);
+  const mU=findMaxAlongAxis(R,0).max, mV=findMaxAlongAxis(R,1).max, mW=findMaxAlongAxis(R,3).max, mE=findMaxAlongAxis(R,2).max;
+  const w={U:2*mU,V:2*mV,W:2*mW,E:2*mE,Ucoh:coherentFwhm(R,0),Vcoh:coherentFwhm(R,1),Wcoh:coherentFwhm(R,3),Ecoh:coherentFwhm(R,2)};
+  const scale=1.2;
+  const frame={
+    RM:R, widths:w,
+    display:{U:w.U/nU,V:w.V/nV,W:w.W/nW,E:w.E,Ucoh:w.Ucoh/nU,Vcoh:w.Vcoh/nV,Wcoh:w.Wcoh/nW,Ecoh:w.Ecoh},
+    lim:{U:mU*scale/nU,V:mV*scale/nV,W:mW*scale/nW,E:mE*scale},
+    ellipses:{
+      projUE:ellipsePoints(schur2(R,[0,2]),nU,1), sliceUE:ellipsePoints(submatrix(R,[0,2],[0,2]),nU,1),
+      projVE:ellipsePoints(schur2(R,[1,2]),nV,1), sliceVE:ellipsePoints(submatrix(R,[1,2],[1,2]),nV,1),
+      projWE:ellipsePoints(schur2(R,[3,2]),nW,1), sliceWE:ellipsePoints(submatrix(R,[3,2],[3,2]),nW,1),
+      projUV:ellipsePoints(schur2(R,[0,1]),nU,nV), sliceUV:ellipsePoints(submatrix(R,[0,1],[0,1]),nU,nV),
+      projUW:ellipsePoints(schur2(R,[0,3]),nU,nW), sliceUW:ellipsePoints(submatrix(R,[0,3],[0,3]),nU,nW),
+      projVW:ellipsePoints(schur2(R,[1,3]),nV,nW), sliceVW:ellipsePoints(submatrix(R,[1,3],[1,3]),nV,nW)
+    },
+    qNorms:{U:nU,V:nV,W:nW},
+    displayAxes:{U:qAxis,V:pAxis,W:oAxis}
+  };
+  // The U-based and lattice (U, V, E, W) frames: the same ellipsoid in the
+  // crystal directions of this point (the 4-circle Q frame replaces the TAS
+  // one, whose Qout is W).
+  const crystal=resolutionFrames(R,lc,rl,UB,qRaw,norm(qRaw),hkl,unitMode,{eX:qHat,eY:pHat,eZ:oHat});
+  return {...crystal,qframe:frame};
 }

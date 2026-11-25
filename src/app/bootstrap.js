@@ -304,6 +304,10 @@ async function initialize(){
   // serializer, then start the catch-all listener only after initialization so
   // defaults cannot overwrite the user's previous browser-local state.
   const restoredGlobalState=restoreGlobalUIState();
+  // The restored analyzer ("none" or a crystal) fixes its Resolution controls
+  // again over their restored (TAS) values.
+  applyInstrumentCrystalAvailability({preserveCurrent:true});
+  syncSidebarCrystalSelectors();
   // Right/global persistence restores input.value without dispatching events.
   // After BOTH restores, seed empty HKL (including a saved empty path) from
   // the current sample U/V. Leave all nonempty saved paths untouched.

@@ -416,6 +416,8 @@
 #qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1 / -1;grid-row:1}
 #qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:1;grid-row:2;display:flex;flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density));min-width:0}
 #qeConstantMapPane > .qe-range-control-grid > .qe-range-control.hidden{display:none}
+/* No spurion column (elastic only: no analyzer, 4-circle): the slider row takes the full width. */
+#qeConstantMapPane > .qe-range-control-grid.qe-no-spurion > .qe-range-control{grid-column:1 / -1}
 #qeConstantMapPane .qe-range-control > .qe-control-entry{display:contents}
 #qeConstantMapPane .qe-control-entry > span:first-child{order:1;white-space:nowrap}
 #qeConstantMapPane .qe-range-control > input[type=range]{order:2;flex:1 1 auto;width:100%;min-width:calc(80px * var(--tas-density));padding:0;accent-color:var(--tas-accent)}

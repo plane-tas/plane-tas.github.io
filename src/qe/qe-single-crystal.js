@@ -1,6 +1,7 @@
 import {nuclearExtinctionThreshold} from '../cif/cif-structure.js';
 import {inferOutOfPlaneHKL} from '../resolution/resolution-core.js';
 import {wavelengthFromEnergy} from '../core/neutron-units.js';
+import {instrumentIsElasticOnly} from '../app/analyzer-mode.js';
 
 // Four-circle W layer: a peak within this |W - w| (r.l.u.) is shown on the map.
 export const W_LAYER_TOLERANCE=0.01+1e-9;
@@ -105,8 +106,10 @@ export function createQESingleCrystal(deps){
     const S2min=Math.abs(num("S2min")), S1min=num("S1min"), S1max=num("S1max");
     // ħω range from the monochromator (M2) / analyzer (A2) angle ranges of the
     // instrument file; negative energy transfer is included.
+    // Elastic only (no analyzer, 4-circle): the ħω = 0 slice alone.
+    const elasticOnly=instrumentIsElasticOnly(inst);
     let hwList;
-    if(lambdaHalf) hwList=[0];
+    if(lambdaHalf || elasticOnly) hwList=[0];
     else hwList=energyTransferGrid(energyTransferRange(inst,{energyMode,Ei,Ef}),{energyMode,Ei,Ef});
     if(hwList.length===0) hwList=[0];
 
@@ -387,7 +390,9 @@ export function createQESingleCrystal(deps){
     // as the reflection table). Matched within 0.006 r.l.u., which also covers
     // a decimal k calculated as the nearest fraction (e.g. 0.333 -> 1/3).
     let magneticIntensity=false;
-    if(enabledPropagationVectors().length===1 && magPoints.length && typeof getMagneticPeakIntensities==="function"){
+    // (Decided by the propagation vectors shown, not by the peaks of this
+    // slice or W layer, so the colorbars stay while the W slider moves.)
+    if(enabledPropagationVectors().length===1 && propagationVectors.length && typeof getMagneticPeakIntensities==="function"){
       const rows=getMagneticPeakIntensities(QplotLattice);
       if(rows?.length){
         const cell=v=>Math.round(v*100);
@@ -443,8 +448,9 @@ export function createQESingleCrystal(deps){
       regions,S2list,QmaxList,darkKF,darkKI,darkFixed,addDark,
       // Elastic wave vector of the Bragg peaks (fixed energy): Lorentz factor.
       braggK:2*PI/wavelength,
-      Gpoints,magPoints,magneticIntensity,ringData,darkAssets,QrefXY,sense,
-      analyzerFree:fourCircle || inst?.instrument_type==="diffractometer",
+      Gpoints,magPoints,magneticIntensity,magneticQIndices:propagationVectors.map(q=>Number(q.index)).filter(Number.isFinite),
+      ringData,darkAssets,QrefXY,sense,
+      analyzerFree:elasticOnly,
       fourCircle,Whkl,layerW,wShift,wInPlane,wZ,wzPerRlu,chiMin,chiMax,chiFactor,
       cifStructure:nuclearCifStructure,cifFileName:selectedCifFileName
     };

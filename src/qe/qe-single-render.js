@@ -394,20 +394,30 @@ function renderSingle(cache,index=0){
   }
   // Keep propagation vectors visually distinct by marker shape (MAGNETIC_SYMBOLS
   // for k1..k6) while retaining one magnetic-peak color.
-  const magneticIndices=[...new Set(transformedMag.map(p=>Number(p.qIndex)).filter(Number.isFinite))].sort((a,b)=>a-b);
+  // Every shown propagation vector keeps its legend entry (and the single-k
+  // colorbar) when this slice or W layer has none of its peaks: the map and
+  // its colorbars keep their size while the sliders move.  Plotly drops the
+  // colorbar of an empty trace, so such a trace carries one unplotted point.
+  const magneticIndices=[...new Set([...(cache.magneticQIndices||[]),...transformedMag.map(p=>Number(p.qIndex))].filter(Number.isFinite))].sort((a,b)=>a-b);
   for(const qIndex of magneticIndices){
     const pts=transformedMag.filter(p=>p.qIndex===qIndex);
-    if(!pts.length) continue;
     const symbol=magneticSymbol(qIndex).plotly;
     const name=`Magnetic Bragg peaks: k${qIndex}`;
+    if(!pts.length && !magneticIntensity){
+      traces.push({x:[null],y:[null],mode:"markers",name,marker:{color:"red",size:symbol==="star"?initialMarkerSizes.star:initialMarkerSizes.magnetic,symbol},
+        hoverinfo:"skip",zorder:10});
+      continue;
+    }
     if(magneticIntensity){
       // Single k: white-to-red |F_M|^2 colorbar below the nuclear one; the
       // legend keeps a plain red entry.
+      const empty=!pts.length;
       traces.push({x:[null],y:[null],mode:"markers",name,marker:{color:"red",size:initialMarkerSizes.magnetic,symbol},
         hoverinfo:"skip",meta:"magnetic-legend",zorder:10});
       traces.push({
-        x:pts.map(p=>p.x),y:pts.map(p=>p.y),mode:"markers",name,showlegend:false,meta:"magnetic-data",
-        marker:{color:pts.map(magneticRelative),
+        x:empty?[null]:pts.map(p=>p.x),y:empty?[null]:pts.map(p=>p.y),mode:"markers",name,showlegend:false,meta:"magnetic-data",
+        ...(empty?{hoverinfo:"skip"}:{}),
+        marker:{color:empty?[0]:pts.map(magneticRelative),
           colorscale:[[0,"rgb(255,255,255)"],[0.25,"rgb(255,200,200)"],[0.5,"rgb(250,130,130)"],[0.75,"rgb(225,55,55)"],[1,"rgb(180,0,0)"]],
           cmin:Number($("mfColorMinEntry")?.value ?? 0),cmax:Number($("mfColorMaxEntry")?.value ?? 1),showscale:true,
           colorbar:{title:{text:`|F<sub>M</sub>|${iSymbol} / max`,side:"right",font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},thickness:16,len:magneticBar.len,x:1.01,xanchor:"left",y:magneticBar.y,
@@ -536,8 +546,8 @@ function renderSingle(cache,index=0){
     unit,x:[-QplotX,QplotX],y:[-QplotY,QplotY]
   };
   const titleAnnotation=qeDomainTitleAnnotation(qeMapTitle({inst:cache.inst,energyMode:cache.energyMode,Ei:cache.Ei,Ef:cache.Ef,
-    // Diffractometer / 4-circle: elastic only, no ħω in the title.
-    hw:['diffractometer','four-circle'].includes(cache.inst?.instrument_type) ? null : cache.hwList[i],
+    // Elastic only (no analyzer, 4-circle): no ħω in the title.
+    hw:cache.analyzerFree ? null : cache.hwList[i],
     W:(cache.fourCircle && cache.Whkl) ? cache.layerW : null}));
   const singleDraw=Plotly.react("singlePlot",traces,{
     // Preserve user zoom/pan when controls trigger a recalculation.

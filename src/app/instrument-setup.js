@@ -5,6 +5,7 @@ import {fileTasConvention, s2FileRange} from './s2-range.js';
 import {energyFromWavelength, wavelengthFromEnergy} from '../core/neutron-units.js';
 import {sideRange, sideRangeFields} from './motor-range.js';
 import {selectedTasSense} from './dom-utils.js';
+import {ANALYZER_NONE, instrumentHasAnalyzer, instrumentIsElasticOnly, instrumentTypeAllowsNoAnalyzer} from './analyzer-mode.js';
 
 export function createInstrumentSetup(deps){
   const {
@@ -89,11 +90,12 @@ function populateInstrumentTypeSelect(){
   select.dataset.instrument=key;
   select.disabled=list.length<2;
 }
-// When the types of an instrument differ in beam or crystals (Poplar,
-// VERITAS energies), a type change re-applies all instrument defaults;
+// When the types of an instrument differ in beam, crystals or resolution
+// details (Poplar, VERITAS energies and collimation), a type change re-applies all instrument defaults;
 // otherwise only the type-dependent limits and labels change.
 const FULL_DEFAULT_KEYS=['default_energy','energy_mode','configuration','qe_range',
-  'available_crystals','monochromator','analyzer','sense','s1sign','s_sign','m_sign','a_sign','geometry'];  // geometry: older files
+  'available_crystals','monochromator','analyzer','sense','s1sign','s_sign','m_sign','a_sign','geometry',  // geometry: older files
+  'collimator','supermirror','distance','beam','detector','approximation'];
 function applyInstrumentTypeChange(){
   const key=$("instrument")?.value;
   if(!key || !instruments.has(key)) return;
@@ -173,7 +175,7 @@ function applyAngleRangeDefaults(key,inst=currentInstrument()){
 // the page (M2 for every type, A2 for TAS).
 function checkAngleRangeSides(inst=currentInstrument()){
   for(const key of Object.keys(ANGLE_MOTORS)){
-    if(key==='A2' && (inst?.instrument_type||'tas')!=='tas') continue;
+    if(key==='A2' && !instrumentHasAnalyzer(inst)) continue;
     const m=ANGLE_MOTORS[key], lo=$(m.lo);
     if(lo?.dataset.unreachable==='1') throw new Error(`The ${m.name} range of the instrument does not reach this side (${m.sense}).`);
   }
@@ -326,7 +328,7 @@ function energyRangeFromAngles(range,d){
   return {min:Math.min(a,b),max:Math.max(a,b)};
 }
 function energyTransferRange(inst,{energyMode,Ei,Ef}){
-  const analyzerFree=inst?.instrument_type==='diffractometer' || inst?.instrument_type==='four-circle';
+  const analyzerFree=instrumentIsElasticOnly(inst);
   if(energyMode==='Ef fixed'){
     const m2=analyzerFree ? null : energyRangeFromAngles(angleRange(inst,'M2'),Number($('dMono')?.value));
     if(m2 && Ef>0) return {hwMin:m2.min-Ef,hwMax:m2.max-Ef,EiRange:m2,source:'M2'};
@@ -608,17 +610,24 @@ function installedCrystalNames(inst,part){
   return [...new Set((Array.isArray(raw)?raw:[raw]).map(normalizeCrystalName))]
     .filter(name=>Object.prototype.hasOwnProperty.call(CRYSTALS,name) && CRYSTALS[name]!=null);
 }
+// Analyzer: "none" (2-axis) is offered for TAS and 4-circle; a diffractometer
+// has only "none" (fixed); a multiplexing instrument has no "none".  The
+// default is the instrument file's analyzer crystal ("none" allowed).
 function setCrystalOptions(part,inst,{preserveCurrent=false}={}){
   const mono=part==='monochromator';
   const main=$(mono?'monoCrystal':'anaCrystal');
   const sidebar=$(mono?'sidebarMonoCrystal':'sidebarAnaCrystal');
   const dInput=$(mono?'dMono':'dAna');
-  const allowed=installedCrystalNames(inst,part);
+  const diffractometer=!mono && inst?.instrument_type==='diffractometer';
+  const offerNone=!mono && !diffractometer && instrumentTypeAllowsNoAnalyzer(inst);
+  const allowed=diffractometer ? [] : installedCrystalNames(inst,part);
   const old=main?.value;
-  const preferred=normalizeCrystalName(inst?.[part]?.crystal);
-  const selected=(preserveCurrent && allowed.includes(old) ? old :
-    (allowed.includes(preferred) ? preferred : (allowed[0]||'')));
-  const options=allowed.length ? allowed : [''];
+  const fileCrystal=String(inst?.[part]?.crystal??'').trim();
+  const preferred=offerNone && fileCrystal.toLowerCase()===ANALYZER_NONE ? ANALYZER_NONE : normalizeCrystalName(fileCrystal);
+  const choices=diffractometer ? [ANALYZER_NONE] : offerNone ? [...allowed,ANALYZER_NONE] : allowed;
+  const selected=(preserveCurrent && choices.includes(old) ? old :
+    (choices.includes(preferred) ? preferred : (allowed[0]||(diffractometer?ANALYZER_NONE:''))));
+  const options=diffractometer ? [ANALYZER_NONE] : [...(allowed.length ? allowed : ['']),...(offerNone?[ANALYZER_NONE]:[])];
   for(const select of [main,sidebar]){
     if(!select) continue;
     select.replaceChildren(...options.map(name=>{
@@ -628,9 +637,10 @@ function setCrystalOptions(part,inst,{preserveCurrent=false}={}){
       return option;
     }));
     select.value=selected;
-    select.disabled=!allowed.length;
+    select.disabled=diffractometer || (!allowed.length && !offerNone);
   }
-  if(dInput){
+  // "none": the d spacing (hidden) keeps its value.
+  if(dInput && selected!==ANALYZER_NONE){
     // Manual d-spacing overrides are allowed for both monochromator and
     // analyzer.  Preserve an edited value across a UI refresh, but reload the
     // new instrument's JSON default when the instrument itself changes.
@@ -647,28 +657,10 @@ function setCrystalOptions(part,inst,{preserveCurrent=false}={}){
 function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
   if(!$('instrument')?.value || !instruments.has($('instrument').value)) return;
   const inst=currentInstrument();
-  const diffraction=instrumentIsDiffractometer(inst);
-  for(const id of ['sidebarAnalyzerCrystalWrap','resolutionAnalyzerFocusing',
-    'resolutionAnalyzerCrystalSection','resolutionAnalyzerSizeSection']){
-    $(id)?.classList.toggle('hidden',diffraction);
-  }
-  // Only the TAS resolution model is implemented: for a diffractometer or a
-  // 4-circle the Resolution tab (and the jump to it from Angle calculation) is
-  // greyed out, and no previously calculated TAS ellipse or matrix is kept.
   for(const id of ['tabResolution','geomToResolution']){
     const button=$(id); if(!button) continue;
-    button.disabled=diffraction;
-    button.title=diffraction ? 'Not available for diffractometers and 4-circle mode.' : '';
+    button.disabled=false; button.title='';
   }
-  if(diffraction){
-    clearResolutionResults?.();
-    if(!$('resolutionPanel')?.classList.contains('hidden')) $('tabQe')?.click();
-  }
-  $('resolutionFocusingGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
-  $('resolutionDistanceGrid')?.classList.toggle('resolution-is-diffractometer',diffraction);
-  for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))
-    el.classList.toggle('hidden',diffraction);
-  $('resolutionSampleDetectorDistanceLabel')?.classList.toggle('hidden',!diffraction);
   // Detector type is editable. Only reset it from JSON on instrument change;
   // never overwrite a user's choice during a layout or local-state refresh.
   const detectorType=$('detectorType');
@@ -676,13 +668,74 @@ function applyInstrumentCrystalAvailability({preserveCurrent=false}={}){
     detectorType.value=String(inst.detector?.type||'single').toLowerCase()==='anger'?'anger':'single';
   }
   setCrystalOptions('monochromator',inst,{preserveCurrent});
-  if(!diffraction) setCrystalOptions('analyzer',inst,{preserveCurrent});
-  else {
-    // Keep hidden legacy Resolution parameters for compatibility; no physical analyzer selection.
-    const sidebar=$('sidebarAnaCrystal');
-    if(sidebar){ sidebar.replaceChildren(); sidebar.disabled=true; }
-    if($('anaCrystal')) $('anaCrystal').disabled=true;
+  setCrystalOptions('analyzer',inst,{preserveCurrent});
+  syncAnalyzerMode();
+}
+// The settings that follow the analyzer (in the beam or "none") and the type:
+// the analyzer inputs, the distances (L2, L3 or the sample-detector L4) and
+// the Resolution controls.  A change of the resolution kind (TAS, 2-axis,
+// 4-circle) drops the shown result of the other kind.
+let analyzerModeKey=null;
+function syncAnalyzerMode(){
+  let inst=null;
+  try{ inst=currentInstrument(); }catch(_e){ return; }
+  const hasAnalyzer=instrumentHasAnalyzer(inst), elastic=instrumentIsElasticOnly(inst);
+  for(const id of ['resolutionAnalyzerFocusing','resolutionAnalyzerCrystalSection','resolutionAnalyzerSizeSection'])
+    $(id)?.classList.toggle('hidden',!hasAnalyzer);
+  $('sidebarAnalyzerCrystalWrap')?.classList.remove('hidden');
+  const key=`${inst?.instrument_type}|${hasAnalyzer}`;
+  if(elastic || (analyzerModeKey!==null && key!==analyzerModeKey)) clearResolutionResults?.();
+  analyzerModeKey=key;
+  syncResolutionModeControls();
+  // Without an analyzer: L0, L1 and the sample-detector distance L4.
+  $('resolutionFocusingGrid')?.classList.toggle('resolution-is-diffractometer',!hasAnalyzer);
+  $('resolutionDistanceGrid')?.classList.toggle('resolution-is-diffractometer',!hasAnalyzer);
+  for(const el of document.querySelectorAll('#resolutionDistanceGrid .resolution-tas-distance'))
+    el.classList.toggle('hidden',!hasAnalyzer);
+  $('resolutionSampleDetectorDistanceLabel')?.classList.toggle('hidden',hasAnalyzer);
+}
+// Resolution controls fixed by the analyzer mode.  Elastic only (no analyzer,
+// or 4-circle): single point, ħω = 0 and no Convolution.  No analyzer
+// (2-axis): also Cooper-Nathans, the 3rd collimator (sample-detector) Soller
+// and no 4th collimator.  The value a TAS uses (instrument file or the
+// user's) is kept aside and put back; release puts every value back (before
+// the instrument file's values are applied).
+function syncResolutionModeControls({release=false}={}){
+  let inst=null;
+  try{ inst=currentInstrument(); }catch(_e){ return; }
+  const elastic=!release && instrumentIsElasticOnly(inst), twoAxis=!release && !instrumentHasAnalyzer(inst);
+  const changed=new Set();
+  const fix=(id,value,on)=>{ const el=$(id); if(!el) return;
+    if(on){
+      // A value other than the fixed one was set since (instrument file,
+      // restored state): it is the TAS value now.
+      if(el.dataset.tasValue===undefined || el.value!==value) el.dataset.tasValue=el.value;
+      if(el.value!==value){ el.value=value; changed.add(id); }
+      el.disabled=true;
+    }else{
+      if(el.dataset.tasValue!==undefined){
+        if(el.value!==el.dataset.tasValue){ el.value=el.dataset.tasValue; changed.add(id); }
+        delete el.dataset.tasValue;
+      }
+      el.disabled=false;
+    } };
+  fix('method','Cooper-Nathans',twoAxis);
+  fix('calcMode','single',elastic);
+  fix('hw','0',elastic);
+  fix('coll3Type','soller',twoAxis);
+  updateCollimator3UI();
+  for(const id of ['coll4Type','div4h','div4v']){
+    $(id)?.classList.toggle('hidden',twoAxis);
+    document.querySelector(`label[for="${id}"]`)?.classList.toggle('hidden',twoAxis);
   }
+  // coll4Type is a fixed (Soller) selector.
+  if($('coll4Type')) $('coll4Type').disabled=true;
+  const conv=$('resolutionTabConvolution');
+  if(conv){
+    conv.disabled=elastic; conv.title=elastic ? 'Not available for elastic-only modes (no analyzer, 4-circle).' : '';
+    if(elastic && conv.classList.contains('active')) $('resolutionTabSimulation')?.click();
+  }
+  for(const id of changed) $(id)?.dispatchEvent(new Event('change',{bubbles:true}));
 }
 // 3rd horizontal collimator: Soller or radial (combobox).  With radial the
 // calculation uses the angular size of the analyzer seen from the sample; the
@@ -762,6 +815,9 @@ function applyInstrumentConfigurationDefaults(){
 // Resolution instrument details from the instrument file: collimation,
 // focusing, mosaic, sizes and distances (crystals are set with the sidebar).
 function applyInstrumentDetailDefaults(inst=currentInstrument()){
+  // The fixed Resolution controls first get their own values back, the
+  // instrument file's are set below, and the mode fixes them again.
+  syncResolutionModeControls({release:true});
   setSelect("method",(inst.approximation||{}).method);
 
   const mono=inst.monochromator||{}, ana=inst.analyzer||{}, col=inst.collimator||{}, sm=inst.supermirror||{}, dist=inst.distance||{}, beam=inst.beam||{}, det=inst.detector||{};
@@ -775,8 +831,9 @@ function applyInstrumentDetailDefaults(inst=currentInstrument()){
   setIf("L0",dist.L0);setIf("L1",dist.L1);setIf("L2",dist.L2);setIf("L3",dist.L3);
   const sampleDetector=$('sampleDetectorDistance');
   if(sampleDetector) {
-    // LSD is an independent distance. Never substitute L2 when it is unspecified.
-    const lsd=dist.LSD;
+    // L4 (sample-detector, without an analyzer; older files: LSD) is an
+    // independent distance. Never substitute L2 when it is unspecified.
+    const lsd=dist.L4!==undefined ? dist.L4 : dist.LSD;
     sampleDetector.value=lsd!=null && String(lsd).trim()!=='' && Number.isFinite(Number(lsd))
       ? String(lsd) : '';
   }
@@ -787,6 +844,8 @@ function applyInstrumentDetailDefaults(inst=currentInstrument()){
   if($('sourceShape')) $('sourceShape').value=sourceCircle ? 'circle' : 'rectangle';
   const detectorRect=String(det.shape||'cylinder').toLowerCase()==='rectangle';
   if($('detectorShape')) $('detectorShape').value=detectorRect ? 'rectangle' : 'cylinder';
+  // ...and fixed again (the file's values are kept aside).
+  syncResolutionModeControls();
   if(instrumentIsDiffractometer(inst)){
     // A missing JSON value means "not specified", NOT a value inherited from
     // the previous instrument or from static HTML defaults. This is critical
@@ -833,7 +892,7 @@ function applyInstrumentDefaults(){
     CRYSTAL_NAMES:Object.keys(CRYSTALS).filter(k=>CRYSTALS[k]!=null),
     syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
     applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, currentInstrument, effectiveS2MaxAtEi,
-    fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer,
+    fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, syncAnalyzerMode,
     energyTransferRange, energyTransferGrid,
     syncSidebarCrystalSelectors, updateS2MaxDisplay,
     updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max

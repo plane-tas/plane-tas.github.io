@@ -50,6 +50,7 @@ import {installGeometryNumericInputs, installNumericInputGuard} from './app/nume
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
 import {formatHKL, hklToQ, isAllowedByCentering} from './core/hkl-utils.js';
 import {createAppBootstrap} from './app/bootstrap.js';
+import {instrumentHasAnalyzer, instrumentIsElasticOnly} from './app/analyzer-mode.js';
 
 const instruments = new Map();
 const backgroundMaterials = new Map();
@@ -84,7 +85,7 @@ const {
   CRYSTAL_NAMES,
   syncS2FieldSigns, syncM2FieldSigns, updateCollimator3UI, syncCollimator3WithAnalyzerFocus,
   applyInstrumentCrystalAvailability, applyInstrumentDefaults, applyInstrumentConfigurationDefaults, applyInstrumentDetailDefaults, applyInstrumentTypeChange, currentInstrument, effectiveS2MaxAtEi,
-  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, energyTransferRange, energyTransferGrid,
+  fillCrystal, initializeSidebarCrystalSelectors, instrumentIsDiffractometer, syncAnalyzerMode, energyTransferRange, energyTransferGrid,
   syncSidebarCrystalSelectors, updateS2MaxDisplay,
   updateS2MaxDisplayForQERange, updateSupermirrorUI, validateEffectiveS2Max
 }=createInstrumentSetup({
@@ -259,14 +260,14 @@ function updateS2SignDisplay(){
   out.textContent=selectedS1Sign()==="cw" ? "CW" : "CCW";
 }
 function updateInstrumentTypeRows(){
-  let type='tas';
-  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
-  const tas=type==='tas', fourCircle=type==='four-circle';
-  // Analyzer sign: TAS only (kept when hidden).
-  $("senseAnalyzerPart")?.classList.toggle("hidden",!tas);
+  let type='tas', inst=null;
+  try{ inst=currentInstrument(); type=inst?.instrument_type||'tas'; }catch(_e){}
+  const fourCircle=type==='four-circle', analyzer=instrumentHasAnalyzer(inst);
+  // Analyzer sign and A2 limits: only with the analyzer (kept when hidden).
+  $("senseAnalyzerPart")?.classList.toggle("hidden",!analyzer);
   $("tasConventionRow")?.classList.remove("hidden");
   for(const el of document.querySelectorAll("#motorLimitTable .four-circle-limit")) el.classList.toggle("hidden",!fourCircle);
-  for(const el of document.querySelectorAll("#motorLimitTable .tas-only-limit")) el.classList.toggle("hidden",!tas);
+  for(const el of document.querySelectorAll("#motorLimitTable .tas-only-limit")) el.classList.toggle("hidden",!analyzer);
   updateS2SignDisplay();
   // Dark angles are not available for 4-circle yet: keep the section visible
   // (greyed out, not editable) with its values unchanged for a later update.
@@ -294,8 +295,8 @@ function updateInstrumentTypeRows(){
   updateGeometryQuickTargetButtons?.();
   syncAnalyzerFreeUI();
 }
-// Diffractometer and 4-circle have no analyzer: only elastic scattering
-// (ħω = 0) is measured.  Their ħω controls (Constant E map, Angle
+// Without an analyzer (diffractometer, Analyzer = none) and for 4-circle only
+// elastic scattering (ħω = 0) is measured.  Their ħω controls (Constant E map, Angle
 // calculation, Powder target), the λ/2 option and the Q vector–E map are not
 // shown, and ħω is set to 0.  The control row above the map keeps Save
 // figure (a 4-circle also its W slider).
@@ -305,27 +306,27 @@ function updateInstrumentTypeRows(){
 function syncLambdaHalfSlider(){
   const on=!!$('lambdaHalf')?.checked;
   for(const id of ['hwSlider','hwEntry']){ const el=$(id); if(el) el.disabled=on; }
-  let type='tas';
-  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
-  const analyzerFree=type==='diffractometer' || type==='four-circle';
+  let analyzerFree=false;
+  try{ analyzerFree=instrumentIsElasticOnly(currentInstrument()); }catch(_e){}
   const vectorTab=$('qeMapTabVector');
   if(vectorTab){
     vectorTab.disabled=analyzerFree || on;
-    vectorTab.title=analyzerFree ? 'Not available for diffractometers and 4-circle mode.' : on ? 'Not available with λ/2 (only elastic).' : '';
+    vectorTab.title=analyzerFree ? 'Not available without an analyzer or for 4-circle.' : on ? 'Not available with λ/2 (only elastic).' : '';
   }
   if(on && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
 }
 $('lambdaHalf')?.addEventListener('change',syncLambdaHalfSlider);
 function syncAnalyzerFreeUI(){
-  let type='tas';
-  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
-  const analyzerFree=type==='diffractometer' || type==='four-circle';
+  let analyzerFree=false;
+  try{ analyzerFree=instrumentIsElasticOnly(currentInstrument()); }catch(_e){}
   const single=checkedValue("sampleMode")==="single";
   // Control row: Save figure always; the ħω card for TAS single crystal,
-  // the W card (syncQEWControl) and the spurion warning for single crystal.
+  // the W card (syncQEWControl) and the spurion warning for single crystal
+  // with energy transfer (no spurion at ħω = 0: the W slider takes the row).
   $('hwEntry')?.closest('.qe-range-control')?.classList.toggle('hidden',analyzerFree || !single);
   if(!single) $('qeWCard')?.classList.add('hidden');
-  document.querySelector('#qeRangeControlGrid .qe-spurion-cell')?.classList.toggle('hidden',!single);
+  document.querySelector('#qeRangeControlGrid .qe-spurion-cell')?.classList.toggle('hidden',!single || analyzerFree);
+  $('qeRangeControlGrid')?.classList.toggle('qe-no-spurion',!single || analyzerFree);
   for(const id of ['geomHW','powderGeomHW']) $(id)?.closest('label')?.classList.toggle('hidden',analyzerFree);
   for(const id of ['geomSliderHW','powderSliderHW']) $(id)?.closest('.geometry-slider-row')?.classList.toggle('hidden',analyzerFree);
   $('geomHW')?.closest('.grid4')?.classList.toggle('geometry-target-no-hw',analyzerFree);
@@ -337,7 +338,7 @@ function syncAnalyzerFreeUI(){
   if(vectorTab){
     vectorTab.classList.toggle('hidden',!single);
     vectorTab.disabled=analyzerFree;
-    vectorTab.title=analyzerFree ? 'Not available for diffractometers and 4-circle mode.' : '';
+    vectorTab.title=analyzerFree ? 'Not available without an analyzer or for 4-circle.' : '';
   }
   if((!single || analyzerFree) && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
   syncLambdaHalfSlider();
@@ -668,6 +669,13 @@ for(const id of ['msign','asign']) $(id)?.addEventListener('change',()=>syncM2Fi
 $("instrumentType")?.addEventListener("change",()=>{
   markResolutionScanStale();
   applyInstrumentTypeChange();
+  updateInstrumentTypeRows();
+  scheduleRecalc();
+});
+// Analyzer "none" / a crystal (sidebar Ana, linked): 2-axis or 3-axis.
+$("anaCrystal")?.addEventListener("change",()=>{
+  markResolutionScanStale();
+  syncAnalyzerMode();
   updateInstrumentTypeRows();
   scheduleRecalc();
 });

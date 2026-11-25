@@ -131,7 +131,8 @@ export function createInstrumentJsonIO(deps){
       if(!out[name] || typeof out[name]!=='object' || Array.isArray(out[name])) out[name]={};
       target=out[name];
     }
-    const tas=inst.instrument_type==='tas';
+    // TAS and 4-circle have an analyzer selection (a crystal or "none").
+    const tas=inst.instrument_type!=='diffractometer';
     const energyMode=text('energyMode')||'Ef fixed';
     const energy=value('energy');
     const config={energy_mode:energyMode,sense:text('sense'),m_sign:text('msign'),s_sign:text('s1sign'),a_sign:text('asign')};
@@ -162,8 +163,9 @@ export function createInstrumentJsonIO(deps){
         hfocus:checked('anaHF'),vfocus:checked('anaVF'),blade_h:value('anaHB'),blade_v:value('anaVB')
       });
     }
-    assign(target,'distance',{L0:value('L0'),L1:value('L1'),L2:value('L2'),L3:value('L3'),LSD:value('sampleDetectorDistance')});
-    if(target.distance && target.distance.LSD===null) delete target.distance.LSD;
+    // L4: sample-detector distance (without an analyzer; older files: LSD).
+    assign(target,'distance',{L0:value('L0'),L1:value('L1'),L2:value('L2'),L3:value('L3'),L4:value('sampleDetectorDistance')});
+    if(target.distance){ delete target.distance.LSD; if(target.distance.L4===null) delete target.distance.L4; }
     assign(target,'beam',{width:value('srcWcm'),height:value('srcHcm'),shape:text('sourceShape')});
     assign(target,'detector',{width:value('detWcm'),height:value('detHcm'),type:text('detectorType'),shape:text('detectorShape')});
     // M2 / A2: the file range with the part on the page's side replaced by

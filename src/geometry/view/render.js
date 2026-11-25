@@ -1,6 +1,7 @@
 // TAS geometry: drawing of the instrument (renderGeometry).
 // Part of the TAS geometry view (see ../tas-geometry-view.js for how the parts are wired).
 import {darkDirectBeamZeroShiftDeg} from '../../core/tas-conventions.js';
+import {instrumentHasAnalyzer} from '../../app/analyzer-mode.js';
 export function installGeometryRender(ctx){
   const {deps:{
     $, angleDiffDeg, checkedValue, clamp, currentInstrument, deg2rad,
@@ -15,7 +16,8 @@ export function installGeometryRender(ctx){
 
 function renderGeometry(cache,index=0){
   const isPowder=checkedValue("sampleMode")==="powder" || !!cache?.powder;
-  const isDiffractometer=['diffractometer','four-circle'].includes(currentInstrument()?.instrument_type);   // 4-circle: no analyzer
+  // No analyzer (diffractometer, Analyzer = none): sample -> detector.
+  const isDiffractometer=!instrumentHasAnalyzer(currentInstrument());
   // Powder has no crystallographic sample orientation, but the TAS scattering
   // sign still determines the displayed motor-angle branch exactly as it does
   // for Single crystal.

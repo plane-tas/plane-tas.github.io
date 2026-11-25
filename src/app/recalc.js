@@ -3,13 +3,16 @@
 export function createRecalc(deps){
   const {
     $, calculatePowder, calculateSingleCrystal, checkedValue, clearError, clearResolutionResults,
-    doSingleResolution, instrumentIsDiffractometer, renderGeometry, renderSingle, showError, updateAutoW,
+    doSingleResolution, renderGeometry, renderSingle, showError, updateAutoW,
     updateEnergyLabel, updateModeVisibility, updateResolutionPlaneWarning, updateS2MaxDisplay,
     getPowderCache, getSingleCache, setPowderCache, setSingleCache, targetHWMapIndex, syncQEPathSnapDefault,
     updateBraggPeakCheck
   }=deps;
 
 let timer=null;
+// Every instrument type has a resolution (diffractometer and 4-circle:
+// elastic, without an analyzer).
+const resolutionUnavailable=()=>false;
 function resolutionPanelIsVisible(){
   const panel=$("resolutionPanel");
   return !!panel && !panel.classList.contains("hidden");
@@ -18,7 +21,7 @@ function resolutionPanelIsVisible(){
 // the empty table and plots), and Calculate is marked.
 function markResolutionScanDirty(){
   if(!resolutionPanelIsVisible() || $("calcMode")?.value!=="scan") return;
-  if(!instrumentIsDiffractometer()) $("result")?.classList.remove("hidden");
+  if(!resolutionUnavailable()) $("result")?.classList.remove("hidden");
   const btn=$("calcScanResolution");
   if(btn) btn.classList.add("needs-calc");
 }
@@ -40,7 +43,7 @@ function runScheduledRecalcNow(){
     updateModeVisibility();
     updateAutoW();
     updateResolutionPlaneWarning();
-    if(instrumentIsDiffractometer()){
+    if(resolutionUnavailable()){
       clearResolutionResults?.();
       return;
     }

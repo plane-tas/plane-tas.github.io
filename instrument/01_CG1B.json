@@ -18,7 +18,7 @@
     "a_sign": "ccw"
   },
   "distance": {
-    "LSD": null
+    "L4": null
   },
   "M2_min": 42.23,
   "M2_max": 42.23,
@@ -31,5 +31,5 @@
       "PG002"
     ]
   },
-  "_unverified_resolution_fields_note": "Collimations, guide supermirror m-value, monochromator focusing/mosaic/blade counts and dimensions, beam and detector dimensions, L0-L3, and sample-detector distance (LSD) are not verified and are intentionally unspecified. The pre-existing supermirror enabled flag, S2 limits and orientation settings are retained from the supplied configuration but have not been independently validated."
+  "_unverified_resolution_fields_note": "Collimations, guide supermirror m-value, monochromator focusing/mosaic/blade counts and dimensions, beam and detector dimensions, L0-L3, and sample-detector distance (L4) are not verified and are intentionally unspecified. The pre-existing supermirror enabled flag, S2 limits and orientation settings are retained from the supplied configuration but have not been independently validated."
 }

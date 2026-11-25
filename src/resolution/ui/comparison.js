@@ -76,9 +76,17 @@ export function installResolutionComparison(ctx){
     const en=entry?.result?.energies||{};
     const f=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(4))) : String(v); };
     const calc=entry?.calc||{};
+    // No analyzer (2-axis); a 4-circle with the analyzer has the TAS fields.
+    if(entry?.result?.diffraction) return {
+      inst:instrumentLines(senseText().slice(0,2)),
+      point:`(${f(calc.h)},${f(calc.k)},${f(calc.l)})\nħω=0 meV`,
+      // (Cooper-Nathans: the mosaics only, no focusing.)
+      mono:`${crystalText('monoCrystal')}, Ei=${energyText(en.Ei)} meV\nH: ${value('mosMonoH')}′\nV: ${value('mosMonoV')}′`,
+      ana:'—',
+      col:`H: ${[sm||value('div1h'),value('div2h'),value('div3h')].join('-')}\nV: ${[sm||value('div1v'),value('div2v'),value('div3v')].join('-')}`
+    };
     return {
-      // Inst.: name and Sense (mono / sample / analyzer) on two lines.
-      inst:`${currentInstrumentName()}\n${senseText()}`,
+      inst:instrumentLines(senseText()),
       point:`(${f(calc.h)},${f(calc.k)},${f(calc.l)})\nħω=${f(calc.hw)} meV`,
       mono:`${crystalText('monoCrystal')}, Ei=${energyText(en.Ei)} meV\nH: ${focusText('monoHF','monoHB','mosMonoH')}\nV: ${focusText('monoVF','monoVB','mosMonoV')}`,
       ana:`${crystalText('anaCrystal')}, Ef=${energyText(en.Ef)} meV\nH: ${focusText('anaHF','anaHB','mosAnaH')}\nV: ${focusText('anaVF','anaVB','mosAnaV')}`,
@@ -93,6 +101,13 @@ export function installResolutionComparison(ctx){
     const c3=entry?.result?.collimation3?.radial
       ? `${Number.isFinite(entry.result.collimation3.fwhmArcmin) ? Math.round(entry.result.collimation3.fwhmArcmin) : '?'}(R)` : raw('div3h');
     const en=entry?.result?.energies||{};
+    if(entry?.result?.diffraction) return {
+      instrument:currentInstrumentName(), sense:senseText().slice(0,2), approximation:$('method')?.value||'',
+      h:entry.calc.h, k:entry.calc.k, l:entry.calc.l, hw:0, Ei:en.Ei, Ef:en.Ef,
+      mono:{crystal:crystalText('monoCrystal'),H:focus('monoHF','monoHB','mosMonoH'),V:focus('monoVF','monoVB','mosMonoV')},
+      ana:{},
+      colH:[sm||raw('div1h'),raw('div2h'),raw('div3h'),''], colV:[sm||raw('div1v'),raw('div2v'),raw('div3v'),'']
+    };
     return {
       instrument:currentInstrumentName(), sense:senseText(), approximation:$('method')?.value||'',
       h:entry.calc.h, k:entry.calc.k, l:entry.calc.l, hw:entry.calc.hw, Ei:en.Ei, Ef:en.Ef,
@@ -103,6 +118,14 @@ export function installResolutionComparison(ctx){
   };
   // Instrument of a result (shown in the table): the preset name without the
   // site after @, with the setting when the instrument has several.
+  // Inst. column: the name, the setting (when the instrument has several) and
+  // the Sense, one per line, e.g. VERITAS / 4-circle / +-+.
+  const instrumentLines=sense=>{
+    const sel=$('instrument'), t=$('instrumentType');
+    const name=(sel?.selectedOptions?.[0]?.text||sel?.value||'').replace(/\s*@.*$/,'');
+    const type=t && t.options.length>1 ? (t.selectedOptions?.[0]?.text||t.value) : '';
+    return [name,type,sense].filter(Boolean).join('\n');
+  };
   const currentInstrumentName=()=>{ const sel=$('instrument'); const t=$('instrumentType'); return `${(sel?.selectedOptions?.[0]?.text||sel?.value||'').replace(/\s*@.*$/,'')}${t && t.options.length>1 ? ` (${t.selectedOptions?.[0]?.text||t.value})` : ''}`; };
   const conditionDetail=entry=>{
     const {result:r,calc}=entry, f=v=>Number(v).toFixed(3);
@@ -143,8 +166,9 @@ export function installResolutionComparison(ctx){
     shared.resolutionFrameLocked=locked;
     for(const id of FRAME_CONTROLS){
       const el=$(id); if(!el) continue;
-      if(el.disabled!==locked){
-        el.disabled=locked;
+      const off=locked;
+      if(el.disabled!==off){
+        el.disabled=off;
         if(locked){ el.dataset.titleFree=el.title||''; el.title=LOCK_TITLE; }
         else{ el.title=el.dataset.titleFree??el.title; }
       }
@@ -259,7 +283,7 @@ export function installResolutionComparison(ctx){
   // Show: which column groups of the table (and of Save figure), kept in
   // the browser.  The buttons and colours are always there.
   const SHOW_KEY='plane-tas-resolution-compare-show';
-  const SHOW_IDS={position:'resolutionShowPosition',condition:'resolutionShowCondition',widths:'resolutionShowWidths',matrix:'resolutionShowMatrix'};
+  const SHOW_IDS={position:'resolutionShowPosition',condition:'resolutionShowCondition',widths:'resolutionShowWidths',fwhm:'resolutionShowFwhm',matrix:'resolutionShowMatrix'};
   const shown=()=>Object.fromEntries(Object.entries(SHOW_IDS).map(([k,id])=>[k,!!$(id)?.checked]));
   { let saved=null; try{ saved=JSON.parse(localStorage.getItem(SHOW_KEY)||'null'); }catch(_e){}
     if(saved && typeof saved==='object') for(const [k,id] of Object.entries(SHOW_IDS)) if(typeof saved[k]==='boolean' && $(id)) $(id).checked=saved[k]; }
@@ -274,10 +298,11 @@ export function installResolutionComparison(ctx){
   const matrixFor=r=>r.qframe?.RM||r.RM;
   // Four significant digits on screen (Save CSV has all of them); elements
   // that are zero to rounding are shown as 0.
-  const matrixCell=M=>{
-    const big=Math.max(...M.flat().map(x=>Math.abs(Number(x))||0));
+  // Diffractometer: the E row and column are a placeholder ("—").
+  const matrixCell=(M,diffraction=false)=>{
+    const big=Math.max(...M.flat().filter((x,i)=>!diffraction || (Math.floor(i/4)!==2 && i%4!==2)).map(x=>Math.abs(Number(x))||0));
     const f=x=>{ const v=Number(x); return Math.abs(v)<=big*1e-10 ? '0' : v.toExponential(3); };
-    return M.map(row=>row.map(x=>f(x).padStart(10)).join('')).join('\n');
+    return M.map((row,i)=>row.map((x,j)=>(diffraction && (i===2||j===2) ? '—' : f(x)).padStart(10)).join('')).join('\n');
   };
 
 
@@ -328,13 +353,23 @@ export function installResolutionComparison(ctx){
   //   Keep / Remove | # | instrument, point, mono, ana, col | widths along the axes
   // The table is rebuilt only when what it shows changed (a rebuild under the
   // pointer would swallow a click).
-  let tableSig='', tableColumns=[];
+  let tableSig='', tableColumns=[], tableRowCount=0;
+  // FWHM column: motor scans through a Bragg peak (deg), one per line;
+  // θ–2θ gives θ (S1) / 2θ (S2).
+  const deg=v=>Number.isFinite(v) ? v.toFixed(2) : '–';
+  function scanLines(result){
+    const s=result?.scans; if(!s) return '';
+    const lines=[`S1 scan: ${deg(s.S1)}`,`S2 scan: ${deg(s.S2)}`];
+    if(s.thetaTwoTheta) lines.push(`θ–2θ: ${deg(s.thetaTwoTheta.S1)}/${deg(s.thetaTwoTheta.S2)}`);
+    if(Number.isFinite(s.chi)) lines.push(`χ scan: ${deg(s.chi)}`);
+    return lines.join('\n');
+  }
   function renderTable(rows){
     const head=$('resolutionCompareHead'), body=$('resolutionCompareRows');
     if(!body || !head) return;
     const scan=!singleMode();
     const sig=JSON.stringify([scan,scan ? [entrySerial(shared.scanResults),scanGraph,scanSelectedIndex()] : 0,rows.map(k=>[k.id,k.color,k.label,k.current ? entrySerial(k.entry) : 0]),selectedId,keepBlock(),shared.keptResolutions.length,shown(),fn.resolutionCoordinates(),rows.length ? 0 : [predictedAxes(),$('unit')?.value]]);
-    if(sig===tableSig && body.childElementCount===rows.length) return;
+    if(sig===tableSig && body.childElementCount===tableRowCount) return;
     tableSig=sig;
     body.replaceChildren(); head.replaceChildren();
     body.closest('table')?.classList.toggle('scan',scan);
@@ -342,7 +377,9 @@ export function installResolutionComparison(ctx){
     const show=shown();
     // The position (h, k, l, ħω) right of the colour, then the groups
     // resolution / condition / R matrix as chosen in Show.
-    const nPos=show.position ? 1 : 0, nCond=show.condition ? 4 : 0, nRes=show.widths ? 4 : 0, nMat=show.matrix ? 1 : 0, nData=nCond+nRes+nMat;
+    // Diffractometer: no δħω column.
+    const noEnergy=!!fn.resolutionIsDiffraction?.();
+    const nPos=show.position ? 1 : 0, nCond=show.condition ? 4 : 0, nRes=show.widths ? (noEnergy ? 3 : 4) : 0, nFwhm=show.fwhm ? 1 : 0, nMat=show.matrix ? 1 : 0, nData=nCond+nRes+nFwhm+nMat;
     // Columns after the button and colour, for Save figure: [group, label, monospace].
     tableColumns=nPos ? [['','position',false]] : [];
     {
@@ -366,10 +403,16 @@ export function installResolutionComparison(ctx){
       r1.appendChild(cell('th','',{rowspan:span,class:'cmp-index'}));
       if(nPos) r1.appendChild(cell('th','position',{rowspan:span,class:'cmp-position'}));
       if(nRes){
-        r1.appendChild(cell('th',`resolution (${qUnit})`,{colspan:'4',class:'cmp-group cmp-res-start'}));
-        // U, V, E, W: the order of the R matrix (Q∥, Q⊥in, E, Q⊥out).
-        const names=[axis(ax?.U,'U'),axis(ax?.V,'V'),'δħω (meV)',axis(ax?.W,'W')];
+        // U, V, E, W: the order of the R matrix (Q∥, Q⊥in, E, Q⊥out); a
+        // diffractometer has no δħω.
+        const names=[axis(ax?.U,'U'),axis(ax?.V,'V'),'δħω (meV)',axis(ax?.W,'W')].filter((_,i)=>i!==2 || !noEnergy);
+        r1.appendChild(cell('th',`resolution (${qUnit})`,{colspan:String(names.length),class:'cmp-group cmp-res-start'}));
         names.forEach((name,i)=>{ r2.appendChild(cell('th',name,i ? {} : {class:'cmp-res-start'})); tableColumns.push([`resolution (${qUnit})`,name,false]); });
+      }
+      // Motor-scan widths (one column, a line per scan).
+      if(nFwhm){
+        r1.appendChild(cell('th','FWHM (deg)',{rowspan:span,class:'cmp-group cmp-res-start',title:'Motor scans through a Bragg peak; θ–2θ: θ (S1) / 2θ (S2)'}));
+        tableColumns.push(['FWHM (deg)','',false]);
       }
       // After the widths (what is compared), the condition that gave them.
       if(nCond){
@@ -432,15 +475,19 @@ export function installResolutionComparison(ctx){
       }
       if(nRes){
         const d=frameFor(k.entry.result,k.coords).display, w=(a,b)=>`${a.toFixed(4)} (${b.toFixed(4)})`;
-        tr.append(td(w(d.U,d.Ucoh),'cmp-num cmp-res cmp-res-start'),td(w(d.V,d.Vcoh),'cmp-num cmp-res'),td(w(d.E,d.Ecoh),'cmp-num cmp-res'),td(w(d.W,d.Wcoh),'cmp-num cmp-res'));
+        tr.append(td(w(d.U,d.Ucoh),'cmp-num cmp-res cmp-res-start'),td(w(d.V,d.Vcoh),'cmp-num cmp-res'));
+        if(!noEnergy) tr.append(td(k.entry.result.diffraction ? '—' : w(d.E,d.Ecoh),'cmp-num cmp-res'));
+        tr.append(td(w(d.W,d.Wcoh),'cmp-num cmp-res'));
       }
+      if(nFwhm) tr.appendChild(td(scanLines(k.entry.result),'cmp-cond cmp-col cmp-res-start'));
       if(nCond){
         tr.appendChild(td(k.condition.inst||k.instrumentName,'cmp-cond cmp-col cmp-res-start'));
         for(const key of ['mono','ana','col']) tr.appendChild(td(k.condition[key],'cmp-cond cmp-col'));
       }
-      if(nMat) tr.appendChild(td(matrixCell(matrixFor(k.entry.result)),'cmp-mat cmp-res-start'));
+      if(nMat) tr.appendChild(td(matrixCell(matrixFor(k.entry.result),!!k.entry.result.diffraction),'cmp-mat cmp-res-start'));
       body.appendChild(tr);
     }
+    tableRowCount=body.childElementCount;
     const bodyEl=document.querySelector('#resolutionComparisonView .resolution-compare-body');
     // The plot frames and the table header stay, also without a result.
     if(bodyEl) bodyEl.hidden=false;
@@ -469,7 +516,12 @@ export function installResolutionComparison(ctx){
     // scan: of the whole scan.  Nothing to draw (no result yet, or a scan
     // point that cannot be calculated): the empty frames.
     const limits={};
-    const rangeRows=singleMode() ? drawn : shownRows().filter(k=>!k.failed);
+    // Diffractometer results (no energy axis) and TAS results are drawn
+    // apart: only those of the current kind.
+    const diffraction=!!fn.resolutionIsDiffraction?.();
+    const sameKind=k=>!!k.entry?.result?.diffraction===diffraction;
+    drawn=drawn.filter(sameKind);
+    const rangeRows=(singleMode() ? drawn : shownRows().filter(k=>!k.failed)).filter(sameKind);
     for(const k of rangeRows){
       const lim=frameFor(k.entry.result,k.coords).lim||{};
       for(const [key,v] of Object.entries(lim)) if(Number(v)>(limits[key]||0)) limits[key]=Number(v);
@@ -507,9 +559,19 @@ export function installResolutionComparison(ctx){
     };
     const qeTitle=v=>`${lab(v)} vs δħω`;
     const layout=(title,x,y,xl,yl,id,yIsQ=false)=>({...fn.resolutionBaseLayout(title,x,y,xl,yl,false,id,fonts,yIsQ),uirevision:`${id}-cmp`});
-    fn.reactResolutionPlot(PLOT_IDS.UE,traces('UE'),layout(qeTitle(ax.U),`${lab(ax.U)} (${qUnit})`,'δħω (meV)',limits.U,limits.E,PLOT_IDS.UE));
-    fn.reactResolutionPlot(PLOT_IDS.VE,traces('VE'),layout(qeTitle(ax.V),`${lab(ax.V)} (${qUnit})`,'δħω (meV)',limits.V,limits.E,PLOT_IDS.VE));
-    fn.reactResolutionPlot(PLOT_IDS.WE,traces('WE'),layout(qeTitle(ax.W),`${lab(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,PLOT_IDS.WE));
+    // Diffractometer (no energy axis): U–W and V–W in place of U–E and V–E;
+    // the W–E panel stays empty.
+    const weEl=$(PLOT_IDS.WE);
+    if(diffraction){
+      fn.reactResolutionPlot(PLOT_IDS.UE,traces('UW'),layout(`${lab(ax.U)} vs ${lab(ax.W)}`,`${lab(ax.U)} (${qUnit})`,`${lab(ax.W)} (${qUnit})`,limits.U,limits.W,PLOT_IDS.UE,true));
+      fn.reactResolutionPlot(PLOT_IDS.VE,traces('VW'),layout(`${lab(ax.V)} vs ${lab(ax.W)}`,`${lab(ax.V)} (${qUnit})`,`${lab(ax.W)} (${qUnit})`,limits.V,limits.W,PLOT_IDS.VE,true));
+      if(weEl){ try{ Plotly.purge(weEl); }catch(_e){} weEl.style.visibility='hidden'; }
+    }else{
+      if(weEl) weEl.style.visibility='';
+      fn.reactResolutionPlot(PLOT_IDS.UE,traces('UE'),layout(qeTitle(ax.U),`${lab(ax.U)} (${qUnit})`,'δħω (meV)',limits.U,limits.E,PLOT_IDS.UE));
+      fn.reactResolutionPlot(PLOT_IDS.VE,traces('VE'),layout(qeTitle(ax.V),`${lab(ax.V)} (${qUnit})`,'δħω (meV)',limits.V,limits.E,PLOT_IDS.VE));
+      fn.reactResolutionPlot(PLOT_IDS.WE,traces('WE'),layout(qeTitle(ax.W),`${lab(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,PLOT_IDS.WE));
+    }
     fn.reactResolutionPlot(PLOT_IDS.UV,traces('UV'),layout(`${lab(ax.U)} vs ${lab(ax.V)}`,`${lab(ax.U)} (${qUnit})`,`${lab(ax.V)} (${qUnit})`,limits.UVU||limits.U,limits.UVV||limits.V,PLOT_IDS.UV,true));
   }
 
@@ -690,6 +752,8 @@ export function installResolutionComparison(ctx){
     for(const c of ['mono','ana']) head.push(`${c}_crystal`,`${c}_H_mosaic`,`${c}_H_focus`,`${c}_H_blades`,`${c}_V_mosaic`,`${c}_V_focus`,`${c}_V_blades`);
     head.push('col_H1','col_H2','col_H3','col_H4','col_V1','col_V2','col_V3','col_V4');
     for(const a of [ax[0],ax[1],'E',ax[2]]) head.push(`d${a}_proj`,`d${a}_slice`);
+    // Motor scans through a Bragg peak (FWHM, deg).
+    head.push('S1_scan_deg','S2_scan_deg','theta2theta_S1_deg','theta2theta_S2_deg','chi_scan_deg');
     for(let i=1;i<=4;i++) for(let j=1;j<=4;j++) head.push(`R${i}${j}`);
     head.push('note');
     lines.push(head.join(','));
@@ -704,8 +768,11 @@ export function installResolutionComparison(ctx){
       const row=[n+1,k.color,f.instrument??k.instrumentName,f.sense??'',f.approximation,num(f.h),num(f.k),num(f.l),num(f.hw),num(f.Ei),num(f.Ef)];
       for(const c of ['mono','ana']){ const x=f[c]||{}; row.push(x.crystal,x.H?.mosaic,x.H?.focus,x.H?.blades,x.V?.mosaic,x.V?.focus,x.V?.blades); }
       row.push(...(f.colH||['','','','']),...(f.colV||['','','','']));
-      row.push(num(d.U),num(d.Ucoh),num(d.V),num(d.Vcoh),num(d.E),num(d.Ecoh),num(d.W),num(d.Wcoh));
-      for(const r of M) for(const x of r) row.push(Number(x).toExponential(9));
+      const dif=!!k.entry.result.diffraction;
+      row.push(num(d.U),num(d.Ucoh),num(d.V),num(d.Vcoh),dif?'':num(d.E),dif?'':num(d.Ecoh),num(d.W),num(d.Wcoh));
+      const sc=k.entry.result.scans||{};
+      row.push(num(sc.S1),num(sc.S2),num(sc.thetaTwoTheta?.S1),num(sc.thetaTwoTheta?.S2),num(sc.chi));
+      M.forEach((r,i)=>r.forEach((x,j)=>row.push(dif && (i===2||j===2) ? '' : Number(x).toExponential(9))));
       row.push('');
       lines.push(row.map(q).join(','));
     });

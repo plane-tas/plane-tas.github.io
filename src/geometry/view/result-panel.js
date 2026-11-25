@@ -3,6 +3,7 @@
 // controls (Single crystal or Powder) are shown.
 // Part of the TAS geometry view (see ../tas-geometry-view.js for how the parts are wired).
 import {displayedMotorAngles} from '../../core/tas-conventions.js';
+import {instrumentHasAnalyzer} from '../../app/analyzer-mode.js';
 export function installGeometryResultPanel(ctx){
   const {deps:{
     $, checkedValue, currentInstrument, effectiveS2MaxAtEi, formatAngle, hklToQ, norm, num,
@@ -89,7 +90,7 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
     ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(4)).join(', ')})</div>`
     : '';
   const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
-  const diffractometer=['diffractometer','four-circle'].includes(currentInstrument()?.instrument_type);   // 4-circle: no analyzer
+  const diffractometer=!instrumentHasAnalyzer(currentInstrument());   // no A1 / A2 without an analyzer
   const fourCircle=Number.isFinite(shown.chi);
   const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${fourCircle?`, χ=${geometryResultMotorAngle(shown.chi)}°, φ=${geometryResultMotorAngle(shown.phi)}°`:''}${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
     (!isPowder && a.warning?` &nbsp; | &nbsp; ${a.warning}`:'');
