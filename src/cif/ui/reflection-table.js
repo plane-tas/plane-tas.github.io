@@ -68,8 +68,6 @@ function displayTwoThetaMax(){
   const max=Number(cifState.reflectionData?.plotRange?.max);
   return fn.currentCifReflectionFilters().withinS2Max && Number.isFinite(max) && max>0 ? Math.min(180,max) : 180;
 }
-// The powder pattern always includes the powder Lorentz factor.
-const lorentzOn=()=>mode()==='graph' || $('reflectionLorentz')?.value!=='off';
 const codeFilter=()=>{
   if(cifState.reflectionData?.incommensurate) return 'N';
   const v=$('reflectionCodeFilter')?.value; return v==='N'||v==='M'?v:'all';
@@ -83,9 +81,11 @@ function powderUVW(){
   const read=(id,fallback)=>{ const v=Number($(id)?.value); return $(id)?.value!=='' && Number.isFinite(v) ? v : fallback; };
   return {U:read('reflectionPlotU',POWDER_UVW_DEFAULT.U),V:read('reflectionPlotV',POWDER_UVW_DEFAULT.V),W:read('reflectionPlotW',POWDER_UVW_DEFAULT.W)};
 }
+// Lorentz factor, always applied: single crystal (Table) 1/sin 2θ (ω or
+// θ–2θ scan, equatorial geometry); powder (Graph) 1/(2 sin²θ cosθ).
 function lorentzFactor(twoTheta){
   if(mode()==='graph') return 1/Math.max(1e-9,sin(twoTheta/2)*sin(twoTheta));
-  return lorentzOn() ? 1/Math.max(1e-9,sin(twoTheta)) : 1;
+  return 1/Math.max(1e-9,sin(twoTheta));
 }
 function displayRows(){
   const data=cifState.reflectionData;
@@ -148,16 +148,17 @@ function powderGroups(rows){
 function columns(){
   const powder=mode()==='graph';
   const cell=cifState.reflectionData?.parentKnown===false?' (magnetic cell)':'';
-  const iTitle=lorentzOn()
-    ? (powder?'I = Mult·(|F_N|²+|F_M|²)/(sinθ sin2θ)':'I = (|F_N|²+|F_M|²)/sin2θ')
-    : (powder?'I = Mult·(|F_N|²+|F_M|²)':'I = |F_N|²+|F_M|²');
+  // Definitions on hover (the details are in the manual).
+  const iTitle=powder?'I = Mult × (|F_N|² + |F_M|²) × L':'I = (|F_N|² + |F_M|²) × L';
+  const lTitle=powder?'Lorentz factor (powder): L = 1/(2 sin²θ cosθ)':'Lorentz factor (single crystal): L = 1/sin 2θ';
   return [
     {key:'hkl',label:`h k l${cell}`,text:r=>`(${r.hkl.map(v=>Number(Number(v).toFixed(6))).join(' ')})`},
     {key:'code',label:'Code',text:r=>r.code},
     {key:'mult',label:'Mult',sort:true,text:r=>String(r.mult)},
     {key:'fn2',label:'|F<sub>N</sub>|² (barn)',sort:true,text:r=>numberText(r.fn2)},
-    {key:'fm2',label:'|F<sub>M</sub>|² (barn)',sort:true,text:r=>numberText(r.fm2)},
-    {key:'formFactorSort',label:'f(Q)',sort:true,text:r=>r.formFactor||'—'},
+    {key:'fm2',label:'|F<sub>M</sub>|² (barn)',title:'|F_M|² = 0.07265 barn × |Σ f(Q) m⊥ exp(iQ·r)|² (dipole approximation, single domain, same Debye–Waller factor as nuclear)',sort:true,text:r=>numberText(r.fm2)},
+    {key:'formFactorSort',label:'f(Q)',title:'Magnetic form factor. Auto: the oxidation state in the CIF, else charge balance',sort:true,text:r=>r.formFactor||'—'},
+    {key:'lorentz',label:'L',title:lTitle,sort:true,text:r=>numberText(r.lorentz)},
     {key:'intensity',label:'I',title:iTitle,sort:true,text:r=>numberText(r.intensity)},
     {key:'twoTheta',label:'2θ (deg)',sort:true,text:r=>numberText(r.twoTheta,4)},
     {key:'q',label:'Q (Å⁻¹)',sort:true,text:r=>numberText(r.q,5)},
@@ -174,7 +175,7 @@ function numberText(value,digits=5){
 }
 
 // ---- Sorting ----
-const SORT_DESC_FIRST=new Set(['intensity','fn2','fm2','mult','q','formFactorSort']);
+const SORT_DESC_FIRST=new Set(['intensity','fn2','fm2','mult','q','formFactorSort','lorentz']);
 function sortedRows(rows){
   const {key,direction}=cifState.cifReflectionSort||{key:'intensity',direction:'desc'};
   const dir=direction==='asc'?1:-1;
@@ -216,17 +217,6 @@ function renderHead(cols){
 }
 function updateOptionLabels(){
   const graph=mode()==='graph';
-  const lorentz=$('reflectionLorentz');
-  if(lorentz){
-    // Table (single crystal, ω scan): L = 1/sin2θ or 1.
-    // Graph (powder): L = 1/(2 sin²θ cosθ) = 1/(sinθ sin2θ), always applied.
-    lorentz.disabled=graph;
-    const on=lorentz.querySelector('option[value="on"]');
-    if(on) on.textContent=graph?'1/(2 sin²θ cosθ)':'1/sin 2θ';
-    if(graph){ if(lorentz.dataset.tableValue===undefined) lorentz.dataset.tableValue=lorentz.value; lorentz.value='on'; }
-    else if(lorentz.dataset.tableValue!==undefined){ lorentz.value=lorentz.dataset.tableValue; delete lorentz.dataset.tableValue; }
-    lorentz.title=graph?'Powder: L = 1/(2 sin²θ cosθ), always applied':'Single crystal ω scan: L = 1/sin 2θ (or 1 = none)';
-  }
   // along U / V and Save table belong to the single-crystal table only.
   for(const id of ['cifReflectionAlongU','cifReflectionAlongV']){ const el=$(id); if(el) el.closest('label')?.classList.toggle('hidden',graph); }
   // Save CSV of the table: with the table (Graph has its own, above the plot).
@@ -451,7 +441,7 @@ function setPowderPattern(pattern){
 // point of the drawn pattern.
 // Reflection CSV columns, shared by Save table (single crystal / powder)
 // and the peak lists of Save pattern, so every file has the same layout:
-//   h, k, l, code, multiplicity, FN2, FM2, form_factor, I, L, 2θ, Q, d,
+//   h, k, l, code, multiplicity, FN2, FM2, form_factor, L, I, 2θ, Q, d,
 //   equivalent_hkl
 // prefix: column-name prefix ('N_' / 'M_' for the pattern peak lists).
 // part: 'all' (FN2 + FM2), 'N' or 'M' for the intensity column.
@@ -465,10 +455,10 @@ const csvSig5=v=>Number.isFinite(Number(v))?String(Number(Number(v).toPrecision(
 const csvHklList=list=>csvQuote(list.map(h=>`(${h.map(csvFixed4).join(' ')})`).join('; '));
 function reflectionCsvColumns({powder,prefix='',part='all'}){
   const cell=cifState.reflectionData?.parentKnown===false?'magnetic':'parent';
-  const lorentz=lorentzOn()?(powder?'1/(2*sin(theta)^2*cos(theta))':'1/sin(2theta)'):'1';
+  const lorentz=powder?'1/(2*sin(theta)^2*cos(theta))':'1/sin(2theta)';
   const iName=part==='N'?(powder?'I=Mult*FN2*L':'I=FN2*L'):part==='M'?(powder?'I=Mult*FM2*L':'I=FM2*L'):(powder?'I=Mult*(FN2+FM2)*L':'I=(FN2+FM2)*L');
   const header=['h','k','l','code','multiplicity',`FN2_barn_per_${cell}_cell`,`FM2_barn_per_${cell}_cell`,'form_factor',
-    iName,`L=${lorentz}`,'two_theta_deg','Q_inv_A','d_A','equivalent_hkl']
+    `L=${lorentz}`,iName,'two_theta_deg','Q_inv_A','d_A','equivalent_hkl']
     .map(h=>prefix+h).map(h=>/[,=*/()]/.test(h)?csvQuote(h):h);
   const intensity=r=>{
     if(part==='all') return r.intensity;
@@ -476,7 +466,7 @@ function reflectionCsvColumns({powder,prefix='',part='all'}){
     return m*(part==='N'?r.fn2:r.fm2)*r.lorentz;
   };
   const cells=r=>r ? [...r.hkl.map(csvFixed4),r.code,r.mult,csvSig5(r.fn2),csvSig5(r.fm2),csvQuote(r.formFactor||''),
-    csvSig5(intensity(r)),csvSig5(r.lorentz),csvFixed4(r.twoTheta),csvFixed4(r.q),csvFixed4(r.d),csvHklList(r.members||[r.hkl])]
+    csvSig5(r.lorentz),csvSig5(intensity(r)),csvFixed4(r.twoTheta),csvFixed4(r.q),csvFixed4(r.d),csvHklList(r.members||[r.hkl])]
     : header.map(()=>'');
   return {header,cells};
 }
@@ -560,7 +550,7 @@ function initializeReflectionTable(){
     const tr=ev.target?.closest?.('tr'); if(!tr?.dataset.reflectionKey) return;
     ev.preventDefault(); toggleRowSelection(tr);
   });
-  for(const id of ['reflectionMode','reflectionLorentz','reflectionCodeFilter']){
+  for(const id of ['reflectionMode','reflectionCodeFilter']){
     $(id)?.addEventListener('change',renderCifReflectionTable);
   }
   // Plot controls: x axis, FWHM and log intensity.
