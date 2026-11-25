@@ -36,9 +36,7 @@ async function initializeCifGenerator(){
     // Current, user-edited values win on a normal reload. New-file imports
     // are separately handled by loadCifText(..., {persist:true}).
     fn.restoreCifGeneratorAtomsState();
-    fn.restoreMagneticCellDraft();
     fn.initializePositionTableToolbar();
-    fn.bindMagneticCellEditor();
     // Keep the generator cell, symmetry choice and title together with atomic
     // rows. Programmatic constraint updates settle before the change handler.
     for(const id of [...Object.values(cifState.CIF_LATTICE_FIELDS),'cifCrystalSystem',
@@ -141,10 +139,12 @@ async function initializeCifGenerator(){
       $(id)?.addEventListener("change",onEditorCellInput);
     }
     inputPane?.addEventListener("input",ev=>{
-      // Magnetic-cell parameters are a separate draft. Do not switch the
-      // nuclear editor/Structure source to a generated CIF when editing them.
+      // Display filters and output settings (format, file name) are not
+      // edits of the structure: the Structure source stays as it is.
       if(ev.target?.id?.startsWith('cifMag') ||
-         ['cifPositionEditingMode','cifPositionTableElement'].includes(ev.target?.id))return;
+         ['cifPositionEditingMode','cifPositionTableElement','cifOutputFormat'].includes(ev.target?.id))return;
+      // A new file name only makes the generated file stale.
+      if(ev.target?.id==='cifGeneratedName'){ fn.invalidateGeneratedCif(); return; }
       physicalEditorChanged(ev);
       if(["cifLoadFile","cifReflectionEnergy","cifReflectionWavelength","cifReflectionWavevector"].includes(ev.target?.id)) return;
       if(cifState.cifStructureSourcePreference==="loaded") cifState.cifStructureSourcePreference="generated";
@@ -152,10 +152,12 @@ async function initializeCifGenerator(){
       fn.renderCifStructureIfVisible();
     });
     inputPane?.addEventListener("change",ev=>{
-      // Magnetic-cell parameters are a separate draft. Do not switch the
-      // nuclear editor/Structure source to a generated CIF when editing them.
+      // Display filters and output settings (format, file name) are not
+      // edits of the structure: the Structure source stays as it is.
       if(ev.target?.id?.startsWith('cifMag') ||
-         ['cifPositionEditingMode','cifPositionTableElement'].includes(ev.target?.id))return;
+         ['cifPositionEditingMode','cifPositionTableElement','cifOutputFormat'].includes(ev.target?.id))return;
+      // A new file name only makes the generated file stale.
+      if(ev.target?.id==='cifGeneratedName'){ fn.invalidateGeneratedCif(); return; }
       physicalEditorChanged(ev);
       if(["cifLoadFile","cifReflectionEnergy","cifReflectionWavelength","cifReflectionWavevector"].includes(ev.target?.id)) return;
       if(cifState.cifStructureSourcePreference==="loaded") cifState.cifStructureSourcePreference="generated";

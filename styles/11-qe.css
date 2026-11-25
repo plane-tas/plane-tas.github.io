@@ -163,23 +163,17 @@
 .qe-external-legend .qe-legend-item[aria-pressed=false]{opacity:.45;text-decoration:line-through}
 .qe-external-legend .qe-legend-marker{display:block;flex:0 0 calc(19px * var(--tas-density))}
 
-/* Constant E map: Save figure at the top left of the plot (as in the 1D cut
-   and Comparison). */
+/* Q–E maps: Save figure and its file name are in a row above the map. */
 #singlePlotFrame{min-width:0;background:#fff}
-/* Constant E map / Powder: Save figure is in the control row above the map
-   (left end), so Plotly's tool bar keeps its usual place. */
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
-#qeVectorPlotFrame .qe-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
 /* Scale row under the legend: F_N and F_M colour scales (min / max, labels
    above the entries as elsewhere) and the Lorentz factor of the peak shading. */
-#sfColorbarRange{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density));padding:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
+#sfColorbarRange{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));align-items:end;gap:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));padding:0 calc(8px * var(--tas-density)) calc(8px * var(--tas-density))}
 #sfColorbarRange.hidden{display:none!important}
-#sfColorbarRange .qe-colorbar-value{width:calc(76px * var(--tas-density));box-sizing:border-box;-moz-appearance:textfield;appearance:textfield}
+#sfColorbarRange .qe-colorbar-value{width:100%;min-width:0;box-sizing:border-box;-moz-appearance:textfield;appearance:textfield}
 #sfColorbarRange .qe-colorbar-value::-webkit-inner-spin-button,
 #sfColorbarRange .qe-colorbar-value::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-#sfColorbarRange .qe-magnetic-ratio{white-space:nowrap;color:#7a1010;font-size:var(--plane-tab-label-font);line-height:1.35;padding-bottom:calc(6px * var(--tas-density))}
-#sfColorbarRange select.qe-lorentz-select{width:auto!important;min-width:calc(120px * var(--tas-density))}
-#sfColorbarRange .qe-scale-lorentz{align-items:stretch}
+#sfColorbarRange .qe-magnetic-ratio{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:#7a1010;font-size:var(--plane-tab-label-font);line-height:1.35;padding-bottom:calc(6px * var(--tas-density))}
 /* Input descriptions in Toolbox, and Q-E display checkboxes. */
 #toolboxPanel .toolbox-subpanel label,
 #qeDisplayControls .checkbox-label {
@@ -518,15 +512,21 @@
 }
 
 /* Magnetic scale only for a single-k magnetic structure. */
-#sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry{display:none}
+/* Scale row: equal columns, each item in its own place -- F_N min / max,
+   M = x N, F_M min / max, I min / max, log I.  An item not in use keeps
+   its place (hidden), so nothing moves. */
+#sfColorbarRange label{display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0}
+#sfColorbarRange label > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sfColorbarRange:not(.qe-nuclear-colorbar) .qe-nuclear-entry,
+#sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry,
+#sfColorbarRange:not(.qe-dispersion-colorbar) .qe-dispersion-entry{visibility:hidden}
+#sfColorbarRange .qe-dispersion-log{align-items:center}
+#sfColorbarRange .qe-dispersion-log input{margin:calc(6px * var(--tas-density)) 0}
+/* Narrow: two lines of four. */
+#qeConstantMapPane,#qeVectorMapPane{container-type:inline-size}
+@container (max-width:480px){ #sfColorbarRange{grid-template-columns:repeat(4,minmax(0,1fr))} }
 #sfColorbarRange label{font-size:var(--plane-tab-label-font)!important;line-height:1.35}
 
-/* Save figure at the top left of every figure (the Q–E maps and the 1D cut
-   have their own buttons in the same place). */
-.plot-save-host{position:relative}
-.plot-save-host>.plot-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:6}
-/* No button over an empty (not yet drawn) figure. */
-.plot-save-host:not(.js-plotly-plot)>.plot-save-figure{display:none}
 
 /* Reflections: Save CSV, file name and ".csv" in one row filling the width,
    right above the table / the powder graph. */
@@ -537,11 +537,9 @@
 /* ".csv" at the size of ".cif" / ".mcif" of the CIF/mCIF output name. */
 .reflection-csv-name .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
 
-/* Control row above the Constant E map, three fixed columns 1 : 2 : 1:
-   Save figure (left end) | the slider and its check box (ħω and λ/2 for TAS,
-   W for 4-circle) | the spurion warning of the current slice (right end).
-   The columns do not depend on what they hold, so the slider never changes
-   width (nothing is drawn over the map). */
+/* Control rows above the Constant E map (final layout in 14-overrides.css):
+   file name | Save figure, then the slider row and the spurion warning of
+   the current slice (right end). */
 #qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);align-items:center}
 #qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1;grid-row:1;justify-self:start;min-width:0}
 #qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:2;grid-row:1}

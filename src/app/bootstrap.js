@@ -4,7 +4,8 @@ import {applyWhileTyping} from '../core/live-entry.js';
 import {fetchJsonOnce, isGitHubPages, isLocalDirectoryListingHost, loadCifDirectory, loadJsonDirectory, manifestWarnings} from './data-loader.js';
 import {createFixedBeamControls} from './fixed-beam-units.js';
 import {saveQEFigure} from '../qe/qe-save-figure.js';
-import {initializePlotSaveButtons} from './plot-save-buttons.js';
+import {figureFileName, initializePlotSaveButtons, watchFigureName} from './plot-save-buttons.js';
+import {sampleFileBase} from '../core/csv-name.js';
 import {initializeJumpBars} from './jump-bar.js';
 import {$, checkedValue, clearError, num, setStatus, showError} from './dom-utils.js';
 export function createAppBootstrap(deps){
@@ -169,12 +170,20 @@ async function initialize(){
   // Save figure (top left) of the other figures.
   initializePlotSaveButtons(msg=>showError?.(msg));
   // Powder: the same button saves the powder Q–E map and its legend.
+  // Its name entry follows the map shown (single crystal or powder).
+  const qeAuto=()=>{
+    const base=sampleFileBase('');
+    return `${base ? `${base}_` : ''}${$('sampleMode')?.value==='powder' ? 'powder_QE_map' : 'constant_E_map'}`;
+  };
+  watchFigureName('qeFigureName',qeAuto,['singlePlot','powderPlot']);
   $('qeSaveFigure')?.addEventListener('click',()=>saveQEFigure($('sampleMode')?.value==='powder'
-      ? {plotId:'powderPlot',legendId:'qePowderLegend',filename:'powder-qe-map.png'}
-      : {plotId:'singlePlot',legendId:'qePlotLegend',filename:'constant-e-map.png'})
+      ? {plotId:'powderPlot',legendId:'qePowderLegend',filename:figureFileName('qeFigureName',qeAuto)}
+      : {plotId:'singlePlot',legendId:'qePlotLegend',filename:figureFileName('qeFigureName',qeAuto)})
     .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
   // Q vector–E map: the same (plot and its legend).
-  $('qeVectorSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'qeVectorPlot',legendId:'qeVectorLegend',filename:'q-vector-e-map.png'})
+  const vectorAuto=()=>{ const base=sampleFileBase(''); return `${base ? `${base}_` : ''}Q_vector_E_map`; };
+  watchFigureName('qeVectorFigureName',vectorAuto,['qeVectorPlot']);
+  $('qeVectorSaveFigure')?.addEventListener('click',()=>saveQEFigure({plotId:'qeVectorPlot',legendId:'qeVectorLegend',filename:figureFileName('qeVectorFigureName',vectorAuto)})
     .catch(err=>showError?.(`Save figure: ${err?.message||err}`)));
   // F_N / F_M scale entries: redraw the open map from its last calculation.
   const refreshPeakScale=()=>{
@@ -244,18 +253,6 @@ async function initialize(){
       saveRightPanelState();
     });
     applyWhileTyping(field,()=>{ refreshPeakScale(); saveRightPanelState(); },{valid:()=>usableColorRange('mfColorMinEntry','mfColorMaxEntry')});
-  }
-  // Lorentz factor of the Q-E peak shading (1/sin 2θ or none).
-  const qeLorentz=$('qeLorentz');
-  if(qeLorentz){
-    // In Powder the selector shows the fixed powder factor: keep the saved
-    // single-crystal choice for the return to Single crystal.
-    try{ const saved=localStorage.getItem('tas-qe-lorentz');
-      if(saved==='on'||saved==='off'){ if(qeLorentz.disabled) qeLorentz.dataset.singleValue=saved; else qeLorentz.value=saved; } }catch(_e){}
-    qeLorentz.addEventListener('change',()=>{
-      try{ localStorage.setItem('tas-qe-lorentz',qeLorentz.value); }catch(_e){}
-      if(getSingleCache()) renderSingle(getSingleCache(),Number($('hwSlider').value));
-    });
   }
   $('cifSelectButton').addEventListener('click',()=>$('cifFileInput').click());
   $('cifClearButton')?.addEventListener('click',clearSelectedCif);

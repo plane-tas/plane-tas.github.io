@@ -779,8 +779,8 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 /* One card: file row, note, then the Preview / 2D slice / 1D cut tabs
    (each with its calculation condition) filling the rest. */
 .convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column}
-/* Dispersion file | Format | Show example. */
-.convolution-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr) auto;gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
+/* Dispersion file | Show example. */
+.convolution-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
 .convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
 .convolution-file button{white-space:nowrap;flex:0 0 auto}
 .convolution-file input{flex:1 1 auto;min-width:0}
@@ -837,7 +837,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
 .convolution-plot{height:100%;min-height:calc(300px * var(--tas-density));min-width:0}
 .convolution-scan-plot{flex:1 1 auto}
 .convolution-scan-layout{flex:1 1 auto;min-height:0;display:flex;gap:calc(10px * var(--tas-density))}
-/* Plot with Save figure at its top left. */
+/* The 1D plot (its Save figure is in the save row above). */
 .convolution-scan-layout>.convolution-scan-plotbox{flex:1 1 0;min-width:0;position:relative;display:flex}
 .convolution-scan-plotbox>.convolution-scan-plot{flex:1 1 auto;min-width:0;height:auto}
 .convolution-curves{flex:1 1 0;min-width:0;overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e7ec;border-radius:calc(4px * var(--tas-density))}
@@ -892,7 +892,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--tas-
    row (that of the Format box). */
 #resolutionConvolutionPane .convolution-file-row :is(select,button,input){height:2.25em;box-sizing:border-box}
 #resolutionConvolutionPane .convolution-file-row>button{white-space:nowrap}
-/* Narrow: Dispersion file above Format and Show example. */
+/* Narrow: Dispersion file above Show example. */
 @container (max-width:560px){
   .convolution-file-card .convolution-row{grid-template-columns:minmax(0,1fr) auto}
   .convolution-file-card .convolution-row>label:first-child{grid-column:1/-1}
@@ -1000,9 +1000,7 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 .convolution-box-head .convolution-estimate{margin:0;min-width:0;white-space:normal;line-height:1.2}
 #resolutionConvolutionPane .convolution-box-head .convolution-status{min-width:0;width:100%;text-align:center;padding:calc(2px * var(--tas-density)) calc(6px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums;min-height:calc(1.6em);box-sizing:border-box}
 #resolutionConvolutionPane .convolution-box-head button.convolution-calc{min-width:0}
-/* Save figure at the top-left of the 1D plot. */
 .convolution-scan-layout{position:relative}
-.convolution-scan-plotbox>.convolution-save-figure{position:absolute;left:calc(6px * var(--tas-density));top:calc(4px * var(--tas-density));z-index:2}
 /* Narrow: the same six items in two lines of three equal columns. */
 .convolution-tab-pane>.convolution-box{container-type:inline-size}
 @container (max-width:720px){
@@ -1245,3 +1243,86 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #structurePanel .structure-config-section > .structure-section-heading{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
 #structurePanel .structure-section-heading > .structure-section-title{margin:0}
 #structurePanel .structure-section-heading > button{flex:none;white-space:nowrap}
+/* mCIF magnetic cell: one line, the multiple of the Cell. */
+#structurePanel .cif-magnetic-cell-text{margin:6px 0 0;font-size:max(var(--plane-tab-label-font),var(--plane-tab-warning-font));line-height:1.45;color:#000;}
+#structurePanel .cif-magnetic-cell-text[hidden]{display:none;}
+/* Sample › Dispersion status: label-size text; blue note, yellow warning, red error. */
+#dispersionMessage{font-size:var(--plane-tab-label-font);line-height:1.4}
+#dispersionMessage[data-level="info"]{background:#eef6fb;border-color:#b9d8ea;color:#1d4f6e}
+#dispersionMessage[data-level="error"]{background:#fff;border-color:#e3a1aa;color:#b00020}
+/* Structure editor: a tab title (Atomic positions) has the size of the
+   other section titles; sub-headings (Crystallographic / Magnetic unit
+   cell, Anisotropic Uij) are bold at no less than the label size. */
+#structurePanel .cif-atom-heading > div > h3{font-size:var(--plane-tab-heading-font)!important}
+#structurePanel .cif-cell-box legend,
+#structurePanel #cifAtomDetailed > summary{font-size:var(--plane-tab-label-font)!important;font-weight:700!important}
+
+/* Save rows: file name | Save CSV | Save figure (| Set on Q-E), read left to
+   right.  One name for both files (suffix ".csv/.png"); a figure without a
+   CSV has its own name (".png").  The row sits above its figure. */
+.save-name-row{display:flex;flex-wrap:nowrap;align-items:stretch;gap:calc(8px * var(--tas-density));min-width:0}
+.save-name-row.hidden{display:none}
+.save-name-row>.cif-filename-entry{flex:1 1 0;min-width:0}
+.save-name-row>.cif-filename-entry input{width:100%;min-width:0}
+/* Buttons as tall as the name entry, with the padding of the other action
+   buttons (Select Path, Undo, …). */
+.save-name-row>button{flex:none;white-space:nowrap;min-height:calc(36px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(12px * var(--tas-density))!important}
+.save-name-row .cif-filename-suffix{font-size:max(15px,calc(17px * var(--tas-density)));font-weight:400;white-space:nowrap}
+#toolboxPanel .save-name-row,#structurePanel .reflection-save-row.save-name-row{justify-content:flex-start}
+#toolboxAttenuationPane .absorption-plot-actions.save-name-row{justify-content:flex-start;margin:0}
+#toolboxFormFactorPane .magff-footer.save-name-row{margin:calc(6px * var(--tas-density)) 0}
+/* Figure-only rows: a little space below, so the row is not read as part of
+   the figure. */
+.qe-vector-save-row{margin:calc(6px * var(--tas-density)) 0}
+.geometry-save-row{margin:0 0 calc(6px * var(--tas-density))}
+
+/* Constant E map: row 1 the file name and Save figure; row 2 the slider row
+   (ħω: slider, entry, λ/2; or the 4-circle W) and the spurion warning. */
+#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,3fr) minmax(0,1fr);row-gap:calc(8px * var(--tas-density))}
+#qeConstantMapPane > .qe-range-control-grid > .qe-save-cell{grid-column:1 / -1;grid-row:1;justify-self:stretch}
+#qeConstantMapPane > .qe-range-control-grid > .qe-range-control{grid-column:1;grid-row:2}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:2;grid-row:2}
+#qeConstantMapPane .qe-range-control{display:flex;flex-direction:row;align-items:center;gap:calc(8px * var(--tas-density))}
+#qeConstantMapPane .qe-range-control.hidden{display:none}
+#qeConstantMapPane .qe-range-control > :is(.qe-hw-control-entry,.qe-s2-control-entry){display:contents}
+#qeConstantMapPane .qe-range-control > :is(.qe-hw-control-entry,.qe-s2-control-entry) > span:first-child{order:1;white-space:nowrap}
+#qeConstantMapPane .qe-range-control > input[type=range]{order:2;flex:1 1 auto;min-width:calc(80px * var(--tas-density))}
+#qeConstantMapPane .qe-range-control #hwEntry,#qeConstantMapPane .qe-range-control #qeWEntry{order:3;flex:none;width:calc(82px * var(--tas-density))}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{order:4;flex:none;white-space:nowrap}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{white-space:nowrap!important}
+/* λ/2 centred on the row, its caption the size of "ħω (meV)", and its
+   check box the size of the other check boxes (Show, labels, …). */
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{align-self:center!important;align-items:center!important;gap:calc(5px * var(--tas-density))}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle,
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{font-size:var(--plane-tab-label-font)!important;line-height:1.35!important}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > input[type="checkbox"]{width:13px!important;height:13px!important;margin:0!important;vertical-align:middle}
+@media(max-width:760px){
+  #qeConstantMapPane > .qe-range-control-grid > .qe-range-control,
+  #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{grid-column:1 / -1 !important}
+}
+
+/* Structure view: Unit cell | Cell | file name | Save figure above the
+   range row (outside the figure). */
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-figure-row{
+  grid-column:1 / -1;align-items:end;background:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0 0 calc(6px * var(--tas-density));
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:calc(6px * var(--tas-density))!important;width:100%!important;max-width:none!important;justify-self:stretch!important;box-sizing:border-box}
+#structurePanel .structure-figure-row > .cif-filename-entry{flex:1 1 0!important;min-width:0;align-self:end}
+#structurePanel .structure-figure-row > button{flex:none;align-self:end}
+#structurePanel .structure-figure-row > label{flex:none;display:grid;gap:calc(3px * var(--tas-density));margin:0}
+#structurePanel .structure-figure-row > .cif-filename-entry input{min-height:calc(32px * var(--tas-density))}
+/* Spurion warning: one line in a column of fixed width, the width of
+   "Spurion: 2ki-3kf" (an invisible copy sizes it), so the slider keeps its
+   width and the row its height whether a warning is shown or not.  A longer
+   text ends in "…" (full text on hover). */
+#qeConstantMapPane > .qe-range-control-grid{grid-template-columns:minmax(0,1fr) auto}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{display:grid;justify-self:end;align-self:center;text-align:right}
+#qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell.hidden{display:none}
+#qeConstantMapPane .qe-spurion-cell::before{content:"Spurion: 2ki-3kf";grid-area:1 / 1;visibility:hidden;height:0;overflow:hidden;white-space:nowrap;font-weight:700;font-size:var(--plane-tab-warning-font)}
+#qeConstantMapPane .qe-spurion-cell > .qe-spurion-warning{grid-area:1 / 1;display:block;width:0;min-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset;line-clamp:unset}
+@media(max-width:760px){
+  /* Its own line, kept (empty) when there is no warning: the map does not
+     move when one appears. */
+  #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{justify-self:start;text-align:left;min-height:calc(var(--plane-tab-warning-font) * 1.45)}
+}
+/* Neutron attenuation: Select CIF/mCIF, then the file name (as in Sample). */
+#toolboxAttenuationPane .absorption-cif-row:not(.hidden){grid-template-columns:auto minmax(0,1fr)!important}

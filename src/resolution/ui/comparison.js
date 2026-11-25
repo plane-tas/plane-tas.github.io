@@ -1,4 +1,4 @@
-import {syncCsvNameTemplate} from '../../core/csv-name.js';
+import {csvNameFromEntry, pngNameFromEntry, syncCsvNameTemplate} from '../../core/csv-name.js';
 import {inferOrthogonalInPlaneHKL} from '../resolution-core.js';
 import {selectedTasSense} from '../../app/dom-utils.js';
 import {downloadBlob, downloadText} from '../../core/download.js';
@@ -663,7 +663,7 @@ export function installResolutionComparison(ctx){
     }finally{ if(!scan) renderPlots(); }
     imgs.forEach((im,i)=>{ const cx=gap+(i%2)*(pw+gap), cy=gap+Math.floor(i/2)*(ph+gap); ctx.drawImage(im,cx,cy,pw,ph); });
     const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
-    downloadBlob(blob,scan ? 'scan-figure.png' : 'comparison-figure.png');
+    downloadBlob(blob,pngNameFromEntry($('resolutionCsvName'),csvDefault()));
   }
   // Save CSV: every kept result with all its columns, whatever Show is.
   // Widths in the unit and coordinates of the table (projection = incoherent,
@@ -713,11 +713,8 @@ export function installResolutionComparison(ctx){
   }
   // Save CSV file name: the entry next to it (without .csv), which is filled
   // with the default for the mode (editable), or that default if emptied.
-  const csvDefault=()=>singleMode() ? 'comparison-table' : 'scan-table';
-  const csvFileName=()=>{
-    const typed=String($('resolutionCsvName')?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');
-    return `${typed||csvDefault()}.csv`;
-  };
+  const csvDefault=()=>singleMode() ? 'resolution_comparison' : 'resolution_scan';
+  const csvFileName=()=>csvNameFromEntry($('resolutionCsvName'),csvDefault());
   $('resolutionCompareSaveCsv')?.addEventListener('click',()=>{
     const text=comparisonCsv(); if(!text) return;
     downloadText('\ufeff'+text,csvFileName(),'text/csv');

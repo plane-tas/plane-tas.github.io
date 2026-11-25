@@ -14,7 +14,10 @@ import {fmt, LEGEND_COLS, loadLegendColumns, saveLegendColumns, legendFields as 
 import {createEngine, initialLattice, newNodes, refineLattice, roughCells, covariance, LATTICE_MAX_NODES} from './convolution-lattice.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {qeMapTitle} from '../qe/qe-plot-title.js';
-import {downloadText} from '../core/download.js';
+import {downloadBlob, downloadText} from '../core/download.js';
+import {fileBaseFromEntry, syncCsvNameTemplate} from '../core/csv-name.js';
+import {enableWithPlot} from '../core/plot-bound-button.js';
+import {setOverlayVolume} from '../qe/qe-dispersion-overlay.js';
 
 
 const ROW_HEIGHT=22;
@@ -75,15 +78,9 @@ export function createConvolutionUI(deps){
   // not overwrite them).
   const RANGE_IDS=['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
   const SCAN_INPUT_IDS=['convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1','convPoints1D'];
-  // Format: E1 … En, I1 … In ('block') or E1, I1, … En, In ('pair'); the
-  // index column is found from the column count.  Names of earlier versions
-  // (index / plain, -pair) are read by their -pair ending.
-  const normalFormat=v=>/pair$/.test(String(v||'')) ? 'pair' : 'block';
-  function formatValue(){
-    const el=$('convFormat'); if(!el) return 'block';
-    const v=normalFormat(el.value); if(el.value!==v) el.value=v;
-    return v;
-  }
+  // One table format: [index] h k l E1 … En I1 … In (blocks); the index
+  // column is found from the column count.
+  const formatValue=()=>'block';
   const INPUT_IDS=[...RANGE_IDS,...SCAN_INPUT_IDS,'convSamples2D','convSamples1D','convGrid2D','convGrid1D','convIntegration2D','convIntegration1D','convCsvName2D','convCsvName1D'];
   // Calculation settings written into Save CSV and put back by Load CSV:
   // instrument (sidebar and Resolution instrument details), lattice,
@@ -217,7 +214,6 @@ export function createConvolutionUI(deps){
     if(rec && typeof rec.text==='string' && !text){
       text=rec.text; fileName=rec.name||'';
       $('convFileName').value=fileName;
-      if(rec.format) $('convFormat').value=normalFormat(rec.format);
       restoring=true;
       try{ loadText(); }finally{ restoring=false; }
     }
@@ -373,9 +369,8 @@ export function createConvolutionUI(deps){
   }
 
   // ------------------------------------------------------------ example --
-  // Show example (next to Format): an example dispersion file (MnF2, (H,0,L)
-  // plane) in File preview, with its columns in the order selected in Format
-  // and without the optional index column.  It is only shown; Load example
+  // Show example: an example dispersion file (MnF2, (H,0,L) plane) in File
+  // preview, without the optional index column.  It is only shown; Load example
   // makes it the dispersion file, Save example downloads it.  Leaving File
   // preview (or reading a file) ends it: File preview shows the file again.
   const EXAMPLE_URL='examples/MnF2_disp_H0L.txt', EXAMPLE_NAME='MnF2_disp_H0L.txt';
@@ -418,7 +413,7 @@ export function createConvolutionUI(deps){
       const line=document.createElement('div');
       line.className='convolution-example-line';
       const say=document.createElement('span');
-      say.textContent=`Example ${EXAMPLE_NAME} (not loaded): ${example.rows.length} rows, columns as selected in Format.`;
+      say.textContent=`Example ${EXAMPLE_NAME} (not loaded): ${example.rows.length} rows; columns h, k, l, E1 … En, I1 … In.`;
       const load=document.createElement('button'); load.type='button'; load.textContent='Load example';
       load.addEventListener('click',loadExample);
       const save=document.createElement('button'); save.type='button'; save.textContent='Save example';
@@ -1520,13 +1515,38 @@ export function createConvolutionUI(deps){
     document.body.appendChild(tmp);
     try{
       await Plotly.newPlot(tmp,traces,fig,{staticPlot:true});
-      // A fixed name, as structure-figure.png in the CIF generator.  Size
-      // from the figure's own layout (the page's density scaling applies to it).
-      await Plotly.downloadImage(tmp,{format:'png',filename:'1d-cut-figure',scale:2});
+      // Named from the entry shared with Save CSV.  Size from the figure's
+      // own layout (the page's density scaling applies to it).
+      await Plotly.downloadImage(tmp,{format:'png',filename:fileBase(source1D(),'1d'),scale:2});
     }finally{ try{ Plotly.purge(tmp); }catch(_e){} tmp.remove(); }
   }
 
 
+  // 2D Save figure: the three maps (E–U, E–V, U–V) in one PNG, placed as
+  // on screen (side by side, or stacked on a narrow screen).
+  async function saveMapsFigure(){
+    if(!plotly() || !volume) return;
+    const plots=['convMapEU','convMapEV','convMapUV'].map(id=>$(id)).filter(el=>el?._fullLayout && el.offsetParent!==null);
+    if(!plots.length) return;
+    const S=2, rects=plots.map(el=>el.getBoundingClientRect());
+    const x0=Math.min(...rects.map(r=>r.left)), y0=Math.min(...rects.map(r=>r.top));
+    const W=Math.ceil(Math.max(...rects.map(r=>r.right))-x0), H=Math.ceil(Math.max(...rects.map(r=>r.bottom))-y0);
+    const cv=document.createElement('canvas'); cv.width=W*S; cv.height=H*S;
+    const ctx=cv.getContext('2d'); ctx.scale(S,S); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+    const load=src=>new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+    for(let i=0;i<plots.length;i++){
+      const r=rects[i], url=await Plotly.toImage(plots[i],{format:'png',width:Math.round(r.width),height:Math.round(r.height),scale:S});
+      ctx.drawImage(await load(url),r.left-x0,r.top-y0,r.width,r.height);
+    }
+    const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+    if(blob) downloadBlob(blob,`${fileBase(source2D(),'2d')}.png`);
+  }
+  // Set on Q-E: the 2D slice shown (calculated, or read with Load CSV) is
+  // copied to Sample › Dispersion and drawn on the Q-E maps.
+  function setOnQE(){
+    if(!volume) return;
+    setOverlayVolume({name:volume.source||'2D slice (Convolution)',volume,settings:volume.settings});
+  }
   function updateKeepButtons(){
     $('convClearKept1D').disabled=!kept.length;
     updateNamePlaceholders();
@@ -1616,14 +1636,15 @@ export function createConvolutionUI(deps){
     return `${base||'convolution'}_conv_${kind}`;
   };
   const nameInput=kind=>$(kind==='2d' ? 'convCsvName2D' : 'convCsvName1D');
-  const csvName=(src,kind)=>{
-    const typed=String(nameInput(kind)?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');
-    return `${typed||autoBase(src,kind)}.csv`;
-  };
+  // One name for Save CSV and Save figure (".csv/.png").
+  const fileBase=(src,kind)=>fileBaseFromEntry(nameInput(kind),autoBase(src,kind));
+  const csvName=(src,kind)=>`${fileBase(src,kind)}.csv`;
+  const source2D=()=>volume?.settings?.dispersion?.file||fileName;
+  const source1D=()=>curveList().find(c=>c.k.settings?.dispersion?.file)?.k.settings.dispersion.file||fileName;
+  // The automatic name is put into the entry as editable text.
   function updateNamePlaceholders(){
-    const n2=nameInput('2d'), n1=nameInput('1d');
-    if(n2) n2.placeholder=autoBase(volume?.settings?.dispersion?.file||fileName,'2d');
-    if(n1){ const c=curveList().find(c=>c.k.settings?.dispersion?.file); n1.placeholder=autoBase(c?.k.settings.dispersion.file||fileName,'1d'); }
+    syncCsvNameTemplate(nameInput('2d'),autoBase(source2D(),'2d'));
+    syncCsvNameTemplate(nameInput('1d'),autoBase(source1D(),'1d'));
   }
   // CSV: the current scan and every kept scan, one block per curve.
   function downloadScan(){
@@ -1718,7 +1739,9 @@ export function createConvolutionUI(deps){
   }
   // 2D: a CSV written by Save CSV ([index,] H, K, L, hw, I).  U and V are
   // read from its first comment line (otherwise the current scattering plane).
-  function load2DText(textIn){
+  // parse2DText reads it (also for the Q-E maps, Sample › Dispersion);
+  // load2DText also applies its settings and shows it here.
+  function parse2DText(textIn){
     const lines=String(textIn).split(/\r?\n/);
     const uv=lines.find(l=>/U\s*=\s*\(/.test(l) && /V\s*=\s*\(/.test(l));
     const vecOf=(lab)=>{ const mm=uv?.match(new RegExp(`${lab}\\s*=\\s*\\(([^)]*)\\)`)); return mm ? mm[1].split(',').map(Number) : null; };
@@ -1752,6 +1775,10 @@ export function createConvolutionUI(deps){
     const ia=new Map(A.map((v,i)=>[v,i])), ib=new Map(B.map((v,i)=>[v,i])), ie=new Map(E.map((v,i)=>[v,i]));
     const I=new Float64Array(A.length*B.length*E.length).fill(NaN);
     for(const o of recs) I[(ib.get(o.b)*A.length+ia.get(o.a))*E.length+ie.get(o.E)]=o.I;
+    return {A,B,E,I,U,V,settings};
+  }
+  function load2DText(textIn){
+    const {A,B,E,I,U,V,settings}=parse2DText(textIn);
     const notes=settings ? applySettings(settings,'2D') : [];
     volume={A,B,E,I,U,V,plane:{U,V,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i])},settings};
     zlim.min=null; zlim.max=null; saveInputs();
@@ -1855,12 +1882,6 @@ export function createConvolutionUI(deps){
     const file=$('convFile');
     $('convSelectFile')?.addEventListener('click',()=>file?.click());
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; loadFile(f); });
-    $('convFormat')?.addEventListener('change',()=>{
-      const wasExample=exampleShown;
-      loadText(); if(text) storeFile({name:fileName,format:formatValue(),text});
-      // The example follows the selected order while it is shown.
-      if(wasExample){ exampleShown=true; showPreview(); }
-    });
     $('convShowExample')?.addEventListener('click',showExample);
     restoreFile();
     $('convResetRanges')?.addEventListener('click',()=>{ if(interp){ fillRanges(); saveInputs(); } });
@@ -1897,7 +1918,7 @@ export function createConvolutionUI(deps){
     });
     // Estimated calculation time follows every input that changes it.
     for(const id of ['convSamples2D','convSamples1D','convGrid2D','convGrid1D','convIntegration2D','convIntegration1D','convPoints1D','convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1',
-      ...['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]),'convMethod2D','convMethod1D','convFormat'])
+      ...['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]),'convMethod2D','convMethod1D'])
       $(id)?.addEventListener('input',scheduleEstimates), $(id)?.addEventListener('change',scheduleEstimates);
     for(const id of INPUT_IDS){ $(id)?.addEventListener('input',saveInputs); $(id)?.addEventListener('change',saveInputs); }
     for(const dim of ['2D','1D']) $(`convIntegration${dim}`)?.addEventListener('change',showIntegration);
@@ -1918,6 +1939,10 @@ export function createConvolutionUI(deps){
     // restoreFile() has read them back.
     restoringResults=true; try{ refreshKept(); }finally{ restoringResults=false; }
     $('convDownload2D')?.addEventListener('click',downloadVolume);
+    $('convSaveFigure2D')?.addEventListener('click',()=>saveMapsFigure().catch(err=>message('convMessage2D',`Save figure: ${err.message||err}`,true)));
+    $('convSetQE2D')?.addEventListener('click',setOnQE);
+    // Both act on the maps shown: usable only while they are drawn.
+    for(const id of ['convSaveFigure2D','convSetQE2D']) enableWithPlot($(id),$('convMapUV'));
     $('convShowDispersion')?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
     $('convLog2D')?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
     for(const id of ['convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ saveInputs(); drawMaps(); });
@@ -1950,5 +1975,7 @@ export function createConvolutionUI(deps){
     window.addEventListener('resize',()=>{ fitHeight(); resizePlots(); });
     document.addEventListener('click',e=>{ if(e.target?.closest?.('.tab-button,#tabResolution')) requestAnimationFrame(fitHeight); });
   }
-  return {bindConvolutionUI};
+  // For Sample › Dispersion (the Q-E maps): read a 2D Save CSV, and put its
+  // settings in (as Load CSV does).
+  return {bindConvolutionUI, parse2DText, applyFileSettings:set=>applySettings(set,'2D')};
 }

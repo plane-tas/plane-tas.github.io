@@ -6,6 +6,7 @@ import {magneticSymbol} from './magnetic-symbols.js';
 import {qeMapTitle, qeDomainTitleAnnotation} from './qe-plot-title.js';
 import {braggPeakScale, magneticRatioText} from './bragg-intensity.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
+import {constantEOverlayTraces, overlayDrawnFor, qeColorbarSlots, updateDispersionSection} from './qe-dispersion-overlay.js';
 
 export function createQESingleRender(deps){
   const {
@@ -307,12 +308,14 @@ function renderSingle(cache,index=0){
   // Peak shading (bragg-intensity.js): I = |F|² L, each colorbar relative to
   // its own maximum.
   const {magneticIntensity,nuclearMax,magneticMax,nuclearRelative,magneticRelative,lorentzText,iSymbol}=
-    braggPeakScale(cache,$('qeLorentz')?.value!=='off');
+    braggPeakScale(cache,true);
   const ratioBox=$('mfMaxRatio');
   if(ratioBox) ratioBox.textContent=magneticRatioText(magneticMax,nuclearMax,magneticIntensity);
-  // Colorbars on the right: nuclear above, magnetic below (single k only).
-  const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
-  const magneticBar={len:0.34,y:0.23};
+  // Colorbars on the right: nuclear, magnetic (single k only) and the
+  // Sample › Dispersion overlay, top to bottom.
+  const overlayShown=overlayDrawnFor(cache);
+  const bars=qeColorbarSlots({nuclear:!!cache.cifStructure,magnetic:magneticIntensity,overlay:overlayShown});
+  const nuclearBar=bars.nuclear, magneticBar=bars.magnetic;
   const peakHoverAngles=singleMapBraggHoverAngles(cache,cache.hwList[i]);
 
   const traces=[
@@ -522,6 +525,10 @@ function renderSingle(cache,index=0){
     traces.push(selectedTrace);
   }
 
+  // Sample › Dispersion: above Accessible Q, below everything else.
+  if(overlayShown) traces.splice(1,0,...constantEOverlayTraces(cache,cache.hwList[i],QplotX,bars.overlay));
+  updateDispersionSection(cache);
+
   renderSingleExternalLegend(traces);
   // The canonical reset window must be calculated from the latest map, not
   // recovered from Plotly's prior auto-range or its pre-resize dimensions.
@@ -542,7 +549,7 @@ function renderSingle(cache,index=0){
     ...(rluGrid?{shapes:rluGrid.shapes}:{}),
     annotations:[...(rluGrid?rluGrid.annotations:[]),titleAnnotation],
     // The legend now lives below the display controls, outside this Plotly canvas.
-    margin:{l:66,r:cache.cifStructure?92:20,t:38,b:72}
+    margin:{l:66,r:(cache.cifStructure||overlayShown)?92:20,t:38,b:72}
   // Plotly's download button saves the plot without the legend and scales:
   // Save figure (top left) replaces it.
   },{responsive:true,doubleClick:false,modeBarButtonsToRemove:['toImage']});
@@ -551,8 +558,13 @@ function renderSingle(cache,index=0){
     if(plotNode?.__tasMapDrawToken!==drawToken) return;
     bindSingleZoomPeakScaling(cache,2*QplotX,2*QplotY);
     bindSingleRluGrid(cache);
-    $('sfColorbarRange')?.classList.toggle('hidden',!cache.cifStructure);
-    $('sfColorbarRange')?.classList.toggle('qe-magnetic-colorbar',magneticIntensity);
+    // The scale row: F_N with a CIF, F_M for a single k, I for the
+    // Sample › Dispersion overlay (each in its own place).
+    const scaleRow=$('sfColorbarRange');
+    scaleRow?.classList.toggle('hidden',!(cache.cifStructure || overlayShown));
+    scaleRow?.classList.toggle('qe-nuclear-colorbar',!!cache.cifStructure);
+    scaleRow?.classList.toggle('qe-magnetic-colorbar',magneticIntensity);
+    scaleRow?.classList.toggle('qe-dispersion-colorbar',overlayShown);
     positionSingleColorbarEntries();
   }).catch(err=>console.warn('Constant E map drawing warning:',err));
 

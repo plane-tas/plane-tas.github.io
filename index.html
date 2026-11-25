@@ -192,6 +192,16 @@
 <div class="sidebar-table-head propagation-head" aria-hidden="true"><span>No.</span><span></span><span>h</span><span>k</span><span>l</span><span></span></div>
 <div class="propagation-vectors" id="propagationVectors"></div>
 <button class="dynamic-add-wide" id="addPropagationVector" type="button">Add</button>
+<div id="sampleDispersionSection">
+<h3>Dispersion</h3>
+<div class="cif-select-row" id="dispersionSelectRow">
+<button id="dispersionSelectButton" type="button" title="A dispersion table (h, k, l, E1 … En, I1 … In) or a 2D slice saved with Save CSV in Resolution › Convolution, drawn on the Q-E maps">Select file</button>
+<input aria-label="Dispersion file shown on the Q-E maps" class="cif-file-name" id="dispersionFileName" readonly="" type="text" value="No file selected" data-no-persist=""/>
+<button disabled="" id="dispersionUnsetButton" type="button" title="Stop showing this file on the Q-E maps">Unset</button>
+<input accept=".txt,.dat,.csv" hidden="" id="dispersionFileInput" type="file" data-no-persist=""/>
+</div>
+<div aria-live="polite" class="orientation-plane-warning hidden" id="dispersionMessage" role="status"></div>
+</div>
 </section>
 <section id="sidebarBackground"><h2>Background materials</h2>
 <input id="backgroundCount" type="hidden" value="0"/>
@@ -223,10 +233,10 @@
 <button aria-controls="qeVectorMapPane" aria-selected="false" class="geometry-card-tab" id="qeMapTabVector" role="tab" type="button">Q vector–E map</button>
 </div>
 <div aria-labelledby="qeMapTabConstant" class="qe-map-pane" id="qeConstantMapPane" role="tabpanel">
-<!-- Control row of the Constant E map, written here (not built at start-up) so that it has its final layout while the page loads: Save figure | slider (ħω + λ/2 for TAS, W for 4-circle) | spurion warning, widths 1 : 2 : 1. -->
+<!-- Control rows of the Constant E map, written here (not built at start-up) so that they have their final layout while the page loads: file name | Save figure, then the slider row (ħω: slider, entry, λ/2 for TAS; W for 4-circle) | spurion warning. -->
 <div class="qe-range-control-grid" id="qeRangeControlGrid">
-<div class="qe-save-cell"><button id="qeSaveFigure" class="qe-save-figure" type="button">Save figure</button></div>
-<div class="qe-range-control"><div class="qe-control-entry qe-hw-control-entry"><span>ħω (meV)</span><label class="checkbox-label qe-lambda-half-toggle qe-s2-ring-toggle"><input id="lambdaHalf" type="checkbox"/><span>λ/2 (only elastic)</span></label><input id="hwEntry" type="number" step="0.1" value="0.0"/></div><input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></div>
+<div class="qe-save-cell save-name-row"><span class="cif-filename-entry figure-name-entry"><input id="qeFigureName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save figure"/><span class="cif-filename-suffix">.png</span></span><button id="qeSaveFigure" class="qe-save-figure" type="button">Save figure</button></div>
+<div class="qe-range-control"><div class="qe-control-entry qe-hw-control-entry"><span>ħω (meV)</span><label class="checkbox-label qe-lambda-half-toggle qe-s2-ring-toggle" title="λ/2 (only elastic)"><input id="lambdaHalf" type="checkbox"/><span>λ/2</span></label><input id="hwEntry" type="number" step="0.1" value="0.0"/></div><input id="hwSlider" max="0" min="0" step="1" type="range" value="0"/></div>
 <div class="qe-range-control hidden" id="qeWCard"><div class="qe-control-entry qe-s2-control-entry"><span id="qeWLabel">W (r.l.u.)</span><input id="qeWEntry" aria-label="W (r.l.u.)" type="number" step="0.01" value="0.00"/></div><input id="qeWSlider" type="range" min="-3" max="3" step="0.01" value="0"/></div>
 <div class="qe-spurion-cell"><span id="qeSpurionWarning" class="qe-spurion-warning" role="status" aria-live="polite"></span></div>
 </div>
@@ -236,7 +246,7 @@
 </div><div class="qe-plot powder hidden" id="powderPlot"></div>
 <div class="qe-external-legend hidden" id="qePowderLegend" aria-label="Powder Q–E map legend"></div>
 <div class="qe-external-legend" id="qePlotLegend" aria-label="Constant E map legend"></div>
-<div class="qe-colorbar-range qe-scale-row hidden" id="sfColorbarRange" aria-label="Colour scales of the peaks"><label class="qe-scale-lorentz"><span>Lorentz factor</span><select class="qe-lorentz-select" id="qeLorentz" aria-label="Lorentz factor of the peak shading"><option value="on">1/sin 2θ</option><option value="off">1</option></select></label><label><span>F<sub>N</sub> min</span><input class="qe-colorbar-value qe-colorbar-value-min" id="sfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit colorbar minimum"/></label><label><span>F<sub>N</sub> max</span><input class="qe-colorbar-value qe-colorbar-value-max" id="sfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit colorbar maximum"/></label><span class="qe-magnetic-ratio qe-magnetic-entry" id="mfMaxRatio"></span><label class="qe-magnetic-entry"><span>F<sub>M</sub> min</span><input class="qe-colorbar-value qe-colorbar-value-min qe-magnetic-entry" id="mfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit magnetic colorbar minimum"/></label><label class="qe-magnetic-entry"><span>F<sub>M</sub> max</span><input class="qe-colorbar-value qe-colorbar-value-max qe-magnetic-entry" id="mfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit magnetic colorbar maximum"/></label></div>
+<div class="qe-colorbar-range qe-scale-row hidden" id="sfColorbarRange" aria-label="Colour scales of the peaks"><label class="qe-nuclear-entry"><span>F<sub>N</sub> min</span><input class="qe-colorbar-value qe-colorbar-value-min" id="sfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit colorbar minimum"/></label><label class="qe-nuclear-entry"><span>F<sub>N</sub> max</span><input class="qe-colorbar-value qe-colorbar-value-max" id="sfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit colorbar maximum"/></label><span class="qe-magnetic-ratio qe-magnetic-entry" id="mfMaxRatio"></span><label class="qe-magnetic-entry"><span>F<sub>M</sub> min</span><input class="qe-colorbar-value qe-colorbar-value-min qe-magnetic-entry" id="mfColorMinEntry" type="number" min="0" max="0.9999" step="any" value="0" aria-label="Edit magnetic colorbar minimum"/></label><label class="qe-magnetic-entry"><span>F<sub>M</sub> max</span><input class="qe-colorbar-value qe-colorbar-value-max qe-magnetic-entry" id="mfColorMaxEntry" type="number" min="0.0001" max="1" step="any" value="1" aria-label="Edit magnetic colorbar maximum"/></label><label class="qe-dispersion-entry"><span>I min</span><input class="qe-colorbar-value qe-colorbar-value-min" id="dispColorMinEntry" type="number" min="0.01" max="0.9999" step="any" value="0.01" aria-label="Dispersion colour scale minimum (weaker is not drawn)" title="Weaker than this (relative to the maximum) is not drawn; at least 0.01"/></label><label class="qe-dispersion-entry"><span>I max</span><input class="qe-colorbar-value qe-colorbar-value-max" id="dispColorMaxEntry" type="number" min="0.0101" max="1" step="any" value="1" aria-label="Dispersion colour scale maximum"/></label><label class="qe-dispersion-entry qe-dispersion-log"><span>log I</span><input id="dispColorLog" type="checkbox" aria-label="Logarithmic dispersion colour scale"/></label></div>
 <div class="nuclear-label-control" id="qeDisplayControls" aria-label="Constant E map display controls">
   <div class="qe-path-tools" aria-label="Q path selection controls">
     <label class="qe-path-snap-label" for="qePathSnap">Snap 1/<input data-numeric="int" id="qePathSnap" type="text" inputmode="numeric" value="" placeholder="free" data-no-persist="" aria-label="Snap Q path points and the dragged Angle-calculation target to multiples of 1/n of U and V (empty = free)" title="Snap to multiples of 1/n of U and V. Default: 1/6 for hexagonal/trigonal (60° or 120°) lattices, otherwise 1/4. Clear the box (or enter 0) for free positioning."/></label>
@@ -255,8 +265,8 @@
 </div>
 <div aria-labelledby="qeMapTabVector" class="qe-map-pane hidden" id="qeVectorMapPane" role="tabpanel">
 <div aria-live="polite" class="orientation-plane-warning hidden" id="qeVectorPlaneWarning"></div>
+<div class="save-name-row qe-vector-save-row"><span class="cif-filename-entry figure-name-entry"><input id="qeVectorFigureName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save figure"/><span class="cif-filename-suffix">.png</span></span><button id="qeVectorSaveFigure" class="qe-save-figure" type="button">Save figure</button></div>
 <div class="qe-plot-frame" id="qeVectorPlotFrame">
-  <button id="qeVectorSaveFigure" class="qe-save-figure" type="button">Save figure</button>
   <div class="qe-plot" id="qeVectorPlot"></div>
 </div>
 <div class="qe-external-legend" id="qeVectorLegend" aria-label="Q vector–E map legend"></div>
@@ -301,6 +311,7 @@
 <label class="geometry-slider-row"><span>Q (Å⁻¹)</span><input id="powderSliderQ" data-no-persist="" type="range" min="0" max="5" step="0.001" value="1"/><output id="powderSliderQValue">1</output><span></span></label>
 <label class="geometry-slider-row"><span>S2 (deg)</span><input id="powderSliderS2" data-no-persist="" type="range" min="-180" max="180" step="0.1" value="-30"/><output id="powderSliderS2Value">-30</output><span></span></label>
 </div>
+<div class="save-name-row geometry-save-row"><span class="cif-filename-entry figure-name-entry"><input id="geometryFigureName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save figure"/><span class="cif-filename-suffix">.png</span></span><button id="geometrySaveFigure" type="button" disabled title="Save the drawing with the Angle calculation result as PNG">Save figure</button></div>
 <div id="geometryDefaultPlotMount"><div class="qe-plot geometry" id="geometryPlot"></div></div>
 </div>
 <div aria-labelledby="geometryTabTime" class="geometry-card-pane time-estimate-pane hidden" id="geometryTimePane" role="tabpanel">
@@ -431,18 +442,14 @@
 <div class="scan hidden" id="scanInputs"><div class="grid5"><label>H initial<input id="h0" type="text" inputmode="text" data-fraction="" value="1"/></label><label>K initial<input id="k0" type="text" inputmode="text" data-fraction="" value="0"/></label><label>L initial<input id="l0" type="text" inputmode="text" data-fraction="" value="0"/></label><label>ħω initial<input id="hw0" type="number" value="0"/></label><label>Points<input id="npts" min="2" type="number" value="11"/></label></div><div class="grid5"><label>H final<input id="h1" type="text" inputmode="text" data-fraction="" value="1"/></label><label>K final<input id="k1" type="text" inputmode="text" data-fraction="" value="0"/></label><label>L final<input id="l1" type="text" inputmode="text" data-fraction="" value="0"/></label><label>ħω final<input id="hw1" type="number" value="10"/></label><button id="calcScanResolution" type="button">Calculate</button></div></div><div class="resolution-single-notes" id="resolutionSingleNotes"><div class="convolution-note resolution-point-note" id="resolutionSingleNote"><div class="convolution-summary">Black row: the current result — change the point or conditions for a new one. Only kept results are saved.</div></div><p class="resolution-point-message" id="resolutionPointMessage" aria-live="polite"></p></div>
 
 </section>
-<div class="convolution-box-foot resolution-csv-row"><button id="resolutionCompareSaveCsv" type="button">Save CSV</button><span class="cif-filename-entry convolution-csv-name resolution-csv-name"><input id="resolutionCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
-<section class="hidden" id="result"><div aria-live="polite" class="orientation-plane-warning" id="resolutionAngleWarning" hidden></div><div id="resolutionCalculationView" hidden><div class="summary" id="summary"></div><div aria-live="polite" class="orientation-plane-warning" id="resolutionFailNote" hidden></div><div class="geometry-card-tabs resolution-detail-tabs" id="resolutionDetailTabs" role="tablist" aria-label="Scan result view"><button aria-selected="true" class="geometry-card-tab active" data-resolution-detail="figure" id="resolutionDetailFigure" role="tab" type="button">Figure</button><button aria-selected="false" class="geometry-card-tab" data-resolution-detail="matrices" id="resolutionDetailMatrices" role="tab" type="button">Matrices</button></div><div id="resolutionFigurePane" role="tabpanel" aria-labelledby="resolutionDetailFigure"><div class="plots"><div id="plotUE"></div><div id="plotVE"></div><div id="plotUV"></div><div id="plotWE"></div></div></div><div id="resolutionMatricesPane" role="tabpanel" aria-labelledby="resolutionDetailMatrices" hidden><div class="resolution-matrix-tools"><button id="resolutionCopyMatrix" type="button" title="Copy the matrices as text">Copy</button><span id="resolutionCopyStatus" role="status"></span></div><div class="resolution-matrix-display"><pre id="matrix" aria-label="Local, U-based and lattice resolution matrices"></pre></div></div></div><div hidden id="resolutionComparisonView"><div class="convolution-show-row resolution-compare-tools"><span id="resolutionScanGraphWrap" class="resolution-display-label" title="Mode = scan: one point at a time (slider) or all points (overwrite)"><span class="convolution-show-title">Display:</span><select id="resolutionScanGraph" aria-label="Scan display"><option value="slider">slider</option><option value="overwrite">overwrite</option></select></span><span class="convolution-show-sep resolution-display-sep" aria-hidden="true"></span><button id="resolutionCompareSaveFigure" type="button">Save figure</button><span class="convolution-show-sep" aria-hidden="true"></span><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="resolutionShowPosition" type="checkbox" checked/><span>position</span></label><label class="checkbox-label"><input id="resolutionShowWidths" type="checkbox" checked/><span>resolution</span></label><label class="checkbox-label"><input id="resolutionShowCondition" type="checkbox" checked/><span>condition</span></label><label class="checkbox-label"><input id="resolutionShowMatrix" type="checkbox"/><span>R matrix</span></label></div><div class="scan-nav hidden" id="scanNav"><button id="prev">◀ Prev</button><input id="scanSlider" max="1" min="1" type="range" value="1"/><output id="scanIndex"></output><button id="next">Next ▶</button></div><div class="resolution-compare-body"><div class="plots resolution-compare-plots"><div id="plotCmpUE"></div><div id="plotCmpVE"></div><div id="plotCmpUV"></div><div id="plotCmpWE"></div></div><div class="resolution-compare-side"><div class="resolution-compare-table-wrap"><table class="resolution-compare-table"><thead id="resolutionCompareHead"></thead><tbody id="resolutionCompareRows"></tbody></table></div></div></div></div></section>
+<div class="convolution-box-foot resolution-csv-row save-name-row"><span class="cif-filename-entry convolution-csv-name resolution-csv-name"><input id="resolutionCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span><button id="resolutionCompareSaveCsv" type="button">Save CSV</button><button id="resolutionCompareSaveFigure" type="button">Save figure</button></div>
+<section class="hidden" id="result"><div aria-live="polite" class="orientation-plane-warning" id="resolutionAngleWarning" hidden></div><div id="resolutionCalculationView" hidden><div class="summary" id="summary"></div><div aria-live="polite" class="orientation-plane-warning" id="resolutionFailNote" hidden></div><div class="geometry-card-tabs resolution-detail-tabs" id="resolutionDetailTabs" role="tablist" aria-label="Scan result view"><button aria-selected="true" class="geometry-card-tab active" data-resolution-detail="figure" id="resolutionDetailFigure" role="tab" type="button">Figure</button><button aria-selected="false" class="geometry-card-tab" data-resolution-detail="matrices" id="resolutionDetailMatrices" role="tab" type="button">Matrices</button></div><div id="resolutionFigurePane" role="tabpanel" aria-labelledby="resolutionDetailFigure"><div class="plots"><div id="plotUE"></div><div id="plotVE"></div><div id="plotUV"></div><div id="plotWE"></div></div></div><div id="resolutionMatricesPane" role="tabpanel" aria-labelledby="resolutionDetailMatrices" hidden><div class="resolution-matrix-tools"><button id="resolutionCopyMatrix" type="button" title="Copy the matrices as text">Copy</button><span id="resolutionCopyStatus" role="status"></span></div><div class="resolution-matrix-display"><pre id="matrix" aria-label="Local, U-based and lattice resolution matrices"></pre></div></div></div><div hidden id="resolutionComparisonView"><div class="convolution-show-row resolution-compare-tools"><span id="resolutionScanGraphWrap" class="resolution-display-label" title="Mode = scan: one point at a time (slider) or all points (overwrite)"><span class="convolution-show-title">Display:</span><select id="resolutionScanGraph" aria-label="Scan display"><option value="slider">slider</option><option value="overwrite">overwrite</option></select></span><span class="convolution-show-sep resolution-display-sep" aria-hidden="true"></span><span class="convolution-show-title">Show:</span><label class="checkbox-label"><input id="resolutionShowPosition" type="checkbox" checked/><span>position</span></label><label class="checkbox-label"><input id="resolutionShowWidths" type="checkbox" checked/><span>resolution</span></label><label class="checkbox-label"><input id="resolutionShowCondition" type="checkbox" checked/><span>condition</span></label><label class="checkbox-label"><input id="resolutionShowMatrix" type="checkbox"/><span>R matrix</span></label></div><div class="scan-nav hidden" id="scanNav"><button id="prev">◀ Prev</button><input id="scanSlider" max="1" min="1" type="range" value="1"/><output id="scanIndex"></output><button id="next">Next ▶</button></div><div class="resolution-compare-body"><div class="plots resolution-compare-plots"><div id="plotCmpUE"></div><div id="plotCmpVE"></div><div id="plotCmpUV"></div><div id="plotCmpWE"></div></div><div class="resolution-compare-side"><div class="resolution-compare-table-wrap"><table class="resolution-compare-table"><thead id="resolutionCompareHead"></thead><tbody id="resolutionCompareRows"></tbody></table></div></div></div></div></section>
 </div>
 <div id="resolutionConvolutionPane" role="tabpanel" aria-labelledby="resolutionTabConvolution" hidden>
 <div class="convolution-layout" id="convLayout">
 <section class="calc-card convolution-card convolution-file-card">
 <div class="convolution-row convolution-file-row">
 <label for="convFileName">Dispersion file<span class="convolution-file"><button id="convSelectFile" type="button">Select file</button><input id="convFileName" data-no-persist="" type="text" readonly placeholder=".txt, .dat or .csv" aria-label="Dispersion file name"/></span></label>
-<label>Format<select id="convFormat">
-<option value="block">(index,) h, k, l, E1 … En, I1 … In</option>
-<option value="pair">(index,) h, k, l, E1, I1, … En, In</option>
-</select></label>
 <button id="convShowExample" type="button" title="Show an example dispersion file (MnF2) in File preview">Show example</button>
 <input id="convFile" type="file" accept=".txt,.dat,.csv" hidden/>
 </div>
@@ -463,7 +470,7 @@
 <div class="convolution-box-top">
 <button id="convLoad2D" type="button" title="Load a 2D CSV saved with Save CSV">Load CSV</button><input id="convLoad2DFile" type="file" accept=".csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad2DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
-<button id="convLoad2DClear" type="button" disabled>Clear</button>
+<button id="convLoad2DClear" type="button" disabled>Unset</button>
 </div>
 <div class="convolution-range-table" id="convRanges">
 <button id="convResetRanges" type="button" disabled title="Set min, max and bin back to the values of the loaded table">Default</button><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>
@@ -479,9 +486,11 @@
 <span class="convolution-message convolution-status" id="convMessage2D" aria-live="polite"></span>
 </div>
 </section>
-<div class="convolution-box-foot">
+<div class="convolution-box-foot save-name-row">
+<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName2D" type="text" spellcheck="false" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span>
 <button id="convDownload2D" type="button" disabled>Save CSV</button>
-<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName2D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
+<button id="convSaveFigure2D" type="button" disabled title="The three maps as one PNG">Save figure</button>
+<button id="convSetQE2D" type="button" disabled title="Show this 2D slice on the Q-E maps (Sample › Dispersion)">Set on Q-E</button>
 </div>
 <div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Logarithmic colour scale (values ≤ 0 take the lowest colour)"><input id="convLog2D" type="checkbox"/><span>log I</span></label><label class="checkbox-label"><input id="convShowDispersion" type="checkbox" checked/><span>dispersion</span></label><label class="checkbox-label" title="FWHM resolution ellipses on a coarse grid of each map"><input id="convShowEllipse" type="checkbox"/><span>ellipse</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label" title="Coherent: section through the resolution ellipsoid"><input id="convEllCoh" type="checkbox"/><span>coherent</span></label><label class="checkbox-label" title="Incoherent: projection of the resolution ellipsoid"><input id="convEllInc" type="checkbox" checked/><span>incoherent</span></label>)</span><label class="checkbox-label"><input id="convShowLine" type="checkbox" checked/><span>line</span></label><span class="convolution-ell-kinds">(<label class="checkbox-label"><input id="convLineU" type="checkbox" checked/><span id="convLineULabel">U</span></label><label class="checkbox-label"><input id="convLineV" type="checkbox" checked/><span id="convLineVLabel">V</span></label><label class="checkbox-label"><input id="convLineE" type="checkbox" checked/><span>ħω</span></label>)</span><span class="convolution-zrange">Color scale <input id="convZmin" type="number" step="any" aria-label="Colour scale minimum" placeholder="auto"/> to <input id="convZmax" type="number" step="any" aria-label="Colour scale maximum" placeholder="auto"/></span></div>
 <div class="convolution-plots">
@@ -510,7 +519,7 @@
 <div class="convolution-box-top">
 <button id="convLoad1D" type="button" title="Load a 1D CSV saved with Save CSV">Load CSV</button><input id="convLoad1DFile" type="file" accept=".csv" hidden/>
 <input class="cif-file-name convolution-load-name" id="convLoad1DName" readonly type="text" value="" autocomplete="off" data-no-persist="" aria-label="Loaded CSV file"/>
-<button id="convLoad1DClear" type="button" disabled>Clear</button>
+<button id="convLoad1DClear" type="button" disabled>Unset</button>
 </div>
 <div class="convolution-range-table convolution-scan-table" title="Initial and final points of the scan; a variable with the same initial and final value is fixed">
 <span></span><span class="convolution-range-head">H</span><span class="convolution-range-head">K</span><span class="convolution-range-head">L</span><span class="convolution-range-head">ħω (meV)</span>
@@ -527,14 +536,14 @@
 </div>
 <div class="convolution-message" id="convMessage1D" aria-live="polite"></div>
 </section>
-<div class="convolution-box-foot">
+<div class="convolution-box-foot save-name-row">
+<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName1D" type="text" spellcheck="false" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span>
 <button id="convDownload" type="button" disabled>Save CSV</button>
-<span class="cif-filename-entry convolution-csv-name"><input id="convCsvName1D" type="text" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span>
+<button id="convSaveFigure1D" type="button" disabled>Save figure</button>
 </div>
 <div class="convolution-show-row"><span class="convolution-show-title">Show:</span><label class="checkbox-label" title="Logarithmic intensity axis (points with I ≤ 0 are not drawn)"><input id="convLog1D" type="checkbox"/><span>log I</span></label><label class="checkbox-label" title="Every curve divided by its own maximum (display and Save figure; Save CSV keeps the calculated values)"><input id="convNormalize1D" type="checkbox"/><span>normalized</span></label><span class="convolution-show-sep" aria-hidden="true"></span><span class="convolution-legend-columns" id="convLegendColumns"></span></div>
 <div class="convolution-scan-layout">
 <div class="convolution-scan-plotbox">
-<button id="convSaveFigure1D" type="button" class="convolution-save-figure" disabled>Save figure</button>
 <div class="convolution-plot convolution-scan-plot" id="convScanPlot"></div>
 </div>
 <aside class="convolution-curves" aria-label="Curves">
@@ -617,8 +626,8 @@
 <label>Density (g/cm³)<input id="absorptionDensity" min="0" step="0.001" type="number" value=""/></label>
 </div>
 <div class="absorption-cif-row" id="absorptionCifInputs">
-<label>Selected CIF/mCIF<input id="absorptionCifStatus" readonly="" type="text" value="No CIF/mCIF selected"/></label>
 <button id="absorptionCifSelectButton" type="button">Select CIF/mCIF</button>
+<label>Selected CIF/mCIF<input id="absorptionCifStatus" readonly="" type="text" value="No CIF/mCIF selected"/></label>
 <input accept=".cif,.mcif" hidden="" id="absorptionCifFileInput" type="file"/>
 </div>
 </div>
@@ -637,9 +646,10 @@
 <div class="absorption-results" id="absorptionResults"></div>
 </div>
 <div class="absorption-right">
+<div class="absorption-plot-actions toolbox-csv-row save-name-row"><span class="cif-filename-entry toolbox-csv-name"><input id="absorptionCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span><button disabled="" id="absorptionDownload" type="button">Save CSV</button><button disabled="" id="absorptionSaveFigure" type="button" title="Save the figure (with its conditions) as PNG">Save figure</button></div>
 <div class="absorption-plot" id="absorptionPlot"></div>
 <input aria-label="Sample thickness slider" class="absorption-plot-slider" id="absorptionThicknessSlider" max="20" min="0" step="0.01" type="range" value="1.00"/>
-<div class="absorption-plot-actions toolbox-csv-row"><button disabled="" id="absorptionDownload" type="button">Save CSV</button><span class="cif-filename-entry toolbox-csv-name"><input id="absorptionCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
+
 </div>
 </div>
 </section>
@@ -662,9 +672,10 @@
 </div>
 <div aria-live="polite" class="magff-model" id="magffModel"></div>
 <div aria-live="polite" class="magff-info" id="magffInfo" role="status"></div>
+<div class="magff-footer toolbox-csv-row save-name-row"><span class="cif-filename-entry toolbox-csv-name"><input id="magffCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span><button id="magffDownload" type="button">Save CSV</button><button disabled="" id="magffSaveFigure" type="button" title="Save the figure (with its conditions) as PNG">Save figure</button></div>
 <div aria-label="Magnetic form factor and its square versus momentum transfer" class="magff-plot" id="magffPlot" role="img"></div>
 <input aria-label="Q slider" class="magff-plot-slider" id="magffQSlider" max="10" min="0" step="0.01" type="range" value="2"/>
-<div class="magff-footer toolbox-csv-row"><button id="magffDownload" type="button">Save CSV</button><span class="cif-filename-entry toolbox-csv-name"><input id="magffCsvName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
+
 </section>
 </div>
 <div aria-labelledby="tabCifGenerator" class="tab-panel hidden" id="structurePanel" role="tabpanel"><section class="calc-card generator-unified-card"><div class="generator-unified-grid" id="cifGeneratorPanel"><div class="generator-unified-left"><div class="generator-mode-pane generator-unified-editor" id="generatorNuclearPane"><section class="generator-shared-file"><div class="cif-pane-heading">
@@ -739,14 +750,8 @@
 <fieldset class="cif-cell-box cif-magnetic-cell-box" id="cifMagneticCellBox" hidden>
 <legend>Magnetic unit cell</legend>
 <p id="cifMagneticCellNotice" class="cif-release-note" role="status" hidden></p>
-<div class="cif-lattice-grid">
-<label>a (Å)<input id="cifMagA" type="number" min="0" step="0.001"/></label>
-<label>b (Å)<input id="cifMagB" type="number" min="0" step="0.001"/></label>
-<label>c (Å)<input id="cifMagC" type="number" min="0" step="0.001"/></label>
-<label>α (deg)<input id="cifMagAlpha" type="number" step="0.01"/></label>
-<label>β (deg)<input id="cifMagBeta" type="number" step="0.01"/></label>
-<label>γ (deg)<input id="cifMagGamma" type="number" step="0.01"/></label>
-</div></fieldset>
+<p id="cifMagneticCellText" class="cif-magnetic-cell-text" hidden></p>
+</fieldset>
 </section></div><div class="structure-config-panel" data-structure-config-panel="positions" hidden=""><div class="cif-atom-heading">
 <div><h3>Atomic positions</h3></div>
 </div><div class="structure-position-editor-toolbar">
@@ -848,6 +853,11 @@
 </div>
 </div></div></div><div class="generator-unified-right structure-viewer-main"><div aria-label="CIF/mCIF generator output" class="cif-output-tabs generator-unified-output-tabs" role="tablist"><button aria-controls="mcifStructurePane" aria-selected="true" class="cif-output-tab active" data-generator-output-tab="structure" id="mcifTabStructure" role="tab" type="button">Structure</button><button aria-controls="generatorReflectionsPane" aria-selected="false" class="cif-output-tab" data-cif-output-tab="reflections" data-generator-output-tab="reflections" id="cifOutputTabReflections" role="tab" type="button">Reflections</button><button aria-controls="cifPreviewPanel" aria-selected="false" class="cif-output-tab" data-cif-output-tab="preview" data-generator-output-tab="preview" id="cifOutputTabPreview" role="tab" type="button">CIF/mCIF Preview</button></div><div aria-labelledby="mcifTabStructure" class="generator-output-pane" id="mcifStructurePane" role="tabpanel">
 <div aria-label="Structure view direction and range" class="generator-structure-view-controls">
+<div aria-label="Structure plot display options" class="structure-plot-toolbar structure-figure-row save-name-row">
+<label><span>Unit cell</span><select id="cifUnitCellMode"><option value="all">All cells</option><option selected="" value="one">One cell</option><option value="none">None</option></select></label>
+<label><span>Cell</span><select id="cifUnitCellReference" aria-label="Unit cell type"><option value="crystallographic">Crystallographic</option><option value="magnetic">Magnetic</option></select></label>
+<span class="cif-filename-entry figure-name-entry"><input id="cifFigureName" type="text" data-no-persist="" spellcheck="false" aria-label="File name for Save figure"/><span class="cif-filename-suffix">.png</span></span><button id="cifSaveFigure" title="Save current 3D view with legend and coordinate axes as PNG" type="button">Save figure</button>
+</div>
 <div class="structure-range-grid structure-range-six">
 <label class="structure-entry-field"><span class="structure-entry-label" data-short-label="a−">a min</span><input id="cifRangeXMin" title="Drawn range along a (fractional coordinate)" step="0.1" type="number" value="0"/></label>
 <label class="structure-entry-field"><span class="structure-entry-label" data-short-label="a+">a max</span><input id="cifRangeXMax" title="Drawn range along a (fractional coordinate)" step="0.1" type="number" value="1"/></label>
@@ -871,11 +881,7 @@
 <div aria-live="polite" class="cif-structure-status" id="cifStructureStatus">Open the CIF/mCIF Generator to visualize the generated or selected structure.</div>
 <div class="structure-plot-wrap">
 <div class="structure-plot-overlay-left">
-<div aria-label="Structure plot display options" class="structure-plot-toolbar">
-<label><span>Unit cell</span><select id="cifUnitCellMode"><option value="all">All cells</option><option selected="" value="one">One cell</option><option value="none">None</option></select></label>
-<label><span>Cell</span><select id="cifUnitCellReference" aria-label="Unit cell type"><option value="crystallographic">Crystallographic</option><option value="magnetic">Magnetic</option></select></label>
-<button id="cifSaveFigure" title="Save current 3D view with legend and coordinate axes as PNG" type="button">Save figure</button>
-</div>
+
 <div aria-label="Atom legend" class="structure-atom-legend" id="cifAtomLegend"></div>
 </div>
 <div class="cif-structure-plot" id="cifStructurePlot"></div>
@@ -907,12 +913,12 @@
 <p id="cifReflectionMessage" class="generator-reflections-notice" role="status" hidden></p>
 <section class="reflection-powder-section" id="reflectionPowderSection" hidden>
 <div class="reflection-powder-plot-wrap">
-<div class="reflection-save-row"><button disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Save CSV</button><span class="cif-filename-entry reflection-csv-name"><input id="cifPatternCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
+<div class="reflection-save-row save-name-row"><span class="cif-filename-entry reflection-csv-name"><input id="cifPatternCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV and Save figure"/><span class="cif-filename-suffix">.csv/.png</span></span><button disabled="" id="cifDownloadPattern" type="button" title="Calculated powder pattern as CSV: 2θ, Q, d, I (N + M), I_N, I_M">Save CSV</button><button disabled="" id="cifPatternSaveFigure" type="button" title="Save the powder pattern as PNG">Save figure</button></div>
 <div class="reflection-plot-controls"><label class="reflection-plot-log" title="Logarithmic intensity axis"><input id="reflectionPlotLog" type="checkbox"/> Log I</label><span class="reflection-plot-fwhm reflection-plot-uvw" title="Gaussian peak width in 2θ (deg²), as in FullProf: FWHM² = U tan²θ + V tanθ + W">FWHM² =<input id="reflectionPlotU" type="number" step="0.05" value="0.44" aria-label="U (deg²)"/>tan²θ +<input id="reflectionPlotV" type="number" step="0.05" value="-0.33" aria-label="V (deg²)"/>tanθ +<input id="reflectionPlotW" type="number" step="0.05" value="0.17" aria-label="W (deg²)"/><button id="reflectionPlotUVWDefault" type="button" title="U = 0.44, V = −0.33, W = 0.17">Default</button></span><label class="reflection-plot-xaxis-label">X axis<select class="reflection-plot-xaxis" id="reflectionPlotXAxis" aria-label="Horizontal axis"><option value="twoTheta">2θ (deg)</option><option value="q">Q (Å⁻¹)</option><option value="d">d (Å)</option></select></label></div>
 <div class="reflection-powder-plot" id="reflectionPowderPlot"></div>
 </div>
 </section>
-<div class="reflection-save-row" id="cifReflectionTableSaveRow"><button disabled="" id="cifDownloadTable" type="button" title="The reflection table as CSV">Save CSV</button><span class="cif-filename-entry reflection-csv-name"><input id="cifTableCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span></div>
+<div class="reflection-save-row save-name-row" id="cifReflectionTableSaveRow"><span class="cif-filename-entry reflection-csv-name"><input id="cifTableCsvName" type="text" spellcheck="false" autocomplete="off" aria-label="File name for Save CSV"/><span class="cif-filename-suffix">.csv</span></span><button disabled="" id="cifDownloadTable" type="button" title="The reflection table as CSV">Save CSV</button></div>
 <div class="cif-reflection-table-wrap" id="cifReflectionTableWrap">
 <p id="cifReflectionEstimateNotice" class="cif-release-note" role="status" hidden></p>
 <table class="cif-reflection-table">

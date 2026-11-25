@@ -100,12 +100,11 @@ function importedMagneticModel(){
   return {lattice:model.lattice,atoms:model.atoms.map(atom=>({atom,setting:fn.defaultMomentSetting(atom,model)}))};
 }
 function individualSettingsFromMagneticModel(structure,model){
-  const L=structure.lattice,M=model.lattice;
-  const R=['a','b','c'].map(k=>Number(M[k])/Number(L[k]));
-  if(R.some(r=>!(Math.abs(r-Math.round(r))<1e-3 && Math.round(r)>=1)) ||
-     ['alpha','beta','gamma'].some(k=>Math.abs(Number(M[k])-Number(L[k]))>1e-3))
-    throw new Error("The mCIF cell is not an integer supercell of the CIF cell; magnetic moments cannot be transferred.");
-  const Ri=R.map(Math.round);
+  const M=model.lattice;
+  // The multiplicity comes from the file (mCIF cell over its parent cell),
+  // not from lattice constants: editing the Cell keeps it.
+  const Ri=fn.magneticCellMultiplicity();
+  if(!Ri) throw new Error("The magnetic cell of the mCIF is unknown; magnetic moments cannot be transferred.");
   const q=fn.effectivePropagationVectorForStructure();
   const N=[q.h,q.k,q.l].map(v=>rationalApprox(v).d);
   if(N.some((n,i)=>n%Ri[i]!==0 && Ri[i]%n!==0) || Ri.some((r,i)=>r>N[i]))

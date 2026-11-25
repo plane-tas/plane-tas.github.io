@@ -2,6 +2,7 @@ import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {braggPeakScale} from './bragg-intensity.js';
 import {magneticSymbol} from './magnetic-symbols.js';
+import {overlayDrawnFor, qeColorbarSlots, vectorOverlayTraces} from './qe-dispersion-overlay.js';
 // Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 export function createQEVectorMap(deps){
@@ -259,10 +260,10 @@ function addPathBraggTraces(cache,traces,paths,xScale){
   // relative to its maximum over ALL peaks of the map, not only the path.
   const hasCif=!!cache.cifStructure;
   const {magneticIntensity,nuclearRelative,magneticRelative,lorentzText,iSymbol}=
-    braggPeakScale(cache,$('qeLorentz')?.value!=='off');
+    braggPeakScale(cache,true);
   const entry=(id,fallback)=>{ const v=Number($(id)?.value); return Number.isFinite(v)?v:fallback; };
-  const nuclearBar=magneticIntensity ? {len:0.34,y:0.74} : {len:0.62,y:0.52};
-  const magneticBar={len:0.34,y:0.23};
+  const bars=qeColorbarSlots({nuclear:hasCif,magnetic:magneticIntensity,overlay:overlayDrawnFor(cache)});
+  const nuclearBar=bars.nuclear, magneticBar=bars.magnetic;
   const colorbar=(title,bar,min,max)=>({title:{text:title,side:'right',font:{size:PLOT_FONTS.axis}},tickfont:{size:PLOT_FONTS.tick},
     thickness:16,len:bar.len,x:1.01,xanchor:'left',y:bar.y,...singleColorbarTicks(min,max)});
   const sizes={nuclear:12,magnetic:7,star:9};
@@ -572,6 +573,12 @@ function renderQEVectorMap(cache){
       marker:{size:11,symbol:'square',color:'rgba(255,215,0,0.20)',line:{color:'#c7a62c',width:1}},
       name:'Accessible Q',showlegend:true,legendrank:0
     }];
+    // Sample › Dispersion: above Accessible Q, below everything else.
+    if(overlayDrawnFor(cache)){
+      const {magneticIntensity}=braggPeakScale(cache,true);
+      const bars=qeColorbarSlots({nuclear:!!cache.cifStructure,magnetic:magneticIntensity,overlay:true});
+      traces.splice(1,0,...vectorOverlayTraces(cache,samples,bars.overlay));
+    }
     const addDarkOverlay=(mask,name,color,legendrank)=>{
       if(!mask.some(row=>row.some(v=>v===1))) return;
       traces.push({type:'heatmap',x:xVals,y:cache.hwList,z:mask,zmin:0,zmax:1,showscale:false,hoverinfo:'skip',

@@ -45,6 +45,7 @@ import {createGeometryTargets} from './geometry/geometry-targets.js';
 import {createGeometrySliders} from './geometry/geometry-sliders.js';
 import {createPowderGeometrySliders} from './geometry/powder-sliders.js';
 import {createConvolutionUI} from './convolution/convolution-ui.js';
+import {initDispersionOverlay} from './qe/qe-dispersion-overlay.js';
 import {installGeometryNumericInputs, installNumericInputGuard} from './app/numeric-inputs.js';
 import {$, checkedValue, clearError, latticeParams, num, parseNumericValue, selectedS1Sign, selectedTasSense, setRadio, setStatus, showError, tasConventionFromLegacyUiSense, userFacingTasMessage} from './app/dom-utils.js';
 import {formatHKL, hklToQ, isAllowedByCentering} from './core/hkl-utils.js';
@@ -298,6 +299,23 @@ function updateInstrumentTypeRows(){
 // calculation, Powder target), the λ/2 option and the Q vector–E map are not
 // shown, and ħω is set to 0.  The control row above the map keeps Save
 // figure (a 4-circle also its W slider).
+// λ/2 (only elastic) fixes ħω at 0: meanwhile its slider and entry are
+// greyed out, and so is the Q vector–E map tab (it needs an energy axis);
+// an open Q vector–E map goes back to the Constant E map.
+function syncLambdaHalfSlider(){
+  const on=!!$('lambdaHalf')?.checked;
+  for(const id of ['hwSlider','hwEntry']){ const el=$(id); if(el) el.disabled=on; }
+  let type='tas';
+  try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
+  const analyzerFree=type==='diffractometer' || type==='four-circle';
+  const vectorTab=$('qeMapTabVector');
+  if(vectorTab){
+    vectorTab.disabled=analyzerFree || on;
+    vectorTab.title=analyzerFree ? 'Not available for diffractometers and 4-circle mode.' : on ? 'Not available with λ/2 (only elastic).' : '';
+  }
+  if(on && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
+}
+$('lambdaHalf')?.addEventListener('change',syncLambdaHalfSlider);
 function syncAnalyzerFreeUI(){
   let type='tas';
   try{ type=currentInstrument()?.instrument_type||'tas'; }catch(_e){}
@@ -322,6 +340,7 @@ function syncAnalyzerFreeUI(){
     vectorTab.title=analyzerFree ? 'Not available for diffractometers and 4-circle mode.' : '';
   }
   if((!single || analyzerFree) && !$('qeVectorMapPane')?.classList.contains('hidden')) setQEMapTab('constant');
+  syncLambdaHalfSlider();
   if(!analyzerFree) return;
   const lambdaHalf=$('lambdaHalf');
   if(lambdaHalf?.checked){ lambdaHalf.checked=false; lambdaHalf.dispatchEvent(new Event('change',{bubbles:true})); }
@@ -569,18 +588,6 @@ function updateModeVisibility(){
   document.querySelector('.nuclear-label-control')?.classList.toggle('hidden',!single);
   $('qePlotLegend')?.classList.toggle('hidden',!single);
   // The F_N / F_M scale row serves both maps (visibility follows the CIF).
-  // Powder has one fixed Lorentz factor: like the Reflection graph, the
-  // selector shows it and cannot be edited; the single-crystal choice comes
-  // back on return.
-  const qeLorentz=$('qeLorentz');
-  if(qeLorentz){
-    qeLorentz.disabled=!single;
-    const on=qeLorentz.querySelector('option[value="on"]');
-    if(on) on.textContent=single?'1/sin 2θ':'1/(2 sin²θ cosθ)';
-    if(!single){ if(qeLorentz.dataset.singleValue===undefined) qeLorentz.dataset.singleValue=qeLorentz.value; qeLorentz.value='on'; }
-    else if(qeLorentz.dataset.singleValue!==undefined){ qeLorentz.value=qeLorentz.dataset.singleValue; delete qeLorentz.dataset.singleValue; }
-    qeLorentz.title=single?'Single crystal ω scan: L = 1/sin 2θ (or 1 = none)':'Powder: L = 1/(2 sin²θ cosθ), always applied';
-  }
   // Powder has its own clickable legend below the Q–E plot.
   $('qePowderLegend')?.classList.toggle('hidden',single);
   if(!single) syncPowderLinkedInputs();
@@ -931,10 +938,17 @@ powderSliders=createPowderGeometrySliders({
 });
 powderSliders.bindPowderSliders();
 // Resolution › Convolution: dispersion table convolved with the TAS resolution.
-createConvolutionUI({
+const convolutionUI=createConvolutionUI({
   $, calcResolution, setStatus, parseNumericValue,
   collectResolutionBase:(...args)=>collectResolutionBase(...args)
-}).bindConvolutionUI();
+});
+convolutionUI.bindConvolutionUI();
+// Sample › Dispersion: a dispersion table or a 2D slice on the Q-E maps.
+initDispersionOverlay({
+  parse2DText:convolutionUI.parse2DText,
+  applyFileSettings:convolutionUI.applyFileSettings,
+  rerender:()=>{ if(singleCache && checkedValue('sampleMode')==='single') renderSingle(singleCache,Number($('hwSlider')?.value)||0); }
+});
 
 ({
   currentGeometryCardTab,

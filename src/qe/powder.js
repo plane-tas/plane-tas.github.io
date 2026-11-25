@@ -318,11 +318,13 @@ function drawPowder(state){
         colorbar:colorbarFor('Σ|F<sub>M</sub>|²L / max',magneticBar,cmin,cmax)}});
   }
 
-  // Scale row (F_N / F_M min and max, M = x N) under the powder legend; its
-  // Lorentz selector shows the fixed powder factor (see updateModeVisibility).
+  // Scale row (F_N / F_M min and max, M = x N) under the powder legend (the
+  // powder Lorentz factor is fixed; no Sample › Dispersion overlay here).
   const scaleRow=$?.('sfColorbarRange');
   scaleRow?.classList.toggle('hidden',!nuclearShaded);
+  scaleRow?.classList.toggle('qe-nuclear-colorbar',nuclearShaded);
   scaleRow?.classList.toggle('qe-magnetic-colorbar',magneticShaded);
+  scaleRow?.classList.remove('qe-dispersion-colorbar');
 
   // Edge of the accessible range, drawn over the Bragg lines: where the
   // lines are dense they would otherwise hide the yellow region.  Same

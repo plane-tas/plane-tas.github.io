@@ -8,7 +8,7 @@ export function installAtomAppearance(ctx){
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
     atomDisplayColor, atomDisplaySize, atomIsVisible, atomSiteKey, complementaryAtomOutlineColor,
-    currentStructureForViewer, elementRadius, mcifParentStructure, parentAppearanceOrbits
+    currentStructureForViewer, elementRadius, magneticCellMultiplicity, mcifParentStructure, parentAppearanceOrbits
   });
 // Site-level presentation overrides are separate from crystallographic data.
 // Using sourceSiteIndex keeps symmetry-generated mates together with their site.
@@ -126,15 +126,38 @@ function elementRadius(element){
   const override=Number(cifState.structureAtomSizeOverrides.get(String(element||"")));
   return Number.isFinite(override) ? Math.max(2,Math.min(30,override)) : defaultElementRadius(element);
 }
+// Integer multiplicity [na,nb,nc] of the magnetic cell of an mCIF over the
+// Structure editor Cell, fixed by the file itself (its parent cell), so that
+// editing the Cell never changes it. Incommensurate (superspace) mCIF: the
+// basic cell is the Cell. null for a nonmagnetic structure.
+const multiplicityCache=new WeakMap();
+function magneticCellMultiplicity(structure=getSelectedCifStructure(),text=getSelectedCifText()){
+  if(!structure?.magnetic) return null;
+  const cached=multiplicityCache.get(structure);
+  if(cached) return cached;
+  let rep=[1,1,1];
+  if(!fn.selectedCifIsIncommensurate?.(structure,text)){
+    let parent=null;
+    try{ parent=fn.crystallographicStructureFromMcif(structure,text); }catch(_e){ parent=null; }
+    const r=parent?.parentReplication;
+    if(Array.isArray(r) && r.length===3 && r.every(n=>Number.isInteger(n) && n>=1)) rep=[...r];
+  }
+  // The parent cell needs the space-group table; cache only once it exists.
+  if(cifState.cifSpaceGroups?.length) multiplicityCache.set(structure,rep);
+  return rep;
+}
+// The magnetic cell follows the Cell: Cell × multiplicity (angles of the Cell).
 function withEditedMagneticCell(source){
-  if(!source?.structure?.magnetic || $("cifMagneticCellBox")?.hidden)return source;
+  if(!source?.structure?.magnetic)return source;
+  const rep=magneticCellMultiplicity(source.structure);
+  if(!rep)return source;
   const lattice={};
-  for(const [key,id] of Object.entries(cifState.CIF_MAG_LATTICE_FIELDS)){
+  for(const [i,[key,id]] of Object.entries(cifState.CIF_LATTICE_FIELDS).entries()){
     const raw=$(id)?.value;
     const value=Number(raw);
     if(raw==='' || !Number.isFinite(value) || value<=0)return source;
     if(['alpha','beta','gamma'].includes(key) && value>=180)return source;
-    lattice[key]=value;
+    lattice[key]=i<3?value*rep[i]:value;
   }
   return {...source,structure:{...source.structure,lattice}};
 }

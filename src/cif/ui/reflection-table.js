@@ -6,6 +6,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {PLOT_FONTS} from '../../core/plot-fonts.js';
 import {downloadText} from '../../core/download.js';
+import {csvNameFromEntry} from '../../core/csv-name.js';
 export function installReflectionTable(ctx){
   const {deps:{$, RL_calc, canonicalReflectionHkl, clamp, compareHkl, getSelectedCifFileName, hklKey, hklToQ, norm, rad2deg},
     state:cifState, fn}=ctx;
@@ -515,10 +516,7 @@ function syncReflectionCsvNames(){
   if(table) table.value=`${base}_reflections_single_crystal`;
   if(pattern) pattern.value=`${base}_powder_pattern`;
 }
-function csvFileName(id,auto){
-  const typed=String($(id)?.value||'').trim().replace(/\.csv$/i,'').replace(/[\\/:*?"<>|]+/g,'_');
-  return `${typed||auto}.csv`;
-}
+function csvFileName(id,auto){ return csvNameFromEntry($(id),auto); }
 // Reflection CSVs are saved as text/csv (the CIF output uses its own type).
 const downloadCsv=(text,filename)=>downloadText(text,filename,'text/csv;charset=utf-8');
 function downloadPowderPattern(){

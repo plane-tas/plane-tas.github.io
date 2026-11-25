@@ -57,7 +57,9 @@ function updateCifUI(){
   if($("cifReloadCurrent")) $("cifReloadCurrent").disabled=!getSelectedCifText();
   // CIF/mCIF Preview follows the loaded file unless it shows a generated one.
   fn.syncPreviewWithLoadedFile?.();
-  $("sfColorbarRange")?.classList.toggle("hidden",!hasSelectedCif());
+  // (Kept for the Sample › Dispersion overlay; the Q-E maps set it as drawn.)
+  const scaleRow=$("sfColorbarRange");
+  scaleRow?.classList.toggle("hidden",!hasSelectedCif() && !scaleRow.classList.contains("qe-dispersion-colorbar"));
   updateAbsorptionCalculator();
 }
 
@@ -123,11 +125,17 @@ function updateImportedUnitCellPanels(parsed,text){
         +(alerts.length?' '+alerts.join(' '):'');
     }
   }
-  // The mCIF has its own time-reversed magnetic symmetry operations. Do not
-  // reinterpret its parent IT number as a magnetic space-group selector.
-  for(const [key,id] of Object.entries(cifState.CIF_MAG_LATTICE_FIELDS)){
-    if($(id))$(id).value=Number.isFinite(Number(parsed.lattice?.[key]))?String(Number(Number(parsed.lattice[key]).toPrecision(10))):'';
+  // Commensurate: the magnetic cell as a multiple of the Cell (one line).
+  // Incommensurate: no finite supercell; only the note above is shown.
+  const line=$('cifMagneticCellText');
+  const rep=parsed?.magnetic?fn.magneticCellMultiplicity(parsed,text):null;
+  const incommensurate=!!parsed?.incommensurateSingleQ || fn.selectedCifIsIncommensurate?.(parsed,text);
+  if(line){
+    line.hidden=!rep || incommensurate;
+    line.textContent=!rep?'':rep.every(n=>n===1)?'a × b × c (same as Cell)':
+      rep.map((n,i)=>`${n>1?n:''}${'abc'[i]}`).join(' × ');
   }
+  if(box && line?.hidden!==false && magneticNotice?.hidden) box.hidden=true;
 }
 function loadCifText(text,fileName="generated_structure.cif",{persist=true,newFile=false}={}){
   cifState.liveEditorNuclearSource=null;

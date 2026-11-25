@@ -1,16 +1,15 @@
-// CIF Generator: messages, space group, lattice constraints and magnetic cell.
+// CIF Generator: messages, space group and lattice constraints.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
-import {CIF_MAGNETIC_CELL_STORAGE_KEY} from './constants.js';
 import {applyLatticeConstraints} from '../../core/lattice-constraints.js';
 
 export function installGeneratorCell(ctx){
   const {deps:{
-    $, getSelectedCifStructure
+    $
   }, state:cifState, fn}=ctx;
   Object.assign(fn,{
-    applyCifLatticeConstraints, bindMagneticCellEditor, clearCifReflectionTable,
+    applyCifLatticeConstraints, clearCifReflectionTable,
     invalidateGeneratedCif, jumpToCifSpaceGroupNumber, populateCifSpaceGroupOptions,
-    restoreMagneticCellDraft, selectCifSpaceGroup, selectedCifGeneratorSpaceGroup,
+    selectCifSpaceGroup, selectedCifGeneratorSpaceGroup,
     setCifGeneratedReady, setCifGeneratorMessage, updateCifSpaceGroupInfo
   });
 
@@ -161,45 +160,6 @@ function applyCifLatticeConstraints(){
   if(!sg) return;
   applyLatticeConstraints(Object.fromEntries(Object.entries(cifState.CIF_LATTICE_FIELDS).map(([key,id])=>[key,$(id)])),sg);
 }
-
-// Magnetic-cell controls are independent from the crystallographic cell.
-// No change here is allowed to rewrite Sample or nuclear-reflection indices.
-cifState.CIF_MAG_LATTICE_FIELDS={a:'cifMagA',b:'cifMagB',c:'cifMagC',alpha:'cifMagAlpha',beta:'cifMagBeta',gamma:'cifMagGamma'};
-const CIF_MAG_CELL_DRAFT_IDS=Object.values(cifState.CIF_MAG_LATTICE_FIELDS);
-function saveMagneticCellDraft(){
-  if(cifState.restoringCifStartup || !getSelectedCifStructure()?.magnetic)return;
-  const values={};
-  for(const id of CIF_MAG_CELL_DRAFT_IDS) values[id]=$(id)?.value??'';
-  try{localStorage.setItem(CIF_MAGNETIC_CELL_STORAGE_KEY,JSON.stringify({version:1,sourceKey:fn.currentEditorSourceKey(),values}));}catch(_e){}
-}
-function restoreMagneticCellDraft(){
-  if(!getSelectedCifStructure()?.magnetic)return false;
-  let saved;
-  try{saved=JSON.parse(localStorage.getItem(CIF_MAGNETIC_CELL_STORAGE_KEY)||'null');}catch(_e){return false;}
-  if(saved?.version!==1 || saved.sourceKey!==fn.currentEditorSourceKey())return false;
-  for(const id of CIF_MAG_CELL_DRAFT_IDS){
-    if($(id) && Object.hasOwn(saved.values||{},id))$(id).value=String(saved.values[id]);
-  }
-  // Older drafts may contain the now-removed crystallographic System/No/SG;
-  // deliberately ignore them rather than constraining the magnetic cell.
-  return true;
-}
-function bindMagneticCellEditor(){
-  // Do not constrain the magnetic metric using a 230-group crystallographic
-  // selector: an imported mCIF already carries the magnetic symmetry.
-  for(const [key,id] of Object.entries(cifState.CIF_MAG_LATTICE_FIELDS)){
-    const field=$(id);
-    field?.addEventListener('input',saveMagneticCellDraft);
-    field?.addEventListener('change',()=>{
-      const value=Number(field.value);
-      if(!Number.isFinite(value) || value<=0 || (['alpha','beta','gamma'].includes(key) && value>=180)){
-        field.setCustomValidity('Enter a valid positive cell parameter (angles below 180°).');
-      }else field.setCustomValidity('');
-      saveMagneticCellDraft();fn.renderCifStructureIfVisible();
-    });
-  }
-}
-
 
 function updateCifSpaceGroupInfo(){
   // The redundant text description was removed from the UI. Keep the number

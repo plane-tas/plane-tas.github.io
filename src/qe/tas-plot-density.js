@@ -187,7 +187,6 @@
       const result=old(gd,adaptTraces(data,factor),compactLayout,config);
       const el=typeof gd==='string' ? document.getElementById(gd) : gd;
       if(el){ el.__tasSource={data,layout,config}; el.__tasDensityDirty=false; }
-      try{ window.__tasEnsurePlotSaveButton?.(el); }catch(_e){}
       observeSize(gd);
       return result;
     };

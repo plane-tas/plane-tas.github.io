@@ -1,6 +1,7 @@
 // Structure rendering (Plotly 3D) and figure export.
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {downloadBlob} from '../../core/download.js';
+import {pngNameFromEntry, syncCsvNameTemplate} from '../../core/csv-name.js';
 export function installStructureRender(ctx){
   const {deps:{
     $
@@ -32,6 +33,9 @@ function renderCifStructureIfVisible(){
 function loadFigureOverlayImage(url){
   return new Promise((resolve,reject)=>{const img=new Image(); img.onload=()=>resolve(img);img.onerror=()=>reject(new Error("Could not render figure overlay"));img.src=url;});
 }
+// Save figure name: the entry beside the button, filled with
+// "<Output file name>_structure" (editable).
+const structureFigureAuto=()=>`${fn.cleanCifBaseName?.($("cifGeneratedName")?.value||"")||"structure"}_structure`;
 async function saveStructureFigure(){
   const plot=$("cifStructurePlot"), wrap=plot?.closest(".structure-plot-wrap");
   if(!plot || !wrap || !plot._fullLayout || typeof Plotly?.toImage!=="function") throw new Error("Draw the structure before saving a figure.");
@@ -82,9 +86,10 @@ async function saveStructureFigure(){
   }
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
   if(!blob) throw new Error("Could not encode PNG image.");
-  downloadBlob(blob,"structure-figure.png");
+  downloadBlob(blob,pngNameFromEntry($("cifFigureName"),structureFigureAuto()));
 }
 function renderCifStructureView(){
+  syncCsvNameTemplate($("cifFigureName"),structureFigureAuto());
   const plot=$("cifStructurePlot"),status=$("cifStructureStatus");
   if(!plot||!status) return;
   if(typeof Plotly==="undefined"){ status.textContent="Plotly is unavailable, so the structure view cannot be drawn."; return; }

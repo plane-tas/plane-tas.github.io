@@ -79,16 +79,18 @@ function updateQESpurionWarning(cache,index){
   if(!cache?.hwList?.length){ box.textContent=""; return; }
   const i=Math.max(0,Math.min(Number(index)||0,cache.hwList.length-1));
   const hits=qeSpurionWarnings(cache,Number(cache.hwList[i]));
-  box.textContent="";
+  box.textContent=""; box.title="";
   if(!hits.length) return;
-  // Each condition stays on one line when the text wraps ("2ki-3kf").
-  box.append("Spurion warning: ");
+  // One line in a column of fixed width (sized for "Spurion: 2ki-3kf"); a
+  // longer text (two conditions) ends in "…", in full on hover.
+  box.append("Spurion: ");
   hits.forEach((x,k)=>{
     if(k) box.append(", ");
     const span=document.createElement("span");
     span.className="qe-spurion-term"; span.textContent=x.label;
     box.append(span);
   });
+  box.title=box.textContent;
 }
 
 function currentQEMapUnit(){
