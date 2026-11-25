@@ -73,16 +73,35 @@ async function saveStructureFigure(){
   }
   // Both SVG triads are live camera-synchronized overlays. Serialize them at the
   // last displayed orientation, without resetting or changing the 3D camera.
+  // On screen the labels (a, b, c*, …) may stand outside the SVG box
+  // (overflow: visible); a stand-alone SVG image is cut at its viewBox and
+  // has no page fonts.  So the copy gets a viewBox around everything drawn
+  // and the label font of the page, and is placed so that it lands where
+  // it is seen.
   for(const id of ["cifDirectTriad","cifReciprocalTriad"]){
     const el=$(id);if(!el) continue;
     const r=layoutRect(el);if(!r.width||!r.height)continue;
     const bg=getComputedStyle(el).backgroundColor;
     if(bg && bg!=="rgba(0, 0, 0, 0)"){ctx.fillStyle=bg;ctx.fillRect(r.left-bounds.left,r.top-bounds.top,r.width,r.height);}
+    const vb=el.viewBox?.baseVal;
+    const box={x:vb?.x||0,y:vb?.y||0,w:vb?.width||r.width,h:vb?.height||r.height};
+    const scale=r.width/box.w;
+    let bb=null; try{ bb=el.getBBox(); }catch(_e){ bb=null; }
+    const pad=4;
+    const x0=Math.min(box.x,bb ? bb.x-pad : box.x), y0=Math.min(box.y,bb ? bb.y-pad : box.y);
+    const x1=Math.max(box.x+box.w,bb ? bb.x+bb.width+pad : box.x+box.w), y1=Math.max(box.y+box.h,bb ? bb.y+bb.height+pad : box.y+box.h);
     const clone=el.cloneNode(true);
-    clone.setAttribute("xmlns","http://www.w3.org/2000/svg");clone.setAttribute("width",String(r.width));clone.setAttribute("height",String(r.height));
+    clone.setAttribute("xmlns","http://www.w3.org/2000/svg");
+    clone.setAttribute("viewBox",`${x0} ${y0} ${x1-x0} ${y1-y0}`);
+    clone.setAttribute("width",String((x1-x0)*scale));clone.setAttribute("height",String((y1-y0)*scale));
+    const liveTexts=el.querySelectorAll("text");
+    clone.querySelectorAll("text").forEach((t,i)=>{ const cs=liveTexts[i] ? getComputedStyle(liveTexts[i]) : null; if(cs) t.setAttribute("font-family",cs.fontFamily); });
     const source=new XMLSerializer().serializeToString(clone);
     const url=URL.createObjectURL(new Blob([source],{type:"image/svg+xml;charset=utf-8"}));
-    try{const img=await loadFigureOverlayImage(url);ctx.drawImage(img,r.left-bounds.left,r.top-bounds.top,r.width,r.height);}finally{URL.revokeObjectURL(url);}
+    try{
+      const img=await loadFigureOverlayImage(url);
+      ctx.drawImage(img,r.left-bounds.left+(x0-box.x)*scale,r.top-bounds.top+(y0-box.y)*scale,(x1-x0)*scale,(y1-y0)*scale);
+    }finally{URL.revokeObjectURL(url);}
   }
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/png"));
   if(!blob) throw new Error("Could not encode PNG image.");
