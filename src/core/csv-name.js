@@ -10,13 +10,27 @@ export function fileBaseFromEntry(input,auto){
 export function csvNameFromEntry(input,auto){ return `${fileBaseFromEntry(input,auto)}.csv`; }
 export function pngNameFromEntry(input,auto){ return `${fileBaseFromEntry(input,auto)}.png`; }
 // Put the automatic name into the entry as editable text (not a grey
-// placeholder) whenever it changes, e.g. for a new file, ion or mode, and
-// whenever the entry is empty; an edited name stays until then.
+// placeholder) whenever it changes, e.g. for a new file, ion or mode; an
+// edited name stays until then.  An entry left empty gets the automatic
+// name back at once when it is left (blur, or Enter); while the entry is
+// being edited nothing is put into it.
 export function syncCsvNameTemplate(input,template){
   if(!input || !template) return;
+  refillWhenLeftEmpty(input);
+  if(document.activeElement===input) return;
   const changed=input.dataset.csvTemplate!==template;
   if(changed || !input.value.trim()) input.value=template;
   input.dataset.csvTemplate=template;
+}
+function refillWhenLeftEmpty(input){
+  if(input.dataset.csvRefill) return;
+  input.dataset.csvRefill='1';
+  const refill=()=>{
+    if(input.value.trim() || !input.dataset.csvTemplate) return;
+    input.value=input.dataset.csvTemplate;
+  };
+  input.addEventListener('blur',refill);
+  input.addEventListener('change',refill);
 }
 // Base of a sample-derived name: the selected CIF/mCIF without extension,
 // else the fallback.

@@ -6,7 +6,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {PLOT_FONTS} from '../../core/plot-fonts.js';
 import {downloadText} from '../../core/download.js';
-import {csvNameFromEntry} from '../../core/csv-name.js';
+import {csvNameFromEntry, syncCsvNameTemplate} from '../../core/csv-name.js';
 export function installReflectionTable(ctx){
   const {deps:{$, RL_calc, canonicalReflectionHkl, clamp, compareHkl, getSelectedCifFileName, hklKey, hklToQ, norm, rad2deg},
     state:cifState, fn}=ctx;
@@ -485,9 +485,8 @@ function reflectionCsvColumns({powder,prefix='',part='all'}){
 // peak lists in the Download table layout (N_..., M_...), one peak per row.
 // Save CSV file names: "<structure>_reflections_single_crystal" and
 // "<structure>_powder_pattern" are written into the name boxes when a new
-// structure is read (as Save CSV of the Convolution: a name typed by hand is
-// kept until then; an empty box uses the automatic name).
-let csvNamesFor=null;
+// structure is read (a name typed by hand is kept until then; a box left
+// empty gets the automatic name back when it is left).
 // Wavelength used for 2θ, for the CSV comment lines and the Graph title:
 // with it the table and the pattern can be reproduced by other programs
 // without the instrument.  Five decimals, as in the Wavelength box.
@@ -510,11 +509,8 @@ function reflectionSourceFileName(){
 function reflectionCsvBase(){ return fn.cleanCifBaseName(reflectionSourceFileName()||'selected_structure.cif'); }
 function syncReflectionCsvNames(){
   const base=reflectionCsvBase();
-  if(base===csvNamesFor) return;
-  csvNamesFor=base;
-  const table=$('cifTableCsvName'), pattern=$('cifPatternCsvName');
-  if(table) table.value=`${base}_reflections_single_crystal`;
-  if(pattern) pattern.value=`${base}_powder_pattern`;
+  syncCsvNameTemplate($('cifTableCsvName'),`${base}_reflections_single_crystal`);
+  syncCsvNameTemplate($('cifPatternCsvName'),`${base}_powder_pattern`);
 }
 function csvFileName(id,auto){ return csvNameFromEntry($(id),auto); }
 // Reflection CSVs are saved as text/csv (the CIF output uses its own type).

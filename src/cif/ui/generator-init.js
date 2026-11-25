@@ -83,7 +83,15 @@ async function initializeCifGenerator(){
     $("cifSpaceGroupNumber")?.addEventListener("change",fn.jumpToCifSpaceGroupNumber);
     $("cifSpaceGroupNumber")?.addEventListener("keydown",ev=>{ if(ev.key==="Enter"){ ev.preventDefault(); fn.jumpToCifSpaceGroupNumber(); } });
     // Cell synchronization applies constraints on change, not each keystroke.
+    // Output file name: left empty, it gets back the name of the input file
+    // (generated_structure without one) as soon as it is left.
+    const refillGeneratedName=()=>{
+      const el=$("cifGeneratedName");
+      if(el && !el.value.trim()) el.value=fn.cleanCifBaseName(getSelectedCifFileName?.()||"");
+    };
+    $("cifGeneratedName")?.addEventListener("blur",refillGeneratedName);
     $("cifGeneratedName")?.addEventListener("change",()=>{
+      refillGeneratedName();
       $("cifGeneratedName").value=fn.cleanCifBaseName($("cifGeneratedName").value);
       fn.invalidateGeneratedMcif();
     });
