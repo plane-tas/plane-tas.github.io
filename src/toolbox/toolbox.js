@@ -629,7 +629,13 @@ export function createToolbox({
     return v.toFixed(digits).replace(/0+$/,'').replace(/\.$/,'');
   }
 
+  function absorptionFieldHasNumber(id){
+    const raw=String($(id)?.value ?? '').trim();
+    return raw!=='' && Number.isFinite(Number(raw));
+  }
+
   function setAbsorptionThicknessFromTransmissionPercent(percent){
+    if(String(percent ?? '').trim()==='' || !absorptionFieldHasNumber('absorptionSETransmission')) return;
     const overallPct=Number(percent);
     if(!(overallPct>0) || overallPct>100) throw new Error('Overall transmission must be greater than 0% and no more than 100%.');
     const seField=$('absorptionSETransmission');
@@ -666,6 +672,9 @@ export function createToolbox({
   function absorptionCsvBase(){ return `${absorptionSampleName()||'neutron'}_attenuation`; }
   function updateAbsorptionCalculator(){
     syncCsvNameTemplate($('absorptionCsvName'),absorptionCsvBase());
+    // An empty thickness or SE transmission is not a value: keep the last
+    // result and skip the calculation, as the other numeric entries do.
+    if(!absorptionFieldHasNumber('absorptionThickness') || !absorptionFieldHasNumber('absorptionSETransmission')) return;
     const selectedCifStructure=getSelectedCifStructure();
     const selectedCifFileName=getSelectedCifFileName();
     const inputMode=absorptionInputMode();

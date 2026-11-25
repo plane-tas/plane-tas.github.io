@@ -108,6 +108,8 @@ export function createToolboxUI({
     $('absorptionSETransmission')?.addEventListener('change',()=>{
       const field=$('absorptionSETransmission');
       if(!field) return;
+      // Empty stays empty: the calculation is skipped until a value is entered.
+      if(String(field.value).trim()===''){ updateAbsorptionCalculator(); return; }
       let v=Number(field.value);
       if(!Number.isFinite(v)) v=100;
       v=Math.min(100,Math.max(0,v));
