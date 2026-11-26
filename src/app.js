@@ -58,7 +58,7 @@ const sampleEnvironments = new Map();
 let fixedBeamControls = null;
 
 // Feature modules are wired near the end of this file after their dependencies are defined.
-let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, calcOne, geometryPointWarnings, updateGeometryTargetVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
+let magneticPeakIntensities, updateCifUI, syncSfColorMaxControl, selectCifFile, clearSelectedCif, centeringFromSpaceGroup, selectedSampleSpaceGroup, selectedSampleCentering, initializeCifGenerator, nuclearStructureForSelectedCif, refreshCifAfterStateRestore, buildResolutionLattice, updateAutoW, flipScatteringPlaneUV, collectResolutionBase, tasMotorAngles, formatAngle, updateResolutionPlaneWarning, doSingleResolution, doScanResolution, renderResolutionScan, bindResolutionManualCalculation, updatePropagationVectorLabels, powderWavevectors, setPowderLinkDriver, syncPowderLinkedInputs, powderGeometryTarget, geometryPointWarnings, updateGeometryTargetVisibility, renderGeometry, safeResizePlot, resizeVisiblePlots, scheduleVisiblePlotResize, initializeResponsivePlotResize, setActiveTab, updateCalcMode, saveRightPanelState, restoreRightPanelState, savedActiveTab, enableRightPanelPersistence, saveGlobalUIState, restoreGlobalUIState, enableGlobalUIPersistence, saveLeftPanelState, restoreLeftPanelState, hasScanResults, clearResolutionResults;
 let getDarkAssets, directBeamOrientationCorrection, rebuildGeometryMatchedDarkPolygons, qeDarkBlockWarningsForHKLE;
 let canonicalOrientationMode, effectiveOrientationReference;
 let calculateSingleCrystal;
@@ -899,8 +899,7 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   syncPowderLinkedInputs,
   powderGeometryTarget,
   hasScanResults,
-  clearResolutionResults,
-  calcOne
+  clearResolutionResults
 }=createResolutionUI({
   $, tasMotorAngles, PI, RLRes, add, calcResolution, checkedValue, clamp, clearError, currentInstrument, deg2rad,
   inferOutOfPlaneHKL, latticeParams,
@@ -921,8 +920,6 @@ document.querySelector('.sidebar').addEventListener('change',()=>saveLeftPanelSt
   qeGeometryAngles, rad2deg, scatteringPlaneWarningMessage:(...args)=>scatteringPlaneWarningMessage(...args),
   selectedS1Sign, selectedTasSense, setScatteringPlaneWarning:(...args)=>setScatteringPlaneWarning(...args),
   tasConvention, qeSpurionWarnings, userFacingTasMessage,
-  // Quick resolution of the Angle calculation point (Resolution settings).
-  quickResolution:(calc)=>calcOne(calc),
   syncGeometrySliders:(...args)=>{ geometrySliders?.syncGeometrySliders(...args); powderSliders?.syncPowderSliders(); },
   updateGeometryTargetMarker:(...args)=>updateGeometryTargetMarker(...args)
 }));
