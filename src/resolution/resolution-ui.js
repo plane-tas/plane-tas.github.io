@@ -27,6 +27,7 @@ export function createResolutionUI(deps){
     formatAngle:fn.formatAngle,
     updateResolutionPlaneWarning:fn.updateResolutionPlaneWarning,
     doSingleResolution:fn.doSingleResolution,
+    calcOne:fn.calcOne,
     doScanResolution:fn.doScanResolution,
     renderResolutionScan:fn.renderResolutionScan,
     bindResolutionManualCalculation:fn.bindResolutionManualCalculation,

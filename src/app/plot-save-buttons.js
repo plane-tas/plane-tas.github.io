@@ -44,7 +44,8 @@ function headerLinesFor(id){
   if(id!=='geometryPlot') return [];
   const box=document.getElementById('geometryAngles');
   if(!box || box.closest('.hidden')) return [];
-  const lines=[...box.querySelectorAll('.geometry-result-line')];
+  // (The quick resolution lines are not written on the TAS geometry figure.)
+  const lines=[...box.querySelectorAll('.geometry-result-line:not(.geometry-quickres-line)')];
   const source=lines.length ? lines : [box];
   return source.map(el=>({text:el.textContent.replace(/\s+/g,' ').trim(),color:getComputedStyle(el).color}));
 }

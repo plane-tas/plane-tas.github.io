@@ -354,12 +354,12 @@ export function installResolutionComparison(ctx){
   // The table is rebuilt only when what it shows changed (a rebuild under the
   // pointer would swallow a click).
   let tableSig='', tableColumns=[], tableRowCount=0;
-  // FWHM column: motor scans through a Bragg peak (deg), one per line;
+  // FWHM column: motor scans through a Bragg peak, one per line;
   // θ–2θ gives θ (S1) / 2θ (S2).
-  const deg=v=>Number.isFinite(v) ? v.toFixed(2) : '–';
+  const deg=v=>Number.isFinite(v) ? `${v.toFixed(2)}°` : '–';
   function scanLines(result){
     const s=result?.scans; if(!s) return '';
-    const lines=[`S1 scan: ${deg(s.S1)}`,`S2 scan: ${deg(s.S2)}`];
+    const lines=[`ω scan: ${deg(s.omega)}`];
     if(s.thetaTwoTheta) lines.push(`θ–2θ: ${deg(s.thetaTwoTheta.S1)}/${deg(s.thetaTwoTheta.S2)}`);
     if(Number.isFinite(s.chi)) lines.push(`χ scan: ${deg(s.chi)}`);
     return lines.join('\n');
@@ -411,8 +411,8 @@ export function installResolutionComparison(ctx){
       }
       // Motor-scan widths (one column, a line per scan).
       if(nFwhm){
-        r1.appendChild(cell('th','FWHM (deg)',{rowspan:span,class:'cmp-group cmp-res-start',title:'Motor scans through a Bragg peak; θ–2θ: θ (S1) / 2θ (S2)'}));
-        tableColumns.push(['FWHM (deg)','',false]);
+        r1.appendChild(cell('th','FWHM',{rowspan:span,class:'cmp-group cmp-res-start',title:'Motor scans through a Bragg peak: ω (S1 rocking), θ–2θ (θ (S1) / 2θ (S2)), χ'}));
+        tableColumns.push(['FWHM','',false]);
       }
       // After the widths (what is compared), the condition that gave them.
       if(nCond){
@@ -753,7 +753,7 @@ export function installResolutionComparison(ctx){
     head.push('col_H1','col_H2','col_H3','col_H4','col_V1','col_V2','col_V3','col_V4');
     for(const a of [ax[0],ax[1],'E',ax[2]]) head.push(`d${a}_proj`,`d${a}_slice`);
     // Motor scans through a Bragg peak (FWHM, deg).
-    head.push('S1_scan_deg','S2_scan_deg','theta2theta_S1_deg','theta2theta_S2_deg','chi_scan_deg');
+    head.push('omega_scan_deg','theta2theta_S1_deg','theta2theta_S2_deg','chi_scan_deg');
     for(let i=1;i<=4;i++) for(let j=1;j<=4;j++) head.push(`R${i}${j}`);
     head.push('note');
     lines.push(head.join(','));
@@ -771,7 +771,7 @@ export function installResolutionComparison(ctx){
       const dif=!!k.entry.result.diffraction;
       row.push(num(d.U),num(d.Ucoh),num(d.V),num(d.Vcoh),dif?'':num(d.E),dif?'':num(d.Ecoh),num(d.W),num(d.Wcoh));
       const sc=k.entry.result.scans||{};
-      row.push(num(sc.S1),num(sc.S2),num(sc.thetaTwoTheta?.S1),num(sc.thetaTwoTheta?.S2),num(sc.chi));
+      row.push(num(sc.omega),num(sc.thetaTwoTheta?.S1),num(sc.thetaTwoTheta?.S2),num(sc.chi));
       M.forEach((r,i)=>r.forEach((x,j)=>row.push(dif && (i===2||j===2) ? '' : Number(x).toExponential(9))));
       row.push('');
       lines.push(row.map(q).join(','));

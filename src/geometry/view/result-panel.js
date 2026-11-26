@@ -86,10 +86,11 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
   const qValue=isPowder
     ? target.q
     : norm(hklToQ(cache.rl,[target.calc.h,target.calc.k,target.calc.l]));
-  const hklLine=!isPowder
-    ? `<div class="geometry-result-line geometry-hkl-line">(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(4)).join(', ')})</div>`
+  // (h,k,l), Ei, Ef and Q on one line.
+  const hklText=!isPowder
+    ? `(h,k,l)=(${[target.calc.h,target.calc.k,target.calc.l].map(v=>Number(v).toFixed(4)).join(', ')}), `
     : '';
-  const energyLine=`Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
+  const energyLine=`${hklText}Ei=${target.Ei.toFixed(3)} meV, Ef=${target.Ef.toFixed(3)} meV, Q=${qValue.toFixed(4)} Å⁻¹`;
   const diffractometer=!instrumentHasAnalyzer(currentInstrument());   // no A1 / A2 without an analyzer
   const fourCircle=Number.isFinite(shown.chi);
   const angleLine=`M1=${geometryResultMotorAngle(shown.m1)}°, M2=${geometryResultMotorAngle(shown.m2)}°, S1=${geometryResultMotorAngle(shown.s1)}°, S2=${geometryResultMotorAngle(shown.s2)}°${fourCircle?`, χ=${geometryResultMotorAngle(shown.chi)}°, φ=${geometryResultMotorAngle(shown.phi)}°`:''}${diffractometer?'':`, A1=${geometryResultMotorAngle(shown.a1)}°, A2=${geometryResultMotorAngle(shown.a2)}°`}`+
@@ -113,6 +114,6 @@ function geometryResultSummaryHtml(cache,target,isPowder,sense,displaySense){
   const darkWarningLine=!isPowder
     ? `<div class="geometry-result-line geometry-warning-line warning-text">${darkWarningText}</div>`
     : '';
-  return `${hklLine}<div class="geometry-result-line geometry-energy-line">${energyLine}</div><div class="geometry-result-line geometry-angle-line">${angleLine}</div>${darkWarningLine}`;
+  return `<div class="geometry-result-line geometry-energy-line">${energyLine}</div><div class="geometry-result-line geometry-angle-line">${angleLine}</div>${darkWarningLine}`;
 }
 }

@@ -154,10 +154,10 @@ function coherentFwhm(RM,idx){
 // FWHM (deg) of motor scans through a Bragg peak (a point in Q and ħω; the
 // energies stay fixed): the section of the ellipsoid along the line each
 // scan moves Q in the local frame (Q∥, Q⊥, E, Qout).
-//   S1 (rocking): Q⊥ by |Q| per rad.
-//   S2 alone: the kf direction turns, Q moves normal to kf by kf per rad
-//     (the kf angle column of the TAS B matrix).
-//   θ–2θ (S1 half of S2, in the sense that keeps an elastic scan radial).
+//   ω (S1, rocking): Q⊥ by |Q| per rad.
+//   θ–2θ (S1 turning half of S2, in the sense that keeps an elastic scan
+//     radial): S2 turns the kf direction, Q moving normal to kf by kf per rad
+//     (the kf angle column of the TAS B matrix), and S1 adds Q⊥.
 //   χ (4-circle): Qout by |Q| per rad.
 function scanWidths(RM,angles,energies,fourCircle=false){
   try{
@@ -170,7 +170,7 @@ function scanWidths(RM,angles,energies,fourCircle=false){
     };
     const b0=-sind(phi-2*thetaS), b1=-cosd(phi-2*thetaS), sense=-(Math.sign(b1)||1);
     const tt=fwhm([kf*b0,kf*b1+sense*q/2,0]);
-    return {S1:fwhm([0,q,0]),S2:fwhm([kf*b0,kf*b1,0]),
+    return {omega:fwhm([0,q,0]),
       thetaTwoTheta:tt===null ? null : {S1:tt/2,S2:tt},
       chi:fourCircle ? fwhm([0,0,q]) : null};
   }catch(_e){ return null; }
