@@ -10,6 +10,7 @@ import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {qeMapTitle} from '../qe/qe-plot-title.js';
 import {downloadBlob} from '../core/download.js';
 import {setOverlayVolume} from '../qe/qe-dispersion-overlay.js';
+import {isoLines} from './convolution-contour.js';
 
 export function installConvolutionMaps(context){
   const {$, collectResolutionBase, setStatus}=context.deps;
@@ -58,7 +59,7 @@ export function installConvolutionMaps(context){
     // while; purging under it breaks Plotly), unless a new result came.
     // (Purge also drops the double-click handler of keepRange: bound again
     // with the next maps.)
-    const purge=()=>{ if(state.volume) return; for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(fns.plotly()) Plotly.purge(id); }catch(_e){} const el=$(id); if(el) el._convRangeBound=false; } };
+    const purge=()=>{ if(state.volume) return; for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(fns.plotly()) Plotly.purge(id); }catch(_e){} } };
     if(state.mapsDrawing) state.mapsDrawing.then(purge); else purge();
     $('convDownload2D').disabled=true;
     for(const key of ['U','V','E']){ const s=$(`convSlider${key}`); if(s) s.disabled=true; }
@@ -165,11 +166,14 @@ export function installConvolutionMaps(context){
   function keepRange(id,x,y){
     const el=$(id); if(!el) return;
     el._convRange={x:[x[0],x[x.length-1]],y:[y[0],y[y.length-1]]};
-    if(el._convRangeBound || typeof el.on!=='function') return;
-    el._convRangeBound=true;
+    // Bound once per Plotly event registry (Plotly.purge makes a new one).
+    if(typeof el.on!=='function' || el._convRangeBound===el._ev) return;
+    el._convRangeBound=el._ev;
     el.on('plotly_relayout',ev=>{
       if(!ev || !(ev['xaxis.autorange'] || ev['yaxis.autorange']) || !el._convRange) return;
-      Plotly.relayout(el,{'xaxis.range':el._convRange.x,'yaxis.range':el._convRange.y});
+      // Copies: Plotly keeps the arrays it is given as the axis ranges and
+      // the next zoom writes into them.
+      Plotly.relayout(el,{'xaxis.range':el._convRange.x.slice(),'yaxis.range':el._convRange.y.slice()});
     });
   }
   // Oblique U and V (their angle in reciprocal space is not 90°): the U–V
@@ -280,17 +284,20 @@ export function installConvolutionMaps(context){
       const p=Number(v.toPrecision(3));
       return log && p>0 && (p<1e-3 || p>=1e5) ? p.toExponential().replace('e+','e') : String(p);
     };
-    const heat=(key,x,y,z,xl,yl)=>{
+    // Hover: the I line only where there is a value (a blank point shows
+    // its coordinates only).  Four significant digits, as Plotly's .4g.
+    const hoverI=v=>Number.isFinite(v) ? `<br>I = ${v.toPrecision(4)}` : '';
+    const heat=(key,x,y,z,xl,yl,cd=null)=>{
       // Five labelled ticks including both ends (kept in saved images); in
       // log I, whole decades when the range spans two or more.
       let vals=Array.from({length:5},(_,i)=>lo+(hi-lo)*i/4);
       if(log && hi-lo>=2){
         vals=[]; for(let d=Math.ceil(lo-1e-9); d<=hi+1e-9; d++) vals.push(d);
       }
-      return {type:'heatmap',x,y,z:log ? z.map(r=>r.map(toColor)) : z,customdata:z,colorscale:'Viridis',zauto:false,zmin:lo,zmax:hi,showscale:true,
+      return {type:'heatmap',x,y,z:log ? z.map(r=>r.map(toColor)) : z,customdata:cd || z.map(r=>r.map(hoverI)),colorscale:'Viridis',zauto:false,zmin:lo,zmax:hi,showscale:true,
         colorbar:{thickness:14,len:0.9,outlinewidth:0,tickfont:{size:PLOT_FONTS.tick},tickmode:'array',tickvals:vals,
           ticktext:vals.map(v=>tickLabel(log ? 10**v : v))},
-        hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{customdata:.4g}<extra></extra>`};
+        hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}%{customdata}<extra></extra>`};
     };
     // Slider positions as dashed lines, each switched by the box next to its slider.
     const all=true;
@@ -312,28 +319,32 @@ export function installConvolutionMaps(context){
     };
     // Constant-energy map: the contour E_b(a, b) = ħω of every branch.  The
     // dispersion on a fine (a, b) grid does not depend on ħω, so it is kept
-    // for the volume and only the contour level follows the slider.
-    // (Oblique U and V: on the true-shape (x, y) grid of the map.)
+    // for the volume and only the contour level follows the slider.  The
+    // lines are traced here (isoLines) and drawn as scatter lines, which
+    // Plotly redraws at once on zoom (oblique U and V: mapped to the
+    // true-shape x, y).
     const overlayUV=Ec=>{
       if(!$('convShowDispersion')?.checked || !state.interp) return [];
-      const key=`${A[0]},${A[nA-1]},${B[0]},${B[B.length-1]},${state.interp.nBranch},${obl ? 'obl' : ''}`;
+      const key=`${A[0]},${A[nA-1]},${B[0]},${B[B.length-1]},${state.interp.nBranch}`;
       if(!state.volume._dispUV || state.volume._dispUV.key!==key || state.volume._dispUV.interp!==state.interp){
         const n=121;
-        const aG=obl ? Array.from({length:n},(_,i)=>obl.x0+(obl.x1-obl.x0)*i/(n-1)) : Array.from({length:n},(_,i)=>A[0]+(A[nA-1]-A[0])*i/(n-1));
-        const bG=obl ? Array.from({length:n},(_,i)=>obl.y0+(obl.y1-obl.y0)*i/(n-1)) : Array.from({length:n},(_,i)=>B[0]+(B[B.length-1]-B[0])*i/(n-1));
+        const aG=Array.from({length:n},(_,i)=>A[0]+(A[nA-1]-A[0])*i/(n-1));
+        const bG=Array.from({length:n},(_,i)=>B[0]+(B[B.length-1]-B[0])*i/(n-1));
         const z=Array.from({length:state.interp.nBranch},()=>bG.map(()=>new Array(n).fill(null)));
-        bG.forEach((y,j)=>aG.forEach((x,i)=>{
-          const [a,b]=obl ? obl.toAB(x,y) : [x,y];
-          if(obl && !(a>=A[0]-1e-9 && a<=A[nA-1]+1e-9 && b>=B[0]-1e-9 && b<=B[B.length-1]+1e-9)) return;
+        bG.forEach((b,j)=>aG.forEach((a,i)=>{
           const v=state.interp.evaluate(...state.volume.plane.hkl(a,b));
           if(v) for(let br=0;br<state.interp.nBranch;br++) if(Number.isFinite(v.E[br])) z[br][j][i]=v.E[br];
         }));
         state.volume._dispUV={key,interp:state.interp,aG,bG,z};
       }
       const {aG,bG,z}=state.volume._dispUV;
-      return z.map(zb=>({type:'contour',x:aG,y:bG,z:zb,showscale:false,hoverinfo:'skip',connectgaps:false,
-        contours:{start:Ec,end:Ec,size:1,coloring:'none',showlabels:false},
-        line:{color:'rgba(255,255,255,0.7)',width:1,dash:'dot',smoothing:0}}));
+      return z.map(zb=>{
+        const l=isoLines(aG,bG,zb,Ec);
+        const x=obl ? l.x.map((a,k)=>a===null ? null : obl.toXY(a,l.y[k])[0]) : l.x;
+        const y=obl ? l.y.map((b,k)=>b===null ? null : obl.toXY(l.x[k],b)[1]) : l.y;
+        return {type:'scatter',mode:'lines',x,y,hoverinfo:'skip',showlegend:false,connectgaps:false,
+          line:{color:'rgba(255,255,255,0.7)',width:1,dash:'dot'}};
+      });
     };
     const fine=(arr)=>Array.from({length:201},(_,i)=>arr[0]+(arr[arr.length-1]-arr[0])*i/200);
     const aF=fine(A), bF=fine(B);
@@ -390,14 +401,14 @@ export function installConvolutionMaps(context){
         const zr=new Array(nx).fill(null), cr=new Array(nx).fill(null);
         for(let i=0;i<nx;i++){
           const [a,b]=toAB(xs[i],y), ja=Math.round((a-A[0])/da), jb=Math.round((b-B[0])/db);
+          cr[i]=['',a,b];
           if(ja<0 || ja>=nA || jb<0 || jb>=B.length) continue;
-          const v=at(ja,jb,ie); zr[i]=Number.isFinite(v) ? v : null; cr[i]=[zr[i],a,b];
+          const v=at(ja,jb,ie); zr[i]=Number.isFinite(v) ? v : null; cr[i][0]=hoverI(v);
         }
         zD.push(zr); cd.push(cr);
       }
-      const tr=heat('UV',xs,ys,zD,sym.u,sym.v);
-      tr.customdata=cd;
-      tr.hovertemplate=`${sym.u} = %{customdata[1]:.4f}<br>${sym.v} = %{customdata[2]:.4f}<br>I = %{customdata[0]:.4g}<extra></extra>`;
+      const tr=heat('UV',xs,ys,zD,sym.u,sym.v,cd);
+      tr.hovertemplate=`${sym.u} = %{customdata[1]:.4f}<br>${sym.v} = %{customdata[2]:.4f}%{customdata[0]}<extra></extra>`;
       const mapXY=t=>({...t,x:t.x.map((x,k)=>x===null||t.y[k]===null ? null : toXY(x,t.y[k])[0]),y:t.y.map((y,k)=>y===null||t.x[k]===null ? null : toXY(t.x[k],y)[1])});
       const g=obl.grid(), seg=(a0,b0,a1,b1)=>{ const [x0,y0]=toXY(a0,b0), [x1,y1]=toXY(a1,b1); return dash(x0,x1,y0,y1); };
       const lay=layout(`${planeUV} at ${e3at(E[ie])}`,axisU,axisV,[obl.x0,obl.x1],[obl.y0,obl.y1],'convMapUV');

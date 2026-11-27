@@ -1116,8 +1116,8 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
   box-shadow:0 calc(4px * var(--tas-density)) calc(4px * var(--tas-density)) calc(-4px * var(--tas-density)) rgba(0,0,0,.12)}
 .jump-bar > button{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;
   padding:calc(3px * var(--tas-density)) calc(11px * var(--tas-density));
-  border:calc(1px * var(--tas-density)) solid #d3dae3;border-radius:999px;background:#eef2f7;color:#2d4a6b}
-.jump-bar > button:hover{background:#e1e8f0;border-color:#b9c4d1}
+  border:calc(1px * var(--tas-density)) solid #000;border-radius:999px;background:#e4e7eb;color:#000}
+.jump-bar > button:hover{background:#d5d9de}
 /* The sidebar has 10 px padding: the bar covers it while stuck. */
 .shell > .sidebar > .jump-bar{top:calc(-10px * var(--tas-density));margin-top:calc(-10px * var(--tas-density));padding-top:calc(10px * var(--tas-density))}
 #resolutionInstrumentDetails .resolution-details-head > .jump-bar{position:static;box-shadow:none;margin-bottom:calc(6px * var(--tas-density));gap:calc(3px * var(--tas-density))}

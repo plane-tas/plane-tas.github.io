@@ -613,13 +613,6 @@ export function installResolutionComparison(ctx){
       lay.shapes=grid.shapes;
       if(uvGd) uvGd.__tasObliqueGrid={basis};
       fn.reactResolutionPlot(PLOT_IDS.UV,tr,lay,fn.refreshObliqueGrid);
-      if(uvGd && !uvGd.__tasObliqueRelayout && typeof uvGd.on==='function'){
-        uvGd.__tasObliqueRelayout=true;
-        uvGd.on('plotly_relayout',event=>{
-          if(!Object.keys(event||{}).some(key=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(key))) return;
-          fn.refreshObliqueGrid(uvGd);
-        });
-      }
       return;
     }
     fn.reactResolutionPlot(PLOT_IDS.UV,traces('UV'),layout(`${lab(ax.U)} vs ${lab(ax.V)}`,`${lab(ax.U)} (${qUnit})`,`${lab(ax.V)} (${qUnit})`,limits.UVU||limits.U,limits.UVV||limits.V,PLOT_IDS.UV,true));

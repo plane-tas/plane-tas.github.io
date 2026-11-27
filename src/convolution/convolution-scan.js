@@ -172,8 +172,9 @@ export function installConvolutionScan(context){
     const el=$('convScanPlot');
     el.__convLogY=layout.yaxis.type==='log' ? layout.yaxis.range?.slice() : null;
     Plotly.react(el,traces,layout,{responsive:true,displaylogo:false,doubleClick:false});
-    if(!el.__convDoubleClick){
-      el.__convDoubleClick=true;
+    // Bound once per Plotly event registry (Plotly.purge makes a new one).
+    if(el.__convDoubleClick!==el._ev){
+      el.__convDoubleClick=el._ev;
       el.on('plotly_doubleclick',()=>requestAnimationFrame(()=>{
         if(!el.isConnected) return;
         const y=el.__convLogY;

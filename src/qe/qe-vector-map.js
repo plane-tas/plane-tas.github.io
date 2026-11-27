@@ -758,8 +758,9 @@ function renderQEVectorMap(cache){
       if(width>0) plot.__tasPathUpdateAxisLabels?.(width);
     };
     // Zoom/pan changes which labels are visible and how far apart they are.
-    if(!plot.__tasPathRelayoutBound && typeof plot.on==='function'){
-      plot.__tasPathRelayoutBound=true;
+    // Bound once per Plotly event registry (Plotly.purge makes a new one).
+    if(plot.__tasPathRelayoutBound!==plot._ev && typeof plot.on==='function'){
+      plot.__tasPathRelayoutBound=plot._ev;
       plot.on('plotly_relayout',ev=>{
         if(ev && Object.keys(ev).some(k=>k.startsWith('xaxis.'))) plot.__tasPathRefreshAxisLabels?.();
       });

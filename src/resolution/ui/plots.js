@@ -126,20 +126,50 @@ function reactResolutionPlot(id,traces,layout,after=null){
   if(!gd) return;
   gd.__tasResolutionView={x:layout.xaxis.range.slice(),y:layout.yaxis.range.slice()};
   Promise.resolve(Plotly.react(gd,traces,layout,{responsive:true,doubleClick:false}))
-    .then(()=>{installResolutionDoubleClick(gd); if(after) after(gd);})
+    .then(()=>{installResolutionPlotEvents(gd); if(after) after(gd);})
     .catch(err=>console.warn('Resolution plot warning:',err));
 }
-function installResolutionDoubleClick(gd){
-  if(!gd || typeof gd.on!=='function' || gd.__tasResolutionDoubleClick) return;
-  gd.__tasResolutionDoubleClick=()=>requestAnimationFrame(()=>{
-    const view=gd.__tasResolutionView;
-    if(!view || !gd.isConnected) return;
-    Plotly.relayout(gd,{
-      'xaxis.range':view.x.slice(),'yaxis.range':view.y.slice(),
-      'xaxis.autorange':false,'yaxis.autorange':false
-    }).catch(err=>console.warn('Resolution plot reset:',err));
+// Plotly.purge (an error, the diffractometer's empty W–E panel) drops the
+// plot's listeners together with its event registry (gd._ev): bind them
+// again whenever the registry is a new one.
+function installResolutionPlotEvents(gd){
+  if(!gd || typeof gd.on!=='function' || gd.__tasResolutionEvents===gd._ev) return;
+  gd.__tasResolutionEvents=gd._ev;
+  gd.on('plotly_doubleclick',()=>requestAnimationFrame(()=>resetResolutionView(gd)));
+  // Re-label the oblique grid after zooming, panning or resizing (no-op
+  // for the other plots).
+  gd.on('plotly_relayout',event=>{
+    if(!Object.keys(event||{}).some(k=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(k))) return;
+    refreshObliqueGrid(gd);
   });
-  gd.on('plotly_doubleclick',gd.__tasResolutionDoubleClick);
+}
+function resetResolutionView(gd,again=true){
+  const view=gd.__tasResolutionView;
+  if(!view || !gd.isConnected) return;
+  let x=view.x.slice(), y=view.y.slice();
+  // Equal scales: widen one range to fill the panel, as on the first draw
+  // (Plotly would widen from the zoomed state and end up elsewhere).
+  const fx=gd._fullLayout?.xaxis, fy=gd._fullLayout?.yaxis;
+  const equal=fy?.scaleanchor==='x' && fy.constrain!=='domain' && fx?._length>0 && fy._length>0;
+  const lengths=equal ? [fx._length,fy._length] : null;
+  if(equal){
+    const r=fy.scaleratio||1, s=Math.max((x[1]-x[0])/fx._length,(y[1]-y[0])*r/fy._length);
+    const cx=(x[0]+x[1])/2, cy=(y[0]+y[1])/2, hx=s*fx._length/2, hy=s*fy._length/r/2;
+    x=[cx-hx,cx+hx]; y=[cy-hy,cy+hy];
+  }
+  // Oblique grid: its labels for the new ranges in the same step (labels of
+  // the zoomed view change the margins, and Plotly would widen the ranges).
+  const g=gd.__tasObliqueGrid, grid=g ? resolutionObliqueGrid(g.basis,x,y) : null;
+  Plotly.relayout(gd,{
+    'xaxis.range':x,'yaxis.range':y,
+    'xaxis.autorange':false,'yaxis.autorange':false,
+    ...(grid ? {shapes:grid.shapes,'xaxis.tickvals':grid.xTickVals,'xaxis.ticktext':grid.xTickText,
+      'yaxis.tickvals':grid.yTickVals,'yaxis.ticktext':grid.yTickText} : {})
+  }).then(()=>{
+    // The new labels can change the panel size a little: fit once more.
+    const L=gd._fullLayout;
+    if(again && lengths && (L?.xaxis?._length!==lengths[0] || L?.yaxis?._length!==lengths[1])) resetResolutionView(gd,false);
+  }).catch(err=>console.warn('Resolution plot reset:',err));
 }
 shared.RESOLUTION_PLOT_IDS={UE:'plotUE',VE:'plotVE',UV:'plotUV',WE:'plotWE'};
 // Draw the four ellipse plots (incoherent = projection, coherent = slice).
@@ -301,14 +331,6 @@ function renderObliqueUVPlot(r,unitMode,ax,id,fonts,limits){
   const gd=$(id);
   if(gd) gd.__tasObliqueGrid={basis};
   reactResolutionPlot(id,[trace(proj,'incoherent','solid',RESULT_COLOR),trace(slice,'coherent','dash',RESULT_COLOR)],layout,refreshObliqueGrid);
-  // Re-label the oblique grid after zooming, panning or resizing.
-  if(gd && !gd.__tasObliqueRelayout && typeof gd.on==='function'){
-    gd.__tasObliqueRelayout=true;
-    gd.on('plotly_relayout',event=>{
-      if(!Object.keys(event||{}).some(k=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(k))) return;
-      refreshObliqueGrid(gd);
-    });
-  }
 }
 // Rebuild the oblique grid for the axis ranges Plotly actually drew.
 function refreshObliqueGrid(gd){

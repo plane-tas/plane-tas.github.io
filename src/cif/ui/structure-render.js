@@ -288,8 +288,9 @@ function renderCifStructureView(){
   }).catch(()=>{
     if(renderRevision===cifState.structureCameraRenderRevision) cifState.structureProgrammaticCameraUpdate=false;
   });
-  if(!plot._structureCameraBound && typeof plot.on==="function"){
-    plot._structureCameraBound=true;
+  // Bound once per Plotly event registry (Plotly.purge makes a new one).
+  if(plot._structureCameraBound!==plot._ev && typeof plot.on==="function"){
+    plot._structureCameraBound=plot._ev;
     const syncTriadsFromCamera=camera=>{
       const copied=fn.copyStructureCamera(camera);
       if(!copied) return;

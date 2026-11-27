@@ -792,6 +792,9 @@ document.querySelectorAll("input,select").forEach(el=>{
   // Display controls of the Resolution results (Show, Graph, colours, the
   // scan slider): they redraw, no recalculation.
   if(el.closest?.('#result')) return;
+  // Convolution: its ranges, sliders and Show row do not change the
+  // resolution (its method box passes the change on to #method).
+  if(el.closest?.('#resolutionConvolutionPane')) return;
   if([
     "instrument",
     "seSelect","seSelect2","seSelect3",

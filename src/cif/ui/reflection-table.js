@@ -420,8 +420,9 @@ function renderReflectionPowderPlot(){
   // Double-click returns to the current view (not Plotly's first-draw range
   // or its autorange, which would include the tick strip and the log baseline).
   },{responsive:true,displaylogo:false,doubleClick:false});
-  if(!plot.__tasPowderDoubleClick){
-    plot.__tasPowderDoubleClick=true;
+  // Bound once per Plotly event registry (Plotly.purge makes a new one).
+  if(plot.__tasPowderDoubleClick!==plot._ev){
+    plot.__tasPowderDoubleClick=plot._ev;
     // The event fires before Plotly's own handling: apply the view afterwards.
     plot.on('plotly_doubleclick',()=>requestAnimationFrame(()=>{
       const view=plot.__tasPowderView; if(!view || !plot.isConnected) return;
