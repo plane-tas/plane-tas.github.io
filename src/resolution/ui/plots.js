@@ -1,6 +1,7 @@
 // Resolution: ellipse plots, axes, U-V oblique view and widths.
 // Part of the Resolution tab UI (see ../resolution-ui.js for how the parts are wired).
 import {PLOT_FONTS} from '../../core/plot-fonts.js';
+import {bindOncePerRegistry, installDoubleClickReset} from '../../core/plot-events.js';
 export function installResolutionPlots(ctx){
   const {deps:{
     $
@@ -130,18 +131,15 @@ function reactResolutionPlot(id,traces,layout,after=null){
     .catch(err=>console.warn('Resolution plot warning:',err));
 }
 // Plotly.purge (an error, the diffractometer's empty W–E panel) drops the
-// plot's listeners together with its event registry (gd._ev): bind them
-// again whenever the registry is a new one.
+// plot's listeners: they are bound again with the next drawing.
 function installResolutionPlotEvents(gd){
-  if(!gd || typeof gd.on!=='function' || gd.__tasResolutionEvents===gd._ev) return;
-  gd.__tasResolutionEvents=gd._ev;
-  gd.on('plotly_doubleclick',()=>requestAnimationFrame(()=>resetResolutionView(gd)));
+  installDoubleClickReset(gd,'__tasResolutionDoubleClick',resetResolutionView);
   // Re-label the oblique grid after zooming, panning or resizing (no-op
   // for the other plots).
-  gd.on('plotly_relayout',event=>{
+  bindOncePerRegistry(gd,'__tasResolutionRelayout',()=>gd.on('plotly_relayout',event=>{
     if(!Object.keys(event||{}).some(k=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(k))) return;
     refreshObliqueGrid(gd);
-  });
+  }));
 }
 function resetResolutionView(gd,again=true){
   const view=gd.__tasResolutionView;

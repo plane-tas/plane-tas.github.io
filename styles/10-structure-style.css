@@ -14,46 +14,27 @@
   width:100%!important;
 }
 
-/* v53: Narrow mCIF Bonds editors use exactly two rows.
+/* Narrow mCIF Bonds editors use exactly two rows.
    Row 1: element A, element B, minimum and maximum distance.
    Row 2: bond width, color and Remove action. */
 @container structure-viewer (max-width:760px){
   #structurePanel .structure-bond-row{
     display:grid!important;
-    grid-template-columns:repeat(4,minmax(0,1fr))!important;
-    grid-template-rows:auto auto!important;
     gap:calc(7px * var(--tas-density))!important;
     align-items:end!important;
     width:100%!important;
-    min-width:0!important;
   }
-  #structurePanel .structure-bond-row > select:nth-child(1){grid-column:1!important;grid-row:1!important;}
-  #structurePanel .structure-bond-row > select:nth-child(2){grid-column:2!important;grid-row:1!important;}
   
   #structurePanel .structure-bond-row > .structure-entry-field{
-    grid-column:1 / 3!important;
-    grid-row:2!important;
     min-width:0!important;
   }
   #structurePanel .structure-bond-row > input[type=color]{
-    grid-column:3!important;
-    grid-row:2!important;
-    width:100%!important;
-    max-width:calc(55px * var(--tas-density))!important;
-    min-width:0!important;
-    justify-self:center!important;
     align-self:end!important;
   }
   #structurePanel .structure-bond-row > button{
-    grid-column:4!important;
-    grid-row:2!important;
-    width:100%!important;
-    min-width:0!important;
-    max-width:none!important;
     padding:calc(6px * var(--tas-density)) calc(2px * var(--tas-density))!important;
     font-size:calc(12px * var(--tas-density));
     overflow-wrap:anywhere;
-    box-sizing:border-box!important;
   }
   #structurePanel .structure-bond-row .structure-entry-label{white-space:nowrap;font-size:calc(11px * var(--tas-density));}
   #structurePanel .structure-bond-row select,
@@ -67,7 +48,7 @@
   }
 }
 
-/* v54 patch: match Structure settings to View, and emphasize all tab labels. */
+/* Match Structure settings to View, and emphasize all tab labels. */
 #structurePanel .structure-config-section > .structure-section-title{
   font-weight:700;
   line-height:normal;
@@ -82,7 +63,9 @@
 }
 #structurePanel .generator-shared-file .cif-file-name{min-width:0;}
 #structurePanel .generator-unified-output-tabs > .cif-output-tab{
-  display:flex;align-items:center;justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   min-height:calc(46px * var(--tas-density));
   padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));
   white-space:normal;
@@ -90,6 +73,11 @@
   line-height:1.25;
   border:calc(1px * var(--tas-density)) solid transparent;
   border-right:calc(1px * var(--tas-density)) solid #b9c4d0;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: calc(4px * var(--tas-density));
 }
 @container generator-unified (max-width:660px){
   #structurePanel .generator-structure-view-controls .cif-structure-view-buttons,
@@ -101,25 +89,15 @@
   #structurePanel .generator-structure-view-controls .cif-structure-view-buttons > button{
     padding:calc(5px * var(--tas-density)) calc(2px * var(--tas-density));font-size:calc(12px * var(--tas-density));
   }
-  #structurePanel .generator-structure-view-controls .structure-entry-label{font-size:calc(10px * var(--tas-density));}
-}
-#structurePanel .generator-unified-output-tabs > .cif-output-tab {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  padding-inline: calc(4px * var(--tas-density));
 }
 
-/* 2026-10: Bonds list scrolling and one-line Spins controls. */
+/* Bonds list scrolling and one-line Spins controls. */
 #structurePanel #cifBondRows {
-  overflow-y: auto;
-  overflow-x: hidden;
   overscroll-behavior-y: contain;
 }
 
 /* Collapsible element/site table in Structure editor > Atoms. */
-#structurePanel #cifAtomColorRows{overflow-y:auto;overflow-x:hidden;padding-right:calc(4px * var(--tas-density));}
+#structurePanel #cifAtomColorRows{padding-right:calc(4px * var(--tas-density));}
 #structurePanel .atoms-table-head,#structurePanel .atoms-table-row{
  display:grid;align-items:center;min-width:0;
 }
@@ -157,7 +135,7 @@
   }
   #structurePanel .atoms-preset-color{width:calc(16px * var(--tas-density));height:calc(19px * var(--tas-density));border-radius:calc(3px * var(--tas-density));}
   #structurePanel .atoms-color-cell .atoms-rgb-picker{
-    flex-basis:calc(24px * var(--tas-density));width:calc(24px * var(--tas-density));height:calc(24px * var(--tas-density));margin-left:calc(12px * var(--tas-density));
+    flex-basis:calc(24px * var(--tas-density));width:calc(24px * var(--tas-density));height:calc(24px * var(--tas-density));
   }
 }
 
@@ -219,7 +197,6 @@
    colour swatch and Remove column need adjustment.  The old stable scrollbar
    gutter reserved a blank strip even with no Style-list scrollbar. */
 #structurePanel #cifBondRows{
-  padding-right:0;
   scrollbar-width:thin;
 }
 #structurePanel .structure-bond-row{
@@ -293,9 +270,6 @@
 #structurePanel #cifAtomColorRows > .atoms-table-head,
 #structurePanel #cifAtomColorRows > .atoms-table-row{
   flex:0 0 auto;
-}
-#structurePanel #cifAtomColorRows{
-  overscroll-behavior-y:contain;
 }
 
 /* CIF Generator: keep the Structure viewer's natural square-height footprint
@@ -389,7 +363,7 @@
   border:calc(1px * var(--tas-density)) solid #c9cdd1;
 }
 
-/* 2026-10-13 — Positions / Atoms / Spins / Style: shared table metrics.
+/* Positions / Atoms / Spins / Style: shared table metrics.
    Table height is capped by the adjacent Structure view; never cap at four rows.
    The JS writes --editor-table-height from the actual plot bottom on desktop. */
 #structurePanel .cif-atom-table-wrap,
@@ -468,7 +442,7 @@
 #structurePanel .structure-style-actions button {width:100%;min-width:0;}
 #structurePanel .structure-style-actions button:disabled {opacity:.45;cursor:not-allowed;}
 
-/* 2026-10-13: Uij columns split into Index | Use | Atom | U11..U23.
+/* Uij columns split into Index | Use | Atom | U11..U23.
    Retain the ordinary Positions cell borders and scroll behavior. */
 #cifGeneratorPanel .cif-thermal-table{
   grid-template-columns:

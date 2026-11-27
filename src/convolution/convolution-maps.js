@@ -11,6 +11,7 @@ import {qeMapTitle} from '../qe/qe-plot-title.js';
 import {downloadBlob} from '../core/download.js';
 import {setOverlayVolume} from '../qe/qe-dispersion-overlay.js';
 import {isoLines} from './convolution-contour.js';
+import {bindOncePerRegistry} from '../core/plot-events.js';
 
 export function installConvolutionMaps(context){
   const {$, collectResolutionBase, setStatus}=context.deps;
@@ -57,7 +58,7 @@ export function installConvolutionMaps(context){
     state.volume=null;
     // Purged only after a drawing in progress (a large map draws for a
     // while; purging under it breaks Plotly), unless a new result came.
-    // (Purge also drops the double-click handler of keepRange: bound again
+    // (Purge also drops the range handler of keepRange: bound again
     // with the next maps.)
     const purge=()=>{ if(state.volume) return; for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(fns.plotly()) Plotly.purge(id); }catch(_e){} } };
     if(state.mapsDrawing) state.mapsDrawing.then(purge); else purge();
@@ -166,15 +167,12 @@ export function installConvolutionMaps(context){
   function keepRange(id,x,y){
     const el=$(id); if(!el) return;
     el._convRange={x:[x[0],x[x.length-1]],y:[y[0],y[y.length-1]]};
-    // Bound once per Plotly event registry (Plotly.purge makes a new one).
-    if(typeof el.on!=='function' || el._convRangeBound===el._ev) return;
-    el._convRangeBound=el._ev;
-    el.on('plotly_relayout',ev=>{
+    bindOncePerRegistry(el,'_convRangeBound',()=>el.on('plotly_relayout',ev=>{
       if(!ev || !(ev['xaxis.autorange'] || ev['yaxis.autorange']) || !el._convRange) return;
       // Copies: Plotly keeps the arrays it is given as the axis ranges and
       // the next zoom writes into them.
       Plotly.relayout(el,{'xaxis.range':el._convRange.x.slice(),'yaxis.range':el._convRange.y.slice()});
-    });
+    }));
   }
   // Oblique U and V (their angle in reciprocal space is not 90°): the U–V
   // map is drawn in its true shape.  x = a|U| + b|V|cos θ, y = b|V|sin θ

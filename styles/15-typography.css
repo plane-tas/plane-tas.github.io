@@ -1,0 +1,150 @@
+/* Shared type scale: captions, headings and warning lines of every tab, the
+   sidebar and the Resolution Instrument details.  Loaded after the panel
+   files on purpose: these sizes win over the older per-panel ones.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+/* Warning lines and Script editor are readable at both density breakpoints.
+   Overlay text and line-number gutter MUST share the same font metrics or
+   highlighted SPICE lines will drift away from the actual command lines. */
+.time-estimate-message.warning-text,
+.script-message.warning-text,
+.script-message.error-text{
+  font-size:max(13px,calc(18px * var(--tas-density)));
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+
+/* Text next to entries, selects, checkboxes and sliders in all main tabs.
+   Also cover the value/output text beside Q–E and TAS Geometry sliders. */
+.tab-panel label,
+.tab-panel .checkbox-label,
+.tab-panel .qe-control-entry,
+.tab-panel .qe-s2-control-entry > span,
+.tab-panel .qe-path-snap-label,
+.tab-panel .cif-reflection-plane-toggle,
+.tab-panel .structure-entry-label,
+.tab-panel .cif-unified-preview-label {
+  line-height: 1.35;
+}
+
+/* Section headings, including Input/Output file and Structure editor. */
+.tab-panel h2,
+.tab-panel h3,
+.tab-panel .cif-section-title,
+.tab-panel .script-pane-heading,
+.tab-panel .structure-section-title {
+  font-size: var(--plane-tab-heading-font) !important;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Warnings/status notices share one text size. Keep their original colors
+   and borders. */
+.tab-panel .orientation-plane-warning,
+.tab-panel .cif-generator-message,
+.tab-panel .generator-reflections-notice,
+.tab-panel .cif-release-note,
+.tab-panel .s2-conversion-info.warning,
+.tab-panel .qe-spurion-warning,
+.tab-panel .time-estimate-message,
+.tab-panel .absorption-warning,
+.tab-panel #cifSpinIndividualInfo {
+  font-size: var(--plane-tab-warning-font) !important;
+  line-height: 1.45;
+}
+
+/* Slider/checkbox/combobox captions. */
+.tab-panel label:has(> input[type="range"]),
+.tab-panel label:has(> input[type="checkbox"]),
+.tab-panel label:has(> select),
+#qeConstantMapPane .qe-control-entry,
+#qeConstantMapPane .qe-control-entry > :is(span,label),
+#qeDisplayControls .qe-path-snap-label,
+#qeDisplayControls .checkbox-label {
+  font-size: max(14px, calc(16px * var(--tas-density))) !important;
+  line-height: 1.35;
+}
+
+/* Labels that belong to a control should never become headings in bold.
+   Keep entry labels legible, and match select captions to the sidebar's
+   Instrument caption (16px * density) instead of enlarging to >=14px. */
+.tab-panel :is(label, .checkbox-label, .structure-entry-label, .qe-control-entry,
+               .qe-s2-control-entry > span, .qe-path-snap-label,
+               .cif-reflection-plane-toggle, .cif-unified-preview-label),
+#qeDisplayControls :is(.checkbox-label, .qe-path-snap-label),
+#qeConstantMapPane .qe-control-entry > :is(span,label) {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+/* A few compound controls carry the bold weight on their inner caption. */
+.tab-panel label :is(span, b, strong),
+.tab-panel .checkbox-label :is(span, b, strong),
+#qeDisplayControls .qe-control-entry :is(span, b, strong) {
+  font-weight: 400 !important;
+}
+.tab-panel button:not([role="tab"]) :is(b,strong),
+.sidebar button :is(b,strong) {
+  font-weight: 400 !important;
+}
+
+/* Toolbox / Neutron attenuation's summary captions (Cell volume, scattering
+   cross section, abs/coh/incoh, penetration depth, transmission) were not
+   covered by the shared label selectors: they are DIV/SPAN elements. */
+#toolboxAttenuationPane :is(.absorption-summary-label, .absorption-summary-subgrid span),
+#toolboxAttenuationPane :is(.absorption-beam-controls, .absorption-thickness-control,
+                            .absorption-input-mode-row, .absorption-manual-row,
+                            .absorption-cif-row) label {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+  line-height: 1.35;
+}
+
+/* Field/select captions are uniformly sidebar-sized in every tab even when an
+   older, ID-qualified Toolbox or Resolution layout rule specified larger text. */
+.tab-panel[id] label:has(> select) {
+  font-size: var(--plane-tab-label-font) !important;
+  font-weight: 400 !important;
+}
+
+/* Typography parity with Atomic positions. All four editor
+   tables inherit the same table/header font token, with native form controls
+   matching the actual Atomic positions inputs. Preserve row paddings/colors. */
+#structurePanel :is(.cif-atom-header,.cif-thermal-header,
+  #cifSpinTable .structure-spin-table-header,
+  .structure-style-table .structure-style-header){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+  font-weight:650;
+}
+#structurePanel :is(.cif-atom-cell,.cif-thermal-cell,
+  #cifSpinTable .structure-spin-cell,
+  .structure-style-table .structure-style-cell,
+  #cifSpinTable .structure-spin-index,
+  #cifSpinTable .structure-moment-site,
+  .structure-style-table .structure-style-index,
+  .cif-thermal-atom-name){
+  font-size:var(--tas-table-text-size)!important;
+  line-height:1.35;
+}
+#structurePanel :is(.cif-atom-cell input,.cif-thermal-cell input[type=number],
+  #cifSpinTable .structure-spin-value input[type=number],
+  .structure-style-table .structure-style-cell select,
+  .structure-style-table .structure-style-cell input[type=number]){
+  font-size:var(--tas-control-text-size)!important;
+}
+
+/* Type scale of the sidebar and of the Resolution Instrument details.  On a
+   desktop nothing is smaller than the captions of the tabs (12px):
+   panel title > card title > subheading (label size, bold) and labels
+   (regular).  Units in a subheading, e.g. "(m)", are a little smaller. */
+:root{--ui-title-font:max(16px,calc(19px * var(--tas-density)));
+  --ui-card-title-font:max(14px,calc(17px * var(--tas-density)))}
+.sidebar section > h2,.sidebar section > .sidebar-heading-row > h2,
+#resolutionInstrumentDetails .resolution-detail-title{font-size:var(--ui-title-font)!important;font-weight:650!important}
+#resolutionInstrumentDetails :is(.instrument-fixed-heading,details > summary){font-size:var(--ui-card-title-font)!important}
+.sidebar h3,.sidebar h3.lattice-parameters-heading,
+#resolutionInstrumentDetails :is(h3,.focus-name){font-size:var(--plane-tab-label-font)!important;font-weight:650!important}
+#resolutionInstrumentDetails :is(h3,.focus-name) small{font-size:.9em;font-weight:400}
+.sidebar :is(label,.checkbox-label,.motor-limit-name,.motor-limit-head,.motor-sign-display,.sidebar-table-head,.dark-asset-no-cell,.auto-vector,.status,.vector > span),
+#resolutionInstrumentDetails label{font-size:var(--plane-tab-label-font)!important}

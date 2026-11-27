@@ -7,7 +7,7 @@
 #singleMain .chart-grid>.geometry-card{overflow:hidden}
 @media(max-width:1050px){#singleMain .chart-grid{grid-template-columns:1fr}#geometryPlot.geometry{min-height:calc(620px * var(--tas-density))}}
 
-/* v53: enlarge the square Q-E map to approximately the former full x-axis width.
+/* Enlarge the square Q-E map to approximately the former full x-axis width.
    The data aspect remains 1:1 in Plotly; the extra vertical room prevents
    `constrain:domain` from shrinking the x domain to fit the 580 px box. */
 @media(max-width:1250px){.geometry-target-row{grid-template-columns:1fr}}
@@ -23,7 +23,6 @@
 .geometry-result-line + .geometry-result-line{margin-top:calc(2px * var(--tas-density));}
 
 /* Time estimate tab inside Angle calculation & TAS geometry card */
-.geometry-card-tab{border-bottom:0;}
 .geometry-card-tab:focus-visible{outline:calc(2px * var(--tas-density)) solid currentColor;outline-offset:calc(2px * var(--tas-density))}
 .geometry-card-pane{min-width:0}
 .time-estimate-pane{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(12px * var(--tas-density))}
@@ -49,11 +48,8 @@
 
 /* Time-estimate validation: make the problematic scan index unmistakable. */
 .time-scan-actions button{width:100%;}
-.time-range-help{
-  margin-top:calc(6px * var(--tas-density));
-}
 
-/* v8 Time estimate footer: one compact row with matched controls. */
+/* Time estimate footer: one compact row with matched controls. */
 .time-estimate-controls>button{
   min-height:0;
   padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));
@@ -95,7 +91,7 @@
 .time-scan-row.time-scan-warning .time-scan-index{background:#e96b4c;color:#fff;border-color:#b94e35}
 .time-scan-table-wrap{min-height:0;}
 
-/* v14: compact Time estimate table so HKL & E range fields fit the stable card width. */
+/* Compact Time estimate table so HKL & E range fields fit the stable card width. */
 .time-scan-cell{padding:calc(4px * var(--tas-density));}
 .time-range-inputs{gap:calc(3px * var(--tas-density));}
 .time-range-field{grid-template-columns:max-content minmax(0,1fr);gap:calc(2px * var(--tas-density));}
@@ -103,7 +99,7 @@
   padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));
 }
 
-/* v15 Time estimate: deterministic 10-row viewport and grouped scan actions. */
+/* Time estimate: deterministic 10-row viewport and grouped scan actions. */
 .time-scan-actions{
   grid-template-columns:repeat(3,minmax(0,1fr));
 }
@@ -133,19 +129,19 @@
   overflow:hidden;
 }
 
-/* v16 Time estimate footer order: Set now, Calc finish, Scan start, Scan finish, Calc MCU. */
+/* Time estimate footer order: Set now, Calc finish, Scan start, Scan finish, Calc MCU. */
 @media(max-width:900px){
   .time-estimate-controls .time-datetime-label{grid-column:span 2;}
 }
 
 /* Angle calculation point -> Resolution tab: at the right end of the button row. */
 .geometry-target-all-buttons>.geometry-to-resolution{margin-left:auto;white-space:nowrap;}
-/* v17: make Angle calculation actions/results match the surrounding Time estimate readability. */
+/* Make Angle calculation actions/results match the surrounding Time estimate readability. */
 .geometry-angles{
   line-height:1.45;
 }
 
-/* v20 Time estimate footer: stable three-row layout.
+/* Time estimate footer: stable three-row layout.
    Row 1 = action buttons, Row 2 = Scan start, Row 3 = Scan finish. */
 .time-estimate-controls{
   display:grid!important;
@@ -205,7 +201,7 @@
   }
 }
 
-/* v21: Single-crystal / Powder Q-E range share the same workspace and right card. */
+/* Single-crystal / Powder Q-E range share the same workspace and right card. */
 .qe-main-plot-column{
   min-width:0;
   overflow:hidden;
@@ -228,10 +224,7 @@
   max-width:100%;
 }
 
-/* v25: make the Angle/Time switch match the CIF Preview / Reflection table tabs. */
-.geometry-card-tabs{
-  border-bottom:calc(1px * var(--tas-density)) solid #ccc;
-}
+/* Make the Angle/Time switch match the CIF Preview / Reflection table tabs. */
 .geometry-card-tab{
   flex:1 1 0;
   border:0;
@@ -253,21 +246,21 @@
   bottom:auto;
 }
 
-/* v25: Index cells double as drag handles. Selected scans move as one block. */
+/* Index cells double as drag handles. Selected scans move as one block. */
 .time-scan-index{cursor:grab;touch-action:none;}
 .time-scan-index:active{cursor:grabbing;}
 .time-scan-row.time-drag-source .time-scan-cell{opacity:.58;}
 .time-scan-row.time-drag-before .time-scan-cell{box-shadow:inset 0 calc(3px * var(--tas-density)) 0 #3b82f6;}
 .time-scan-row.time-drag-after .time-scan-cell{box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #3b82f6;}
 
-/* v27 Time estimate command model. */
+/* Time estimate command model. */
 .time-scan-cell input.time-readonly{
   background:#f3f4f6;
   color:#555;
   cursor:default;
 }
 
-/* v30 Time estimate: loop nesting is expressed by indentation only. */
+/* Time estimate: loop nesting is expressed by indentation only. */
 .time-command-cell{
   transition:padding-left .08s ease;
 }
@@ -275,7 +268,7 @@
   min-width:0;
 }
 
-/* v34: empty loop insertion slot.  It stays unobtrusive normally and expands
+/* Empty loop insertion slot.  It stays unobtrusive normally and expands
    while dragging so a command can be dropped into a brand-new nested loop
    before any row exists between loopN and endloopN. */
 .time-loop-empty-dropzone{
@@ -298,13 +291,13 @@
   box-shadow:inset 0 0 0 calc(1px * var(--tas-density)) #3b82f6;
 }
 
-/* v36 Time estimate column balance: wider Command, compact t(s). */
+/* Time estimate column balance: wider Command, compact t(s). */
 .time-scan-cell input[data-time-mcu]{
   width:100%;
   min-width:0;
 }
 
-/* v41: non-blocking instrument S2 upper-limit warnings in Time estimate / Script. */
+/* Non-blocking instrument S2 upper-limit warnings in Time estimate / Script. */
 .time-scan-row.time-s2-limit-warning .time-scan-index{
   background:#f2c66d;
   color:#4b3a10;
@@ -316,7 +309,7 @@
   border-color:#b94e35;
 }
 
-/* v42 Script command model: ASET / commands / SPICE = ~1:2:1. */
+/* Script command model: ASET / commands / SPICE = ~1:2:1. */
 .time-internal-command{display:none!important}
 .time-command-cell,.time-target-cell{min-width:0}
 .time-command-cell select,.time-target-cell select{width:100%;min-width:0;max-width:none}
@@ -337,14 +330,14 @@
   outline:calc(2px * var(--tas-density)) solid #3b82f6;
 }
 
-/* v57: explicit MCU conversion and movement-overhead controls. */
+/* Explicit MCU conversion and movement-overhead controls. */
 .time-setting-entry{display:inline-flex;align-items:center;gap:calc(4px * var(--tas-density))}
 .time-setting-entry input{width:calc(82px * var(--tas-density));min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
 @media(max-width:760px){
   .time-estimate-settings{grid-template-columns:1fr 1fr}
 }
 
-/* v58: clearer Time estimate settings — two independent white inline boxes. */
+/* Clearer Time estimate settings — two independent white inline boxes. */
 .time-estimate-settings{
   display:flex;
   align-items:center;
@@ -391,11 +384,11 @@
   }
 }
 
-/* v59 Q-E map tabs and Q-vector map controls */
+/* Q-E map tabs and Q-vector map controls */
 .qe-map-tabs{margin:0;border:calc(1px * var(--tas-density)) solid #ddd;border-bottom:0;border-radius:calc(8px * var(--tas-density)) calc(8px * var(--tas-density)) 0 0;overflow:hidden}
 .qe-map-pane{min-width:0}
 
-/* v61: Constant-E-only Q-unit control sits beside the nuclear-label toggle. */
+/* Constant-E-only Q-unit control sits beside the nuclear-label toggle. */
 .nuclear-label-control{
   gap:calc(16px * var(--tas-density));
   flex-wrap:wrap;
@@ -403,7 +396,7 @@
   background:#fff;
 }
 
-/* v72: non-blocking warning when a Bragg orientation reference is outside U-V. */
+/* Non-blocking warning when a Bragg orientation reference is outside U-V. */
 .orientation-plane-warning{
   margin-top:calc(6px * var(--tas-density));
   padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));
@@ -414,9 +407,7 @@
   line-height:1.35;
   color:#6a4a00;
 }
-@media(max-width:1250px){.s2-conversion-card{overflow-x:auto}}
-
-/* v9 Time estimate: settings and Info share a single row; Info stays right-aligned. */
+/* Time estimate: settings and Info share a single row; Info stays right-aligned. */
 #geometryTimePane .time-estimate-settings {
   display:flex;
   align-items:center;
@@ -429,7 +420,7 @@
   margin-left:auto;
 }
 
-/* v48: Angle calculation & TAS geometry / Time estimate have equal-width tabs.
+/* Angle calculation & TAS geometry / Time estimate have equal-width tabs.
    Limit this to the outer geometry switch; inner Single/Scan tabs are unchanged. */
 #singleMain .chart-grid > .geometry-card > .geometry-card-tabs:first-child{
   display:grid;
@@ -497,3 +488,33 @@
 /* Last valid drawing shown while the current target is inaccessible. */
 #geometryPlot.geometry-plot-stale{opacity:0.35;}
 .numeric-entry-rejected{border-color:#c44 !important;box-shadow:0 0 0 2px rgba(204,68,68,.25)}
+
+
+/* Read each Time estimate Command diagnostic on its own line. */
+.time-estimate-message{white-space:pre-line}
+
+/* Time estimate scan cells previously had a fixed 38*density pixel height and
+   overflow:hidden.  Those values clipped larger selects/input text.  Let grid
+   tracks grow to fit whichever control is tallest, preserving horizontal
+   scrolling and the index/command columns. */
+.time-scan-table .time-scan-cell{
+  box-sizing:border-box;
+  height:auto!important;
+  min-height:max(36px,calc(48px * var(--tas-density)));
+  overflow:visible;
+  padding:max(4px,calc(5px * var(--tas-density)));
+  align-content:center;
+}
+.time-scan-table-wrap.time-scan-scroll{
+  max-height:max(410px,calc(600px * var(--tas-density)));
+  overflow-y:auto;
+}
+
+/* hbar-omega / U / V / linear-combination sliders: 4 aligned columns. */
+.geometry-sliders{grid-template-columns:max-content minmax(0,1fr) calc(52px * var(--tas-density)) max-content!important;}
+.geometry-sliders .geometry-slider-combo{display:contents;}
+.geometry-combo-label{display:inline-flex;align-items:center;gap:calc(3px * var(--tas-density));white-space:nowrap;}
+.geometry-combo-label input{width:calc(42px * var(--tas-density))!important;min-width:0!important;padding:calc(2px * var(--tas-density)) calc(4px * var(--tas-density));text-align:right;}
+#geomComboSetOrigin{padding:calc(2px * var(--tas-density)) calc(8px * var(--tas-density));white-space:nowrap;}
+.geometry-sliders .geometry-slider-row > *,
+.geometry-sliders .geometry-combo-label input{font-size:max(13px,calc(16px * var(--tas-density)));}

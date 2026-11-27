@@ -1,4 +1,5 @@
-/* Application header and main tab bar.
+/* Application header and page layout: the sidebar / workspace shell and
+   its scrolling.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
 header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}h1{margin:0}
@@ -77,3 +78,85 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
 #tasTopBar .tas-brand-letter{
   text-shadow:0 1px 0 rgba(255,233,195,.92),0 2px 2px rgba(131,64,24,.22);
 }
+
+/* Sidebars are bounded by the real viewport, not an enlarged stage. */
+.shell { min-height: calc(100vh - var(--tas-header-height)); }
+
+/* Independent sidebar / workspace scrolling for two-column layouts.
+   Size the shell from the space remaining beneath the actual header rather
+   than assuming a fixed header height (which can vary with wrapping/zoom). */
+@media (min-width: 761px) {
+  body {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  #tasTopBar { flex: 0 0 auto; }
+  .shell {
+    flex: 1 1 auto;
+    height: 0;
+    min-height: 0;
+  }
+  .shell > .sidebar {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+  .shell > main {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+}
+
+/* Viewport resizing: prevent the document from retaining an oversized scroll
+   area when the layout crosses the 760px breakpoint.  The shell should be
+   sized by the flex viewport on desktop, not by older vh-based minimums. */
+@media (min-width: 761px) {
+  html { height: 100%; overflow-y: hidden; }
+  body { min-height: 0; max-height: 100dvh; overflow-y: hidden; }
+  body > .shell { min-height: 0; max-height: 100%; }
+  body > .shell > main,
+  body > .shell > .sidebar { min-height: 0; max-height: 100%; }
+}
+@media (max-width: 760px) {
+  html { height: auto; overflow-y: auto; }
+  body { display: block; height: auto; min-height: 0; max-height: none; overflow-y: auto; }
+  body > .shell { display: block; height: auto; min-height: 0; max-height: none; }
+  body > .shell > main,
+  body > .shell > .sidebar { height: auto; max-height: none; overflow-y: visible; }
+}
+
+/* Touch tablets: allow native pull-to-refresh to reach the viewport when the
+   independent sidebar / workspace scroller has reached its top.  The desktop
+   viewport lock and the <=760px single-page mobile layout are unchanged. */
+@media (min-width:761px) and (pointer:coarse){
+  html, body{
+    overflow-y:auto;
+    overscroll-behavior-y:auto;
+  }
+  body > .shell > .sidebar,
+  body > .shell > main{
+    overscroll-behavior-y:auto;
+  }
+}
+/* Desktop: the main tabs stay; only the area below them (#mainScroll)
+   scrolls, and only when its content is taller than the window. */
+@media (min-width:761px){
+  body > .shell > main{display:flex;flex-direction:column;overflow:hidden;padding-bottom:0;scrollbar-gutter:auto}
+  body > .shell > main > *{flex:0 0 auto}
+  body > .shell > main > .main-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;
+    padding-bottom:calc(12px * var(--tas-density))}
+}
+
+/* Nested scrolling: a table, list or preview that scrolls inside the page
+   hands the wheel / touch scroll over to the page (or the pane around it)
+   once it reaches its top or bottom, everywhere (as the Reflections table).
+   Only the two outermost scroll areas (sidebar and main workspace) keep the
+   scroll to themselves, so the browser window does not bounce. */
+.shell > main .main-scroll *,
+.shell > .sidebar *{overscroll-behavior:auto!important}

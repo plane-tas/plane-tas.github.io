@@ -1,0 +1,188 @@
+/* Resolution › Convolution: dispersion file, File preview / 2D slice / 1D cut.
+   Load order is significant: styles/*.css are linked in the order of index.html. */
+
+/* Simulation / Convolution tabs. */
+.resolution-mode-tabs{margin-bottom:calc(8px * var(--tas-density))}
+.convolution-layout{display:flex;flex-direction:column;gap:calc(8px * var(--tas-density));min-height:0}
+
+/* One card: file row, note, then the File preview / 2D slice / 1D cut tabs
+   (each with its calculation condition) filling the rest.  Narrow cards
+   (container query below) put Dispersion file above Show example. */
+.convolution-file-card{flex:1 1 auto;margin:0;min-height:0;display:flex;flex-direction:column;container-type:inline-size}
+/* Dispersion file | Show example. */
+.convolution-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:calc(6px * var(--tas-density)) calc(10px * var(--tas-density));align-items:end;margin-bottom:calc(6px * var(--tas-density))}
+.convolution-file{display:flex;gap:calc(6px * var(--tas-density))}
+.convolution-file button{white-space:nowrap;flex:0 0 auto}
+.convolution-file input{flex:1 1 auto;min-width:0}
+/* One height for the boxes and buttons of the file row. */
+#resolutionConvolutionPane .convolution-file-row :is(select,button,input){height:2.25em;box-sizing:border-box}
+#resolutionConvolutionPane .convolution-file-row>button{white-space:nowrap}
+@container (max-width:560px){
+  .convolution-file-card .convolution-row{grid-template-columns:minmax(0,1fr) auto}
+  .convolution-file-card .convolution-row>label:first-child{grid-column:1/-1}
+}
+/* File preview of the example: what it is, Load / Save, then its comment
+   lines (model, lattice, scattering plane, grid, columns). */
+.convolution-example-line{display:flex;flex-wrap:wrap;align-items:center;gap:calc(8px * var(--tas-density))}
+.convolution-example-line button{flex:none}
+.convolution-example-notes{white-space:pre-wrap;margin-top:calc(4px * var(--tas-density))}
+
+/* Notes under Dispersion file: the blue information box of the app, black text. */
+.convolution-note{background:#eef6fb;border:calc(1px * var(--tas-density)) solid #b9d8ea;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(9px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+.convolution-summary{font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-note .convolution-summary{color:#222;margin:0}
+.convolution-summary.conv-error,.convolution-message.conv-error{color:#b00020}
+
+/* File preview / 2D slice / 1D cut. */
+.convolution-tab-wrap{flex:1 1 auto;min-height:0;margin-top:calc(2px * var(--tas-density));display:flex;flex-direction:column;border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));overflow:hidden}
+.convolution-tabs{flex:0 0 auto;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.convolution-tabs .geometry-card-tab{flex:1 1 0!important;width:auto!important;max-width:none!important;}
+.convolution-tab-pane{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:calc(9px * var(--tas-density))}
+.convolution-tab-pane[hidden]{display:none}
+
+/* Calculation entries at the top of the 2D slice and 1D cut tabs, with a
+   line under them.  Narrow boxes (container query below) put the Calculate
+   row in two lines. */
+.convolution-box{min-width:0;flex:0 0 auto;margin:0 0 calc(8px * var(--tas-density));border:0;border-bottom:calc(1px * var(--tas-density)) solid #ddd;border-radius:0;padding:0 0 calc(8px * var(--tas-density));display:flex;flex-direction:column;gap:calc(6px * var(--tas-density));container-type:inline-size}
+/* Load CSV | read-only name of the loaded file (filling the row) | Unset. */
+.convolution-box-top{display:flex;flex-wrap:nowrap;align-items:center;gap:calc(8px * var(--tas-density))}
+.convolution-box-top>.convolution-load-name{flex:1 1 0;min-width:0}
+/* Ranges (2D) and initial / final points (1D). */
+.convolution-range-table>button{justify-self:start;}
+.convolution-range-table{display:grid;grid-template-columns:max-content repeat(4,minmax(0,1fr));gap:calc(4px * var(--tas-density)) calc(8px * var(--tas-density));align-items:center;font-size:max(14px,calc(18px * var(--tas-density)))}
+.convolution-range-table input{width:100%;max-width:none;min-width:0;padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
+.convolution-range-name{padding-right:calc(6px * var(--tas-density))}
+.convolution-range-head{text-align:center}
+/* 1D message under the cut box: room for one line kept, as in the CIF
+   generator, so a note does not move the plot (the notes are kept short).
+   The 2D message is the progress bar of the Calculate row. */
+#convMessage1D{min-height:1.4em;line-height:1.4}
+
+/* Calculate row, left to right in the order of use: approximation, method,
+   spacing / points, estimated time, Calculate, progress bar ("45 %" /
+   "Completed" / "Stopped").  Six equal columns that do not depend on the
+   text, so nothing moves when Grid / Monte Carlo or the estimate changes;
+   the progress bar is always there (empty frame).  The first three have
+   their caption above the box; the others line up with the boxes. */
+#resolutionConvolutionPane .convolution-box-head{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:calc(6px * var(--tas-density));align-items:end}
+@container (max-width:720px){
+  #resolutionConvolutionPane .convolution-box-head{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+.convolution-box-head .convolution-integration{display:contents}
+.convolution-box-head>button{width:100%;min-width:0}
+/* Spacing (Grid) and Points (Monte Carlo) share one cell (as wide as the
+   wider one); the inactive one is only made invisible. */
+.convolution-integration-detail{display:inline-grid;align-items:center;white-space:nowrap;min-width:0}
+.convolution-integration-detail>*{grid-area:1/1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.convolution-integration-detail>[hidden]{display:flex!important;visibility:hidden}
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-head-field,.convolution-integration-detail label){display:flex;flex-direction:column;align-items:stretch;gap:calc(2px * var(--tas-density));min-width:0;white-space:nowrap}
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-head-field,.convolution-integration-detail label) select{width:100%;min-width:0;flex:none}
+#resolutionConvolutionPane .convolution-box-head .convolution-caption{overflow:hidden;text-overflow:ellipsis}
+/* Without a caption: the height of the boxes, at their level. */
+#resolutionConvolutionPane .convolution-box-head :is(.convolution-estimate,button.convolution-calc,.convolution-status){min-height:2.25em}
+#resolutionConvolutionPane .convolution-box-head .convolution-estimate{display:flex;align-items:center;margin:0;min-width:0;line-height:1.2;text-align:left;font-variant-numeric:tabular-nums}
+#resolutionConvolutionPane .convolution-box-head .convolution-status{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;padding:calc(2px * var(--tas-density)) calc(6px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #9fb6cf;border-radius:calc(4px * var(--tas-density));background:linear-gradient(to right,#cfe0f2 var(--conv-progress,0%),#fff var(--conv-progress,0%));color:#1d3b5c;font-variant-numeric:tabular-nums;box-sizing:border-box}
+/* Calculate (blue) and Stop (red). */
+#resolutionConvolutionPane button.convolution-calc{background:linear-gradient(#3a7bc8,#1f5fa8);color:#fff;border-color:#174c88;box-shadow:0 1px 1px rgba(0,0,0,.18)}
+#resolutionConvolutionPane button.convolution-calc:hover{background:linear-gradient(#2f6db6,#174c88)}
+#resolutionConvolutionPane button.convolution-calc:active{background:#174c88;box-shadow:inset 0 1px 2px rgba(0,0,0,.3)}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop{background:linear-gradient(#d23b2f,#b42318);border-color:#912018}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop:hover{background:linear-gradient(#c02f24,#912018)}
+#resolutionConvolutionPane button.convolution-calc.convolution-stop:active{background:#912018}
+
+/* Save row (file name | Save CSV | Save figure | Set on Q-E, a .save-name-row)
+   under the line: it saves the result. */
+.convolution-tab-pane>.convolution-box-foot{flex:0 0 auto;margin-bottom:calc(8px * var(--tas-density))}
+.convolution-box-foot>*{flex:none}
+/* Text in the Convolution pane: the page colour (#222), as other labels. */
+.convolution-csv-name .cif-filename-suffix{color:inherit}
+
+/* Show row (2D slice and 1D cut; also the Resolution results): display
+   switches above the plots. */
+.convolution-show-row{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:calc(4px * var(--tas-density)) calc(12px * var(--tas-density));margin-bottom:calc(6px * var(--tas-density));font-size:max(13px,calc(16px * var(--tas-density)))}
+.convolution-show-row>*{flex:none}
+.convolution-show-row .checkbox-label{min-height:0;white-space:nowrap;align-self:center}
+.convolution-show-title{line-height:1.3}
+.convolution-show-sep{align-self:stretch;width:0;border-left:calc(1px * var(--tas-density)) solid #c8ced6;margin:0 calc(2px * var(--tas-density))}
+/* 2D Show row: dispersion | ellipse: coherent incoherent | line: U V ħω,
+   the groups parted by a thin vertical line, then the colour scale. */
+#convPane2D .convolution-show-group{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density))}
+#convPane2D .convolution-show-group ~ .convolution-show-group{border-left:1px solid #b5bcc4;padding-left:calc(10px * var(--tas-density));margin-left:calc(4px * var(--tas-density))}
+#convPane2D .convolution-show-name{white-space:nowrap}
+/* Colour scale of the 2D maps (log I, min, max), at the end of the Show row.
+   The values are shown with three significant digits (1.32e-8, 0.0132). */
+.convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
+.convolution-zrange input{width:calc(66px * var(--tas-density));min-width:calc(7ch + 10px)}
+#convPane2D .convolution-zrange .checkbox-label{display:inline-flex;margin-right:calc(6px * var(--tas-density))}
+#convPane2D .convolution-zrange input[type=checkbox]{width:auto;min-width:0}
+/* The legend column boxes of the 1D cut take part in the Show row's wrapping. */
+.convolution-legend-columns{display:contents}
+
+/* 2D slice: three maps, each in one frame (that of the Resolution plots)
+   with the one slider that changes it right above it. */
+.convolution-plots{flex:1 1 auto;min-height:calc(300px * var(--tas-density));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density))}
+.convolution-plot-col{display:flex;flex-direction:column;min-width:0;min-height:0;border:calc(1px * var(--tas-density)) solid #d3dae4;border-radius:calc(7px * var(--tas-density));padding:calc(6px * var(--tas-density));overflow:hidden;background:#fff}
+.convolution-plot-col>.convolution-sliders{flex:0 0 auto;margin:0 0 calc(4px * var(--tas-density));grid-template-columns:max-content minmax(0,1fr) calc(80px * var(--tas-density))!important}
+.convolution-sliders input[type=number]{width:100%;max-width:none;min-width:0;text-align:right}
+/* Plain (not bold) row / column names and slider names. */
+#resolutionConvolutionPane :is(.convolution-range-name,.convolution-range-head),.convolution-sliders .convolution-slider-name{font-weight:400}
+.convolution-plot-frame{position:relative;flex:1 1 auto;min-width:0;min-height:calc(340px * var(--tas-density))}
+.convolution-plot{height:100%;min-height:calc(300px * var(--tas-density));min-width:0}
+
+/* 1D cut: the plot (its Save figure is in the save row above) and the table
+   of curves beside it. */
+.convolution-scan-layout{flex:1 1 auto;min-height:0;display:flex;gap:calc(10px * var(--tas-density));position:relative}
+.convolution-scan-layout>.convolution-scan-plotbox{flex:1 1 0;min-width:0;position:relative;display:flex}
+.convolution-scan-plotbox>.convolution-scan-plot{flex:1 1 auto;min-width:0;height:auto}
+.convolution-curves{flex:1 1 0;min-width:0;overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e7ec;border-radius:calc(4px * var(--tas-density))}
+.convolution-keep-empty{padding:calc(4px * var(--tas-density)) calc(6px * var(--tas-density))}
+/* Curves of the 1D cut: a table that is also the legend (its columns are
+   chosen in the Show row above the plot).  Columns: Keep / Remove, colour,
+   then the legend columns, one line each; the first two stay in view when
+   the table scrolls sideways.  Click a row to highlight its curve. */
+.convolution-curve-table{--c1:calc(96px * var(--tas-density));--c2:calc(44px * var(--tas-density));width:100%;border-collapse:collapse;}
+.convolution-curve-table :is(th,td){white-space:nowrap;text-align:left;padding:calc(3px * var(--tas-density)) calc(5px * var(--tas-density))}
+.convolution-curve-table th{position:sticky;top:0;z-index:1;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);border-bottom:calc(1px * var(--tas-density)) solid #d8dde3}
+.convolution-curve-table td{border-bottom:calc(1px * var(--tas-density)) solid #eef1f4;vertical-align:middle}
+.convolution-curve-table td.convolution-curve-field{min-width:3.2em}
+.convolution-curve-table button{padding:calc(1px * var(--tas-density)) calc(6px * var(--tas-density))}
+.convolution-curve-table tbody tr{cursor:pointer}
+.convolution-curve-table tbody tr:hover td{background:#f6f9fc}
+.convolution-curve-current td{background:#f7f9fb}
+.convolution-curve-table tbody tr.selected td{background:#e3eefb}
+.convolution-curve-table :is(th,td):nth-child(-n+2){position:sticky;z-index:1;background:#fff;box-sizing:border-box}
+.convolution-curve-table th:nth-child(-n+2){z-index:2;background:var(--table-head-bg)}
+.convolution-curve-table .convolution-curve-current td:nth-child(-n+2){background:#f7f9fb}
+.convolution-curve-table tbody tr.selected td:nth-child(-n+2){background:#e3eefb}
+.convolution-curve-table :is(th,td):nth-child(1){left:0;width:var(--c1);min-width:var(--c1);max-width:var(--c1)}
+.convolution-curve-table :is(th,td):nth-child(2){left:var(--c1);width:var(--c2);min-width:var(--c2);max-width:var(--c2);box-shadow:inset -1px 0 #e3e7ec}
+/* Colour of a curve: a square colour picker (as in the CIF generator). */
+.convolution-color-pick{display:block;width:calc(30px * var(--tas-density));height:calc(22px * var(--tas-density));padding:calc(1px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #c8ced6;border-radius:calc(3px * var(--tas-density));background:#fff;cursor:pointer;box-sizing:border-box}
+.convolution-color-pick::-webkit-color-swatch-wrapper{padding:0}
+.convolution-color-pick::-webkit-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
+.convolution-color-pick::-moz-color-swatch{border:none;border-radius:calc(2px * var(--tas-density))}
+
+/* File preview: the loaded dispersion table. */
+.convolution-table-info{flex:0 0 auto;margin-bottom:calc(4px * var(--tas-density))}
+.convolution-table-scroll{flex:1 1 auto;min-height:calc(300px * var(--tas-density));overflow:auto;border:calc(1px * var(--tas-density)) solid #e3e3e3}
+.convolution-table{border-collapse:collapse;font-variant-numeric:tabular-nums;white-space:nowrap}
+.convolution-table th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;border-bottom:1px solid #d8dde3}
+.convolution-table td{padding:0 calc(8px * var(--tas-density));text-align:right;height:22px;line-height:22px}
+.convolution-table tr.convolution-spacer td{padding:0;line-height:0}
+
+/* Narrow workspace: the maps one under another, the table of curves under
+   the 1D plot. */
+@media(max-width:1100px){
+  .convolution-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+  .convolution-plots{grid-template-columns:1fr}
+  .convolution-scan-layout>.convolution-scan-plotbox{flex:none}
+  .convolution-scan-plotbox>.convolution-scan-plot{height:calc(360px * var(--tas-density));flex:1 1 auto}
+  .convolution-scan-layout{flex-direction:column}
+  .convolution-curves{flex:none;max-height:calc(260px * var(--tas-density))}
+  .convolution-table-scroll{height:calc(500px * var(--tas-density));flex:none}
+}
+
+/* Convolution labels the same size as the labels of the other tabs (the
+   control text size, as in Q-E Range and Toolbox); the curve list uses the
+   table size like every other table. */
+#resolutionConvolutionPane :is(.convolution-head-field,.convolution-row label,.convolution-range-head,.convolution-range-name,.convolution-show-row,.convolution-show-row .checkbox-label,.convolution-field,.convolution-status,.convolution-estimate,.convolution-message,.convolution-table-info,.convolution-keep-empty){font-size:var(--tas-control-text-size)!important}

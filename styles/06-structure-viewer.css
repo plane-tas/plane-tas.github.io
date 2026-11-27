@@ -39,6 +39,7 @@
   min-width:0;
   display:flex;
   flex-direction:column;
+  min-height:calc(100vh - calc(142px * var(--tas-density)));
 }
 .cif-structure-status{
   margin-bottom:calc(8px * var(--tas-density));
@@ -50,6 +51,8 @@
   border:calc(1px * var(--tas-density)) solid #ddd;
   border-radius:calc(8px * var(--tas-density));
   background:#fff;
+  min-height:calc(100vh - calc(182px * var(--tas-density)));
+  height:calc(100vh - calc(182px * var(--tas-density)));
 }
 .structure-bond-row{
   display:grid;
@@ -65,31 +68,21 @@
 .structure-moment-site{
   flex-direction:column;
   min-width:0;
+  display:block;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .structure-moment-site span{
   color:#222;
   font-size:calc(11px * var(--tas-density));
   overflow-wrap:anywhere;
 }
-.structure-viewer-main{
-  min-height:calc(100vh - calc(142px * var(--tas-density)));
-}
-.cif-structure-plot{
-  min-height:calc(100vh - calc(182px * var(--tas-density)));
-  height:calc(100vh - calc(182px * var(--tas-density)));
-}
 @media (max-width:1180px){
   .structure-viewer-main{min-height:auto}
   .cif-structure-plot{height:calc(560px * var(--tas-density));min-height:calc(560px * var(--tas-density))}
 }
-.structure-moment-site{
-  display:block;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
 
-/* Structure viewer v5 refinements */
 .structure-range-grid{
   display:grid;
   grid-template-columns:calc(28px * var(--tas-density)) minmax(calc(70px * var(--tas-density)),1fr) minmax(calc(70px * var(--tas-density)),1fr);
@@ -225,12 +218,11 @@
   pointer-events:none;
 }
 #structurePanel .structure-atom-legend-item{align-items:center;white-space:nowrap;}
-#structurePanel .structure-atom-legend-dot{display:inline-block;border-radius:50%;border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.35);}
+#structurePanel .structure-atom-legend-dot{display:inline-block;border-radius:50%;border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.35);width:calc(20px * var(--tas-density))!important;height:calc(20px * var(--tas-density))!important;border-width:calc(1.5px * var(--tas-density))!important}
 
 @container structure-viewer (max-width:760px){
   
-  #structurePanel .structure-plot-toolbar{flex-direction:column;align-items:stretch;}
-  #structurePanel .structure-atom-legend{max-width:52%;}
+  #structurePanel .structure-plot-toolbar{flex-direction:column;}
 }
 
 #structurePanel .structure-plot-overlay-left{
@@ -259,13 +251,8 @@
   font-size:calc(18px * var(--tas-density))!important;
 }
 #structurePanel .structure-atom-legend-item{gap:calc(7px * var(--tas-density))!important;}
-#structurePanel .structure-atom-legend-dot{
-  width:calc(20px * var(--tas-density))!important;
-  height:calc(20px * var(--tas-density))!important;
-  border-width:calc(1.5px * var(--tas-density))!important;
-}
 
-/* vNext: stack the in-plot atom legend vertically below the plot controls. */
+/* Stack the in-plot atom legend vertically below the plot controls. */
 #structurePanel .structure-atom-legend{
   display:flex!important;
   flex-direction:column!important;
@@ -291,7 +278,7 @@
 .cif-generator-output-pane{display:flex;flex-direction:column;}
 .cif-generator-beam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:calc(8px * var(--tas-density));margin:calc(10px * var(--tas-density)) 0 calc(12px * var(--tas-density))}
 
-/* v11: only the new figure export button; do not alter camera/viewer sizing. */
+/* Only the new figure export button; do not alter camera/viewer sizing. */
 #structurePanel #cifSaveFigure{align-self:end;white-space:nowrap;}
 .geometry-card-tabs .geometry-card-tab:last-child,
 .cif-output-tabs .cif-output-tab:last-child{border-right:0;}
@@ -346,8 +333,6 @@
   #structurePanel .generator-structure-view-controls .structure-entry-label::after{
     content:attr(data-short-label);
     display:block;
-    font-size:calc(11px * var(--tas-density));
-    font-weight:700;
     line-height:1.3;
   }
 }
@@ -356,12 +341,6 @@
 #structurePanel .generator-structure-view-controls .structure-entry-label{
   line-height:1.3!important;
 }
-@container generator-unified (max-width:660px){
-  #structurePanel .generator-structure-view-controls .structure-entry-label{
-    font-size:calc(13px * var(--tas-density))!important;
-  }
-}
-
 /* CIF Generator Structure: use a square viewport instead of a viewport-height
    minimum. Keep other Generator output tabs and their sizing unchanged. */
 #structurePanel #mcifStructurePane .structure-plot-wrap{
@@ -524,3 +503,14 @@
 
 /* Unit-cell frame reference: second, unlabelled row under Structure controls. */
 #structurePanel .structure-plot-toolbar{flex-wrap:wrap!important;}
+
+
+/* Structure view: Unit cell | Cell | file name | Save figure above the
+   range row (outside the figure). */
+#structurePanel #mcifStructurePane .generator-structure-view-controls > .structure-figure-row{
+  grid-column:1 / -1;align-items:end;background:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0 0 calc(6px * var(--tas-density));
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:calc(6px * var(--tas-density))!important;width:100%!important;max-width:none!important;justify-self:stretch!important;box-sizing:border-box}
+#structurePanel .structure-figure-row > .cif-filename-entry{flex:1 1 0!important;min-width:0;align-self:end}
+#structurePanel .structure-figure-row > button{flex:none;align-self:end}
+#structurePanel .structure-figure-row > label{flex:none;display:grid;gap:calc(3px * var(--tas-density));margin:0}
+#structurePanel .structure-figure-row > .cif-filename-entry input{min-height:calc(32px * var(--tas-density))}

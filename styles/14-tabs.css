@@ -1,0 +1,111 @@
+/* Navigation tabs at every level: the main workspace tabs, the two-item
+   sub-tabs (Q-E maps, Angle calculation / Time estimate, Simulation /
+   Convolution, CIF/mCIF output, …) and the Toolbox calculators.  One palette
+   (grey bar, lighter hover, the selected tab white with a frame) and
+   equal-width items; nested bars have thinner borders.
+   Load order is significant: styles/*.css are linked in the order of index.html. */
+
+/* Main workspace tabs: five equal columns; on a narrow main workspace (or a
+   narrow window, for browsers without container queries) two rows of three. */
+main > .main-tabs{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:calc(5px * var(--tas-density));
+  overflow:visible;
+  border:calc(2px * var(--tas-density)) solid #b9c4d0;
+  background:#f3f5f7;
+}
+main > .main-tabs > .tab-button{
+  flex:none;
+  width:100%;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  padding:calc(9px * var(--tas-density)) calc(11px * var(--tas-density));
+  line-height:1.25;
+  border:calc(1px * var(--tas-density)) solid transparent;
+  background:#f3f5f7;
+}
+main > .main-tabs > .tab-button:hover{background:#eaf0f6;}
+main > .main-tabs > .tab-button.active{
+  background:#fff;
+  border-color:#aab7c5;
+  box-shadow:none;
+}
+/* Greyed out (Resolution for diffractometers and 4-circle mode). */
+main > .main-tabs > .tab-button:disabled{color:#aaa;background:#f3f5f7;cursor:default}
+@container (max-width:850px){
+  main > .main-tabs{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,auto);}
+  main > .main-tabs > .tab-button{padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));}
+}
+@media (max-width:760px){
+  main > .main-tabs{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,auto);}
+  main > .main-tabs > .tab-button{padding:calc(8px * var(--tas-density)) calc(5px * var(--tas-density));}
+}
+
+/* Two-item sub-tabs: each receives exactly half the row. */
+.geometry-card-tabs,
+.cif-output-tabs{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0;
+  overflow-x:hidden;
+}
+.geometry-card-tabs > .geometry-card-tab:disabled{color:#aaa;background:#f5f5f5;cursor:default}
+.geometry-card-tabs .geometry-card-tab,
+.cif-output-tabs .cif-output-tab{
+  box-sizing:border-box;
+  border:calc(1px * var(--tas-density)) solid transparent;
+  border-radius:0;
+  background:#f3f5f7;
+  color:#222;
+  line-height:1.25;
+  padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
+  box-shadow:none;
+  position:static;
+  bottom:auto;
+}
+.geometry-card-tabs > .geometry-card-tab,
+.cif-output-tabs > .cif-output-tab{
+  width:100%;min-width:0;max-width:100%;flex:none;
+  white-space:normal;overflow-wrap:anywhere;
+  text-align:center;
+}
+.geometry-card-tabs .geometry-card-tab:hover,
+.cif-output-tabs .cif-output-tab:hover{background:#eaf0f6;}
+.geometry-card-tabs .geometry-card-tab.active,
+.cif-output-tabs .cif-output-tab.active{
+  box-sizing:border-box;
+  border:calc(1px * var(--tas-density)) solid #98a7b6;
+  border-radius:calc(4px * var(--tas-density));
+  background:#fff;
+  color:#222;
+  box-shadow:none;
+  position:static;
+  bottom:auto;
+}
+
+/* Toolbox: four calculators of equal width (two rows of two on phones);
+   Structure editor tabs share the selected-tab frame. */
+.toolbox-subtabs{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:calc(4px * var(--tas-density));
+  overflow-x:auto;
+}
+@media (max-width:600px){
+  .toolbox-subtabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+.toolbox-subtab:hover{background:#eaf0f6;}
+.toolbox-subtab.active{color:#222;}
+.toolbox-subtab.active,
+#structurePanel .structure-config-tabs button.active{
+  border:calc(1px * var(--tas-density)) solid #98a7b6;
+  border-radius:calc(5px * var(--tas-density));
+  background:#fff;
+  box-shadow:none;
+}

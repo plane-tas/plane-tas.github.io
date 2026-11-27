@@ -111,11 +111,10 @@
 }
 @media(max-width:600px){
   #resolutionCalculation #singleInputs{grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:calc(4px * var(--tas-density))}
-  #resolutionCalculation #singleInputs label{font-size:calc(11.5px * var(--tas-density))}
   #resolutionCalculation #singleInputs input[type=number],#resolutionCalculation #singleInputs input[data-fraction]{padding-left:calc(4px * var(--tas-density));padding-right:calc(4px * var(--tas-density))}
 }
 
-/* v105: Resolution Scan is explicitly calculated to keep common editing responsive. */
+/* Resolution Scan is explicitly calculated to keep common editing responsive. */
 #calcScanResolution{align-self:end;min-height:calc(38px * var(--tas-density))}
 
 /* Resolution: input labels, calculation results, axis directions/angles, matrix. */
@@ -184,8 +183,6 @@
   min-width:0;
 }
 
-/* Instrument type: omit analyzer controls for diffractometers. */
-
 /* Diffractometer: show a direct sample–detector leg instead of TAS L2/L3. */
 #resolutionDistanceGrid.resolution-is-diffractometer{grid-template-columns:repeat(3,minmax(0,1fr))}
 #resolutionDistanceGrid .resolution-diffraction-distance{min-width:0}
@@ -231,7 +228,6 @@
 #resolutionInstrumentDetails label:has(> select) {
   font-size: var(--plane-tab-label-font) !important;
 }
-/* Inside Resolution Instrument details, Crystal and d must be equivalent. */
 /* The unit text is part of the heading, not a small footnote. */
 #resolutionInstrumentDetails :is(.instrument-fixed-heading, details > summary) small {
   font-size: 1em !important;
@@ -316,3 +312,71 @@
 #resolutionPanel .resolution-compare-table tbody tr.selected td:is(.cmp-action,.cmp-index){background:#e3eefb}
 
 #resolutionPanel #result .plots > div::after{content:"";position:absolute;inset:0;border:1px solid #d3dae4;border-radius:calc(7px * var(--tas-density));pointer-events:none;z-index:5}
+
+
+/* Resolution ellipse plots fitted to the visible workspace height (ui-shell.js). */
+#resolutionPanel.res-fit #result .plots>div{
+  height:var(--res-fit-plot)!important;
+}
+
+/* Resolution results (Mode = single): Show row with Save figure, then the
+   four plots on the left and the table on the right; on a narrow panel the
+   table above the plots. */
+#resolutionPanel #resolutionComparisonView{container-type:inline-size}
+#resolutionPanel .resolution-compare-tools.convolution-show-row{margin:0 0 calc(8px * var(--tas-density))}
+#resolutionPanel .resolution-compare-body{display:flex;flex-direction:column;gap:calc(10px * var(--tas-density))}
+#resolutionPanel .resolution-compare-body[hidden]{display:none}
+#resolutionPanel .resolution-compare-side{order:-1;min-width:0}
+#resolutionPanel .resolution-compare-side .resolution-compare-table-wrap{margin:0;overflow:auto;max-height:45vh}
+/* The header stays in view when the table scrolls down. */
+#resolutionPanel .resolution-compare-table thead{position:sticky;top:0;z-index:4}
+@container (min-width: 860px){
+  #resolutionPanel .resolution-compare-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  /* Beside the plots the table is as tall as they are and scrolls inside. */
+  #resolutionPanel .resolution-compare-body .resolution-compare-side{order:0;align-self:stretch;position:relative;min-height:calc(160px * var(--tas-density))}
+  #resolutionPanel .resolution-compare-body .resolution-compare-side .resolution-compare-table-wrap{position:absolute;inset:0;max-height:none}
+  #resolutionPanel .resolution-compare-body .resolution-compare-plots{grid-template-columns:1fr 1fr}
+  #resolutionPanel #result .resolution-compare-body .resolution-compare-plots>div{height:auto!important;aspect-ratio:1/0.9}
+  /* Lower than that when the window is not tall enough (ui-shell.js). */
+  #resolutionPanel.res-fit #result .resolution-compare-body .resolution-compare-plots>div{height:var(--res-fit-plot)!important;aspect-ratio:auto}
+}
+/* R matrix: one 4 × 4 block per row. */
+#resolutionPanel .resolution-compare-table td.cmp-mat{white-space:pre;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:calc(12px * var(--tas-density));line-height:1.3}
+#resolutionPanel .resolution-compare-table th.cmp-mat-head{white-space:nowrap}
+
+/* Mode = single, under Calculation point: one line kept for a message (not
+   calculable, a warning, why the result cannot be kept), then the note. */
+#resolutionCalculation .resolution-single-notes{margin-top:calc(6px * var(--tas-density))}
+#resolutionCalculation .resolution-single-notes[hidden]{display:none}
+#resolutionCalculation .resolution-point-message{margin:0;min-height:1.4em;line-height:1.4em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#9a3b00;font-weight:600;font-size:max(13px,calc(16px * var(--tas-density)))}
+#resolutionCalculation .resolution-point-note{margin:0 0 calc(4px * var(--tas-density))}/* Headers spanning both header rows sit at the bottom, next to the column names. */
+#resolutionPanel .resolution-compare-table thead th[rowspan="2"]{vertical-align:bottom}
+/* Mode = scan: no button column; the slider (Graph: slider) above the plots. */
+#resolutionPanel .resolution-compare-table.scan{--cmp-a:0px}
+#resolutionPanel #resolutionComparisonView .scan-nav.scan-nav-off{display:none}
+#resolutionPanel #resolutionComparisonView .scan-nav{margin:0 0 calc(8px * var(--tas-density))}
+/* Instrument details (beside the calculation and results): it scrolls on its
+   own within the visible height (ui-shell.js), as the left sidebar does. */
+@media(min-width:1251px){
+  #resolutionPanel #resolutionInstrumentDetails{position:sticky;top:0;display:flex;flex-direction:column;max-height:var(--res-details-max,calc(100vh - calc(120px * var(--tas-density))))}
+  #resolutionPanel #resolutionInstrumentDetails > .resolution-details-head{flex:0 0 auto}
+  #resolutionPanel #resolutionDetailsBody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+}
+#resolutionPanel #resolutionScanGraph{width:auto}
+/* Simulation: Save CSV first under the line (it saves the results), the
+   name filling the row (as Save CSV in Convolution). */
+#resolutionSimulationPane > .resolution-csv-row{margin:0 0 calc(8px * var(--tas-density))}
+/* Simulation: one frame around the calculation and the results, with a line
+   between them (as the 2D slice / 1D cut of Convolution). */
+#resolutionSimulationPane{border:calc(1px * var(--tas-density)) solid #ddd;border-radius:calc(8px * var(--tas-density));
+  padding:calc(9px * var(--tas-density));background:#fff}
+#resolutionSimulationPane[hidden]{display:none}
+#resolutionSimulationPane > #resolutionCalculation{margin:0 0 calc(8px * var(--tas-density));border:0;
+  border-bottom:calc(1px * var(--tas-density)) solid #ddd;border-radius:0;padding:0 0 calc(8px * var(--tas-density))}
+#resolutionSimulationPane > #result{margin:0;border:0;border-radius:0;padding:0}
+
+/* Display (scan): in the row of Save figure / Show / Save CSV. */
+.resolution-compare-tools .resolution-display-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));align-self:center;min-height:0}
+.resolution-compare-tools .resolution-display-label select{width:auto}
+.resolution-compare-tools .resolution-display-label.hidden+.resolution-display-sep{display:none}
+#resolutionPanel .resolution-compare-tools.convolution-show-row{flex-wrap:nowrap}

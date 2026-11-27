@@ -14,7 +14,6 @@
   flex-direction:column;
 }
 
-/* Structure viewer v3 refinements */
 .structure-control-section{
   background:#fff;
 }
@@ -44,16 +43,9 @@
    give Length/Width/Head a full-width second row. */
 @container structure-viewer (max-width:760px){
   #structurePanel .structure-moment-row{
-    grid-template-columns:calc(24px * var(--tas-density)) minmax(calc(64px * var(--tas-density)),calc(96px * var(--tas-density))) minmax(0,1fr) calc(40px * var(--tas-density))!important;
-    grid-template-rows:auto auto!important;
-    column-gap:calc(8px * var(--tas-density))!important;
-    row-gap:calc(7px * var(--tas-density))!important;
-    align-items:end!important;
     padding:calc(6px * var(--tas-density)) calc(2px * var(--tas-density))!important;
   }
   #structurePanel .structure-moment-row > input[type=checkbox]{
-    grid-column:1!important;
-    grid-row:1!important;
     align-self:center!important;
   }
   #structurePanel .structure-moment-site{
@@ -72,43 +64,6 @@
     grid-row:1!important;
     justify-self:end!important;
   }
-  
-
-  /* Bonds wrap into logical rows so Remove never extends outside the card. */
-  #structurePanel .structure-bond-row{
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    grid-template-rows:auto auto auto!important;
-    gap:calc(8px * var(--tas-density))!important;
-    width:100%!important;
-    min-width:0!important;
-  }
-  #structurePanel .structure-bond-row > select:nth-child(1){
-    grid-column:1!important;
-    grid-row:1!important;
-  }
-  #structurePanel .structure-bond-row > select:nth-child(2){
-    grid-column:2!important;
-    grid-row:1!important;
-  }
-  
-  #structurePanel .structure-bond-row > .structure-entry-field{
-    grid-column:1!important;
-    grid-row:3!important;
-  }
-  #structurePanel .structure-bond-row > input[type=color]{
-    grid-column:2!important;
-    grid-row:3!important;
-    justify-self:start!important;
-    align-self:end!important;
-  }
-  #structurePanel .structure-bond-row > button{
-    grid-column:1 / -1!important;
-    grid-row:4!important;
-    width:100%!important;
-    min-width:0!important;
-    max-width:none!important;
-    box-sizing:border-box!important;
-  }
 }
 
 /* Very narrow split-screen/mobile: place moment identity on the first row, then
@@ -119,14 +74,6 @@
   }
   #structurePanel .structure-moment-axis-row{
     grid-template-columns:1fr!important;
-  }
-  #structurePanel .structure-moment-row{
-    grid-template-columns:calc(24px * var(--tas-density)) minmax(0,1fr) calc(40px * var(--tas-density))!important;
-    grid-template-rows:auto auto auto!important;
-  }
-  #structurePanel .structure-moment-row > input[type=checkbox]{
-    grid-column:1!important;
-    grid-row:1!important;
   }
   #structurePanel .structure-moment-site{
     grid-column:2!important;
@@ -144,7 +91,7 @@
   }
 }
 
-/* vNext: compact Atoms / Spins / Bonds tabs and plot-overlay legend placement. */
+/* Compact Atoms / Spins / Bonds tabs and plot-overlay legend placement. */
 #structurePanel .structure-config-section{padding-top:0;}
 #structurePanel .structure-config-tabs{
   border-radius:calc(8px * var(--tas-density));
@@ -164,14 +111,6 @@
   #structurePanel .structure-plot-overlay-left{max-width:80%;}
   #structurePanel .structure-atom-legend{font-size:calc(16px * var(--tas-density))!important;}
   #structurePanel .structure-atom-legend-dot{width:calc(18px * var(--tas-density))!important;height:calc(18px * var(--tas-density))!important;}
-}
-
-@container structure-viewer (max-width:760px){
-  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(68px * var(--tas-density)),.9fr) minmax(calc(130px * var(--tas-density)),2fr) minmax(calc(76px * var(--tas-density)),.9fr) auto!important;}
-}
-@container structure-viewer (max-width:520px){
-  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(64px * var(--tas-density)),1fr) minmax(0,2.3fr) minmax(calc(70px * var(--tas-density)),1fr) auto!important;}
-  
 }
 
 /* mCIF Generator preview panes */
@@ -194,11 +133,16 @@
 .cif-generator-file-name .cif-filename-entry{width:100%}
 .cif-source-button-row button{width:100%;white-space:nowrap}
 
-/* v13: Four numeric inputs share available width; no changes to 3D plot. */
+/* Four numeric inputs share available width; no changes to 3D plot. */
 #structurePanel .structure-moment-row{
   display:grid!important;
-  grid-template-rows:auto!important;column-gap:calc(7px * var(--tas-density))!important;row-gap:calc(5px * var(--tas-density))!important;
-  align-items:end!important;width:100%!important;min-width:0!important;
+  grid-template-rows:auto!important;
+  column-gap:calc(7px * var(--tas-density))!important;
+  row-gap:calc(5px * var(--tas-density))!important;
+  align-items:end!important;
+  width:100%!important;
+  min-width:0!important;
+  grid-template-columns:auto minmax(calc(54px * var(--tas-density)),.65fr) minmax(calc(150px * var(--tas-density)),3fr) auto!important;
 }
 #structurePanel .structure-moment-row>input[type=checkbox]{grid-column:1!important;grid-row:1!important;}
 #structurePanel .structure-moment-row>.structure-moment-site{
@@ -210,13 +154,12 @@
 }
 
 @container structure-viewer (max-width:430px){
-  #structurePanel .structure-moment-row{grid-template-columns:calc(22px * var(--tas-density)) minmax(0,1fr) calc(36px * var(--tas-density))!important;grid-template-rows:auto auto!important;}
+  #structurePanel .structure-moment-row{grid-template-rows:auto auto!important;}
   #structurePanel .structure-moment-row>.structure-moment-site{grid-column:2!important;grid-row:1!important;}
   #structurePanel .structure-moment-row>.structure-moment-color-swatch{grid-column:3!important;grid-row:1!important;}
   
 }
 
-#structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(54px * var(--tas-density)),.65fr) minmax(calc(150px * var(--tas-density)),3fr) auto!important;}
 
 #structurePanel .structure-moment-row .structure-entry-field{min-width:0;}
 @container structure-viewer (max-width:520px){
@@ -227,7 +170,6 @@
 #structurePanel .structure-config-tabs{
   flex-wrap:nowrap;
   align-items:stretch;
-  overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
 }
@@ -244,15 +186,12 @@
   color:#222;
 }
 /* Three Structure tabs are likewise 1:1:1. */
-#structurePanel .structure-config-tabs{
-  overflow-x:hidden;
-}
 #structurePanel .structure-config-tabs > button{
   white-space:normal;overflow-wrap:anywhere;
   text-align:center;
 }
 
-/* v51: unified, two-pane CIF / mCIF Generator workspace.
+/* Unified, two-pane CIF / mCIF Generator workspace.
    Each side is one continuous card; sections inside the left card are separated
    by unobtrusive rules, not independent card outlines. */
 
@@ -275,7 +214,7 @@
   border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
 }
 
-/* v53: match CIF/mCIF source-section spacing and keep both interfaces legible. */
+/* Match CIF/mCIF source-section spacing and keep both interfaces legible. */
 #cifGeneratorPanel .cif-generator-source-section .cif-pane-heading{
   display:flex;
   align-items:center;
@@ -438,7 +377,7 @@
   background:#fff;
 }
 
-/* v71 — compact atom reordering controls, separate from the 3 equal actions. */
+/* Compact atom reordering controls, separate from the 3 equal actions. */
 
 #cifGeneratorPanel .cif-atom-row.cif-atom-dragging .cif-atom-cell{opacity:.5;}
 #cifGeneratorPanel .cif-atom-row.cif-atom-drop-before .cif-atom-cell{box-shadow:inset 0 calc(2px * var(--tas-density)) 0 #4488bd;}
@@ -637,7 +576,7 @@
   overscroll-behavior:contain;
   scrollbar-gutter:stable;
 }
-#structurePanel .cif-cell-box legend{font-size:1em;font-weight:700;padding:0 6px;}
+#structurePanel .cif-cell-box legend{padding:0 6px;}
 #structurePanel .cif-cell-box[hidden]{display:none!important;}
 #structurePanel .cif-cell-box .cif-generator-setup{margin-top:3px;}
 #structurePanel .cif-cell-box .cif-lattice-grid{margin-top:10px;}
@@ -648,3 +587,14 @@
 #structurePanel .cif-structure-editor-note p{margin:4px 0;padding:6px 10px;border-radius:6px}
 #structurePanel .cif-structure-editor-note p.info{background:#eef6fb;border:1px solid #b9d8ea;color:#1d4f6e}
 #structurePanel .cif-structure-editor-note p.warn{background:#fff6dc;border:1px solid #e7c96a;color:#6b5000}
+
+.cif-generator-message.error-text{color:#a22}
+
+
+/* Structure editor heading with Clear all at its right end. */
+#structurePanel .structure-config-section > .structure-section-heading{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--tas-density));margin:0 0 calc(8px * var(--tas-density))}
+#structurePanel .structure-section-heading > .structure-section-title{margin:0}
+#structurePanel .structure-section-heading > button{flex:none;white-space:nowrap}
+/* mCIF magnetic cell: one line, the multiple of the Cell. */
+#structurePanel .cif-magnetic-cell-text{margin:6px 0 0;font-size:max(var(--plane-tab-label-font),var(--plane-tab-warning-font));line-height:1.45;color:#000;}
+#structurePanel .cif-magnetic-cell-text[hidden]{display:none;}

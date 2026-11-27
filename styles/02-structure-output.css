@@ -129,7 +129,7 @@
   }
 }
 
-/* v56: A shared type scale for CIF and mCIF Generator.
+/* A shared type scale for CIF and mCIF Generator.
    Section headings match View / Structure settings: 15px bold.
    File actions and labels use the same sizes in both generators. */
 #cifGeneratorPanel .cif-generator-input-pane :is(.cif-pane-heading h3, .cif-atom-heading h3){
@@ -286,6 +286,15 @@
 #structurePanel #cifPreviewPanel #cifPreview{
   box-sizing:border-box;
   width:100%;
+  display:block;
+  flex:1 1 0;
+  height:0!important;
+  min-height:0!important;
+  max-height:none!important;
+  aspect-ratio:auto;
+  margin:0;
+  overflow:auto;
+  overscroll-behavior:contain;
 }
 #structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel):not(.hidden){
   display:flex;
@@ -317,17 +326,6 @@
   min-height:0!important;
   max-height:none!important;
   aspect-ratio:auto;
-  overflow:auto;
-  overscroll-behavior:contain;
-}
-#structurePanel #cifPreviewPanel #cifPreview{
-  display:block;
-  flex:1 1 0;
-  height:0!important;
-  min-height:0!important;
-  max-height:none!important;
-  aspect-ratio:auto;
-  margin:0;
   overflow:auto;
   overscroll-behavior:contain;
 }
@@ -390,3 +388,64 @@
 #structurePanel .reflection-powder-plot-wrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-fwhm{position:absolute;top:calc(8px * var(--tas-density));left:calc(8px * var(--tas-density));z-index:2;font-size:max(12px,calc(15px * var(--tas-density)))}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-xaxis{position:absolute;bottom:calc(4px * var(--tas-density));left:50%;transform:translateX(-50%);z-index:2;width:auto;min-width:calc(120px * var(--tas-density));max-width:none;font-size:max(12px,calc(16px * var(--tas-density)))}
+
+.cif-generator-section + .cif-generator-section{margin-top:calc(14px * var(--tas-density));padding-top:calc(12px * var(--tas-density));border-top:calc(1px * var(--tas-density)) solid #ddd}
+.cif-reflection-parameters-section .cif-generator-beam-grid{margin:calc(8px * var(--tas-density)) 0 0}
+
+/* Reflections: Table / Graph view tabs, wrapping option row, plot controls. */
+#cifReflectionsPanel > .reflection-view-tabs{margin:0 0 calc(8px * var(--tas-density))}
+
+#structurePanel .magnetic-options.reflection-options{
+  grid-auto-flow:row;
+  grid-template-columns:repeat(auto-fill,minmax(calc(170px * var(--tas-density)),1fr));
+}
+#structurePanel .magnetic-options .hidden{display:none!important}
+/* Graph controls: a normal row above the plot (never over the axes). */
+#structurePanel .reflection-powder-plot-wrap > .reflection-plot-controls{
+  position:static;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:calc(6px * var(--tas-density)) calc(18px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(8px * var(--tas-density)) 0;
+  font-size:max(12px,calc(15px * var(--tas-density)));
+  justify-content:flex-start;
+  align-self:stretch;
+}
+#structurePanel .reflection-plot-xaxis-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(6px * var(--tas-density));white-space:nowrap;}
+#structurePanel .reflection-plot-controls .reflection-plot-xaxis{position:static;transform:none;width:auto;min-width:0;}
+#structurePanel .reflection-plot-controls .reflection-plot-fwhm{position:static;}
+#structurePanel .reflection-plot-log{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));white-space:nowrap;}
+#structurePanel .reflection-plot-controls :is(.reflection-plot-log,.reflection-plot-fwhm,.reflection-plot-xaxis-label){
+  font-size:max(12px,calc(15px * var(--tas-density)))!important;font-weight:400;margin:0;
+}
+#structurePanel .reflection-plot-controls :is(input[type=number],select){font-size:max(12px,calc(15px * var(--tas-density)))!important}
+/* Keep a usable plot height on narrow windows (margins hold the axis titles and legend). */
+#structurePanel .reflection-powder-section .reflection-powder-plot{min-height:calc(440px * var(--tas-density))}
+
+/* Reflections (CIF/mCIF Generator): when the window is too short for the
+   controls plus the minimum graph height (small laptops, 125-150 % display
+   scaling, browser zoom), scroll inside the panel instead of clipping the
+   graph.  Large windows are unchanged: the graph still fills the space. */
+#structurePanel #generatorReflectionsPane .generator-reflection-pane > #cifReflectionsPanel{
+  overflow-x:hidden;
+  overflow-y:auto;
+  /* Let the wheel reach the page when this panel (or the table inside it)
+     cannot scroll further, e.g. in a half-width window where the editor and
+     the output are stacked. */
+  overscroll-behavior:auto;
+}
+#structurePanel #generatorReflectionsPane #cifReflectionTableWrap{overscroll-behavior:auto}
+/* Inside the scrolling panel the controls keep their natural height (they
+   would otherwise shrink and overlap); only the table area shrinks.  The
+   Table / Graph tabs stay at the top while the panel is scrolled. */
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > *{flex-shrink:0}
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{flex-shrink:1}
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > .reflection-view-tabs{position:sticky;top:0;z-index:3;background:var(--card-bg,#fff)}
+/* The table area keeps a readable minimum height; in a short window the panel
+   scrolls to it instead of squeezing the table to nothing. */
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{min-height:calc(220px * var(--tas-density))!important}
+
+/* CIF/mCIF Preview: the name of the file shown above the text. */
+.cif-preview-head{display:flex;align-items:center;min-width:0}
+.cif-preview-head > .cif-unified-preview-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

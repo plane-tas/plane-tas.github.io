@@ -3,6 +3,7 @@ import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {braggPeakScale} from './bragg-intensity.js';
 import {magneticSymbol} from './magnetic-symbols.js';
 import {overlayDrawnFor, qeColorbarSlots, vectorOverlayTraces} from './qe-dispersion-overlay.js';
+import {bindOncePerRegistry, installDoubleClickReset} from '../core/plot-events.js';
 // Q-vector map: oblique RLU grid, point-in-polygon tests and renderQEVectorMap.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
 export function createQEVectorMap(deps){
@@ -202,19 +203,16 @@ function qePointInPolygon(point,polygon){
 // Q-path edit. Disable that built-in reset on this plot and always return to
 // the current path's calculated axes instead (without affecting Constant E).
 function installQEVectorDoubleClickReset(plot){
-  if(!plot || typeof plot.on!=='function' || plot.__tasQEVectorResetHandler) return;
-  const handler=()=>{
+  installDoubleClickReset(plot,'__tasQEVectorDoubleClick',()=>{
     const view=plot.__tasQEVectorDefaultView;
-    if(!view || !plot.isConnected) return;
+    if(!view) return;
     Plotly.relayout(plot,{
       'xaxis.range':view.x.slice(),
       'yaxis.range':view.y.slice(),
       'xaxis.autorange':false,
       'yaxis.autorange':false
     }).catch(err=>console.warn('Q vector–E map reset:',err));
-  };
-  plot.__tasQEVectorResetHandler=handler;
-  plot.on('plotly_doubleclick',handler);
+  });
 }
 
 // A Bragg peak is shown on the Q vector–E map only when it lies exactly on
@@ -366,7 +364,6 @@ function renderQEVectorMap(cache){
       try{Plotly.purge(plot);}catch(_e){}
       plot.__tasQEVectorPathKey=null;
       plot.__tasQEVectorDefaultView=null;
-      plot.__tasQEVectorResetHandler=null;
       return;
     }
     const multiple=pathPoints.length>2;
@@ -758,13 +755,9 @@ function renderQEVectorMap(cache){
       if(width>0) plot.__tasPathUpdateAxisLabels?.(width);
     };
     // Zoom/pan changes which labels are visible and how far apart they are.
-    // Bound once per Plotly event registry (Plotly.purge makes a new one).
-    if(plot.__tasPathRelayoutBound!==plot._ev && typeof plot.on==='function'){
-      plot.__tasPathRelayoutBound=plot._ev;
-      plot.on('plotly_relayout',ev=>{
-        if(ev && Object.keys(ev).some(k=>k.startsWith('xaxis.'))) plot.__tasPathRefreshAxisLabels?.();
-      });
-    }
+    bindOncePerRegistry(plot,'__tasPathRelayoutBound',()=>plot.on('plotly_relayout',ev=>{
+      if(ev && Object.keys(ev).some(k=>k.startsWith('xaxis.'))) plot.__tasPathRefreshAxisLabels?.();
+    }));
     if(typeof ResizeObserver!=='undefined' && !plot.__tasPathResizeObserver){
       plot.__tasPathLastWidth=plotPixelWidth;
       plot.__tasPathResizeObserver=new ResizeObserver(entries=>{
@@ -784,7 +777,6 @@ function renderQEVectorMap(cache){
     try{Plotly.purge(plot);}catch(_e){}
     plot.__tasQEVectorPathKey=null;
     plot.__tasQEVectorDefaultView=null;
-    plot.__tasQEVectorResetHandler=null;
   }
 }
 

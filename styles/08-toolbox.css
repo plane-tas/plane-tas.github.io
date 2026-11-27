@@ -10,19 +10,6 @@
   }
 }
 
-@container (max-width:700px){
-  #toolboxPanel .toolbox-grid{
-    grid-template-columns:minmax(0,1fr)!important;
-  }
-  .absorption-beam-controls,
-  .absorption-thickness-control{
-    grid-template-columns:minmax(0,1fr)!important;
-  }
-  .absorption-thickness-control label:last-child{
-    justify-self:stretch;
-    max-width:none;
-  }
-}
 .s2-conversion-grid input,.s2-conversion-grid select{width:100%;}
 
 /* Stable Toolbox / CIF Generator UI transplant */
@@ -43,7 +30,7 @@
 .absorption-thickness-control{display:grid;align-items:end}
 .absorption-thickness-control input[type="range"]{width:100%;align-self:center;margin-bottom:calc(8px * var(--tas-density))}
 .absorption-right{min-height:calc(430px * var(--tas-density));background:#fff} /* no frame, as the form factor plot */
-.absorption-plot{height:100%;min-height:calc(430px * var(--tas-density))}
+.absorption-plot{height:100%;min-height:calc(430px * var(--tas-density));min-width:0!important;max-width:100%!important;width:100%!important}
 .absorption-results{margin-top:0}
 .absorption-table{table-layout:fixed;border-collapse:collapse;width:100%}
 .absorption-table th,.absorption-table td{border:calc(1px * var(--tas-density)) solid #c9c9c9!important;box-sizing:border-box}
@@ -52,6 +39,7 @@
   display:grid;
   gap:calc(9px * var(--tas-density));
   margin-top:calc(2px * var(--tas-density));
+  grid-template-columns:repeat(4,minmax(0,1fr));
 }
 .absorption-summary-card{
   border:calc(1px * var(--tas-density)) solid #c9c9c9;
@@ -62,6 +50,7 @@
 .absorption-summary-label{
   line-height:1.25;
   margin-bottom:calc(6px * var(--tas-density));
+  color:#222!important;
 }
 .absorption-summary-value{
   line-height:1.25;
@@ -92,13 +81,9 @@
 .absorption-beam-controls input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-summary-card,
 .absorption-summary-subgrid>div{background:#fff!important;}
-.absorption-summary-label{color:#222!important;}
 .absorption-summary-subgrid span{color:#222!important;}
 .absorption-thickness-control label:last-child{width:100%;}
 #absorptionTransmission{width:100%;}
-.absorption-summary-cards{
-  grid-template-columns:repeat(4,minmax(0,1fr));
-}
 .absorption-summary-cards > .absorption-summary-card:first-child{
   grid-column:span 1;
 }
@@ -146,11 +131,6 @@
   width:100%;
   overflow:hidden;
 }
-.absorption-plot{
-  min-width:0!important;
-  max-width:100%!important;
-  width:100%!important;
-}
 .absorption-input-mode-row{display:grid;gap:calc(8px * var(--tas-density));align-items:end}
 .absorption-input-mode-row select,.absorption-manual-row input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-manual-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(calc(150px * var(--tas-density)),.6fr);gap:calc(8px * var(--tas-density));align-items:end}
@@ -171,7 +151,7 @@
   white-space:nowrap;
 }
 
-/* v20: responsive CIF Generator and Neutron Attenuation.
+/* Responsive CIF Generator and Neutron Attenuation.
    Keep these rules after the desktop refinements so they cannot be overridden. */
 #cifGeneratorPanel .cif-generator-input-pane,
 #cifGeneratorPanel .cif-generator-output-pane,
@@ -214,7 +194,7 @@
   .absorption-summary-cards>.absorption-summary-card{grid-column:1!important}
 }
 
-/* v21: responsive field groups, no forced six-column scrolling. */
+/* Responsive field groups, no forced six-column scrolling. */
 .s2-conversion-card{min-width:0;max-width:100%;overflow:visible}
 .s2-conversion-grid{
   min-width:0!important;
@@ -258,11 +238,9 @@
 .toolbox-subtab:focus-visible{outline:calc(2px * var(--tas-density)) solid #5073b3;outline-offset:calc(2px * var(--tas-density));}
 #toolboxPanel .toolbox-subpanel{min-width:0;max-width:100%;width:100%;margin-top:0;}
 #toolboxPanel .toolbox-subpanel.hidden{display:none!important;}
-.magff-info{margin-top:calc(9px * var(--tas-density));color:#222;}
+.magff-info{color:#222;}
 .magff-plot{width:100%;min-width:0;}
-@container (max-width:700px){.toolbox-subtabs{grid-template-columns:repeat(2,minmax(0,1fr));}}
-
-/* v40: compact magnetic form factor; same text size as the main tabs. */
+/* Compact magnetic form factor; same text size as the main tabs. */
 .magff-info{min-height:0;margin:calc(4px * var(--tas-density)) 0;font-size:calc(13px * var(--tas-density));}
 .magff-info:empty{display:none;}
 .magff-plot{min-height:calc(380px * var(--tas-density));} /* + the title above the plot */
@@ -296,7 +274,7 @@
 }
 .magff-extra-row>label.hidden{display:none!important;}
 
-/* v43: Keep the attenuation plot, thickness slider and CSV action together.
+/* Keep the attenuation plot, thickness slider and CSV action together.
    Previously .absorption-plot {height:100%} filled the entire clipped
    .absorption-right card, hiding the controls that follow the graph. */
 #toolboxAttenuationPane .absorption-right{
@@ -353,17 +331,13 @@
   background:#f3f5f7;
   color:#222;
 }
-@container (max-width:700px){
-  .toolbox-subtabs{display:flex;grid-template-columns:none;}
-}
-
-/* v47: give the selected item a visible frame at every tab level. */
+/* Give the selected item a visible frame at every tab level. */
 .toolbox-subtab,
 #structurePanel .structure-config-tabs button{
   border:calc(1px * var(--tas-density)) solid transparent;
   box-sizing:border-box;
 }
-/* v47: compact four-field form-factor control row. */
+/* Compact four-field form-factor control row. */
 #toolboxFormFactorPane .magff-main-row{
   display:grid;
   grid-template-columns:repeat(6,minmax(0,1fr));
@@ -384,7 +358,7 @@
   min-width:0;
   max-width:100%;
 }
-/* v47: preserve three beam fields, with Set default on their right. */
+/* Preserve three beam fields, with Set default on their right. */
 #toolboxAttenuationPane .absorption-beam-row{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
@@ -514,3 +488,26 @@
 .magff-model:empty{display:none}
 /* c shows the weight in use; it is editable only with Custom c. */
 #toolboxFormFactorPane #magffWeight[readonly]{background:#f1f3f5;color:#3d4954;cursor:default}
+
+/* Late cross-panel overrides. These rules must load after the panel files to keep the cascade unchanged.
+   Load order is significant: styles/*.css are linked in numeric order from index.html. */
+
+.s2-conversion-info.warning{color:#a25a00;background:#fff8e6;border:calc(1px * var(--tas-density)) solid #e5c982;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
+.absorption-table th,.absorption-table td{padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));text-align:right;white-space:nowrap;width:20%}
+.absorption-table th:first-child,.absorption-table td:first-child{text-align:left}
+.absorption-cif-row>label,.absorption-cif-row input,.absorption-input-mode-row label,.absorption-input-mode-row select{min-width:0;max-width:100%;box-sizing:border-box}
+.magff-info.error{color:#9c441d;border:0;padding:0;background:transparent;}
+.magff-extra-row>label{
+  min-width:0;display:grid;gap:calc(5px * var(--tas-density));align-content:end;
+}
+.magff-extra-row :is(input,select){
+  box-sizing:border-box;width:100%;max-width:100%;min-width:0;
+}
+/* Toolbox, unit conversion: a row is highlighted by a click (the table is
+   wide); the λ multiple column stays in view when it scrolls sideways. */
+#toolboxUnitPane .harmonic-table > *{cursor:pointer}
+#toolboxUnitPane .harmonic-table > .harmonic-row-label{position:sticky;left:0;z-index:2;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight)}
+#toolboxUnitPane .harmonic-table > .harmonic-row-hover{background:#f6f9fc}
+#toolboxUnitPane .harmonic-table > .harmonic-row-selected{background:#e3eefb}
+/* Neutron attenuation: Select CIF/mCIF, then the file name (as in Sample). */
+#toolboxAttenuationPane .absorption-cif-row:not(.hidden){grid-template-columns:auto minmax(0,1fr)!important}

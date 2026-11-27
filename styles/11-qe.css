@@ -27,7 +27,7 @@
   }
 }
 
-/* v14: keep Angle calculation / TAS geometry and Time estimate at one stable width.
+/* Keep Angle calculation / TAS geometry and Time estimate at one stable width.
    The former geometry column was ~1/3 of the workspace; 1.4:1 makes it ~1.25x wider. */
 @media(min-width:1351px){
   #singleMain .chart-grid,
@@ -71,7 +71,7 @@
   box-sizing:border-box;
 }
 
-/* v63: Q-vector map legend, spacing, and taller plot. */
+/* Q-vector map legend, spacing, and taller plot. */
 #qeVectorPlot.qe-plot{
   height:calc(744px * var(--tas-density));
   min-height:calc(744px * var(--tas-density));
@@ -197,7 +197,7 @@
   }
 }
 
-/* 2026-10-12 — Q-E Range: one stable 50:50 split for BOTH right-hand tabs.
+/* Q-E Range: one stable 50:50 split for BOTH right-hand tabs.
    Earlier Time estimate rules could silently override the Angle/TAS layout,
    making the right card change width or forcing a vertical stack on a tab click.
    Keep the wide table scrollable inside its own pane instead. */
@@ -318,9 +318,6 @@
   white-space:nowrap;
   min-height:calc(30px * var(--tas-density));
 }
-#qeDisplayControls > .qe-path-tools{
-  margin-left:auto;
-}
 #qeDisplayControls .qe-path-tools .qe-path-snap-label{
   display:inline-flex;
   flex-direction:row;
@@ -328,7 +325,7 @@
   gap:calc(5px * var(--tas-density));
 }
 
-/* 2026-10-13 Constant E map toolbar and Resolution unit headings.
+/* Constant E map toolbar and Resolution unit headings.
    Display settings and path tools occupy two centered rows, never a
    horizontally scrolling strip. Narrow views wrap items within their row. */
 #qeDisplayControls {
@@ -368,7 +365,7 @@
   padding-block: calc(2px * var(--tas-density));
 }
 
-/* 2026-10-13: enlarge the three Constant E map path-edit buttons to match
+/* Enlarge the three Constant E map path-edit buttons to match
    neighboring actions without changing the two-row centered toolbar layout. */
 #qeDisplayControls .qe-path-tools :is(#qePathPickToggle, #qePathUndo, #qePathClear) {
   box-sizing: border-box;
@@ -378,7 +375,6 @@
   line-height: 1.25;
 }
 
-/* Magnetic scale only for a single-k magnetic structure. */
 /* Scale row: equal columns, each item in its own place -- F_N min / max,
    M = x N, F_M min / max, I min / max, log I.  An item not in use keeps
    its place (hidden), so nothing moves. */
@@ -424,7 +420,7 @@
 #qeConstantMapPane .qe-range-control :is(#hwEntry,#qeWEntry){order:3;flex:none;box-sizing:border-box;width:calc(82px * var(--tas-density));min-width:0;min-height:calc(32px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density))}
 /* λ/2: centred on the row, its caption the size of "ħω (meV)", its check
    box the size of the other check boxes (Show, labels, …). */
-#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{order:4;flex:none;display:inline-flex;align-items:center;align-self:center;gap:calc(5px * var(--tas-density));margin:0;min-height:0;white-space:nowrap;cursor:pointer}
+#qeConstantMapPane .qe-range-control .qe-lambda-half-toggle{order:4;flex:none;display:inline-flex;align-items:center;align-self:center;gap:calc(5px * var(--tas-density));margin:0;min-height:0;cursor:pointer}
 #qeConstantMapPane .qe-range-control .qe-lambda-half-toggle,
 #qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > span{font-size:var(--plane-tab-label-font)!important;line-height:1.35!important;white-space:nowrap!important}
 #qeConstantMapPane .qe-range-control .qe-lambda-half-toggle > input[type="checkbox"]{width:13px;height:13px;margin:0;flex:none}
@@ -438,3 +434,47 @@
   #qeConstantMapPane > .qe-range-control-grid > :is(.qe-save-cell,.qe-range-control,.qe-spurion-cell){grid-column:1;grid-row:auto}
   #qeConstantMapPane > .qe-range-control-grid > .qe-spurion-cell{justify-self:start;text-align:left;min-height:calc(var(--plane-tab-warning-font) * 1.45)}
 }
+
+.qe-external-legend .qe-legend-item{
+  display:inline-flex;gap:calc(6px * var(--tas-density));align-items:center;
+  border:calc(1px * var(--tas-density)) solid transparent;border-radius:calc(4px * var(--tas-density));
+  padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density));background:transparent;color:#202a37;
+  cursor:pointer;line-height:1.25;text-align:left;
+}
+.qe-external-legend .qe-legend-item:hover,
+.qe-external-legend .qe-legend-item:focus-visible{background:#f2f5f9;border-color:#b7c2d0}
+.qe-external-legend .qe-legend-swatch{
+  display:inline-block;flex:0 0 calc(16px * var(--tas-density));height:calc(10px * var(--tas-density));border-radius:calc(2px * var(--tas-density));
+  background:var(--legend-color);border:calc(1px * var(--tas-density)) solid rgba(0,0,0,.15);
+}
+.qe-external-legend .qe-legend-line{
+  height:0;border:0;border-top:calc(3px * var(--tas-density)) solid var(--legend-color);
+  border-radius:0;background:transparent;
+}
+/* Snap 1/n entry and the Constant E map HKL path box (same path as Q vector–E). */
+#qePathSnap{width:calc(64px * var(--tas-density))!important;min-width:0!important;text-align:center;}
+.qe-path-snap-label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:calc(3px * var(--tas-density));}
+/* Snap first (it also snaps the dragged Angle-calculation point), then a
+   wider gap before Select Path / Undo / Clear. */
+#qeDisplayControls .qe-path-tools > .qe-path-snap-label{margin-right:calc(10px * var(--tas-density))}
+.qe-constant-path-input{margin-top:calc(6px * var(--tas-density));display:flex!important;align-items:center;gap:calc(6px * var(--tas-density));}
+.qe-constant-path-input label{flex:none;}
+.qe-constant-path-input input{flex:1 1 auto;width:auto!important;min-width:0!important;}
+/* Powder: no map tabs and no HKL path box (beats the display rules above). */
+#qePanel .qe-map-tabs.hidden,
+#qePanel .qe-constant-path-input.hidden{display:none!important;}
+
+/* Q-E Range fitted to the visible workspace height (see ui-shell.js): one
+   height per plot, so a map keeps its own when the other map tab is shown. */
+#qePanel #singlePlot.qe-fit,#qePanel #powderPlot.qe-fit,#qePanel #qeVectorPlot.qe-fit,
+#qePanel #geometryPlot.qe-fit{
+  height:var(--qe-fit)!important;
+  min-height:0!important;
+}
+/* "labels" checkbox right after the Nuclear Bragg peaks legend entry. */
+.qe-external-legend .qe-legend-labels,#qePlotLegend .qe-legend-labels{
+  display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));
+  margin-left:calc(-8px * var(--tas-density));font-size:calc(13px * var(--tas-density));color:#202a37;
+  white-space:nowrap;cursor:pointer;
+}
+.qe-external-legend .qe-legend-labels input,#qePlotLegend .qe-legend-labels input{margin:0;cursor:pointer}

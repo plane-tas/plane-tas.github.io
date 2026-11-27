@@ -1,5 +1,7 @@
 // Constant-E single-crystal map: peak marker sizes/labels, zoom-dependent scaling and colorbar.
 // Extracted from app.js without changing calculation/display behavior; dependencies are injected by app.js.
+import {installDoubleClickReset} from '../core/plot-events.js';
+
 export function createQESingleMap(deps){
   const {
     $, currentQEMapUnit, qeXYForUnit
@@ -181,30 +183,20 @@ function bindSingleZoomPeakScaling(cache,fullX,fullY){
   gd.on('plotly_relayout',handler);
   // Plotly's built-in reset can restore stale axis ranges after the panel
   // changes width, especially when the plot has different r.l.u. X/Y spans.
-  // Disable that implicit reset and restore the latest *data-derived* ranges
-  // ourselves on every double-click. Both units now use physical Q coordinates.
-  if(gd.__tasSingleMapDoubleClickHandler && typeof gd.removeListener==='function')
-    gd.removeListener('plotly_doubleclick',gd.__tasSingleMapDoubleClickHandler);
-  const resetHandler=()=>{
-    const drawToken=gd.__tasMapDrawToken;
-    // Plotly's doubleclick event is emitted before its internal relayout.
-    // Defer our replacement relayout until the native event has completed.
-    requestAnimationFrame(()=>{
-      if(gd.__tasMapDrawToken!==drawToken || !gd.isConnected) return;
-      const view=gd.__tasSingleMapDefaultView;
-      if(!view || view.x?.length!==2 || view.y?.length!==2) return;
-      Plotly.relayout(gd,{
-        'xaxis.range':view.x.slice(),
-        'yaxis.range':view.y.slice(),
-        'xaxis.autorange':false,
-        'yaxis.autorange':false,
-        'yaxis.scaleanchor':'x',
-        'yaxis.scaleratio':1
-      }).catch(err=>console.warn('Constant E map reset warning:',err));
-    });
-  };
-  gd.__tasSingleMapDoubleClickHandler=resetHandler;
-  gd.on('plotly_doubleclick',resetHandler);
+  // Restore the latest *data-derived* ranges instead (both units use
+  // physical Q coordinates); not after a redraw in between.
+  installDoubleClickReset(gd,'__tasSingleMapDoubleClick',()=>{
+    const view=gd.__tasSingleMapDefaultView;
+    if(!view || view.x?.length!==2 || view.y?.length!==2) return;
+    Plotly.relayout(gd,{
+      'xaxis.range':view.x.slice(),
+      'yaxis.range':view.y.slice(),
+      'xaxis.autorange':false,
+      'yaxis.autorange':false,
+      'yaxis.scaleanchor':'x',
+      'yaxis.scaleratio':1
+    }).catch(err=>console.warn('Constant E map reset warning:',err));
+  },{drawToken:g=>g.__tasMapDrawToken});
   if(!gd.__tasPeakResizeObserver && typeof ResizeObserver!=='undefined'){
     gd.__tasPeakResizeObserver=new ResizeObserver(()=>{
       requestAnimationFrame(()=>{

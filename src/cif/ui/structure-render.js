@@ -2,6 +2,7 @@
 // Part of the CIF/Structure UI (see ../cif-ui.js for how the parts are wired).
 import {downloadBlob} from '../../core/download.js';
 import {pngNameFromEntry, syncCsvNameTemplate} from '../../core/csv-name.js';
+import {bindOncePerRegistry} from '../../core/plot-events.js';
 export function installStructureRender(ctx){
   const {deps:{
     $
@@ -288,20 +289,20 @@ function renderCifStructureView(){
   }).catch(()=>{
     if(renderRevision===cifState.structureCameraRenderRevision) cifState.structureProgrammaticCameraUpdate=false;
   });
-  // Bound once per Plotly event registry (Plotly.purge makes a new one).
-  if(plot._structureCameraBound!==plot._ev && typeof plot.on==="function"){
-    plot._structureCameraBound=plot._ev;
-    const syncTriadsFromCamera=camera=>{
-      const copied=fn.copyStructureCamera(camera);
-      if(!copied) return;
-      cifState.structureCameraState=copied;
-      const latest=fn.directLatticeBasis(fn.currentStructureForViewer()?.structure?.lattice) || basis;
-      fn.updateStructureOrientationTriads(latest,copied);
-    };
-    const syncTriadsFromLiveCamera=()=>{
-      const copied=fn.currentStructureCamera();
-      if(copied) syncTriadsFromCamera(copied);
-    };
+  // Plotly listeners once per event registry (Plotly.purge drops them with
+  // it); the pointer and wheel listeners of the element only once.
+  const syncTriadsFromCamera=camera=>{
+    const copied=fn.copyStructureCamera(camera);
+    if(!copied) return;
+    cifState.structureCameraState=copied;
+    const latest=fn.directLatticeBasis(fn.currentStructureForViewer()?.structure?.lattice) || basis;
+    fn.updateStructureOrientationTriads(latest,copied);
+  };
+  const syncTriadsFromLiveCamera=()=>{
+    const copied=fn.currentStructureCamera();
+    if(copied) syncTriadsFromCamera(copied);
+  };
+  bindOncePerRegistry(plot,'_structureCameraBound',()=>{
     const onCameraMotion=ev=>{
       if(cifState.structureProgrammaticCameraUpdate) return;
       // Prefer the live camera over relayout payloads, which can lag one frame.
@@ -311,14 +312,17 @@ function renderCifStructureView(){
       else if(eventCamera) syncTriadsFromCamera(eventCamera);
       else requestAnimationFrame(syncTriadsFromLiveCamera);
     };
+    plot.on("plotly_relayouting",onCameraMotion);
+    plot.on("plotly_relayout",onCameraMotion);
+  });
+  if(!plot._structurePointerBound){
+    plot._structurePointerBound=true;
     let trackingPointer=false, trackingFrame=0;
     const trackWhilePointerDown=()=>{
       if(!trackingPointer) return;
       syncTriadsFromLiveCamera();
       trackingFrame=requestAnimationFrame(trackWhilePointerDown);
     };
-    plot.on("plotly_relayouting",onCameraMotion);
-    plot.on("plotly_relayout",onCameraMotion);
     plot.addEventListener("pointerdown",()=>{
       trackingPointer=true;
       cancelAnimationFrame(trackingFrame);

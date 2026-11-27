@@ -3,6 +3,7 @@
 // Part of Resolution › Convolution (see convolution-ui.js for how the parts
 // are wired: shared state, functions by name in fns).
 import {AXIS_TITLE_FONT, FONT} from './convolution-constants.js';
+import {installDoubleClickReset} from '../core/plot-events.js';
 import {LEGEND_COLS, fmt, legendLine, legendFields as legendValues, loadLegendColumns, saveLegendColumns} from './convolution-legend.js';
 
 export function installConvolutionScan(context){
@@ -172,15 +173,10 @@ export function installConvolutionScan(context){
     const el=$('convScanPlot');
     el.__convLogY=layout.yaxis.type==='log' ? layout.yaxis.range?.slice() : null;
     Plotly.react(el,traces,layout,{responsive:true,displaylogo:false,doubleClick:false});
-    // Bound once per Plotly event registry (Plotly.purge makes a new one).
-    if(el.__convDoubleClick!==el._ev){
-      el.__convDoubleClick=el._ev;
-      el.on('plotly_doubleclick',()=>requestAnimationFrame(()=>{
-        if(!el.isConnected) return;
-        const y=el.__convLogY;
-        Plotly.relayout(el,{'xaxis.autorange':true,...(y ? {'yaxis.range':y.slice(),'yaxis.autorange':false} : {'yaxis.autorange':true})});
-      }));
-    }
+    installDoubleClickReset(el,'__convDoubleClick',()=>{
+      const y=el.__convLogY;
+      Plotly.relayout(el,{'xaxis.autorange':true,...(y ? {'yaxis.range':y.slice(),'yaxis.autorange':false} : {'yaxis.autorange':true})});
+    });
   }
   // Save figure: the plot as on screen (current zoom) with the legend table
   // (a head row and one row per curve, the columns shown on screen) under it.  The legend is drawn with shapes and
