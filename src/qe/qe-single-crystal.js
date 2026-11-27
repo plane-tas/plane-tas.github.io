@@ -94,7 +94,8 @@ export function createQESingleCrystal(deps){
     if(QrefNorm>1e-10){
       const dRef=2*PI/QrefNorm;
       const arg=wavelength/(2*dRef);
-      if(arg>1+1e-12) throw new Error("Reference Q is not accessible at the selected reference energy.");
+      // An input error of Sample orientation (the Bragg peak position).
+      if(arg>1+1e-12) throw new Error(`Sample orientation: the Bragg peak (${formatHKL(ref).replace(/,/g,', ')}) cannot be reached at ${energyMode==="Ef fixed"?"Ef":"Ei"} = ${Number(fixedReferenceEnergy.toFixed(3))} meV. `);
       thetaRef=rad2deg(Math.asin(clamp(arg,-1,1)));
     }
 

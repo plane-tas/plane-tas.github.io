@@ -182,6 +182,7 @@ export function installConvolutionSettings(context){
     if(saved.checks?.convShowLine===false) for(const id of ['convLineU','convLineV','convLineE']) if($(id)) $(id).checked=false;
     fns.showIntegration();
     if(saved.zlim){ fns.zlim.min=Number.isFinite(saved.zlim.min) ? saved.zlim.min : null; fns.zlim.max=Number.isFinite(saved.zlim.max) ? saved.zlim.max : null; }
+    fns.showZRange?.();
   }
   async function restoreFile(){
     restoreInputs();

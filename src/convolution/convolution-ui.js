@@ -132,6 +132,7 @@ export function createConvolutionUI(deps){
     $('convSelectFile')?.addEventListener('click',()=>file?.click());
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; fns.loadFile(f); });
     $('convShowExample')?.addEventListener('click',fns.showExample);
+    fns.showZRange();
     fns.restoreFile();
     // W: 0 (a TAS measures in the scattering plane; the resolution out of
     // it is integrated); its boxes cannot be edited.
@@ -203,7 +204,7 @@ export function createConvolutionUI(deps){
     // Both act on the maps shown: usable only while they are drawn.
     for(const id of ['convSaveFigure2D','convSetQE2D']) enableWithPlot($(id),$('convMapUV'));
     $('convShowDispersion')?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
-    $('convLog2D')?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
+    $('convLog2D')?.addEventListener('change',()=>{ fns.saveInputs(); fns.showZRange(); fns.drawMaps(); });
     for(const id of ['convEllCoh','convEllInc','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
     for(const end of ['min','max']){
       const el=$(`convZ${end}`);
@@ -214,6 +215,8 @@ export function createConvolutionUI(deps){
       };
       el?.addEventListener('change',apply);
       el?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); apply(); el.blur(); } });
+      // A box left empty shows the automatic value again.
+      el?.addEventListener('blur',()=>{ if(el.value.trim()==='') fns.showZRange(); });
       applyWhileTyping(el,apply,{allowEmpty:true});
     }
     for(const [key,input,arr] of [['U','convValueU','A'],['V','convValueV','B'],['E','convValueE','E']]){

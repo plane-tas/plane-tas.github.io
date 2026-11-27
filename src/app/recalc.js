@@ -75,6 +75,7 @@ function recalculate(){
   // update, so it is kept.
   if(timer && !resolutionPanelIsVisible()){ clearTimeout(timer); timer=null; }
   clearError();
+  clearError("qeErrorBox");
   updateEnergyLabel();
   updateS2MaxDisplay();
   updateModeVisibility();
@@ -96,7 +97,9 @@ function recalculate(){
       renderGeometry(getPowderCache(),0);
     }
   }catch(err){
-    showError(err);
+    // Shown in Q-E Range only (under the main tabs): the other tabs do not
+    // use this calculation.
+    showError(err,"qeErrorBox");
     // No stale angles or drawing from the previous settings.
     const angles=$("geometryAngles");
     if(angles) angles.textContent="Enter a target Q and ħω to calculate TAS angles.";

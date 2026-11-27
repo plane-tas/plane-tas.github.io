@@ -64,8 +64,21 @@ export function installConvolutionMaps(context){
     if(state.mapsDrawing) state.mapsDrawing.then(purge); else purge();
     $('convDownload2D').disabled=true;
     for(const key of ['U','V','E']){ const s=$(`convSlider${key}`); if(s) s.disabled=true; }
-    // No result: the colour-scale boxes are automatic again.
-    for(const end of ['min','max']){ const el=$(`convZ${end}`); if(el){ el.placeholder='auto'; if(fns.zlim[end]===null) el.value=''; } }
+    // No result: the colour-scale boxes show the provisional range.
+    state.zInUse=null; showZRange();
+  }
+  // Colour-scale entries: the value in use is always written in the box,
+  // ready to be edited (a value typed in fixes that end; clearing the box
+  // returns it to automatic, and the automatic value is written back).
+  // Automatic: the whole calculation; before there is a result, 0 to 1
+  // (log I: 1e-4 to 1).
+  function showZRange(){
+    const log=!!$('convLog2D')?.checked, def=log ? ['1e-4','1'] : ['0','1'];
+    ['min','max'].forEach((end,i)=>{
+      const el=$(`convZ${end}`); if(!el || document.activeElement===el) return;
+      const v=state.zInUse ? state.zInUse[end] : fns.zlim[end];
+      el.value=v===null || v===undefined || !Number.isFinite(v) || (log && !(v>0)) ? def[i] : String(Number(v.toPrecision(3)));
+    });
   }
   // Stop: the 2D result is discarded, and so are the previous maps.
   function stop2D(){ state.run2D++; state.cancelJobs(); state.busy2D=false; setRunning('convCalculate2D',false); clear2DResult(); statusEnd('convMessage2D','Stopped',true); }
@@ -420,16 +433,7 @@ export function installConvolutionMaps(context){
     state.mapsDrawing=pending;
     pending.then(()=>{ if(state.mapsDrawing===pending) state.mapsDrawing=null; });
     for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',obl ? [obl.x0,obl.x1] : A,obl ? [obl.y0,obl.y1] : B]]) keepRange(id,x,y);
-    // Entries: the value in use is always written in the box (automatic:
-    // the whole calculation), ready to be edited; a value typed in fixes
-    // that end, and clearing the box returns it to automatic.  "auto" (grey)
-    // only before there is a result.
-    for(const [end,v] of [['min',zmin],['max',zmax]]){
-      const el=$(`convZ${end}`); if(!el) continue;
-      el.placeholder='auto';
-      if(document.activeElement===el) continue;
-      el.value=String(Number(v.toPrecision(3)));
-    }
+    state.zInUse={min:zmin,max:zmax}; showZRange();
   }
   // log I: [smallest positive I (not below 10⁻⁶ of the maximum), maximum].
   function volumeRangeLog(I){
@@ -558,5 +562,5 @@ export function installConvolutionMaps(context){
     if(!state.volume) return;
     setOverlayVolume({name:state.volume.source||'2D slice (Convolution)',volume:state.volume,settings:state.volume.settings});
   }
-  Object.assign(fns,{prepare2D, setRunning, setFill, setProgress, statusEnd, clear2DResult, stop2D, calculate2D, finish2D, nearest, setupSliders, planeSymbols, componentText, pointText, sliderIndex, keepRange, drawMaps, volumeRangeLog, volumeRange, niceStep, Q_STEPS, E_STEPS, gridIn, ellCache, ellipseCov, ellipsePath, ellipseTraces, saveMapsFigure, setOnQE});
+  Object.assign(fns,{showZRange, prepare2D, setRunning, setFill, setProgress, statusEnd, clear2DResult, stop2D, calculate2D, finish2D, nearest, setupSliders, planeSymbols, componentText, pointText, sliderIndex, keepRange, drawMaps, volumeRangeLog, volumeRange, niceStep, Q_STEPS, E_STEPS, gridIn, ellCache, ellipseCov, ellipsePath, ellipseTraces, saveMapsFigure, setOnQE});
 }

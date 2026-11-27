@@ -48,7 +48,8 @@
 .tab-panel .qe-spurion-warning,
 .tab-panel .time-estimate-message,
 .tab-panel .absorption-warning,
-.tab-panel #cifSpinIndividualInfo {
+.tab-panel #cifSpinIndividualInfo,
+.tab-panel #qeErrorBox {
   font-size: var(--plane-tab-warning-font) !important;
   line-height: 1.45;
 }

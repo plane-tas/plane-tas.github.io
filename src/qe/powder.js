@@ -5,6 +5,7 @@ import {nuclearExtinctionThreshold, nuclearStructureFactorSquared} from '../cif/
 import {qeMapTitle, qeTitleLayout} from './qe-plot-title.js';
 import {PLOT_FONTS} from '../core/plot-fonts.js';
 import {magneticRatioText} from './bragg-intensity.js';
+import {installDoubleClickReset} from '../core/plot-events.js';
 
 export function createPowder(deps){
   const {
@@ -337,7 +338,11 @@ function drawPowder(state){
   const keptPowderView=currentPlotRanges("powderPlot");
 
   renderQEExternalLegend('qePowderLegend','powderPlot',traces);
-  Plotly.react("powderPlot",traces,{
+  // Double-click: back to the ranges of this calculation (Plotly's own
+  // reset would go back to those of the first drawing).
+  const powderNode=document.getElementById("powderPlot");
+  if(powderNode) powderNode.__tasPowderMapView={x:[0,Qdraw],y:[hwmin,hwmax]};
+  const powderDraw=Plotly.react("powderPlot",traces,{
     uirevision:"powderPlot-q",
     title:qeTitleLayout(state.title),
     showlegend:false,
@@ -372,7 +377,12 @@ function drawPowder(state){
     // Room for the colorbars on the right (as in the Constant E map).
     margin:{l:66,r:nuclearShaded?88:34,t:56,b:65},
     hovermode:"closest"
-  },{responsive:true,doubleClick:"reset"});
+  },{responsive:true,doubleClick:false});
+  Promise.resolve(powderDraw).then(()=>installDoubleClickReset(powderNode,'__tasPowderMapDoubleClick',gd=>{
+    const view=gd.__tasPowderMapView; if(!view) return;
+    Plotly.relayout(gd,{'xaxis.range':view.x.slice(),'yaxis.range':view.y.slice(),'xaxis.autorange':false,'yaxis.autorange':false})
+      .catch(err=>console.warn('Powder Q-E map reset:',err));
+  })).catch(err=>console.warn('Powder Q-E map:',err));
 }
 
 function calculatePowder(){

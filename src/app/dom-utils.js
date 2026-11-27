@@ -73,7 +73,9 @@ export function userFacingTasMessage(value){
 // original error goes to the browser console.
 const INTERNAL_MATH_ERROR=/^(Singular matrix|inverse requires square matrix|matmul shape mismatch)/;
 const INTERNAL_JS_ERRORS=new Set(['TypeError','ReferenceError','RangeError','SyntaxError']);
-export function showError(err){
+// The error box above the main tabs (errorBox), or another box given by id
+// (qeErrorBox: errors of the Q-E Range calculation, shown in that tab only).
+export function showError(err,boxId="errorBox"){
   const raw=err instanceof Error ? err.message : String(err);
   let text=userFacingTasMessage(raw);
   if(INTERNAL_MATH_ERROR.test(raw)){
@@ -83,11 +85,12 @@ export function showError(err){
     console.error(err);
     text='Unexpected internal error: the calculation was stopped. Details are in the browser console.';
   }
-  $("errorBox").textContent = text;
-  $("errorBox").classList.remove("hidden");
+  const box=$(boxId)||$("errorBox");
+  box.textContent = text;
+  box.classList.remove("hidden");
 }
 
-export function clearError(){ $("errorBox").classList.add("hidden"); $("errorBox").textContent=""; }
+export function clearError(boxId="errorBox"){ const box=$(boxId); if(!box) return; box.classList.add("hidden"); box.textContent=""; }
 
 export function setStatus(text){ $("status").textContent=text; }
 
