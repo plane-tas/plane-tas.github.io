@@ -737,8 +737,10 @@ function syncResolutionModeControls({release=false}={}){
   const conv=$('resolutionTabConvolution');
   if(conv){
     conv.disabled=elastic; conv.title=elastic ? 'Not available for elastic-only modes (no analyzer, 4-circle).' : '';
-    if(elastic && conv.classList.contains('active')) $('resolutionTabSimulation')?.click();
   }
+  // Resolution › Simulation while Convolution is unavailable; the user's
+  // last choice comes back with an instrument that has it (convolution-ui.js).
+  document.dispatchEvent(new CustomEvent('plane-tas:convolution-available',{detail:!elastic}));
   for(const id of changed) $(id)?.dispatchEvent(new Event('change',{bubbles:true}));
 }
 // 3rd horizontal collimator: Soller or radial (combobox).  With radial the

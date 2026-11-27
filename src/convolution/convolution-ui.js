@@ -109,7 +109,9 @@ export function createConvolutionUI(deps){
       const el=$(id); if(el?.data && el.offsetParent) try{ Plotly.Plots.resize(el); }catch(_e){}
     }
   }
-  function showPane(name){
+  // persist: false when the pane is changed by the app (Convolution not
+  // available for the instrument), not by the user: the saved choice stays.
+  function showPane(name,{persist=true}={}){
     const conv=name==='convolution';
     $('resolutionSimulationPane').hidden=conv;
     $('resolutionConvolutionPane').hidden=!conv;
@@ -117,7 +119,7 @@ export function createConvolutionUI(deps){
       $(id)?.classList.toggle('active',on); $(id)?.setAttribute('aria-selected',String(on));
     }
     if(conv && $('method')) for(const id of ['convMethod2D','convMethod1D']) if($(id)) $(id).value=$('method').value;
-    try{ localStorage.setItem('plane-tas-resolution-pane',name); }catch(_e){}
+    if(persist) try{ localStorage.setItem('plane-tas-resolution-pane',name); }catch(_e){}
     requestAnimationFrame(()=>{ fitHeight(); resizePlots(); fns.renderTableRows(); });
   }
   function bindConvolutionUI(){
@@ -142,6 +144,18 @@ export function createConvolutionUI(deps){
     const heads=()=>setTimeout(fns.updateRangeHeads,0);
     for(const ev of ['input','change']) document.addEventListener(ev,e=>{ if(HEAD_IDS.has(e.target?.id) || e.target?.id==='cifFileInput') heads(); });
     $('resolutionTabConvolution')?.addEventListener('click',heads);
+    // Convolution available or not (instrument-setup.js, on every instrument
+    // sync; at start-up also for the first instrument of the list, before
+    // the saved one): Simulation while it is not, else the user's last
+    // choice.  The saved choice is not changed.
+    document.addEventListener('plane-tas:convolution-available',e=>{
+      let saved='simulation'; try{ saved=localStorage.getItem('plane-tas-resolution-pane')||'simulation'; }catch(_e){}
+      const want=e.detail && saved==='convolution' ? 'convolution' : 'simulation';
+      const now=$('resolutionTabConvolution')?.classList.contains('active') ? 'convolution' : 'simulation';
+      if(want===now) return;
+      showPane(want,{persist:false});
+      if(want==='convolution') heads();
+    });
     $('cifClearButton')?.addEventListener('click',heads);
     fns.updateRangeHeads();
     $('convResetRanges')?.addEventListener('click',()=>{ if(state.interp){ fns.fillRanges(); fns.saveInputs(); } });

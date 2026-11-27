@@ -6,7 +6,7 @@ import {autoGridSize, convolvePoint, convolvePointGrid, gaussianGrid, nearDisper
 import {inverse} from '../core/matrix.js';
 import {inferOutOfPlaneHKL} from '../resolution/resolution-core.js';
 import {fmt} from './convolution-legend.js';
-import {LATTICE_MAX_NODES, covariance, createEngine, initialLattice, newNodes, refineLattice, roughCells} from './convolution-lattice.js';
+import {LATTICE_MAX_NODES, LATTICE_TOL, change, covariance, createEngine, initialLattice, newNodes, refineLattice, roughCells} from './convolution-lattice.js';
 
 export function installConvolutionCalc(context){
   const {$, calcResolution, collectResolutionBase}=context.deps;
@@ -134,7 +134,9 @@ export function installConvolutionCalc(context){
     }catch(_e){ state.workersBroken=true; state.workers=null; }
     return state.workers;
   }
-  function killWorkers(){ state.workers?.forEach(w=>w.terminate()); state.workers=null; }
+  // (The time estimate then counts starting the threads and reading the
+  // table again.)
+  function killWorkers(){ state.workers?.forEach(w=>w.terminate()); state.workers=null; scheduleEstimates(); }
   // Run jobs on the workers; onDone(reply, job) for each.  A worker that
   // fails to load rejects with workerFailed (the caller then runs on the page).
   function runJobs(ws,jobs,onDone){
@@ -171,7 +173,7 @@ export function installConvolutionCalc(context){
     });
   }
   const workerRunner=ws=>({
-    size:ws.length,
+    size:ws.length, workers:true,
     broadcast:msg=>ws.forEach(w=>w.postMessage(msg)),
     run:(jobs,onDone)=>runJobs(ws,jobs,onDone)
   });
@@ -197,6 +199,8 @@ export function installConvolutionCalc(context){
     const {base,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
     const gridMode=integrationMode('2D')==='grid';
     R.broadcast({type:'table',key:state.tableKey,text:state.text,format:fns.formatValue()});
+    // (The threads now have this table: no reading time in the next estimate.)
+    if(R.workers) state.workersTable=state.tableKey;
     R.broadcast({type:'base',base});
     const items=[];  // per row: [{ia,hkl}] inside the range
     for(let ib=0;ib<Bv.length;ib++){
@@ -275,9 +279,10 @@ export function installConvolutionCalc(context){
   }
 
   // --------------------------------------------------------- time estimate --
-  // Time = points × MC samples × (time per sample) + resolution matrices ×
-  // (time per matrix).  The two unit times are measured once on this
-  // computer with the loaded table and the current approximation.
+  // Time = points × (time per point: MC samples or grid nodes) + resolution
+  // matrices × (time per matrix), shared between the threads, + reading the
+  // table in the threads (2D, first run).  The unit times are measured once
+  // on this computer with the loaded table and the current approximation.
   // Median time of k runs (single runs of a few ms are noisy: JIT, GC).
   const medianTime=(fn,k)=>{
     const t=[];
@@ -298,9 +303,11 @@ export function installConvolutionCalc(context){
       c=at(f);
       for(const E of Es){
         if(!resolutionAt(base,c,E,{})) continue;
-        const t0=performance.now(); let r=null;
-        for(let i=0;i<3;i++) r=resolutionAt(base,c,E,{});
-        tRes=(performance.now()-t0)/3; res=r; break;
+        // Warmed up first, then the median of several runs (a few runs of
+        // about 1 ms each vary by a factor of 3: JIT, GC).
+        for(let i=0;i<3;i++) res=resolutionAt(base,c,E,{});
+        tRes=medianTime(()=>{ res=resolutionAt(base,c,E,{}); },9);
+        break;
       }
       if(res) break;
     }
@@ -316,7 +323,10 @@ export function installConvolutionCalc(context){
     const G=gaussianGrid([11,11,11]), Ec=res.energies.Ei-res.energies.Ef;
     convolvePointGrid(c,Ec,res,state.interp,G,{model:'given',skip:false});
     const tNode=0.75*medianTime(()=>convolvePointGrid(c,Ec,res,state.interp,G,{model:'given',skip:false}),9)/G.weights.length;
-    state.bench={key,tRes,tSample,tNode};
+    // A node of the 2D lattice with Grid also gets its automatic grid size.
+    autoGridSize(c,Ec,res,state.interp,{budget:Infinity});
+    const tAuto=medianTime(()=>autoGridSize(c,Ec,res,state.interp,{budget:Infinity}),5);
+    state.bench={key,tRes,tSample,tNode,tAuto};
     return state.bench;
   }
   const timeText=sec=>{
@@ -352,23 +362,8 @@ export function installConvolutionCalc(context){
   function estimate2D(){
     const b=measureBench(); if(!b) return {t:NaN};
     const g=fns.prepare2D();
-    let per, n=null;
-    // Points far from the dispersion are skipped after a quick check (Grid
-    // and Monte Carlo): the full cost applies to the fraction near it
-    // (sampled on a coarse subset of the map).
-    const sub=(arr,k)=>arr.length<=k ? arr : Array.from({length:k},(_,i)=>arr[Math.round(i*(arr.length-1)/(k-1))]);
-    const near=()=>{
-      const sample=[];
-      for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
-        const hkl=g.plane.hkl(a,bb);
-        for(const e of sub(g.E,9)) sample.push({hkl,E:e});
-      }
-      return nearFraction(g.base,sample);
-    };
-    if(integrationMode('2D')==='mc'){
-      const {frac,tCheck}=near();
-      per=tCheck+frac*mcSamples('2D')*b.tSample;
-    }
+    let n=null, integ;
+    if(integrationMode('2D')==='mc') integ={mode:'mc',samples:standardNormalSamples(mcSamples('2D'))};
     else{
       const pick=arr=>[arr[0],arr[Math.floor(arr.length/2)],arr[arr.length-1]];
       const pts=[];
@@ -377,12 +372,79 @@ export function installConvolutionCalc(context){
         pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
       }
       n=gridSizeFor('2D',pts);
-      const {frac,tCheck}=near();
-      per=tCheck+0.8*frac*n[0]*n[1]*n[2]*b.tNode;
+      integ={mode:'grid',grid:gaussianGrid(n)};
     }
+    // Time per point: the convolution timed on a coarse subset of the map
+    // (5 × 5 Q × 9 ħω), as the run does it (points far from the dispersion
+    // skipped after a quick check, samples outside the table cheaper;
+    // unreachable points cost nothing), averaged over the subset.
+    const sub=(arr,k)=>arr.length<=k ? arr : Array.from({length:k},(_,i)=>arr[Math.round(i*(arr.length-1)/(k-1))]);
+    const sample=[], cache={};
+    for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
+      const hkl=g.plane.hkl(a,bb);
+      for(const e of sub(g.E,9)){ const res=resolutionAt(g.base,hkl,e,cache); sample.push({hkl,E:e,res}); }
+    }
+    // (Run twice, the second timed: the first is about 2 × slower, JIT.)
+    const pass=()=>{ for(const p of sample) if(p.res) intensityAt(g.base,p.hkl,p.E,integ,cache,{unreachable:0,outside:0},p.res); };
+    pass();
+    const t0=performance.now(); pass();
+    const per=sample.length ? (performance.now()-t0)/sample.length : 0;
     // Shared between the cores (measured: 1.75 × on 2 cores).
     const k=workersAvailable() ? workerCount() : 1, speedup=1+0.75*(k-1);
-    return {t:(g.nInside*g.E.length*per+g.nRes*b.tRes)/1000/speedup,n};
+    // Resolution matrices of the lattice (phase 1 of run2DOn).
+    const tLattice=latticeNodes(g)*(b.tRes+(integrationMode('2D')==='grid' ? b.tAuto||0 : 0));
+    // Each thread reads the table (once; on the page: every run), and the
+    // threads start (once).
+    const workers=workersAvailable() && !!state.workers;
+    const tTable=(workers && state.workersTable===state.tableKey ? 0 : (state.parseTime||0))+(workersAvailable() && !state.workers ? 300 : 0);
+    return {t:((g.nInside*g.E.length*per+tLattice)/speedup+tTable)/1000,n};
+  }
+  // Number of resolution matrices of the lattice (convolution-lattice.js):
+  // the starting lattice is refined where the matrix changes by more than
+  // LATTICE_TOL between neighbours, down to the bin of the map, within
+  // LATTICE_MAX_NODES.  The change is sampled along each axis of the
+  // starting lattice on nine lines (the other two axes at their ends and
+  // middle: the largest changes are often next to the kinematic limit); an
+  // interval with change d is taken as split into 2^⌈log₂(d / LATTICE_TOL)⌉
+  // (the change taken proportional to the spacing), at most down to the
+  // bin.  About 150 resolution matrices: kept while the settings and the
+  // ranges are the same (calibrated against full runs: within about 20 %).
+  function latticeNodes(g){
+    const lat=initialLattice(g.A,g.Bv,g.E);
+    const ckey=JSON.stringify([g.base,lat,g.A.length,g.Bv.length,g.E.length]);
+    if(state.latticeEstimate?.key===ckey) return state.latticeEstimate.nodes;
+    const step=v=>v.length>1 ? Math.abs(v[1]-v[0]) : Infinity;
+    const bins={a:step(g.A),b:step(g.Bv),e:step(g.E)};
+    const memo=new Map(), cache={};
+    const cov=(a,b,e)=>{
+      const key=`${a},${b},${e}`;
+      if(!memo.has(key)) memo.set(key,covariance(resolutionAt(g.base,g.plane.hkl(a,b),e,cache)));
+      return memo.get(key);
+    };
+    // Three positions on an axis: its ends and middle.
+    const lines=v=>[...new Set([0,0.5,1].map(q=>v[Math.round(q*(v.length-1))]))];
+    const axes=['a','b','e'];
+    let nodes=1;
+    for(const ax of axes){
+      const v=lat[ax];
+      const [o1,o2]=axes.filter(x=>x!==ax), l1=lines(lat[o1]), l2=lines(lat[o2]);
+      const pairs=l1.flatMap(x=>l2.map(y=>[x,y]));
+      const at=(x,i)=>{ const p={[ax]:x,[o1]:pairs[i][0],[o2]:pairs[i][1]}; return cov(p.a,p.b,p.e); };
+      const nLines=pairs.length;
+      let count=1;
+      for(let s=0;s+1<v.length;s++){
+        let d=0;
+        for(let i=0;i<nLines;i++) d=Math.max(d,change(at(v[s],i),at(v[s+1],i)));
+        const L=v[s+1]-v[s];
+        const kMax=bins[ax]>0 && Number.isFinite(bins[ax]) ? Math.max(0,Math.floor(Math.log2(L/bins[ax])+1e-9)) : 0;
+        const kNeed=d>LATTICE_TOL ? Math.ceil(Math.log2(d/LATTICE_TOL)) : 0;
+        count+=2**Math.min(kNeed,kMax);
+      }
+      nodes*=count;
+    }
+    nodes=Math.min(nodes,LATTICE_MAX_NODES);
+    state.latticeEstimate={key:ckey,nodes};
+    return nodes;
   }
   function estimate1D(){
     const b=measureBench(); if(!b) return {t:NaN};
@@ -403,5 +465,5 @@ export function installConvolutionCalc(context){
     return {t:sc.pts.length*(per+b.tRes)/1000,n};
   }
   const scheduleEstimates=()=>{ clearTimeout(state.estimateTimer); state.estimateTimer=setTimeout(updateEstimates,250); };
-  Object.assign(fns,{resolutionAt, intensityAt, prefactor, inTable, tableRangeText, GRID_CHOICES, MC_CHOICES, GRID_DEFAULT, MC_DEFAULT, choice, mcSamples, gridMax, samplesFrom, fixChoices, integrationMode, showIntegration, gridSizeFor, DEFAULT_GRID, sizeGrid, integrationFor, grid, planeBasis, workerCount, workersAvailable, getWorkers, killWorkers, runJobs, workerRunner, pageRunner, run2DOn, medianTime, measureBench, timeText, updateEstimates, nearFraction, estimate2D, estimate1D, scheduleEstimates});
+  Object.assign(fns,{resolutionAt, intensityAt, prefactor, inTable, tableRangeText, GRID_CHOICES, MC_CHOICES, GRID_DEFAULT, MC_DEFAULT, choice, mcSamples, gridMax, samplesFrom, fixChoices, integrationMode, showIntegration, gridSizeFor, DEFAULT_GRID, sizeGrid, integrationFor, grid, planeBasis, workerCount, workersAvailable, getWorkers, killWorkers, runJobs, workerRunner, pageRunner, run2DOn, medianTime, measureBench, timeText, updateEstimates, nearFraction, estimate2D, estimate1D, scheduleEstimates, latticeNodes});
 }

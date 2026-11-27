@@ -41,7 +41,7 @@ const idx=(lat,i,j,k)=>(i*lat.b.length+j)*lat.e.length+k;
 // the node cannot be reached).
 export const covariance=r=>{ if(!r) return null; try{ return inverse(r.RM); }catch(_e){ return null; } };
 // Relative change between two covariances: largest |ΔΣ_ij| / √(Σ_ii Σ_jj).
-function change(s1,s2){
+export function change(s1,s2){
   if(!s1 || !s2) return 0;   // unreachable node: nothing to compare
   let d=0;
   for(let i=0;i<4;i++) for(let j=i;j<4;j++){

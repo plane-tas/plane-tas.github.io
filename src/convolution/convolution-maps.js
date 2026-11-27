@@ -116,6 +116,8 @@ export function installConvolutionMaps(context){
     state.volume={A,B:Bv,E,I,plane,U:plane.U,V:plane.V,settings};
     fns.zlim.min=null; fns.zlim.max=null; fns.saveInputs();
     fns.store2D();
+    // The threads now have the table: the estimate no longer counts reading it.
+    fns.scheduleEstimates();
     $('convDownload2D').disabled=false;
     fns.showConvTab('2d');
     setupSliders();

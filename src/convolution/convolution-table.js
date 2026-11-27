@@ -31,8 +31,11 @@ export function installConvolutionTable(context){
   function loadText(){
     if(!state.text) return;
     try{
+      const t0=performance.now();
       state.data=parseDispersionTable(state.text,fns.formatValue());
       state.interp=createDispersionInterpolator(state.data);
+      // (Each calculation thread reads the table again: time estimate.)
+      state.parseTime=performance.now()-t0;
       state.tableKey++;
       // A 2D result or 1D scan already shown (calculated or loaded from a CSV)
       // stays, with its sliders: it carries its own settings.  Only the
@@ -105,7 +108,8 @@ export function installConvolutionTable(context){
     const r6=v=>Number(v.toPrecision(6));
     if(plane){
       const cs=state.data.points.map(p=>plane.coeff3(p.hkl));
-      const span=j=>[Math.min(...cs.map(c=>c[j])),Math.max(...cs.map(c=>c[j]))];
+      // (A loop: a large table has too many points for Math.min(...list).)
+      const span=j=>{ let lo=Infinity, hi=-Infinity; for(const c of cs){ if(c[j]<lo) lo=c[j]; if(c[j]>hi) hi=c[j]; } return [lo,hi]; };
       const steps=state.interp.axes.map(ax=>ax.length>1 ? (ax[ax.length-1]-ax[0])/(ax.length-1) : 0);
       const binOf=vec=>{ let b=Infinity; vec.forEach((x,i)=>{ if(Math.abs(x)>1e-9 && steps[i]>0) b=Math.min(b,steps[i]/Math.abs(x)); }); return Number.isFinite(b) ? r6(b) : 0; };
       const [u0,u1]=span(0), [v0,v1]=span(1);
@@ -242,12 +246,14 @@ export function installConvolutionTable(context){
   const EXAMPLE_SAMPLE={a:4.873,b:4.873,c:3.311,alpha:90,beta:90,gamma:90,Uh:1,Uk:0,Ul:0,Vh:0,Vk:0,Vl:1};
   const EXAMPLE_SPACE_GROUP=136;
   // Load example also sets the Sample to MnF2 (before the table is read, so
-  // the ħω defaults use its resolution).  A loaded CIF/mCIF of MnF2 (lattice
-  // within 0.1 %, e.g. c = 3.3099 Å) stays with its own lattice and only the
-  // scattering plane is set; one with another lattice is cleared.
+  // the ħω defaults use its resolution).  A loaded CIF/mCIF of MnF2 (a, b, c
+  // within 1 %, angles within 0.1°: published MnF2 cells differ by a few
+  // 0.1 %, e.g. c = 3.300 or 3.3099 Å) stays with its own lattice and only
+  // the scattering plane is set; one with another lattice is cleared.
   function setExampleSample(){
     const LATTICE=['a','b','c','alpha','beta','gamma'], cifUnset=$('cifClearButton');
-    const near=LATTICE.every(id=>{ const v=Number($(id)?.value), w=EXAMPLE_SAMPLE[id]; return Number.isFinite(v) && Math.abs(v-w)<=1e-3*w; });
+    const near=LATTICE.every(id=>{ const v=Number($(id)?.value), w=EXAMPLE_SAMPLE[id], angle=['alpha','beta','gamma'].includes(id);
+      return Number.isFinite(v) && Math.abs(v-w)<=(angle ? 0.1 : 0.01*w); });
     if(cifUnset && !cifUnset.disabled && near){
       const notes=fns.applySettings({instrument:Object.fromEntries(['Uh','Uk','Ul','Vh','Vk','Vl'].map(k=>[k,EXAMPLE_SAMPLE[k]]))},'2D');
       return {notes,keptCif:true};

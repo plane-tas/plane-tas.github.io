@@ -1,5 +1,5 @@
 # MnF2 linear spin waves (approximate): J1=-0.32 K (c), J2=1.76 K (body diagonal), J3=0, S=5/2, gap 1.1 meV
-# lattice a=b=4.873 A, c=3.311 A (tetragonal); magnetic zone centre (1,0,0); scattering plane (H,0,L)
+# lattice a=b=4.8736 A, c=3.300 A (tetragonal); magnetic zone center (1,0,0); scattering plane (H,0,L)
 # grid: H 0.4 to 1.6 (step 0.02), K -0.2 to 0.2 (step 0.04), L -0.6 to 0.6 (step 0.02)
 # columns: h k l E1 E2 I1 I2  (two degenerate branches)
 0.4	-0.2	-0.6	6.64843	6.64843	8.73919	8.73919

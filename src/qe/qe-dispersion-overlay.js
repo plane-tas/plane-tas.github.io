@@ -81,6 +81,7 @@ function colorbarTrace(title,bar,s){
   return {type:'scatter',mode:'markers',x:[null],y:[null],hoverinfo:'skip',showlegend:false,meta:'dispersion-colorbar',
     marker:{color:[s.c0],colorscale:'Viridis',cmin:s.c0,cmax:s.c1,showscale:true,colorbar:colorbar(title,bar,s),size:0.1}};
 }
+const hasValue=z=>z.some(row=>row.some(v=>v!==null));
 // Line pieces grouped by colour level: one trace per level (Plotly draws a
 // line in one colour).  pieces: [{x0,y0,x1,y1,v}] with v = I / max.
 function colouredLineTraces(pieces,s,hoverLabel){
@@ -241,11 +242,14 @@ function dispersionContourPieces(cache,hw,Q){
 }
 // The 2D slice at ħω (linear between its energies) as a colour map on a
 // rectangular (x, y) grid over the slice.
+// Nothing to colour (ħω outside the slice, or every point below I min):
+// the colorbar alone, so that it stays while ħω moves.
 function convolutionHeatmap(cache,hw,s,bar){
   const V=state.volume, basis=planeBasis(cache);
-  if(!(Math.abs(basis.det)>1e-12)) return [];
+  const barOnly=()=>[colorbarTrace('I / max',bar,s)];
+  if(!(Math.abs(basis.det)>1e-12)) return barOnly();
   const be=bracket(V.E,hw);
-  if(!be) return [];
+  if(!be) return barOnly();
   const corners=[[V.A[0],V.B[0]],[V.A.at(-1),V.B[0]],[V.A[0],V.B.at(-1)],[V.A.at(-1),V.B.at(-1)]].map(([a,b])=>basis.xy(a,b));
   const x0=Math.min(...corners.map(p=>p[0])), x1=Math.max(...corners.map(p=>p[0]));
   const y0=Math.min(...corners.map(p=>p[1])), y1=Math.max(...corners.map(p=>p[1]));
@@ -263,6 +267,7 @@ function convolutionHeatmap(cache,hw,s,bar){
     }
     rel.push(rr); z.push(zr);
   }
+  if(!hasValue(z)) return barOnly();
   return [{type:'heatmap',x:xs,y:ys,z,customdata:rel,zauto:false,zmin:s.c0,zmax:s.c1,colorscale:'Viridis',
     showscale:true,colorbar:colorbar('I / max',bar,s),hoverongaps:false,meta:'dispersion-map',
     hovertemplate:'I / max = %{customdata:.3g}<extra></extra>',showlegend:false}];
@@ -310,6 +315,8 @@ export function vectorOverlayTraces(cache,samples,bar){
       }
       rel.push(rr); z.push(zr);
     }
+    // (Nothing to colour along the path: the colorbar alone.)
+    if(!hasValue(z)) return [colorbarTrace('I / max',bar,s)];
     return [{type:'heatmap',x:samples.map(p=>p.x),y:Array.from(V.E),z,customdata:rel,zauto:false,zmin:s.c0,zmax:s.c1,
       colorscale:'Viridis',showscale:true,colorbar:colorbar('I / max',bar,s),hoverongaps:false,meta:'dispersion-map',
       hovertemplate:'I / max = %{customdata:.3g}<extra></extra>',showlegend:false}];
