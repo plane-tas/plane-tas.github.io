@@ -113,12 +113,12 @@
 #convPane2D .convolution-show-group{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density))}
 #convPane2D .convolution-show-group ~ .convolution-show-group{border-left:1px solid #b5bcc4;padding-left:calc(10px * var(--tas-density));margin-left:calc(4px * var(--tas-density))}
 #convPane2D .convolution-show-name{white-space:nowrap}
-/* Colour scale of the 2D maps at the end of the Show row: log I, then
-   "color scale:" min to max (used with and without log I).  The values are
-   shown with three significant digits (1.32e-8, 0.0132). */
+/* Colour scale of the 2D maps at the end of the Show row: "color scale:"
+   min to max, then log I (the range is used with and without log I).  The
+   values are shown with three significant digits (1.32e-8, 0.0132). */
 .convolution-zrange{margin-left:auto;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));white-space:nowrap}
 .convolution-zrange input{width:calc(66px * var(--tas-density));min-width:calc(7ch + 10px)}
-#convPane2D .convolution-zrange .checkbox-label{display:inline-flex;margin-right:calc(6px * var(--tas-density))}
+#convPane2D .convolution-zrange .checkbox-label{display:inline-flex;margin-left:calc(6px * var(--tas-density))}
 #convPane2D .convolution-zrange input[type=checkbox]{width:auto;min-width:0}
 /* The legend column boxes of the 1D cut take part in the Show row's wrapping. */
 .convolution-legend-columns{display:contents}
