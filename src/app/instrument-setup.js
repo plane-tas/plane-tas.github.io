@@ -719,7 +719,11 @@ function syncResolutionModeControls({release=false}={}){
       }
       el.disabled=false;
     } };
-  fix('method','Cooper-Nathans',twoAxis);
+  // Cooper-Nathans only without an analyzer (2-axis) and for 4-circle.
+  const fourCircle=!release && inst?.instrument_type==='four-circle';
+  fix('method','Cooper-Nathans',twoAxis || fourCircle);
+  // The Approximation boxes of Convolution show the same setting.
+  for(const id of ['convMethod2D','convMethod1D']){ const el=$(id); if(el){ el.value=$('method')?.value||el.value; el.disabled=!!$('method')?.disabled; } }
   fix('calcMode','single',elastic);
   fix('hw','0',elastic);
   fix('coll3Type','soller',twoAxis);

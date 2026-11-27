@@ -429,9 +429,15 @@ export function calcResolution(lc,rl,col,mos,config,approximation,focusing,geom,
   let RMinv=inverse(RM); RMinv[1][1]+=Q*Q*etaS*etaS; RMinv[3][3]+=Q*Q*etaSp*etaSp; RM=inverse(RMinv);
 
   if(fourCircle){
-    // The full 4D ellipsoid (as for a TAS at ħω = 0) in the 4-circle Q frame.
-    return {...fourCircleFrames(symmetrize(RM),lc,rl,UB,qRaw,hkl,unitMode),
-      fourCircle:true, analyzer:true,
+    // 4-circle with the analyzer: a diffractometer whose analyzer only sets
+    // the energy window.  Every measurement is at ħω = 0, so the Q
+    // resolution is the ΔE = 0 section of the 4D ellipsoid: the E row and
+    // column are dropped (an uncoupled placeholder, as for a 2-axis), and the
+    // result is shown as a diffraction one (Q only).  The scans use the full
+    // matrix (the same section).
+    const S=symmetrize(RM), RMsec=S.map((row,i)=>row.map((x,j)=>i===2||j===2 ? (i===j ? 1 : 0) : x));
+    return {...fourCircleFrames(RMsec,lc,rl,UB,qRaw,hkl,unitMode),
+      fourCircle:true, analyzer:true, diffraction:true,
       scans:scanWidths(RM,{thetaS,phi},{Ei,Ef},true),
       angles:{A1,A2,A3,thetaM,thetaS,thetaA,phi}, energies:{Ei,Ef}, UB,
       collimation3:{radial:radial3,fwhmArcmin:radial3FwhmArcmin}, prefactor};

@@ -133,6 +133,16 @@ export function createConvolutionUI(deps){
     file?.addEventListener('change',()=>{ const f=file.files?.[0]; file.value=''; fns.loadFile(f); });
     $('convShowExample')?.addEventListener('click',fns.showExample);
     fns.restoreFile();
+    // W: 0 (a TAS measures in the scattering plane; the resolution out of
+    // it is integrated); its boxes cannot be edited.
+    for(const id of ['convWmin','convWmax','convWbin']){ const el=$(id); if(el){ el.value='0'; el.disabled=true; } }
+    // Column heads of the 2D ranges follow the lattice and the scattering plane.
+    const HEAD_IDS=new Set(['Uh','Uk','Ul','Vh','Vk','Vl','a','b','c','alpha','beta','gamma','instrument','instrumentType']);
+    const heads=()=>setTimeout(fns.updateRangeHeads,0);
+    for(const ev of ['input','change']) document.addEventListener(ev,e=>{ if(HEAD_IDS.has(e.target?.id) || e.target?.id==='cifFileInput') heads(); });
+    $('resolutionTabConvolution')?.addEventListener('click',heads);
+    $('cifClearButton')?.addEventListener('click',heads);
+    fns.updateRangeHeads();
     $('convResetRanges')?.addEventListener('click',()=>{ if(state.interp){ fns.fillRanges(); fns.saveInputs(); } });
     // Approximation: the same setting as Simulation.
     // Approximation: one setting (Simulation's), shown in the 2D slice and
@@ -167,7 +177,7 @@ export function createConvolutionUI(deps){
     });
     // Estimated calculation time follows every input that changes it.
     for(const id of ['convSamples2D','convSamples1D','convGrid2D','convGrid1D','convIntegration2D','convIntegration1D','convPoints1D','convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1',
-      ...['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]),'convMethod2D','convMethod1D'])
+      ...fns.RANGE_IDS,'convMethod2D','convMethod1D'])
       $(id)?.addEventListener('input',fns.scheduleEstimates), $(id)?.addEventListener('change',fns.scheduleEstimates);
     for(const id of fns.INPUT_IDS){ $(id)?.addEventListener('input',fns.saveInputs); $(id)?.addEventListener('change',fns.saveInputs); }
     for(const dim of ['2D','1D']) $(`convIntegration${dim}`)?.addEventListener('change',fns.showIntegration);
@@ -194,7 +204,7 @@ export function createConvolutionUI(deps){
     for(const id of ['convSaveFigure2D','convSetQE2D']) enableWithPlot($(id),$('convMapUV'));
     $('convShowDispersion')?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
     $('convLog2D')?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
-    for(const id of ['convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
+    for(const id of ['convEllCoh','convEllInc','convLineU','convLineV','convLineE']) $(id)?.addEventListener('change',()=>{ fns.saveInputs(); fns.drawMaps(); });
     for(const end of ['min','max']){
       const el=$(`convZ${end}`);
       const apply=()=>{

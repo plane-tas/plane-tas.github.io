@@ -138,14 +138,17 @@ export function installConvolutionCsv(context){
     if(header){ cols=['h','k','l','hw_mev','i_arb'].map(n=>header.indexOf(n)); if(cols[3]<0) cols[3]=header.findIndex(n=>/^(e|hw|energy)$/.test(n)); if(cols[4]<0) cols[4]=header.findIndex(n=>/^(i|intensity)$/.test(n)); }
     else{ const off=rows[0]?.length===6 ? 1 : 0; cols=[0,1,2,3,4].map(i=>i+off); }
     if(cols.some(c=>c<0)) throw new Error('Expected the columns H, K, L, hw_meV and I_arb.');
-    // (H, K, L) = a U + b V: least squares in index space.
-    const uu=U.reduce((s,x)=>s+x*x,0), vv=V.reduce((s,x)=>s+x*x,0), uvp=U.reduce((s,x,i)=>s+x*V[i],0), det=uu*vv-uvp*uvp;
-    if(Math.abs(det)<1e-12) throw new Error('U and V are parallel.');
+    // (H, K, L) = a U + b V + w W, W out of the plane (from the current
+    // lattice; the slice has one w).
+    let base={}; try{ base=collectResolutionBase(); }catch(_e){ base={}; }
+    let plane;
+    try{ plane=fns.planeBasis({...base,lc:{...(base.lc||{}),sv1:U,sv2:V}}); }catch(_e){ plane=null; }
+    if(!plane || !plane.coeff3([1,0,0]).every(Number.isFinite)) throw new Error('U and V are parallel.');
     const r6=v=>Math.round(v*1e6)/1e6;
     const recs=rows.map(r=>{
       const h=[0,1,2].map(i=>Number(r[cols[i]])), E=Number(r[cols[3]]), I=Number(r[cols[4]]);
-      const pu=h.reduce((s,x,i)=>s+x*U[i],0), pv=h.reduce((s,x,i)=>s+x*V[i],0);
-      return {a:r6((vv*pu-uvp*pv)/det),b:r6((uu*pv-uvp*pu)/det),E:r6(E),I};
+      const [a,b,w]=plane.coeff3(h);
+      return {a:r6(a),b:r6(b),w,E:r6(E),I};
     }).filter(o=>[o.a,o.b,o.E].every(Number.isFinite));
     if(!recs.length) throw new Error('No numeric rows found.');
     const uniq=k=>[...new Set(recs.map(o=>o[k]))].sort((x,y)=>x-y);
@@ -155,12 +158,14 @@ export function installConvolutionCsv(context){
     const ia=new Map(A.map((v,i)=>[v,i])), ib=new Map(B.map((v,i)=>[v,i])), ie=new Map(E.map((v,i)=>[v,i]));
     const I=new Float64Array(A.length*B.length*E.length).fill(NaN);
     for(const o of recs) I[(ib.get(o.b)*A.length+ia.get(o.a))*E.length+ie.get(o.E)]=o.I;
-    return {A,B,E,I,U,V,settings};
+    const ws=recs.map(o=>o.w).filter(Number.isFinite).sort((x,y)=>x-y);
+    const w=ws.length ? r6(ws[Math.floor(ws.length/2)]) : 0;
+    return {A,B,E,I,U,V,W:plane.W,w,settings};
   }
   function load2DText(textIn){
-    const {A,B,E,I,U,V,settings}=parse2DText(textIn);
+    const {A,B,E,I,U,V,W,w,settings}=parse2DText(textIn);
     const notes=settings ? fns.applySettings(settings,'2D') : [];
-    state.volume={A,B,E,I,U,V,plane:{U,V,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i])},settings};
+    state.volume={A,B,E,I,U,V,plane:{U,V,W,w,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i]+w*W[i])},settings};
     fns.zlim.min=null; fns.zlim.max=null; fns.saveInputs();
     fns.store2D();
     $('convDownload2D').disabled=false;

@@ -95,14 +95,23 @@ export function installConvolutionTable(context){
     loadText();
     fns.storeFile({name:state.fileName,format:fns.formatValue(),text:state.text});
   }
-  // H, K, L: the loaded grid; ħω: the branch energies with a margin.
+  // U, V: the extent of the table points in the scattering plane (U, V
+  // coefficients), bin from the table steps (the finest of the components
+  // of U or V); W: 0 (a TAS measures in the scattering plane; the resolution
+  // out of it is integrated); ħω: the branch energies with a margin.
   function fillRanges(){
-    const names=['H','K','L'];
-    names.forEach((n,i)=>{
-      const ax=state.interp.axes[i], r=state.interp.ranges[i];
-      const bin=ax.length>1 ? (r.max-r.min)/(ax.length-1) : 0;
-      $(`conv${n}min`).value=fmt(r.min,6); $(`conv${n}max`).value=fmt(r.max,6); $(`conv${n}bin`).value=fmt(bin,6);
-    });
+    let plane=null;
+    try{ plane=fns.planeBasis(collectResolutionBase()); }catch(_e){ plane=null; }
+    const r6=v=>Number(v.toPrecision(6));
+    if(plane){
+      const cs=state.data.points.map(p=>plane.coeff3(p.hkl));
+      const span=j=>[Math.min(...cs.map(c=>c[j])),Math.max(...cs.map(c=>c[j]))];
+      const steps=state.interp.axes.map(ax=>ax.length>1 ? (ax[ax.length-1]-ax[0])/(ax.length-1) : 0);
+      const binOf=vec=>{ let b=Infinity; vec.forEach((x,i)=>{ if(Math.abs(x)>1e-9 && steps[i]>0) b=Math.min(b,steps[i]/Math.abs(x)); }); return Number.isFinite(b) ? r6(b) : 0; };
+      const [u0,u1]=span(0), [v0,v1]=span(1);
+      const put=(n,lo,hi,bin)=>{ $(`conv${n}min`).value=fmt(r6(lo),6); $(`conv${n}max`).value=fmt(r6(hi),6); $(`conv${n}bin`).value=fmt(bin,6); };
+      put('U',u0,u1,binOf(plane.U)); put('V',v0,v1,binOf(plane.V)); put('W',0,0,0);
+    }
     const e=energyDefaults();
     $('convEmin').value=fmt(e.min,3); $('convEmax').value=fmt(e.max,3); $('convEbin').value=fmt(e.bin,3);
   }
@@ -133,17 +142,31 @@ export function installConvolutionTable(context){
     const max=r3(Math.ceil(((ok(fHi) ? hi.E+1.5*fHi : state.data.eMax+pad))/bin-1e-9)*bin);
     return {min,max,bin};
   }
-  // A range that the bin does not divide: min and bin are kept and max is
-  // moved up to the next multiple of the bin (calculated range; max0: the
-  // entry).
+  // Column heads of the 2D ranges: the directions of U, V (the scattering
+  // plane) and W (out of it), "U // (1,0,0) (r.l.u.)".
+  const vecText=v=>`(${v.map(x=>{ const t=fmt(Number(x.toFixed(4)),4); return t.replace(/^-/,'−'); }).join(',')})`;
+  function updateRangeHeads(){
+    let plane=null;
+    try{ plane=fns.planeBasis(collectResolutionBase()); }catch(_e){ plane=null; }
+    for(const n of ['U','V','W']){
+      const el=$(`convHead${n}`); if(!el) continue;
+      el.textContent=plane ? `${n} // ${vecText(plane[n])} (r.l.u.)` : `${n} (r.l.u.)`;
+    }
+  }
+  // U, V, ħω: a range that the bin does not divide keeps min and bin, and
+  // max is moved up to the next multiple of the bin (calculated range; max0:
+  // the entry).  W: 0 (a TAS measures in the scattering plane; its boxes are
+  // fixed at 0).
   function ranges(){
-    const out={};
-    for(const n of ['H','K','L','E']){
+    const out={W:{min:0,max:0,max0:0,bin:0,value:0}};
+    const label={U:'U',V:'V',E:'ħω'};
+    for(const n of ['U','V','E']){
       const lo=fns.num(`conv${n}min`), hi=fns.num(`conv${n}max`), bin=fns.num(`conv${n}bin`);
-      if(![lo,hi].every(Number.isFinite) || hi<lo) throw new Error(`Check the ${n==='E'?'ħω':n.toLowerCase()} min / max.`);
+      if(![lo,hi].every(Number.isFinite) || hi<lo) throw new Error(`Check the ${label[n]} min / max.`);
       const steps=bin>0 ? Math.ceil((hi-lo)/bin-1e-6) : 0;
       out[n]={min:lo,max:bin>0 ? Number((lo+steps*bin).toPrecision(12)) : hi,max0:hi,bin:bin>0 ? bin : 0};
     }
+    for(const n of ['U','V']) if(!(out[n].bin>0) || !(out[n].max>out[n].min)) throw new Error(`${n} needs max > min and a positive bin.`);
     if(!(out.E.bin>0) || !(out.E.max>out.E.min)) throw new Error('ħω needs max > min and a positive bin.');
     return out;
   }
@@ -282,5 +305,5 @@ export function installConvolutionTable(context){
     rows.push(spacer((total-last)*ROW_HEIGHT));
     body.replaceChildren(...rows);
   }
-  Object.assign(fns,{defaultScanPoints, loadText, loadFile, fillRanges, energyDefaults, ranges, EXAMPLE_URL, EXAMPLE_NAME, example, exampleText, readExample, exampleData, showPreview, showExample, EXAMPLE_SAMPLE, EXAMPLE_SPACE_GROUP, setExampleSample, loadExample, shown, columnNames, renderTableHead, cell, renderTableRows});
+  Object.assign(fns,{updateRangeHeads, defaultScanPoints, loadText, loadFile, fillRanges, energyDefaults, ranges, EXAMPLE_URL, EXAMPLE_NAME, example, exampleText, readExample, exampleData, showPreview, showExample, EXAMPLE_SAMPLE, EXAMPLE_SPACE_GROUP, setExampleSample, loadExample, shown, columnNames, renderTableHead, cell, renderTableRows});
 }

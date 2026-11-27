@@ -19,22 +19,12 @@ export function installConvolutionMaps(context){
   // resolution matrices (shared with the time estimate).
   function prepare2D(){
     if(!state.interp) throw new Error('Load a dispersion file first.');
-    const base=collectResolutionBase(), rg=fns.ranges(), plane=fns.planeBasis(base);
-    const ra=fns.axisRange(rg,plane,'a'), rb=fns.axisRange(rg,plane,'b');
-    let A=fns.grid(ra.min,ra.max,ra.step,MAX_TABLE_RANGE_POINTS.ab), Bv=fns.grid(rb.min,rb.max,rb.step,MAX_TABLE_RANGE_POINTS.ab);
-    // Keep only the U and V values that reach the h, k, l range (an
-    // oblique plane cuts the box corners): the sliders stay inside it.
-    const inside=hkl=>['H','K','L'].every((n,i)=>hkl[i]>=rg[n].min-1e-9 && hkl[i]<=rg[n].max+1e-9);
-    const hitA=A.map(a=>Bv.some(b=>inside(plane.hkl(a,b)))), hitB=Bv.map(b=>A.some(a=>inside(plane.hkl(a,b))));
-    if(!hitA.some(Boolean)) throw new Error('The scattering plane does not cross the h, k, l range.');
-    const span=hit=>[hit.indexOf(true),hit.lastIndexOf(true)+1];
-    A=A.slice(...span(hitA)); Bv=Bv.slice(...span(hitB));
-    if(A.length<2 || Bv.length<2) throw new Error('The h, k, l range is too narrow in the scattering plane.');
+    const base=collectResolutionBase(), rg=fns.ranges(), plane=fns.planeBasis(base,rg.W.value);
+    const A=fns.grid(rg.U.min,rg.U.max,rg.U.bin,MAX_TABLE_RANGE_POINTS.ab), Bv=fns.grid(rg.V.min,rg.V.max,rg.V.bin,MAX_TABLE_RANGE_POINTS.ab);
     const E=fns.grid(rg.E.min,rg.E.max,rg.E.bin,MAX_TABLE_RANGE_POINTS.E);
     // Resolution matrices: on a lattice of nodes, refined where needed (see
     // convolution-lattice.js); about twice the starting lattice.
-    let nInside=0;
-    for(const b of Bv) for(const a of A) if(fns.insideBox(plane.hkl(a,b),rg)) nInside++;
+    const nInside=A.length*Bv.length;
     const L0=initialLattice(A,Bv,E);
     return {base,rg,plane,A,Bv,E,nInside,nRes:2*L0.a.length*L0.b.length*L0.e.length};
   }
@@ -64,7 +54,12 @@ export function installConvolutionMaps(context){
   // keeps its result.
   function clear2DResult(){
     state.volume=null;
-    for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(fns.plotly()) Plotly.purge(id); }catch(_e){} }
+    // Purged only after a drawing in progress (a large map draws for a
+    // while; purging under it breaks Plotly), unless a new result came.
+    // (Purge also drops the double-click handler of keepRange: bound again
+    // with the next maps.)
+    const purge=()=>{ if(state.volume) return; for(const id of ['convMapEU','convMapEV','convMapUV']){ try{ if(fns.plotly()) Plotly.purge(id); }catch(_e){} const el=$(id); if(el) el._convRangeBound=false; } };
+    if(state.mapsDrawing) state.mapsDrawing.then(purge); else purge();
     $('convDownload2D').disabled=true;
     for(const key of ['U','V','E']){ const s=$(`convSlider${key}`); if(s) s.disabled=true; }
     // No result: the colour-scale boxes are automatic again.
@@ -78,7 +73,7 @@ export function installConvolutionMaps(context){
     try{
       const P=prepare2D();
       // A max moved up to a multiple of the bin is shown in its entry.
-      for(const n of ['H','K','L','E']) if(P.rg[n].max!==P.rg[n].max0){ const el=$(`conv${n}max`); if(el) el.value=fmt(P.rg[n].max,6); }
+      for(const n of ['U','V','E']) if(P.rg[n].max!==P.rg[n].max0){ const el=$(`conv${n}max`); if(el) el.value=fmt(P.rg[n].max,6); }
       fns.saveInputs();
       const {A,Bv,E,plane}=P;
       const settings=fns.settingsSnapshot('2D');
@@ -99,7 +94,7 @@ export function installConvolutionMaps(context){
       if(!out) out=await fns.run2DOn(id,fns.pageRunner(id),P);
       if(id!==state.run2D || !out) return;
       finish2D(A,Bv,E,out,plane,settings);
-    }catch(err){ if(id===state.run2D){ state.cancelJobs(); state.busy2D=false; setRunning('convCalculate2D',false); clear2DResult(); fns.message('convMessage2D',err.message||String(err),true); } }
+    }catch(err){ if(id===state.run2D){ state.cancelJobs(); state.busy2D=false; setRunning('convCalculate2D',false); clear2DResult(); fns.message('convMessage2D',err.message||String(err),true); if(err?.detail && $('convMessage2D')) $('convMessage2D').title=err.detail; } }
   }
   function finish2D(A,Bv,E,I,plane,settings){
     state.busy2D=false; setRunning('convCalculate2D',false);
@@ -113,6 +108,7 @@ export function installConvolutionMaps(context){
     setProgress('convMessage2D',1); fns.message('convMessage2D','Completed'); setFill('convMessage2D',1); $('convMessage2D')?.classList.add('convolution-progress-on');
     setStatus?.('Convolution 2D calculated');
   }
+  let mapRevision=0;
   const nearest=(arr,v)=>{ let best=0; arr.forEach((x,i)=>{ if(Math.abs(x-v)<Math.abs(arr[best]-v)) best=i; }); return best; };
   function setupSliders(){
     const conf=[['U',state.volume.A,'convValueU'],['V',state.volume.B,'convValueV'],['E',state.volume.E,'convValueE']];
@@ -135,29 +131,35 @@ export function installConvolutionMaps(context){
   // Symbols for the plane coordinates: (H, K, L) = a U + b V.  a takes the
   // name of a component that only U changes, b of one that only V changes
   // (U = (1,0,0), V = (0,0,1): H and L, so (H, 0, 0.5) is the line at
-  // b = 0.5).  Without such a component (U = (1,1,0), V = (1,-1,0)) the
-  // symbols are ξ and η: (ξ+η, ξ−η, 0).
+  // b = 0.5; U = (1,1,0), V = (0,0,1): (H, H, L)).  When either has no such
+  // component (U = (1,-1,0), V = (1,1,-2)), both are Greek, ξ and η:
+  // (ξ+η, −ξ+η, −2η).
   function planeSymbols(U,V){
     const names=['H','K','L'], nz=x=>Math.abs(x)>1e-9;
     const iu=U.findIndex((x,i)=>nz(x) && !nz(V[i]));
     const iv=V.findIndex((x,i)=>nz(x) && !nz(U[i]));
-    return {u:iu>=0 ? names[iu] : 'ξ', v:iv>=0 ? names[iv] : 'η'};
+    return iu>=0 && iv>=0 ? {u:names[iu],v:names[iv]} : {u:'ξ',v:'η'};
   }
-  // One component as text: cu·u + cv·v + c0 (u, v symbols or numbers).
-  function componentText(cu,su,cv,sv){
+  // One component as text: Σ c·s + c0 over [c, s] pairs (s a symbol or a
+  // number).
+  function termsText(pairs,c00=0){
     const parts=[];
-    let c0=0;
-    const add=(c,symbol)=>{
-      if(Math.abs(c)<1e-9) return;
-      if(typeof symbol==='number'){ c0+=c*symbol; return; }
+    let c0=c00;
+    for(const [c,symbol] of pairs){
+      if(Math.abs(c)<1e-9) continue;
+      if(typeof symbol==='number'){ c0+=c*symbol; continue; }
       const mag=Math.abs(c);
       parts.push({neg:c<0,text:`${Math.abs(mag-1)<1e-9 ? '' : fmt(mag)}${symbol}`});
-    };
-    add(cu,su); add(cv,sv);
-    if(Math.abs(c0)>1e-9 || !parts.length) parts.push({neg:c0<0,text:fmt(Math.abs(c0))});
+    }
+    if(Math.abs(c0)>1e-9 || !parts.length) parts.push({neg:c0<-1e-9,text:fmt(Math.abs(c0))});
     return parts.map((t,i)=>`${t.neg ? '−' : (i ? '+' : '')}${t.text}`).join('');
   }
-  const pointText=(U,V,su,sv)=>`(${[0,1,2].map(i=>componentText(U[i],su,V[i],sv)).join(', ')})`;
+  const componentText=(cu,su,cv,sv,cw=0)=>termsText([[cu,su],[cv,sv]],cw);
+  // A point (h, k, l) = Σ vec · s, e.g. [[U,'ξ'],[V,1]] → (ξ+1, −ξ+1, −2).
+  const vecText=terms=>`(${[0,1,2].map(i=>termsText(terms.map(([v,sy])=>[v[i],sy]))).join(', ')})`;
+  // off: the W part of the slice (w W).
+  const pointText=(U,V,su,sv,off=[0,0,0])=>`(${[0,1,2].map(i=>componentText(U[i],su,V[i],sv,off[i])).join(', ')})`;
+  const sliceOffset=vol=>vol?.plane?.W && Number.isFinite(vol.plane.w) && vol.plane.w!==0 ? vol.plane.W.map(x=>x*vol.plane.w) : [0,0,0];
   function sliderIndex(key){ return Number($(`convSlider${key}`)?.value)||0; }
   // Fixed axis range of a map: the calculated grid; restored on double-click.
   function keepRange(id,x,y){
@@ -170,6 +172,75 @@ export function installConvolutionMaps(context){
       Plotly.relayout(el,{'xaxis.range':el._convRange.x,'yaxis.range':el._convRange.y});
     });
   }
+  // Oblique U and V (their angle in reciprocal space is not 90°): the U–V
+  // map is drawn in its true shape.  x = a|U| + b|V|cos θ, y = b|V|sin θ
+  // (Å⁻¹); the display grid samples the (a, b) map (nearest point).
+  // Labels: U values where the U grid lines meet the bottom edge, V values
+  // on the left (V lines are horizontal); the lines are drawn faintly over
+  // the map.
+  function obliqueView(A,B){
+    const vol=state.volume;
+    if(vol._oblBasis===undefined){
+      vol._oblBasis=null;
+      try{
+        const base=collectResolutionBase(), st=[base.rl.astar,base.rl.bstar,base.rl.cstar];
+        const q=h=>[0,1,2].map(j=>h[0]*st[0][j]+h[1]*st[1][j]+h[2]*st[2][j]);
+        const qU=q(vol.U), qV=q(vol.V), nu=Math.hypot(...qU), nv=Math.hypot(...qV);
+        const c=(qU[0]*qV[0]+qU[1]*qV[1]+qU[2]*qV[2])/(nu*nv);
+        if(Math.abs(c)>1e-6 && Math.abs(c)<1-1e-9) vol._oblBasis={ux:nu,vx:nv*c,vy:nv*Math.sqrt(1-c*c)};
+      }catch(_e){ vol._oblBasis=null; }
+    }
+    const bs=vol._oblBasis; if(!bs) return null;
+    const {ux,vx,vy}=bs;
+    const toXY=(a,b)=>[ux*a+vx*b,vy*b], toAB=(x,y)=>[(x-vx*y/vy)/ux,y/vy];
+    // Shown range: the points with a value in some slice (the reachable
+    // part; the corners of the (a, b) parallelogram are mostly out of
+    // reach), found once per result.
+    if(!vol._oblBox){
+      const {I,E}=vol, nA=A.length, nE=E.length;
+      let bx0=Infinity, bx1=-Infinity, by0=Infinity, by1=-Infinity;
+      for(let jb=0;jb<B.length;jb++) for(let ja=0;ja<nA;ja++){
+        const o=(jb*nA+ja)*nE;
+        let any=false; for(let e=0;e<nE;e++) if(Number.isFinite(I[o+e])){ any=true; break; }
+        if(!any) continue;
+        const [x,y]=toXY(A[ja],B[jb]);
+        if(x<bx0) bx0=x; if(x>bx1) bx1=x; if(y<by0) by0=y; if(y>by1) by1=y;
+      }
+      if(!(bx1>bx0) || !(by1>by0)){
+        const cs=[[A[0],B[0]],[A[nA-1],B[0]],[A[0],B[B.length-1]],[A[nA-1],B[B.length-1]]].map(p=>toXY(...p));
+        bx0=Math.min(...cs.map(p=>p[0])); bx1=Math.max(...cs.map(p=>p[0])); by0=Math.min(...cs.map(p=>p[1])); by1=Math.max(...cs.map(p=>p[1]));
+      }
+      vol._oblBox={x0:bx0,x1:bx1,y0:by0,y1:by1};
+    }
+    const {x0,x1,y0,y1}=vol._oblBox;
+    const d=Math.min(A.length>1 ? Math.abs(A[1]-A[0])*ux : Infinity, B.length>1 ? Math.abs(B[1]-B[0])*vy : Infinity);
+    const nx=Math.max(2,Math.min(1200,Math.ceil((x1-x0)/d)+1)), ny=Math.max(2,Math.min(1200,Math.ceil((y1-y0)/d)+1));
+    const xs=Array.from({length:nx},(_,i)=>x0+(x1-x0)*i/(nx-1)), ys=Array.from({length:ny},(_,j)=>y0+(y1-y0)*j/(ny-1));
+    const nice=h=>{ const raw=0.9*h; if(!(raw>0)) return 1; const e=10**Math.floor(Math.log10(raw)); return ([1,2,2.5,5,10].filter(m=>m*e<=raw*(1+1e-9)).pop()||1)*e; };
+    const grid=()=>{
+      const out={shapes:[],xTickVals:[],xTickText:[],yTickVals:[],yTickText:[]};
+      const us=nice((x1-x0)/2/ux), vs=nice((y1-y0)/2/vy), f=v=>Math.abs(v)<1e-12 ? '0' : String(Number(v.toPrecision(6)));
+      // Grey: seen over the map and on the white outside it, up to the labels.
+      const style={color:'rgba(150,150,150,0.55)',width:1};
+      const cAB=[[x0,y0],[x0,y1],[x1,y0],[x1,y1]].map(p=>toAB(...p));
+      const uLo=Math.min(...cAB.map(p=>p[0])), uHi=Math.max(...cAB.map(p=>p[0]));
+      for(let n=Math.ceil(uLo/us-1e-9);n*us<=uHi+1e-9;n++){
+        const u=n*us, [xa,ya]=toXY(u,y0/vy), [xb,yb]=toXY(u,y1/vy);
+        out.shapes.push({type:'line',x0:xa,y0:ya,x1:xb,y1:yb,line:style,layer:'above'});
+        const xBottom=ux*u+vx*(y0/vy);
+        if(xBottom>=x0-1e-9 && xBottom<=x1+1e-9){ out.xTickVals.push(xBottom); out.xTickText.push(f(u)); }
+      }
+      for(let n=Math.ceil((y0/vy)/vs-1e-9);n*vs<=y1/vy+1e-9;n++){
+        const v=n*vs, [xa,ya]=toXY((x0-vx*v)/ux,v), [xb,yb]=toXY((x1-vx*v)/ux,v);
+        out.shapes.push({type:'line',x0:xa,y0:ya,x1:xb,y1:yb,line:style,layer:'above'});
+        // (V lines are horizontal: y = v|V| sin θ.)
+        const y=vy*v;
+        if(y>=y0-1e-9 && y<=y1+1e-9){ out.yTickVals.push(y); out.yTickText.push(f(v)); }
+      }
+      return out;
+    };
+    return {x0,x1,y0,y1,nx,ny,xs,ys,toXY,toAB,grid};
+  }
   function drawMaps(){
     if(!state.volume || !fns.plotly()) return;
     const {A,B,E,I}=state.volume, nA=A.length, nE=E.length;
@@ -179,7 +250,12 @@ export function installConvolutionMaps(context){
     const zEV=E.map((_,e)=>B.map((_,b)=>at(ia,b,e)));
     const zUV=B.map((_,b)=>A.map((_,a)=>at(a,b,ie)));
     const {U,V}=state.volume, sym=planeSymbols(U,V);
-    const lineU=pointText(U,V,sym.u,B[ib]), lineV=pointText(U,V,A[ia],sym.v), planeUV=pointText(U,V,sym.u,sym.v);
+    // Axis titles are the (h, k, l) of the map points: (ξ+1, −ξ+1, −2).
+    const off=sliceOffset(state.volume);
+    const lineU=pointText(U,V,sym.u,B[ib],off), lineV=pointText(U,V,A[ia],sym.v,off), planeUV=pointText(U,V,sym.u,sym.v,off);
+    const e3='ħω', e3axis='ħω (meV)', e3at=v=>`ħω = ${fmt(v,3)} meV`;
+    const axisU=vecText([[U,sym.u]]), axisV=vecText([[V,sym.v]]);
+    const obl=obliqueView(A,B);
     // Colour scale: one range for the three maps, from the whole calculated
     // volume (so it stays the same while the sliders move) unless set in the
     // Show row.
@@ -217,7 +293,7 @@ export function installConvolutionMaps(context){
         hovertemplate:`${xl} = %{x:.4f}<br>${yl} = %{y:.3f}<br>I = %{customdata:.4g}<extra></extra>`};
     };
     // Slider positions as dashed lines, each switched by the box next to its slider.
-    const all=$('convShowLine')?.checked!==false;
+    const all=true;
     const onU=all && $('convLineU')?.checked!==false, onV=all && $('convLineV')?.checked!==false, onE=all && $('convLineE')?.checked!==false;
     const dash=(x0,x1,y0,y1)=>({type:'line',x0,x1,y0,y1,line:{color:'rgba(255,255,255,0.8)',width:1,dash:'dash'}});
     // Bare dispersion E_b(h, k, l) of every branch, whatever its intensity
@@ -237,13 +313,18 @@ export function installConvolutionMaps(context){
     // Constant-energy map: the contour E_b(a, b) = ħω of every branch.  The
     // dispersion on a fine (a, b) grid does not depend on ħω, so it is kept
     // for the volume and only the contour level follows the slider.
+    // (Oblique U and V: on the true-shape (x, y) grid of the map.)
     const overlayUV=Ec=>{
       if(!$('convShowDispersion')?.checked || !state.interp) return [];
-      const key=`${A[0]},${A[nA-1]},${B[0]},${B[B.length-1]},${state.interp.nBranch}`;
+      const key=`${A[0]},${A[nA-1]},${B[0]},${B[B.length-1]},${state.interp.nBranch},${obl ? 'obl' : ''}`;
       if(!state.volume._dispUV || state.volume._dispUV.key!==key || state.volume._dispUV.interp!==state.interp){
-        const n=121, aG=Array.from({length:n},(_,i)=>A[0]+(A[nA-1]-A[0])*i/(n-1)), bG=Array.from({length:n},(_,i)=>B[0]+(B[B.length-1]-B[0])*i/(n-1));
+        const n=121;
+        const aG=obl ? Array.from({length:n},(_,i)=>obl.x0+(obl.x1-obl.x0)*i/(n-1)) : Array.from({length:n},(_,i)=>A[0]+(A[nA-1]-A[0])*i/(n-1));
+        const bG=obl ? Array.from({length:n},(_,i)=>obl.y0+(obl.y1-obl.y0)*i/(n-1)) : Array.from({length:n},(_,i)=>B[0]+(B[B.length-1]-B[0])*i/(n-1));
         const z=Array.from({length:state.interp.nBranch},()=>bG.map(()=>new Array(n).fill(null)));
-        bG.forEach((b,j)=>aG.forEach((a,i)=>{
+        bG.forEach((y,j)=>aG.forEach((x,i)=>{
+          const [a,b]=obl ? obl.toAB(x,y) : [x,y];
+          if(obl && !(a>=A[0]-1e-9 && a<=A[nA-1]+1e-9 && b>=B[0]-1e-9 && b<=B[B.length-1]+1e-9)) return;
           const v=state.interp.evaluate(...state.volume.plane.hkl(a,b));
           if(v) for(let br=0;br<state.interp.nBranch;br++) if(Number.isFinite(v.E[br])) z[br][j][i]=v.E[br];
         }));
@@ -270,9 +351,12 @@ export function installConvolutionMaps(context){
     const withHead=t=>head ? `${head}<br>${t}` : t;
     // A frame on all four sides (as on the Q-E maps).
     const frameAxis={showline:true,mirror:true,linecolor:'#555',linewidth:1.2,ticks:'outside'};
+    // Zoom and pan stay while the Show row, sliders or colour scale redraw
+    // the maps (uirevision: one per result; a new result starts unzoomed).
+    if(!state.volume.rev) state.volume.rev=++mapRevision;
     const layout=(title,xl,yl,x,y,id)=>{
       const text=withHead(title);
-      return {font:FONT,
+      return {font:FONT,uirevision:`${id}-${state.volume.rev}`,
         // Plotly places a two-line title in the middle of the top margin.
         title:{text,font:{size:CONV_TITLE_SIZE},x:0.5,xanchor:'center'},
         margin:{l:70,r:10,t:head?62:40,b:60},
@@ -282,17 +366,51 @@ export function installConvolutionMaps(context){
     // Double-click: back to the calculated min–max range (Plotly would
     // otherwise autorange to the heatmap cell edges and the overlays).
     const cfg={responsive:true,displaylogo:false,doubleClick:'autosize'};
-    const ell=$('convShowEllipse')?.checked ? ellipseTraces(A,B,E,ia,ib,ie) : {EU:[],EV:[],UV:[]};
-    Plotly.react('convMapEU',[heat('EU',A,E,zEU,sym.u,'ħω'),...overlay(aF,aF.map(a=>state.volume.plane.hkl(a,B[ib]))),...ell.EU],
-      {...layout(`ħω–${sym.u} at ${sym.v} = ${fmt(B[ib],3)}`,lineU,'ħω (meV)',A,E,'convMapEU'),
-       shapes:[onE&&dash(A[0],A[nA-1],E[ie],E[ie]),onU&&dash(A[ia],A[ia],E[0],E[nE-1])].filter(Boolean)},cfg);
-    Plotly.react('convMapEV',[heat('EV',B,E,zEV,sym.v,'ħω'),...overlay(bF,bF.map(b=>state.volume.plane.hkl(A[ia],b))),...ell.EV],
-      {...layout(`ħω–${sym.v} at ${sym.u} = ${fmt(A[ia],3)}`,lineV,'ħω (meV)',B,E,'convMapEV'),
-       shapes:[onE&&dash(B[0],B[B.length-1],E[ie],E[ie]),onV&&dash(B[ib],B[ib],E[0],E[nE-1])].filter(Boolean)},cfg);
-    Plotly.react('convMapUV',[heat('UV',A,B,zUV,sym.u,sym.v),...overlayUV(E[ie]),...ell.UV],
-      {...layout(`${planeUV} at ħω = ${fmt(E[ie],3)} meV`,`${sym.u} (r.l.u.)`,`${sym.v} (r.l.u.)`,A,B,'convMapUV'),
-       shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg);
-    for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',A,B]]) keepRange(id,x,y);
+    // Ellipses when coherent or incoherent is ticked.
+    const ell=($('convEllCoh')?.checked || $('convEllInc')?.checked) ? ellipseTraces(A,B,E,ia,ib,ie) : {EU:[],EV:[],UV:[]};
+    const drawn=[];
+    drawn.push(Plotly.react('convMapEU',[heat('EU',A,E,zEU,sym.u,e3),...overlay(aF,aF.map(a=>state.volume.plane.hkl(a,B[ib]))),...ell.EU],
+      {...layout(`${e3}–${sym.u} at ${sym.v} = ${fmt(B[ib],3)}`,lineU,e3axis,A,E,'convMapEU'),
+       shapes:[onE&&dash(A[0],A[nA-1],E[ie],E[ie]),onU&&dash(A[ia],A[ia],E[0],E[nE-1])].filter(Boolean)},cfg));
+    drawn.push(Plotly.react('convMapEV',[heat('EV',B,E,zEV,sym.v,e3),...overlay(bF,bF.map(b=>state.volume.plane.hkl(A[ia],b))),...ell.EV],
+      {...layout(`${e3}–${sym.v} at ${sym.u} = ${fmt(A[ia],3)}`,lineV,e3axis,B,E,'convMapEV'),
+       shapes:[onE&&dash(B[0],B[B.length-1],E[ie],E[ie]),onV&&dash(B[ib],B[ib],E[0],E[nE-1])].filter(Boolean)},cfg));
+    if(!obl){
+      drawn.push(Plotly.react('convMapUV',[heat('UV',A,B,zUV,sym.u,sym.v),...overlayUV(E[ie]),...ell.UV],
+        {...layout(`${planeUV} at ${e3at(E[ie])}`,axisU,axisV,A,B,'convMapUV'),
+         shapes:[onU&&dash(A[ia],A[ia],B[0],B[B.length-1]),onV&&dash(A[0],A[nA-1],B[ib],B[ib])].filter(Boolean)},cfg));
+    }else{
+      // Oblique U and V (e.g. (1,0,0), (0,1,0) of a hexagonal lattice): the
+      // map in its true shape, x along U and y normal to it in the plane
+      // (Å⁻¹, equal scales), labelled with an oblique U, V grid, as the
+      // true-shape U–V panel of Simulation.
+      const {nx,xs,ys,toAB,toXY}=obl, da=nA>1 ? A[1]-A[0] : 1, db=B.length>1 ? B[1]-B[0] : 1;
+      const zD=[], cd=[];
+      for(const y of ys){
+        const zr=new Array(nx).fill(null), cr=new Array(nx).fill(null);
+        for(let i=0;i<nx;i++){
+          const [a,b]=toAB(xs[i],y), ja=Math.round((a-A[0])/da), jb=Math.round((b-B[0])/db);
+          if(ja<0 || ja>=nA || jb<0 || jb>=B.length) continue;
+          const v=at(ja,jb,ie); zr[i]=Number.isFinite(v) ? v : null; cr[i]=[zr[i],a,b];
+        }
+        zD.push(zr); cd.push(cr);
+      }
+      const tr=heat('UV',xs,ys,zD,sym.u,sym.v);
+      tr.customdata=cd;
+      tr.hovertemplate=`${sym.u} = %{customdata[1]:.4f}<br>${sym.v} = %{customdata[2]:.4f}<br>I = %{customdata[0]:.4g}<extra></extra>`;
+      const mapXY=t=>({...t,x:t.x.map((x,k)=>x===null||t.y[k]===null ? null : toXY(x,t.y[k])[0]),y:t.y.map((y,k)=>y===null||t.x[k]===null ? null : toXY(t.x[k],y)[1])});
+      const g=obl.grid(), seg=(a0,b0,a1,b1)=>{ const [x0,y0]=toXY(a0,b0), [x1,y1]=toXY(a1,b1); return dash(x0,x1,y0,y1); };
+      const lay=layout(`${planeUV} at ${e3at(E[ie])}`,axisU,axisV,[obl.x0,obl.x1],[obl.y0,obl.y1],'convMapUV');
+      lay.xaxis={...lay.xaxis,tickmode:'array',tickvals:g.xTickVals,ticktext:g.xTickText,zeroline:false,showgrid:false};
+      lay.yaxis={...lay.yaxis,tickmode:'array',tickvals:g.yTickVals,ticktext:g.yTickText,scaleanchor:'x',scaleratio:1,constrain:'domain',zeroline:false,showgrid:false};
+      lay.xaxis.constrain='domain';
+      lay.shapes=[...g.shapes,onU&&seg(A[ia],B[0],A[ia],B[B.length-1]),onV&&seg(A[0],B[ib],A[nA-1],B[ib])].filter(Boolean);
+      drawn.push(Plotly.react('convMapUV',[tr,...overlayUV(E[ie]),...ell.UV.map(mapXY)],lay,cfg));
+    }
+    const pending=Promise.allSettled(drawn);
+    state.mapsDrawing=pending;
+    pending.then(()=>{ if(state.mapsDrawing===pending) state.mapsDrawing=null; });
+    for(const [id,x,y] of [['convMapEU',A,E],['convMapEV',B,E],['convMapUV',obl ? [obl.x0,obl.x1] : A,obl ? [obl.y0,obl.y1] : B]]) keepRange(id,x,y);
     // Entries: the value in use is always written in the box (automatic:
     // the whole calculation), ready to be edited; a value typed in fixes
     // that end, and clearing the box returns it to automatic.  "auto" (grey)
@@ -327,10 +445,10 @@ export function installConvolutionMaps(context){
   const gridIn=(lo,hi,st)=>{ const out=[]; for(let v=Math.ceil((lo+st*0.25)/st)*st; v<=hi-st*0.25+1e-9; v+=st) out.push(Number(v.toFixed(10))); return out; };
   const ellCache=new Map();
   function ellipseCov(base,a,b,E){
-    // Covariance of (a, b, ħω) from the resolution matrix at (a U + b V, E).
+    // Covariance of (a, b, ħω) from the resolution matrix at (a U + b V + w W, E).
     const key=`${a},${b},${E}`;
     if(ellCache.has(key)) return ellCache.get(key);
-    const {U,V}=state.volume, hkl=U.map((x,i)=>a*x+b*V[i]);
+    const {U,V}=state.volume, off=sliceOffset(state.volume), hkl=U.map((x,i)=>a*x+b*V[i]+off[i]);
     const res=fns.resolutionAt(base,hkl,E,{});
     let out=null;
     if(res){
@@ -369,7 +487,7 @@ export function installConvolutionMaps(context){
   }
   function ellipseTraces(A,B,E,ia,ib,ie){
     let base; try{ base=collectResolutionBase(); }catch(_e){ return {EU:[],EV:[],UV:[]}; }
-    const sig=JSON.stringify([base.config,base.approximation,base.col,base.mos,base.lc?.a,base.lc?.b,base.lc?.c,state.volume.U,state.volume.V]);
+    const sig=JSON.stringify([base.config,base.approximation,base.col,base.mos,base.lc?.a,base.lc?.b,base.lc?.c,state.volume.U,state.volume.V,sliceOffset(state.volume)]);
     if(ellCache.sig!==sig){ ellCache.clear(); ellCache.sig=sig; }
     const span=arr=>arr[arr.length-1]-arr[0];
     const sa=niceStep(span(A),6,Q_STEPS), sb=niceStep(span(B),6,Q_STEPS), se=niceStep(span(E),7,E_STEPS);
@@ -409,7 +527,8 @@ export function installConvolutionMaps(context){
   // on screen (side by side, or stacked on a narrow screen).
   async function saveMapsFigure(){
     if(!fns.plotly() || !state.volume) return;
-    const plots=['convMapEU','convMapEV','convMapUV'].map(id=>$(id)).filter(el=>el?._fullLayout && el.offsetParent!==null);
+    // (Elastic only: the two maps left of the U–V map are hidden, not saved.)
+    const plots=['convMapEU','convMapEV','convMapUV'].map(id=>$(id)).filter(el=>el?._fullLayout && el.offsetParent!==null && getComputedStyle(el).visibility!=='hidden');
     if(!plots.length) return;
     const S=2, rects=plots.map(el=>el.getBoundingClientRect());
     const x0=Math.min(...rects.map(r=>r.left)), y0=Math.min(...rects.map(r=>r.top));

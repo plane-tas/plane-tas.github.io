@@ -1271,3 +1271,11 @@ button:where(:not(.tab-button):not(.toolbox-subtab):not(.cif-output-tab):not(.ge
 #structurePanel .structure-figure-row > .cif-filename-entry input{min-height:calc(32px * var(--tas-density))}
 /* Neutron attenuation: Select CIF/mCIF, then the file name (as in Sample). */
 #toolboxAttenuationPane .absorption-cif-row:not(.hidden){grid-template-columns:auto minmax(0,1fr)!important}
+
+/* Convolution 2D Show row: dispersion | ellipse: coherent incoherent |
+   line: U V ħω, the groups parted by a thin vertical line. */
+#convPane2D .convolution-show-group{display:inline-flex;align-items:center;gap:calc(6px * var(--tas-density))}
+#convPane2D .convolution-show-group ~ .convolution-show-group{border-left:1px solid #b5bcc4;padding-left:calc(10px * var(--tas-density));margin-left:calc(4px * var(--tas-density))}
+#convPane2D .convolution-show-name{white-space:nowrap}
+#convPane2D .convolution-zrange .checkbox-label{display:inline-flex;margin-right:calc(6px * var(--tas-density))}
+#convPane2D .convolution-zrange input[type=checkbox]{width:auto;min-width:0}

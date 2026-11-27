@@ -48,7 +48,7 @@ export function installConvolutionSettings(context){
   // The entry boxes of the Convolution pane are saved with every change and
   // put back after a reload (before the table is read, so its defaults do
   // not overwrite them).
-  const RANGE_IDS=['H','K','L','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
+  const RANGE_IDS=['U','V','W','E'].flatMap(n=>[`conv${n}min`,`conv${n}max`,`conv${n}bin`]);
   const SCAN_INPUT_IDS=['convH0','convK0','convL0','convE0','convH1','convK1','convL1','convE1','convPoints1D'];
   // One table format: [index] h k l E1 … En I1 … In (blocks); the index
   // column is found from the column count.
@@ -162,7 +162,7 @@ export function installConvolutionSettings(context){
     return set;
   };
   const INPUTS_KEY='plane-tas-convolution-inputs-v1';
-  const CHECK_IDS=['convShowDispersion','convShowEllipse','convEllCoh','convEllInc','convShowLine','convLineU','convLineV','convLineE','convNormalize1D','convLog1D','convLog2D'];
+  const CHECK_IDS=['convShowDispersion','convEllCoh','convEllInc','convLineU','convLineV','convLineE','convNormalize1D','convLog1D','convLog2D'];
   const savedInputsComplete=ids=>ids.every(id=>String($(id)?.value??'').trim()!=='');
   function saveInputs(){
     try{ localStorage.setItem(INPUTS_KEY,JSON.stringify({...Object.fromEntries(INPUT_IDS.map(id=>[id,$(id)?.value??''])),zlim:fns.zlim,
@@ -175,6 +175,11 @@ export function installConvolutionSettings(context){
     for(const id of INPUT_IDS) if(typeof saved[id]==='string' && $(id)) $(id).value=saved[id];
     fns.fixChoices();
     if(saved.checks) for(const id of CHECK_IDS) if(typeof saved.checks[id]==='boolean' && $(id)) $(id).checked=saved.checks[id];
+    // Saved before the ellipse / line boxes were dropped: an ellipse box that
+    // was off turns coherent and incoherent off, a line box that was off the
+    // three lines.
+    if(saved.checks?.convShowEllipse===false) for(const id of ['convEllCoh','convEllInc']) if($(id)) $(id).checked=false;
+    if(saved.checks?.convShowLine===false) for(const id of ['convLineU','convLineV','convLineE']) if($(id)) $(id).checked=false;
     fns.showIntegration();
     if(saved.zlim){ fns.zlim.min=Number.isFinite(saved.zlim.min) ? saved.zlim.min : null; fns.zlim.max=Number.isFinite(saved.zlim.max) ? saved.zlim.max : null; }
   }

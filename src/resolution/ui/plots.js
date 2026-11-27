@@ -9,6 +9,7 @@ export function installResolutionPlots(ctx){
     bindResolutionUVView, formatAngle, formatResolutionAxis, renderResolutionPlots,
     rerenderResolution, resolutionDisplayAxes, resolutionFrameLimits, resolutionWidthsHtml,
     resolutionBaseLayout:(...args)=>baseLayout(...args), reactResolutionPlot:(...args)=>reactResolutionPlot(...args),
+    resolutionObliqueGrid:(...args)=>resolutionObliqueGrid(...args), refreshObliqueGrid:(...args)=>refreshObliqueGrid(...args),
     RESOLUTION_PLOT_FONTS:()=>RESOLUTION_PLOT_FONTS
   });
 

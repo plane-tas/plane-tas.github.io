@@ -43,9 +43,10 @@ function resolutionIsUnavailable(){
   return false;
 }
 // Q-only resolution (no energy axis): no analyzer (diffractometer, Ana =
-// none).  A 4-circle with the analyzer has the TAS (4D) resolution at ħω = 0.
+// none) and 4-circle (with the analyzer: the ΔE = 0 section of the TAS
+// resolution, since only ħω = 0 is measured).
 function resolutionIsDiffraction(){
-  try{ return !instrumentHasAnalyzer(currentInstrument()); }catch(_err){ return false; }
+  try{ const inst=currentInstrument(); return !instrumentHasAnalyzer(inst) || inst?.instrument_type==='four-circle'; }catch(_err){ return false; }
 }
 // Only ħω = 0: no analyzer, or 4-circle.
 function resolutionIsElasticOnly(){

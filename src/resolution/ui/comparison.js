@@ -77,7 +77,7 @@ export function installResolutionComparison(ctx){
     const f=v=>{ const n=Number(v); return Number.isFinite(n) ? String(Number(n.toFixed(4))) : String(v); };
     const calc=entry?.calc||{};
     // No analyzer (2-axis); a 4-circle with the analyzer has the TAS fields.
-    if(entry?.result?.diffraction) return {
+    if(entry?.result?.diffraction && !entry.result.analyzer) return {
       inst:instrumentLines(senseText().slice(0,2)),
       point:`(${f(calc.h)},${f(calc.k)},${f(calc.l)})\nħω=0 meV`,
       // (Cooper-Nathans: the mosaics only, no focusing.)
@@ -101,7 +101,7 @@ export function installResolutionComparison(ctx){
     const c3=entry?.result?.collimation3?.radial
       ? `${Number.isFinite(entry.result.collimation3.fwhmArcmin) ? Math.round(entry.result.collimation3.fwhmArcmin) : '?'}(R)` : raw('div3h');
     const en=entry?.result?.energies||{};
-    if(entry?.result?.diffraction) return {
+    if(entry?.result?.diffraction && !entry.result.analyzer) return {
       instrument:currentInstrumentName(), sense:senseText().slice(0,2), approximation:$('method')?.value||'',
       h:entry.calc.h, k:entry.calc.k, l:entry.calc.l, hw:0, Ei:en.Ei, Ef:en.Ef,
       mono:{crystal:crystalText('monoCrystal'),H:focus('monoHF','monoHB','mosMonoH'),V:focus('monoVF','monoVB','mosMonoV')},
@@ -571,6 +571,56 @@ export function installResolutionComparison(ctx){
       fn.reactResolutionPlot(PLOT_IDS.UE,traces('UE'),layout(qeTitle(ax.U),`${lab(ax.U)} (${qUnit})`,'δħω (meV)',limits.U,limits.E,PLOT_IDS.UE));
       fn.reactResolutionPlot(PLOT_IDS.VE,traces('VE'),layout(qeTitle(ax.V),`${lab(ax.V)} (${qUnit})`,'δħω (meV)',limits.V,limits.E,PLOT_IDS.VE));
       fn.reactResolutionPlot(PLOT_IDS.WE,traces('WE'),layout(qeTitle(ax.W),`${lab(ax.W)} (${qUnit})`,'δħω (meV)',limits.W,limits.E,PLOT_IDS.WE));
+    }
+    // U, V, E, W with U not perpendicular to V (e.g. (1,0,0), (0,1,0) of a
+    // hexagonal lattice), U–V plot = Orthogonal: the true shape.  Each
+    // ellipse (U-based orthogonal frame) in Å⁻¹, x along U and y normal to
+    // it in the plane, with an oblique U, V grid labelled in the unit
+    // (the V axis drawn at its real angle to U).
+    const uvGd=$(PLOT_IDS.UV);
+    if(uvGd) uvGd.__tasObliqueGrid=null;
+    const vd=first?.result?.lattice?.vDirection;
+    if(ref?.coords==='lattice' && vd && Math.abs(vd.cos)>1e-6 && shared.resolutionUVView==='shape'){
+      const r0=first.result, rlu=(ref.unit||$('unit')?.value)==='rlu';
+      const nU=rlu ? r0.qNorms.U : 1, nV=rlu ? r0.lattice.qNorms.V : 1;
+      const basis={ux:nU,uy:0,vx:nV*vd.cos,vy:nV*vd.sin};
+      let ellX=0, ellY=0;
+      const tr=[];
+      for(const k of order){
+        const r=k.entry.result, kr=(k.unit||ref.unit)==='rlu', st=style(k);
+        const su=kr ? r.qNorms.U : 1, sv=kr ? r.qNorms.V : 1;
+        for(const [kind,dash] of [['proj','solid'],['slice','dash']]){
+          const p0=r.ellipses?.[`${kind}UV`]; if(!p0) continue;
+          const p={x:p0.x.map(v=>v===null ? null : v*su),y:p0.y.map(v=>v===null ? null : v*sv)};
+          for(const v of p.x) if(Number.isFinite(v)) ellX=Math.max(ellX,Math.abs(v));
+          for(const v of p.y) if(Number.isFinite(v)) ellY=Math.max(ellY,Math.abs(v));
+          const t=fn.traceEllipse(p,`${k.label} ${kind==='proj'?'incoherent':'coherent'}`,dash);
+          t.line={dash,color:k.color,width:st.width}; t.opacity=st.opacity; t.hoverinfo='skip';
+          tr.push(t);
+        }
+      }
+      const limU=Number(limits.U)>0 ? Number(limits.U) : 0, limV=Number(limits.V)>0 ? Number(limits.V) : 0;
+      let halfX=Math.max(limU*nU,1.05*ellX), halfY=Math.max(limV*nV*Math.abs(vd.sin),1.05*ellY);
+      if(!(halfX>0)) halfX=1; if(!(halfY>0)) halfY=1;
+      const xRange=[-halfX,halfX], yRange=[-halfY,halfY], grid=fn.resolutionObliqueGrid(basis,xRange,yRange);
+      const lay=layout(`${lab(ax.U)} vs ${lab(ax.V)}`,`${lab(ax.U)} (${qUnit})`,`${lab(ax.V)} (${qUnit})`,halfX,halfY,PLOT_IDS.UV,true);
+      lay.uirevision=`${PLOT_IDS.UV}-cmp-oblique`;
+      // Only the oblique U, V grid: no rectangular grid (major or minor).
+      lay.xaxis={...lay.xaxis,range:xRange,tickmode:'array',tickvals:grid.xTickVals,ticktext:grid.xTickText,showgrid:false,zeroline:false,showline:false,minor:{showgrid:false,ticks:''}};
+      // Equal scales, so V is drawn at its real angle to U (Plotly widens
+      // one range to fill the panel; the grid follows the drawn ranges).
+      lay.yaxis={...lay.yaxis,range:yRange,tickmode:'array',tickvals:grid.yTickVals,ticktext:grid.yTickText,showgrid:false,zeroline:false,showline:false,minor:{showgrid:false,ticks:''},scaleanchor:'x',scaleratio:1};
+      lay.shapes=grid.shapes;
+      if(uvGd) uvGd.__tasObliqueGrid={basis};
+      fn.reactResolutionPlot(PLOT_IDS.UV,tr,lay,fn.refreshObliqueGrid);
+      if(uvGd && !uvGd.__tasObliqueRelayout && typeof uvGd.on==='function'){
+        uvGd.__tasObliqueRelayout=true;
+        uvGd.on('plotly_relayout',event=>{
+          if(!Object.keys(event||{}).some(key=>/^([xy]axis\.(range|autorange)|autosize|width|height)/.test(key))) return;
+          fn.refreshObliqueGrid(uvGd);
+        });
+      }
+      return;
     }
     fn.reactResolutionPlot(PLOT_IDS.UV,traces('UV'),layout(`${lab(ax.U)} vs ${lab(ax.V)}`,`${lab(ax.U)} (${qUnit})`,`${lab(ax.V)} (${qUnit})`,limits.UVU||limits.U,limits.UVV||limits.V,PLOT_IDS.UV,true));
   }

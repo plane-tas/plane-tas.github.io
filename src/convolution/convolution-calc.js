@@ -4,6 +4,7 @@
 // are wired: shared state, functions by name in fns).
 import {autoGridSize, convolvePoint, convolvePointGrid, gaussianGrid, nearDispersion, standardNormalSamples} from './convolution-core.js';
 import {inverse} from '../core/matrix.js';
+import {inferOutOfPlaneHKL} from '../resolution/resolution-core.js';
 import {fmt} from './convolution-legend.js';
 import {LATTICE_MAX_NODES, covariance, createEngine, initialLattice, newNodes, refineLattice, roughCells} from './convolution-lattice.js';
 
@@ -98,27 +99,20 @@ export function installConvolutionCalc(context){
     return n===1 ? [lo] : Array.from({length:n},(_,i)=>lo+(hi-lo)*i/(n-1));
   };
 
-  // Scattering-plane coordinates: hkl = a U + b V (+ the out-of-plane part 0).
-  function planeBasis(base){
+  // Slice coordinates: hkl = a U + b V + w W, with W the out-of-plane
+  // direction of the scattering plane (as on the Constant E map: U × V in
+  // reciprocal space, largest component 1) and w the W value of the slice.
+  // coeff: (a, b) of the in-plane part; coeff3: (a, b, w).
+  function planeBasis(base,w=0){
     const U=base.lc.sv1.map(Number), V=base.lc.sv2.map(Number);
-    const B=[base.rl.astar,base.rl.bstar,base.rl.cstar];
-    const cart=h=>[0,1,2].map(j=>h[0]*B[0][j]+h[1]*B[1][j]+h[2]*B[2][j]);
-    const qU=cart(U), qV=cart(V);
-    const dot=(x,y)=>x[0]*y[0]+x[1]*y[1]+x[2]*y[2];
-    const g=[[dot(qU,qU),dot(qU,qV)],[dot(qU,qV),dot(qV,qV)]], det=g[0][0]*g[1][1]-g[0][1]*g[1][0];
-    const coeff=h=>{ const q=cart(h), r=[dot(q,qU),dot(q,qV)]; return [(g[1][1]*r[0]-g[0][1]*r[1])/det,(g[0][0]*r[1]-g[0][1]*r[0])/det]; };
-    return {U,V,coeff,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i])};
+    let W;
+    try{ W=inferOutOfPlaneHKL(base.rl,U,V).map(Number); }catch(_e){ W=[U[1]*V[2]-U[2]*V[1],U[2]*V[0]-U[0]*V[2],U[0]*V[1]-U[1]*V[0]]; }
+    const Minv=inverse([0,1,2].map(i=>[U[i],V[i],W[i]]));
+    const coeff3=h=>[0,1,2].map(j=>Minv[j][0]*h[0]+Minv[j][1]*h[1]+Minv[j][2]*h[2]);
+    const coeff=h=>coeff3(h).slice(0,2);
+    const w0=Number.isFinite(w) ? w : 0;
+    return {U,V,W,w:w0,coeff,coeff3,hkl:(a,b)=>U.map((x,i)=>a*x+b*V[i]+w0*W[i])};
   }
-  function axisRange(rg,plane,which){
-    const vecv=which==='a' ? plane.U : plane.V;
-    // Coefficient range from the h, k, l box corners; step from the bins.
-    const vals=[];
-    for(const h of [rg.H.min,rg.H.max]) for(const k of [rg.K.min,rg.K.max]) for(const l of [rg.L.min,rg.L.max]) vals.push(plane.coeff([h,k,l])[which==='a'?0:1]);
-    let step=Infinity;
-    ['H','K','L'].forEach((n,i)=>{ if(Math.abs(vecv[i])>1e-9 && rg[n].bin>0) step=Math.min(step,rg[n].bin/Math.abs(vecv[i])); });
-    return {min:Math.min(...vals),max:Math.max(...vals),step:Number.isFinite(step) ? step : (Math.max(...vals)-Math.min(...vals))/40};
-  }
-  const insideBox=(hkl,rg)=>['H','K','L'].every((n,i)=>hkl[i]>=rg[n].min-1e-6-rg[n].bin/2 && hkl[i]<=rg[n].max+1e-6+rg[n].bin/2);
 
   // ------------------------------------------------------------ workers --
   // A 2D map is shared between the CPU cores: one worker per core, each
@@ -200,14 +194,14 @@ export function installConvolutionCalc(context){
   // grid size from the nodes inside the range).  2: the points, a piece of a
   // row per job (see convolution-lattice.js for how a point gets its matrix).
   async function run2DOn(id,R,P){
-    const {base,rg,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
+    const {base,plane,A,Bv,E}=P, nA=A.length, nE=E.length;
     const gridMode=integrationMode('2D')==='grid';
     R.broadcast({type:'table',key:state.tableKey,text:state.text,format:fns.formatValue()});
     R.broadcast({type:'base',base});
     const items=[];  // per row: [{ia,hkl}] inside the range
     for(let ib=0;ib<Bv.length;ib++){
       const row=[];
-      for(let ia=0;ia<nA;ia++){ const hkl=plane.hkl(A[ia],Bv[ib]); if(insideBox(hkl,rg)) row.push({ia,hkl}); }
+      for(let ia=0;ia<nA;ia++) row.push({ia,hkl:plane.hkl(A[ia],Bv[ib])});
       items.push(row);
     }
     const nPts=items.reduce((n,r)=>n+r.length,0)*nE;
@@ -231,7 +225,7 @@ export function installConvolutionCalc(context){
       const jobs=[];
       for(let k=0;k<fresh.length;k+=chunk){
         const part=fresh.slice(k,k+chunk);
-        jobs.push({part,msg:{type:'nodes',pts:part.map(p=>{ const hkl=plane.hkl(p.a,p.b); return {hkl,E:p.e,size:gridMode && insideBox(hkl,rg)}; })}});
+        jobs.push({part,msg:{type:'nodes',pts:part.map(p=>{ const hkl=plane.hkl(p.a,p.b); return {hkl,E:p.e,size:gridMode}; })}});
       }
       await R.run(jobs,(m,job)=>{
         m.out.forEach((o,i)=>{
@@ -367,7 +361,7 @@ export function installConvolutionCalc(context){
       const sample=[];
       for(const a of sub(g.A,5)) for(const bb of sub(g.Bv,5)){
         const hkl=g.plane.hkl(a,bb);
-        if(insideBox(hkl,g.rg)) for(const e of sub(g.E,9)) sample.push({hkl,E:e});
+        for(const e of sub(g.E,9)) sample.push({hkl,E:e});
       }
       return nearFraction(g.base,sample);
     };
@@ -380,7 +374,7 @@ export function installConvolutionCalc(context){
       const pts=[];
       for(const a of pick(g.A)) for(const bb of pick(g.Bv)) for(const e of pick(g.E)){
         const hkl=g.plane.hkl(a,bb);
-        if(insideBox(hkl,g.rg)) pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
+        pts.push({hkl,E:e,res:resolutionAt(g.base,hkl,e,{})});
       }
       n=gridSizeFor('2D',pts);
       const {frac,tCheck}=near();
@@ -409,5 +403,5 @@ export function installConvolutionCalc(context){
     return {t:sc.pts.length*(per+b.tRes)/1000,n};
   }
   const scheduleEstimates=()=>{ clearTimeout(state.estimateTimer); state.estimateTimer=setTimeout(updateEstimates,250); };
-  Object.assign(fns,{resolutionAt, intensityAt, prefactor, inTable, tableRangeText, GRID_CHOICES, MC_CHOICES, GRID_DEFAULT, MC_DEFAULT, choice, mcSamples, gridMax, samplesFrom, fixChoices, integrationMode, showIntegration, gridSizeFor, DEFAULT_GRID, sizeGrid, integrationFor, grid, planeBasis, axisRange, insideBox, workerCount, workersAvailable, getWorkers, killWorkers, runJobs, workerRunner, pageRunner, run2DOn, medianTime, measureBench, timeText, updateEstimates, nearFraction, estimate2D, estimate1D, scheduleEstimates});
+  Object.assign(fns,{resolutionAt, intensityAt, prefactor, inTable, tableRangeText, GRID_CHOICES, MC_CHOICES, GRID_DEFAULT, MC_DEFAULT, choice, mcSamples, gridMax, samplesFrom, fixChoices, integrationMode, showIntegration, gridSizeFor, DEFAULT_GRID, sizeGrid, integrationFor, grid, planeBasis, workerCount, workersAvailable, getWorkers, killWorkers, runJobs, workerRunner, pageRunner, run2DOn, medianTime, measureBench, timeText, updateEstimates, nearFraction, estimate2D, estimate1D, scheduleEstimates});
 }
