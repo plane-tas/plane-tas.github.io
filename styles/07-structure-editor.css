@@ -23,6 +23,8 @@
   margin:0!important;
   justify-self:center!important;
   align-self:center!important;
+  grid-column:1!important;
+  grid-row:1!important;
 }
 
 @media(max-width:1180px){
@@ -92,12 +94,22 @@
 }
 
 /* Compact Atoms / Spins / Bonds tabs and plot-overlay legend placement. */
-#structurePanel .structure-config-section{padding-top:0;}
+#structurePanel .structure-config-section{padding-top:0;overflow:visible}
 #structurePanel .structure-config-tabs{
   border-radius:calc(8px * var(--tas-density));
+  flex-wrap:nowrap;
+  align-items:stretch;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
 }
 #structurePanel .structure-config-tabs button{
   border-radius:calc(6px * var(--tas-density));
+  flex:1 0 auto;
+  min-width:max-content;
+  white-space:nowrap;
+  padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
+  background:#f3f5f7;
+  color:#222;
 }
 #structurePanel .structure-spin-mode-row{
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
@@ -144,7 +156,6 @@
   min-width:0!important;
   grid-template-columns:auto minmax(calc(54px * var(--tas-density)),.65fr) minmax(calc(150px * var(--tas-density)),3fr) auto!important;
 }
-#structurePanel .structure-moment-row>input[type=checkbox]{grid-column:1!important;grid-row:1!important;}
 #structurePanel .structure-moment-row>.structure-moment-site{
   grid-column:2!important;grid-row:1!important;min-width:0!important;max-width:none!important;
 }
@@ -166,21 +177,7 @@
  #structurePanel .structure-moment-row{grid-template-columns:auto minmax(calc(48px * var(--tas-density)),.6fr) minmax(calc(125px * var(--tas-density)),3fr) auto!important;}
 }
 
-/* mCIF Generator: Atoms / Spins / Bonds. */
-#structurePanel .structure-config-tabs{
-  flex-wrap:nowrap;
-  align-items:stretch;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-}
-#structurePanel .structure-config-tabs button{
-  flex:1 0 auto;
-  min-width:max-content;
-  white-space:nowrap;
-  padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));
-  background:#f3f5f7;
-  color:#222;
-}
+/* Structure editor tabs: hover and selected. */
 #structurePanel .structure-config-tabs button:hover{background:#eaf0f6;}
 #structurePanel .structure-config-tabs button.active{
   color:#222;
@@ -200,7 +197,6 @@
   border-top:calc(1px * var(--tas-density)) solid #e1e5ea;
 }
 #structurePanel .structure-control-section:last-child{padding-bottom:0;}
-#structurePanel .structure-config-section{overflow:visible;}
 #structurePanel .structure-viewer-main > .cif-output-tabs,
 #cifGeneratorPanel .cif-generator-output-pane > .cif-output-tabs{
   border-top:0;
@@ -286,13 +282,18 @@
 #cifGeneratorPanel .cif-generator-source-section .cif-generator-source-row > .cif-file-name{
   min-width:0;
 }
+/* Editor and output side by side.  No scroll anchoring: short editor tabs
+   must not make the browser compensate when the output pane changes at
+   narrower widths. */
 #structurePanel #cifGeneratorPanel.generator-unified-grid{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
   gap:calc(12px * var(--tas-density));
   align-items:start;
-  width:100%;max-width:100%;
+  width:100%;
+  max-width:100%;
   min-width:0;
+  overflow-anchor:none;
 }
 #structurePanel .generator-unified-left{padding:calc(12px * var(--tas-density));}
 #structurePanel .generator-shared-file .cif-pane-heading{margin-bottom:calc(9px * var(--tas-density));align-items:center;}
@@ -339,6 +340,11 @@
   width:100%;
   padding:calc(12px * var(--tas-density));
   overflow:hidden;
+  grid-column:1;
+  grid-row:2;
+  min-height:0!important;
+  height:100%!important;
+  align-self:stretch;
 }
 #structurePanel .generator-reflections-notice{
   margin:calc(12px * var(--tas-density)) 0;
@@ -402,6 +408,7 @@
   display: grid !important;
   align-items: end;
   gap: calc(8px * var(--tas-density));
+  grid-template-columns:minmax(calc(105px * var(--tas-density)),1fr) minmax(0,2fr)!important;
 }
 #structurePanel .cif-unified-output-line > label { min-width: 0; }
 #structurePanel .cif-unified-output-line .cif-generator-file-name { display: block; }
@@ -473,9 +480,6 @@
 }
 
 /* Restore the output format selector beside the filename. */
-#structurePanel .cif-unified-output-line{
-  grid-template-columns:minmax(calc(105px * var(--tas-density)),1fr) minmax(0,2fr)!important;
-}
 #structurePanel .cif-unified-output-line .cif-output-format-label select{
   width:100%;min-width:0;max-width:100%;box-sizing:border-box;
   margin-top:calc(5px * var(--tas-density));
@@ -502,19 +506,7 @@
 /* Do not show an mCIF future-support notice for ordinary CIF output,
    including on the first paint before scripts initialize. */
 #structurePanel #cifMcifBnsNotice[hidden]{display:none!important}
-#structurePanel .generator-unified-right > .generator-output-pane{
-  grid-column:1;
-  grid-row:2;
-  min-height:0!important;
-  height:100%!important;
-  align-self:stretch;
-}
 
-/* Scroll anchoring must not compensate for short editor tabs when the
-   Generator changes its output pane at narrower responsive widths. */
-#structurePanel #cifGeneratorPanel.generator-unified-grid{
-  overflow-anchor:none;
-}
 /* Previously forced-small CIF file headings and view-control captions. */
 #structurePanel .generator-shared-file > .cif-pane-heading h3,
 #structurePanel #cifGeneratorPanel .cif-generator-source-section .cif-pane-heading h3 {

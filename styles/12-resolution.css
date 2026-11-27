@@ -1,7 +1,10 @@
 /* Resolution panel.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-.sidebar h2,.calc-card h2,#result h2{margin:0 0 calc(8px * var(--tas-density))}details summary{cursor:pointer}.plots>div{height:calc(390px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #eee}.scan .grid5{margin-top:calc(5px * var(--tas-density))}
+.sidebar h2,.calc-card h2,#result h2{margin:0 0 calc(8px * var(--tas-density))}
+details summary{cursor:pointer}
+.plots>div{height:calc(390px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #eee}
+.scan .grid5{margin-top:calc(5px * var(--tas-density))}
 #resolutionPanel .calc-card{margin-top:0}
 
 /* Resolution-only instrument details.
@@ -323,7 +326,7 @@
    four plots on the left and the table on the right; on a narrow panel the
    table above the plots. */
 #resolutionPanel #resolutionComparisonView{container-type:inline-size}
-#resolutionPanel .resolution-compare-tools.convolution-show-row{margin:0 0 calc(8px * var(--tas-density))}
+#resolutionPanel .resolution-compare-tools.convolution-show-row{margin:0 0 calc(8px * var(--tas-density));flex-wrap:nowrap}
 #resolutionPanel .resolution-compare-body{display:flex;flex-direction:column;gap:calc(10px * var(--tas-density))}
 #resolutionPanel .resolution-compare-body[hidden]{display:none}
 #resolutionPanel .resolution-compare-side{order:-1;min-width:0}
@@ -379,4 +382,3 @@
 .resolution-compare-tools .resolution-display-label{display:inline-flex;flex-direction:row;align-items:center;gap:calc(4px * var(--tas-density));align-self:center;min-height:0}
 .resolution-compare-tools .resolution-display-label select{width:auto}
 .resolution-compare-tools .resolution-display-label.hidden+.resolution-display-sep{display:none}
-#resolutionPanel .resolution-compare-tools.convolution-show-row{flex-wrap:nowrap}

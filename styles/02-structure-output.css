@@ -8,7 +8,7 @@
 .cif-output-tab:last-child{border-right:0}
 .cif-output-tab.active{background:#fff;box-shadow:inset 0 calc(-3px * var(--tas-density)) 0 #555}
 .cif-reflection-plane-toggle input{margin:0}
-.cif-reflection-table th,.cif-reflection-table td{border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap}
+.cif-reflection-table th,.cif-reflection-table td{border-right:calc(1px * var(--tas-density)) solid #ddd;border-bottom:calc(1px * var(--tas-density)) solid #ddd;text-align:right;white-space:nowrap;padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))}
 .cif-reflection-table th:first-child,.cif-reflection-table td:first-child{text-align:center}
 .cif-reflection-table th{position:sticky;top:0;z-index:1;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight)}
 .cif-reflection-table th:last-child,.cif-reflection-table td:last-child{border-right:0}
@@ -21,7 +21,7 @@
 #cifPreviewPanel{overflow:hidden}
 
 /* Reflection-table readability and row selection. */
-.cif-reflection-toolbar{grid-template-columns:calc(170px * var(--tas-density)) calc(175px * var(--tas-density)) calc(220px * var(--tas-density)) calc(160px * var(--tas-density)) minmax(0,1fr)}
+.cif-reflection-toolbar{grid-template-columns:calc(170px * var(--tas-density)) calc(175px * var(--tas-density)) calc(220px * var(--tas-density)) calc(160px * var(--tas-density)) minmax(0,1fr);display:flex;flex-wrap:wrap;gap:calc(10px * var(--tas-density)) calc(18px * var(--tas-density));align-items:center;flex:0 0 auto;margin-bottom:calc(10px * var(--tas-density))}
 .cif-reflection-table tbody tr{cursor:pointer}
 .cif-reflection-table tbody tr:hover td{background:#f0f4f8}
 .cif-reflection-table tbody tr.cif-reflection-selected td,
@@ -37,15 +37,12 @@
 /* CIF atom/action proportions. */
 .cif-atom-table{grid-template-columns:calc(52px * var(--tas-density)) calc(72px * var(--tas-density)) repeat(4,minmax(calc(76px * var(--tas-density)),1fr)) calc(94px * var(--tas-density));min-width:calc(652px * var(--tas-density))}
 
-/* v4.5 reflection-table simplification */
-.cif-reflection-toolbar{display:flex;flex-wrap:wrap;gap:calc(10px * var(--tas-density)) calc(18px * var(--tas-density));align-items:center;}
+/* Reflection table: sortable headers; hidden output panels. */
 .cif-sortable-th{cursor:pointer;user-select:none}
 .cif-sortable-th:hover{background:#e8edf3}
 .cif-sortable-th:focus{outline:calc(2px * var(--tas-density)) solid #3b82f6;outline-offset:calc(-2px * var(--tas-density))}
 .cif-output-panel.hidden{display:none!important}
 #cifPreviewPanel,#cifReflectionsPanel{min-height:0}
-.cif-reflection-toolbar{flex:0 0 auto;margin-bottom:calc(10px * var(--tas-density))}
-.cif-reflection-table th,.cif-reflection-table td{padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density))}
 
 /* View: six equal direction buttons and six equal min/max entry boxes. */
 #structurePanel .cif-structure-view-buttons.structure-view-buttons-six{
@@ -199,16 +196,19 @@
   align-items:end;
   min-width:0;
   margin:calc(10px * var(--tas-density)) 0 0;
+  margin-top:0;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:calc(5px * var(--tas-density));
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
   box-sizing:border-box;
   max-width:100%;
+  min-width:0;
+  width:100%;
+  padding-left:calc(5px * var(--tas-density));
+  padding-right:calc(3px * var(--tas-density));
 }
 
-/* Keep beam parameters; remove the now-unneeded Reflection parameters heading. */
-#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
-  margin-top:0;
-}
 /* Download table belongs to the right of the Nuclear filtering checkboxes. */
 #structurePanel #cifReflectionsPanel .cif-reflection-toolbar{
   display:flex;
@@ -228,11 +228,7 @@
   white-space:nowrap;
 }
 
-/* Nuclear and Magnetic: a common approximately-ten-data-row scroll viewport.
-   Auto-height prevents blank space when the table contains fewer rows. */
-#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
-  max-width:100%;
-}
+/* Reflection table: the header row stays in view while the rows scroll. */
 #structurePanel #generatorReflectionsPane .cif-reflection-table th{
   position:sticky;
   top:0;
@@ -251,19 +247,9 @@
 
 /* Reflections: keep Energy, Wavelength and Wavevector on a single row,
    including half-width browser windows. Override the 620px two-column rule. */
-#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:calc(5px * var(--tas-density));
-}
 #structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid > label{
   min-width:0;
   overflow-wrap:anywhere;
-}
-#structurePanel #generatorReflectionsPane .generator-reflection-settings .cif-generator-beam-grid input{
-  min-width:0;
-  width:100%;
-  padding-left:calc(5px * var(--tas-density));
-  padding-right:calc(3px * var(--tas-density));
 }
 #structurePanel .generator-unified-right > :is(#generatorReflectionsPane,#cifPreviewPanel){
   flex:0 0 auto;
@@ -274,15 +260,9 @@
   min-height:0;
 }
 
-/* CIF Generator output height alignment (Structure / Reflections / Preview).
-   Use the same square content viewport for all three tabs.  Reflections
-   keeps its own vertical scroll rather than clipping the reflection rows. */
-/* Reflections returns to the original compact, content-height table viewport. */
-#structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
-  box-sizing:border-box;
-  width:100%;
-}
-
+/* CIF Generator output height alignment (Structure / Reflections / Preview):
+   the preview text and the reflection table fill their tab and scroll
+   inside it, rather than clipping the rows. */
 #structurePanel #cifPreviewPanel #cifPreview{
   box-sizing:border-box;
   width:100%;
@@ -320,6 +300,9 @@
   overflow:hidden;
 }
 #structurePanel #generatorReflectionsPane .generator-reflection-pane .cif-reflection-table-wrap{
+  max-width:100%;
+  box-sizing:border-box;
+  width:100%;
   display:block;
   flex:1 1 0;
   height:0!important;
@@ -384,7 +367,9 @@
 #structurePanel .reflection-powder-plot{width:100%;height:calc(280px * var(--tas-density));min-width:0}
 #structurePanel #cifReflectionTableWrap.hidden{display:none!important}
 #structurePanel .reflection-powder-section:not([hidden]){flex:1 1 auto;display:flex;flex-direction:column;min-height:calc(320px * var(--tas-density))}
-#structurePanel .reflection-powder-section .reflection-powder-plot{flex:1 1 auto;}
+/* Graph: a usable plot height also in narrow windows (the margins hold the
+   axis titles and the legend). */
+#structurePanel .reflection-powder-section .reflection-powder-plot{flex:1 1 auto;min-height:calc(440px * var(--tas-density))}
 #structurePanel .reflection-powder-plot-wrap{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-fwhm{position:absolute;top:calc(8px * var(--tas-density));left:calc(8px * var(--tas-density));z-index:2;font-size:max(12px,calc(15px * var(--tas-density)))}
 #structurePanel .reflection-powder-plot-wrap > .reflection-plot-xaxis{position:absolute;bottom:calc(4px * var(--tas-density));left:50%;transform:translateX(-50%);z-index:2;width:auto;min-width:calc(120px * var(--tas-density));max-width:none;font-size:max(12px,calc(16px * var(--tas-density)))}
@@ -420,8 +405,6 @@
   font-size:max(12px,calc(15px * var(--tas-density)))!important;font-weight:400;margin:0;
 }
 #structurePanel .reflection-plot-controls :is(input[type=number],select){font-size:max(12px,calc(15px * var(--tas-density)))!important}
-/* Keep a usable plot height on narrow windows (margins hold the axis titles and legend). */
-#structurePanel .reflection-powder-section .reflection-powder-plot{min-height:calc(440px * var(--tas-density))}
 
 /* Reflections (CIF/mCIF Generator): when the window is too short for the
    controls plus the minimum graph height (small laptops, 125-150 % display
@@ -437,14 +420,12 @@
 }
 #structurePanel #generatorReflectionsPane #cifReflectionTableWrap{overscroll-behavior:auto}
 /* Inside the scrolling panel the controls keep their natural height (they
-   would otherwise shrink and overlap); only the table area shrinks.  The
-   Table / Graph tabs stay at the top while the panel is scrolled. */
+   would otherwise shrink and overlap); only the table area shrinks, down to
+   a readable minimum height (a short window scrolls the panel instead).
+   The Table / Graph tabs stay at the top while the panel is scrolled. */
 #structurePanel #generatorReflectionsPane #cifReflectionsPanel > *{flex-shrink:0}
-#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{flex-shrink:1}
+#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{flex-shrink:1;min-height:calc(220px * var(--tas-density))!important}
 #structurePanel #generatorReflectionsPane #cifReflectionsPanel > .reflection-view-tabs{position:sticky;top:0;z-index:3;background:var(--card-bg,#fff)}
-/* The table area keeps a readable minimum height; in a short window the panel
-   scrolls to it instead of squeezing the table to nothing. */
-#structurePanel #generatorReflectionsPane #cifReflectionsPanel > #cifReflectionTableWrap{min-height:calc(220px * var(--tas-density))!important}
 
 /* CIF/mCIF Preview: the name of the file shown above the text. */
 .cif-preview-head{display:flex;align-items:center;min-width:0}

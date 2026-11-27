@@ -2,7 +2,8 @@
    its scrolling.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}h1{margin:0}
+header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) calc(16px * var(--tas-density));border-bottom:calc(1px * var(--tas-density)) solid #ddd;background:#fff;display:flex;align-items:baseline;gap:calc(20px * var(--tas-density))}
+h1{margin:0}
 /* Keep the existing header links accessible on very narrow phones. */
 @media(max-width:360px){
   header{flex-wrap:wrap!important;gap:calc(6px * var(--tas-density)) calc(12px * var(--tas-density))!important;align-items:center!important;padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));}
@@ -23,13 +24,26 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
   display:flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:0 14px;
 }
 #tasTopBar .tas-brand h1{
-  margin:0;color:#cf6914;font-size:23px;letter-spacing:.025em;line-height:1.08;
+  margin:0;
+  color:#cf6914;
+  font-size:23px;
+  letter-spacing:.025em;
+  line-height:1.08;
+  text-shadow:
+    0 1px 0 rgba(255,230,193,.9),
+    0 2px 0 rgba(146,70,17,.82),
+    0 3px 3px rgba(71,40,18,.25);
 }
 #tasTopBar .tas-brand-subtitle{
-  margin-top:0;font-size:13px;line-height:1.25;color:#495261;
-  letter-spacing:0;white-space:normal;
+  margin-top:0;
+  font-size:13px;
+  line-height:1.25;
+  color:#495261;
+  letter-spacing:0;
+  white-space:normal;
+  text-shadow:0 1px 0 rgba(255,255,255,.9),0 2px 2px rgba(46,52,64,.18);
 }
-#tasTopBar .tas-brand-letter{color:#cf6914;}
+#tasTopBar .tas-brand-letter{color:#cf6914;text-shadow:0 1px 0 rgba(255,233,195,.92),0 2px 2px rgba(131,64,24,.22)}
 #tasTopBar #status{
   flex:1 1 145px;min-width:0;margin-left:auto;
   font-size:12px;line-height:1.3;text-align:right;color:#222;
@@ -66,18 +80,6 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
   font-family:'Anta',system-ui,-apple-system,'Segoe UI',sans-serif;
   font-weight:400;
 }
-#tasTopBar .tas-brand h1{
-  text-shadow:
-    0 1px 0 rgba(255,230,193,.9),
-    0 2px 0 rgba(146,70,17,.82),
-    0 3px 3px rgba(71,40,18,.25);
-}
-#tasTopBar .tas-brand-subtitle{
-  text-shadow:0 1px 0 rgba(255,255,255,.9),0 2px 2px rgba(46,52,64,.18);
-}
-#tasTopBar .tas-brand-letter{
-  text-shadow:0 1px 0 rgba(255,233,195,.92),0 2px 2px rgba(131,64,24,.22);
-}
 
 /* Sidebars are bounded by the real viewport, not an enlarged stage. */
 .shell { min-height: calc(100vh - var(--tas-header-height)); }
@@ -91,6 +93,9 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
     height: 100dvh;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow-y: hidden;
   }
   #tasTopBar { flex: 0 0 auto; }
   .shell {
@@ -118,7 +123,6 @@ header{position:sticky;top:0;z-index:20;padding:calc(10px * var(--tas-density)) 
    sized by the flex viewport on desktop, not by older vh-based minimums. */
 @media (min-width: 761px) {
   html { height: 100%; overflow-y: hidden; }
-  body { min-height: 0; max-height: 100dvh; overflow-y: hidden; }
   body > .shell { min-height: 0; max-height: 100%; }
   body > .shell > main,
   body > .shell > .sidebar { min-height: 0; max-height: 100%; }

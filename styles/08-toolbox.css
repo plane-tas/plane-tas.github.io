@@ -19,7 +19,7 @@
 .toolbox-grid input[type=number]{width:100%;min-width:0;max-width:none}
 .absorption-card{margin-top:calc(16px * var(--tas-density))}
 .absorption-table-wrap{margin-top:calc(12px * var(--tas-density));overflow:auto;max-height:calc(320px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d7d7d7;border-radius:calc(6px * var(--tas-density))}
-.absorption-table thead th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);z-index:1}
+.absorption-table thead th{position:sticky;top:0;background:var(--table-head-bg);color:var(--table-head-color);font-weight:var(--table-head-weight);z-index:1;border:calc(1px * var(--tas-density)) solid #bdbdbd!important}
 .absorption-warning{margin-top:calc(10px * var(--tas-density));padding:calc(8px * var(--tas-density)) calc(10px * var(--tas-density));border:calc(1px * var(--tas-density)) solid #d9b55b;border-radius:calc(6px * var(--tas-density));background:#fff8df;font-size:calc(14px * var(--tas-density))}
 .absorption-workspace{display:grid;grid-template-columns:minmax(calc(440px * var(--tas-density)),.95fr) minmax(calc(430px * var(--tas-density)),1.05fr);gap:calc(18px * var(--tas-density));align-items:stretch}
 .absorption-left{display:grid;align-content:start;gap:calc(12px * var(--tas-density));}
@@ -27,14 +27,13 @@
 .absorption-left input[type="text"],.absorption-left input[type="number"]{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
 .absorption-cif-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:calc(8px * var(--tas-density));align-items:end}
 .absorption-cif-row button{min-height:calc(38px * var(--tas-density));white-space:nowrap}
-.absorption-thickness-control{display:grid;align-items:end}
-.absorption-thickness-control input[type="range"]{width:100%;align-self:center;margin-bottom:calc(8px * var(--tas-density))}
-.absorption-right{min-height:calc(430px * var(--tas-density));background:#fff} /* no frame, as the form factor plot */
+.absorption-thickness-control{display:grid;align-items:end;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(145px * var(--tas-density))),1fr))!important;gap:calc(10px * var(--tas-density))}
+.absorption-thickness-control input[type="range"]{width:100%;align-self:center;margin-bottom:calc(8px * var(--tas-density));grid-column:auto!important;grid-row:auto!important;min-width:0}
+.absorption-right{min-height:calc(430px * var(--tas-density));background:#fff;width:100%;overflow:hidden} /* no frame, as the form factor plot */
 .absorption-plot{height:100%;min-height:calc(430px * var(--tas-density));min-width:0!important;max-width:100%!important;width:100%!important}
 .absorption-results{margin-top:0}
 .absorption-table{table-layout:fixed;border-collapse:collapse;width:100%}
-.absorption-table th,.absorption-table td{border:calc(1px * var(--tas-density)) solid #c9c9c9!important;box-sizing:border-box}
-.absorption-table thead th{border:calc(1px * var(--tas-density)) solid #bdbdbd!important}
+.absorption-table th,.absorption-table td{border:calc(1px * var(--tas-density)) solid #c9c9c9!important;box-sizing:border-box;padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));text-align:right;white-space:nowrap;width:20%}
 .absorption-summary-cards{
   display:grid;
   gap:calc(9px * var(--tas-density));
@@ -76,13 +75,15 @@
 .absorption-summary-subgrid>div:first-child{border-left:0}
 .absorption-beam-controls{
   display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(145px * var(--tas-density))),1fr))!important;
+  gap:calc(10px * var(--tas-density));
 }
 .absorption-beam-controls label{display:grid;gap:calc(5px * var(--tas-density));}
 .absorption-beam-controls input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-summary-card,
 .absorption-summary-subgrid>div{background:#fff!important;}
 .absorption-summary-subgrid span{color:#222!important;}
-.absorption-thickness-control label:last-child{width:100%;}
+.absorption-thickness-control label:last-child{width:100%;justify-self:stretch;max-width:none}
 #absorptionTransmission{width:100%;}
 .absorption-summary-cards > .absorption-summary-card:first-child{
   grid-column:span 1;
@@ -127,11 +128,7 @@
   overflow-x:auto;
   overflow-y:hidden;
 }
-.absorption-right{
-  width:100%;
-  overflow:hidden;
-}
-.absorption-input-mode-row{display:grid;gap:calc(8px * var(--tas-density));align-items:end}
+.absorption-input-mode-row{display:grid;gap:calc(8px * var(--tas-density));align-items:end;min-width:0;grid-template-columns:minmax(0,1fr)!important}
 .absorption-input-mode-row select,.absorption-manual-row input{min-height:calc(38px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density));width:100%}
 .absorption-manual-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(calc(150px * var(--tas-density)),.6fr);gap:calc(8px * var(--tas-density));align-items:end}
 .absorption-input-mode-row label,
@@ -212,13 +209,8 @@
   align-items:end;
   gap:calc(10px * var(--tas-density));
 }
-.absorption-input-mode-row{min-width:0;grid-template-columns:minmax(0,1fr)!important}
 .absorption-cif-row:not(.hidden){display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:calc(8px * var(--tas-density));min-width:0;align-items:end}
 .absorption-manual-row:not(.hidden){display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(140px * var(--tas-density))),1fr));gap:calc(8px * var(--tas-density));min-width:0}
-.absorption-beam-controls{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(145px * var(--tas-density))),1fr))!important;gap:calc(10px * var(--tas-density))}
-.absorption-thickness-control{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(145px * var(--tas-density))),1fr))!important;gap:calc(10px * var(--tas-density))}
-.absorption-thickness-control input[type=range]{grid-column:auto!important;grid-row:auto!important;min-width:0}
-.absorption-thickness-control label:last-child{justify-self:stretch;max-width:none}
 .absorption-beam-controls>label,.absorption-thickness-control>label{min-width:0}
 @media(max-width:850px){
   .absorption-source-row{grid-template-columns:minmax(0,1fr)!important}
@@ -233,17 +225,15 @@
 
 /* Toolbox sub-tabs: keep all four calculators in one workspace (v39). */
 #toolboxPanel{min-width:0;max-width:100%;}
-.toolbox-subtabs{margin:0 0 calc(12px * var(--tas-density));border-radius:calc(9px * var(--tas-density));}
-.toolbox-subtab{border-radius:calc(6px * var(--tas-density));}
+.toolbox-subtabs{margin:0 0 calc(12px * var(--tas-density));border-radius:calc(9px * var(--tas-density));flex-wrap:nowrap;align-items:stretch;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding:calc(4px * var(--tas-density))}
+.toolbox-subtab{border-radius:calc(6px * var(--tas-density));flex:1 0 auto;min-width:max-content;padding:calc(8px * var(--tas-density)) calc(11px * var(--tas-density));line-height:1.2;white-space:nowrap;overflow-wrap:normal;background:#f3f5f7;color:#222}
 .toolbox-subtab:focus-visible{outline:calc(2px * var(--tas-density)) solid #5073b3;outline-offset:calc(2px * var(--tas-density));}
 #toolboxPanel .toolbox-subpanel{min-width:0;max-width:100%;width:100%;margin-top:0;}
 #toolboxPanel .toolbox-subpanel.hidden{display:none!important;}
-.magff-info{color:#222;}
-.magff-plot{width:100%;min-width:0;}
 /* Compact magnetic form factor; same text size as the main tabs. */
-.magff-info{min-height:0;margin:calc(4px * var(--tas-density)) 0;font-size:calc(13px * var(--tas-density));}
+.magff-info{color:#222;min-height:0;margin:calc(4px * var(--tas-density)) 0;font-size:calc(13px * var(--tas-density))}
+.magff-plot{width:100%;min-width:0;min-height:calc(380px * var(--tas-density))} /* + the title above the plot */
 .magff-info:empty{display:none;}
-.magff-plot{min-height:calc(380px * var(--tas-density));} /* + the title above the plot */
 .magff-extra-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(12px * var(--tas-density));}
 .magff-plot-slider,.absorption-plot-slider{
   display:block;width:100%;min-width:0;box-sizing:border-box;
@@ -276,7 +266,9 @@
 
 /* Keep the attenuation plot, thickness slider and CSV action together.
    Previously .absorption-plot {height:100%} filled the entire clipped
-   .absorption-right card, hiding the controls that follow the graph. */
+   .absorption-right card, hiding the controls that follow the graph.  The
+   Plotly SVG must not keep a stale wide canvas outside its own card after
+   the page switches between narrow and wide layouts. */
 #toolboxAttenuationPane .absorption-right{
   display:flex;
   flex-direction:column;
@@ -287,6 +279,8 @@
   padding:calc(10px * var(--tas-density)) calc(12px * var(--tas-density)) calc(12px * var(--tas-density));
   gap:calc(8px * var(--tas-density));
   overflow:visible;
+  min-width:0;
+  max-width:100%;
 }
 #toolboxAttenuationPane .absorption-plot{
   flex:0 0 auto;
@@ -294,6 +288,9 @@
   height:calc(380px * var(--tas-density))!important;
   min-height:0!important;
   max-height:none;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
 }
 #toolboxAttenuationPane .absorption-plot-slider{
   display:block;
@@ -313,43 +310,29 @@
   background:#f3f5f7;
   border:calc(1px * var(--tas-density)) solid #b9c4d0;
 }
-.toolbox-subtabs{
-  flex-wrap:nowrap;
-  align-items:stretch;
-  overflow-y:hidden;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-  padding:calc(4px * var(--tas-density));
-}
-.toolbox-subtab{
-  flex:1 0 auto;
-  min-width:max-content;
-  padding:calc(8px * var(--tas-density)) calc(11px * var(--tas-density));
-  line-height:1.2;
-  white-space:nowrap;
-  overflow-wrap:normal;
-  background:#f3f5f7;
-  color:#222;
-}
 /* Give the selected item a visible frame at every tab level. */
 .toolbox-subtab,
 #structurePanel .structure-config-tabs button{
   border:calc(1px * var(--tas-density)) solid transparent;
   box-sizing:border-box;
 }
-/* Compact four-field form-factor control row. */
+/* Compact four-field form-factor control row; the text labels and the four
+   field baselines stay aligned even when a label wraps. */
 #toolboxFormFactorPane .magff-main-row{
   display:grid;
   grid-template-columns:repeat(6,minmax(0,1fr));
   gap:calc(10px * var(--tas-density));
   min-width:0;
   margin:calc(10px * var(--tas-density)) 0;
+  align-items:stretch;
 }
 #toolboxFormFactorPane .magff-main-row>label{
   display:grid;
   gap:calc(5px * var(--tas-density));
   min-width:0;
   overflow-wrap:anywhere;
+  grid-template-rows:minmax(calc(20px * var(--tas-density)),1fr) calc(38px * var(--tas-density));
+  align-content:stretch;
 }
 #toolboxFormFactorPane .magff-main-row :is(input,select){
   display:block;
@@ -357,6 +340,7 @@
   width:100%;
   min-width:0;
   max-width:100%;
+  height:calc(38px * var(--tas-density));
 }
 /* Preserve three beam fields, with Set default on their right. */
 #toolboxAttenuationPane .absorption-beam-row{
@@ -386,13 +370,6 @@
   #toolboxFormFactorPane .magff-main-row :is(input,select){font-size:calc(14px * var(--tas-density));padding-inline:calc(4px * var(--tas-density));}
   #toolboxFormFactorPane .magff-main-row>label{font-size:calc(12px * var(--tas-density));}
 }
-/* Keep text labels and the four field baselines aligned even when a label wraps. */
-#toolboxFormFactorPane .magff-main-row{align-items:stretch;}
-#toolboxFormFactorPane .magff-main-row>label{
-  grid-template-rows:minmax(calc(20px * var(--tas-density)),1fr) calc(38px * var(--tas-density));
-  align-content:stretch;
-}
-#toolboxFormFactorPane .magff-main-row :is(input,select){height:calc(38px * var(--tas-density));}
 .toolbox-subtabs > .toolbox-subtab{
   min-width:0;width:100%;flex:none;
   white-space:normal;overflow-wrap:anywhere;
@@ -460,10 +437,6 @@
   #toolboxS2Pane .s2-conversion-grid{grid-template-columns:minmax(0,1fr)!important;}
 }
 
-/* Neutron attenuation: the Plotly SVG must not retain a stale wide canvas
-   outside its own card after the page switches between narrow/wide layouts. */
-#toolboxAttenuationPane .absorption-right{min-width:0;max-width:100%;}
-#toolboxAttenuationPane .absorption-plot{min-width:0;max-width:100%;overflow:hidden;}
 #toolboxAttenuationPane .absorption-summary-subgrid strong,
 #toolboxAttenuationPane .absorption-summary-value {
   font-size: max(13px, calc(17px * var(--tas-density))) !important;
@@ -493,7 +466,6 @@
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
 .s2-conversion-info.warning{color:#a25a00;background:#fff8e6;border:calc(1px * var(--tas-density)) solid #e5c982;border-radius:calc(5px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
-.absorption-table th,.absorption-table td{padding:calc(7px * var(--tas-density)) calc(9px * var(--tas-density));text-align:right;white-space:nowrap;width:20%}
 .absorption-table th:first-child,.absorption-table td:first-child{text-align:left}
 .absorption-cif-row>label,.absorption-cif-row input,.absorption-input-mode-row label,.absorption-input-mode-row select{min-width:0;max-width:100%;box-sizing:border-box}
 .magff-info.error{color:#9c441d;border:0;padding:0;background:transparent;}

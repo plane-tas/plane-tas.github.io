@@ -2,7 +2,9 @@
    tables of Propagation vectors, Background materials and Dark angles.
    Load order is significant: styles/*.css are linked in numeric order from index.html. */
 
-.sidebar h3{margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.auto-row{grid-template-columns:calc(28px * var(--tas-density)) minmax(0,1fr)}
+.sidebar h3{margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density));line-height: 1.3}
+.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.auto-row{grid-template-columns:calc(28px * var(--tas-density)) minmax(0,1fr)}
 
 /* Explicit U/V swap control. The entered order defines handedness, so this
    button performs an intentional swap only when the user requests it. */
@@ -17,13 +19,15 @@
 .uv-vector-u{grid-column:1;grid-row:1;}
 .uv-vector-v{grid-column:1;grid-row:2;}
 .sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
-.sidebar select{padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density))}
+.sidebar select{padding:calc(6px * var(--tas-density)) calc(7px * var(--tas-density));min-height:calc(32px * var(--tas-density));font-size: calc(16px * var(--tas-density))}
 
-/* Stable compact sidebar sizing and linked Powder Angle inputs. */
+/* Sample: Type | No. | Space group in one row; No. compact, the space-group
+   selector wider (without changing the sidebar width). */
 .sample-spacegroup-row{
   gap:calc(4px * var(--tas-density));
   width:100%;
   min-width:0;
+  grid-template-columns:minmax(0,1fr) minmax(0,.825fr) minmax(0,1.375fr)!important;
 }
 .sample-spacegroup-row label,
 .sample-spacegroup-row select,
@@ -36,29 +40,26 @@
 
 /* Keep the permanent left panel width stable when Single crystal / Powder
    changes the amount of visible content. Reserve the vertical scrollbar gutter
-   so form controls do not grow/shrink by the scrollbar width. */
-.sidebar{scrollbar-gutter:stable;}
-@media(max-width:760px){
-  .sidebar{scrollbar-gutter:auto;}
+   so form controls do not grow/shrink by the scrollbar width.  The sidebar
+   is bounded by the window below the header.  The custom properties are
+   the No. and Remove column widths and the cell line shared by the sidebar
+   tables (Propagation vectors, Background materials, Dark angles). */
+.sidebar{
+  scrollbar-gutter:stable;
+  max-height:calc(100vh - var(--tas-header-height));
+  --sidebar-remove-w:calc(84px * var(--tas-density));
+  --sidebar-no-w:calc(52px * var(--tas-density));
+  --sidebar-line:calc(1px * var(--tas-density)) solid #d8dde3;
 }
-
 .instrument-primary-row>label,.instrument-primary-row select,.instrument-primary-row input{min-width:0;width:100%;max-width:100%}
-.sidebar { max-height: calc(100vh - var(--tas-header-height)); }
 @media (max-width: 760px) {
-  .sidebar { max-height: none; }
+  .sidebar {scrollbar-gutter:auto;max-height: none}
 }
 
 /* Readability tuning (native compact UI; no transform/zoom).
    Adjust typography only. Existing responsive columns and graph geometry stay intact. */
 .sidebar section > h2 {
   line-height: 1.25;
-}
-.sidebar h3 {
-  line-height: 1.3;
-}
-.sidebar input:not([type=checkbox]):not([type=radio]):not([type=range]),
-.sidebar select {
-  font-size: calc(16px * var(--tas-density));
 }
 #fixedBeamQuantity,#fixedBeamValue{width:100%;min-width:0;}
 #fixedBeamLabel{min-width:0;}
@@ -80,12 +81,6 @@
 /* Six fixed-beam unit choices share one existing Fixed and one value slot.
    The hidden legacy fields retain the canonical meV interface used by TAS calculations. */
 .instrument-primary-row > .fixed-beam-internal{display:none!important;}
-
-/* Sidebar: make No. compact and give the space-group selector more room.
-   Override the legacy equal-width columns without changing sidebar width. */
-.sample-spacegroup-row{
-  grid-template-columns:minmax(0,1fr) minmax(0,.825fr) minmax(0,1.375fr)!important;
-}
 
 /* Sidebar: Lattice parameters and Scattering plane use the same heading size. */
 .sidebar h3.lattice-parameters-heading{
@@ -163,10 +158,10 @@
 /* Sidebar tables and cards: Propagation vectors (k1 ● h k l), Background
    materials (BG1 ■ material) and the Dark angles cards (SE1 environment,
    then the From / To / Offset table). Each starts empty (a table shows its
-   header); Add makes a row or card. The No. column and the Remove column have one width throughout, so
-   the numbers and the Remove buttons line up; numbers are at the size of
-   the entries, headers at the size of the other captions. */
-.sidebar{--sidebar-remove-w:calc(84px * var(--tas-density));--sidebar-no-w:calc(52px * var(--tas-density))}
+   header); Add makes a row or card.  The No. column and the Remove column
+   have one width throughout (set on .sidebar above), so the numbers and the
+   Remove buttons line up; numbers are at the size of the entries, headers at
+   the size of the other captions. */
 .propagation-vectors,.background-rows{display:grid;gap:0}
 .propagation-vectors:empty,.background-rows:empty{display:none}
 .sidebar-table-head{margin-bottom:calc(2px * var(--tas-density));color:#333}
@@ -220,7 +215,6 @@
    the header row on grey, a line between cells.  Each entry sits in its
    cell with the usual entry frame (as in Positions); Remove sits in the
    last cell. */
-.sidebar{--sidebar-line:calc(1px * var(--tas-density)) solid #d8dde3}
 .sidebar :is(.propagation-head,.background-head){margin-bottom:0}
 .sidebar :is(.propagation-head,.propagation-row,.background-head,.background-row,.dark-table){gap:0;align-items:stretch}
 .sidebar :is(.propagation-head,.propagation-row,.background-head,.background-row,.dark-table) > *{

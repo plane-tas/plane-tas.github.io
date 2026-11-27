@@ -139,8 +139,6 @@
    desktop nothing is smaller than the captions of the tabs (12px):
    panel title > card title > subheading (label size, bold) and labels
    (regular).  Units in a subheading, e.g. "(m)", are a little smaller. */
-:root{--ui-title-font:max(16px,calc(19px * var(--tas-density)));
-  --ui-card-title-font:max(14px,calc(17px * var(--tas-density)))}
 .sidebar section > h2,.sidebar section > .sidebar-heading-row > h2,
 #resolutionInstrumentDetails .resolution-detail-title{font-size:var(--ui-title-font)!important;font-weight:650!important}
 #resolutionInstrumentDetails :is(.instrument-fixed-heading,details > summary){font-size:var(--ui-card-title-font)!important}

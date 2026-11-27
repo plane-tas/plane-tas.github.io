@@ -113,6 +113,18 @@
   border-radius:0;
   margin-top:0;
   background:#fff;
+  scrollbar-width:thin;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: calc(8px * var(--tas-density));
+  width: 100%;
+  min-width: 0;
+  overflow-x: visible;
+  overflow-y: visible;
+  padding: calc(9px * var(--tas-density)) calc(5px * var(--tas-density));
 }
 #qeDisplayControls.hidden,#qePlotLegend.hidden{display:none!important}
 #qeDisplayControls .checkbox-label{margin:0;display:inline-flex;align-items:center;gap:calc(5px * var(--tas-density));min-height:calc(28px * var(--tas-density));white-space:normal}
@@ -153,7 +165,7 @@
 .qe-external-legend .qe-legend-marker{display:block;flex:0 0 calc(19px * var(--tas-density))}
 
 /* Q–E maps: Save figure and its file name are in a row above the map. */
-#singlePlotFrame{min-width:0;background:#fff}
+#singlePlotFrame{min-width:0;background:#fff;position:relative}
 #qeVectorPlotFrame{position:relative;min-width:0;background:#fff}
 /* Scale row under the legend: F_N and F_M colour scales (min / max, labels
    above the entries as elsewhere) and the Lorentz factor of the peak shading. */
@@ -232,7 +244,13 @@
 /* Q path snap preferences share the Constant E map toolbar without
    forcing other controls to grow or breaking the 50:50 tablet layout. */
 #qeDisplayControls .qe-path-tools .qe-path-snap-label{
-  min-width:0;white-space:nowrap;margin:0;
+  min-width:0;
+  white-space:nowrap;
+  margin:0;
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  gap:calc(5px * var(--tas-density));
 }
 #qeDisplayControls .qe-path-tools #qePathSnap{
   width:auto;min-width:64px;max-width:88px;box-sizing:border-box;
@@ -241,7 +259,6 @@
 
 /* Q-path repair: the plot overlay was lost in a later stylesheet revision.
    It is transparent and intercepts taps only while Select Path is active. */
-#singlePlotFrame{position:relative;}
 #qePathHitLayer{
   position:absolute;
   inset:0;
@@ -265,9 +282,6 @@
 
 /* Constant-E toolbar: keep all seven controls on one aligned row, including
    when the right panel remains beside the map on a tablet. */
-#qeDisplayControls{
-  scrollbar-width:thin;
-}
 #qeDisplayControls .qe-path-tools{
   display:contents;
 }
@@ -290,6 +304,10 @@
   min-width:calc(58px * var(--tas-density));
   max-width:none;
   padding:0 calc(4px * var(--tas-density));
+  height: max(30px, calc(34px * var(--tas-density)));
+  min-height: max(30px, calc(34px * var(--tas-density)));
+  line-height: normal;
+  padding-block: calc(2px * var(--tas-density));
 }
 #qeDisplayControls .qe-path-tools button{
   flex:0 0 auto;
@@ -318,29 +336,10 @@
   white-space:nowrap;
   min-height:calc(30px * var(--tas-density));
 }
-#qeDisplayControls .qe-path-tools .qe-path-snap-label{
-  display:inline-flex;
-  flex-direction:row;
-  align-items:center;
-  gap:calc(5px * var(--tas-density));
-}
 
 /* Constant E map toolbar and Resolution unit headings.
    Display settings and path tools occupy two centered rows, never a
    horizontally scrolling strip. Narrow views wrap items within their row. */
-#qeDisplayControls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  gap: calc(8px * var(--tas-density));
-  width: 100%;
-  min-width: 0;
-  overflow-x: visible;
-  overflow-y: visible;
-  padding: calc(9px * var(--tas-density)) calc(5px * var(--tas-density));
-}
 #qeDisplayControls > .qe-path-tools {
   display: flex;
   align-items: center;
@@ -357,14 +356,6 @@
 #qeDisplayControls .qe-path-tools > :is(button,label) {
   flex: 0 0 auto;
 }
-/* Keep the Snap value fully visible with the sidebar-matched caption size. */
-#qeDisplayControls #qePathSnap {
-  height: max(30px, calc(34px * var(--tas-density)));
-  min-height: max(30px, calc(34px * var(--tas-density)));
-  line-height: normal;
-  padding-block: calc(2px * var(--tas-density));
-}
-
 /* Enlarge the three Constant E map path-edit buttons to match
    neighboring actions without changing the two-row centered toolbar layout. */
 #qeDisplayControls .qe-path-tools :is(#qePathPickToggle, #qePathUndo, #qePathClear) {
@@ -378,7 +369,7 @@
 /* Scale row: equal columns, each item in its own place -- F_N min / max,
    M = x N, F_M min / max, I min / max, log I.  An item not in use keeps
    its place (hidden), so nothing moves. */
-#sfColorbarRange label{display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0}
+#sfColorbarRange label{display:flex;flex-direction:column;gap:calc(2px * var(--tas-density));min-width:0;font-size:var(--plane-tab-label-font)!important;line-height:1.35}
 #sfColorbarRange label > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sfColorbarRange:not(.qe-nuclear-colorbar) .qe-nuclear-entry,
 #sfColorbarRange:not(.qe-magnetic-colorbar) .qe-magnetic-entry,
@@ -388,7 +379,6 @@
 /* Narrow: two lines of four. */
 #qeConstantMapPane,#qeVectorMapPane{container-type:inline-size}
 @container (max-width:480px){ #sfColorbarRange{grid-template-columns:repeat(4,minmax(0,1fr))} }
-#sfColorbarRange label{font-size:var(--plane-tab-label-font)!important;line-height:1.35}
 
 
 /* Reflections: Save CSV, file name and ".csv" in one row filling the width,

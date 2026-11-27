@@ -5,7 +5,10 @@
 
 /* Keep the dark-angle / geometry card border continuous around Plotly content */
 #singleMain .chart-grid>.geometry-card{overflow:hidden}
-@media(max-width:1050px){#singleMain .chart-grid{grid-template-columns:1fr}#geometryPlot.geometry{min-height:calc(620px * var(--tas-density))}}
+@media(max-width:1050px){
+  #singleMain .chart-grid{grid-template-columns:1fr}
+  #geometryPlot.geometry{min-height:calc(620px * var(--tas-density))}
+}
 
 /* Enlarge the square Q-E map to approximately the former full x-axis width.
    The data aspect remains 1:1 in Plotly; the extra vertical room prevents
@@ -26,28 +29,22 @@
 .geometry-card-tab:focus-visible{outline:calc(2px * var(--tas-density)) solid currentColor;outline-offset:calc(2px * var(--tas-density))}
 .geometry-card-pane{min-width:0}
 .time-estimate-pane{padding:calc(10px * var(--tas-density)) calc(8px * var(--tas-density)) calc(12px * var(--tas-density))}
-.time-scan-table-wrap{overflow-x:visible;max-width:100%;min-width:0}
+.time-scan-table-wrap{overflow-x:visible;max-width:100%;min-width:0;min-height:0}
 .time-scan-table{display:grid;width:100%;min-width:0;border-left:calc(1px * var(--tas-density)) solid #ccc;border-top:calc(1px * var(--tas-density)) solid #ccc;background:#fff}
-.time-scan-header{font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg);padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center}
+.time-scan-header{font-weight:var(--table-head-weight);color:var(--table-head-color);background:var(--table-head-bg);padding:calc(7px * var(--tas-density)) calc(4px * var(--tas-density));border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;text-align:center;height:calc(34px * var(--tas-density));display:flex;align-items:center;justify-content:center}
 .time-scan-rows,.time-scan-row{display:contents}
-.time-scan-cell{border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff;min-width:0}
-.time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#222;background:#fafafa}
+.time-scan-cell{border-right:calc(1px * var(--tas-density)) solid #ccc;border-bottom:calc(1px * var(--tas-density)) solid #ccc;background:#fff;min-width:0;padding:calc(4px * var(--tas-density));height:calc(38px * var(--tas-density));overflow:hidden}
+.time-scan-index{display:flex;align-items:center;justify-content:center;font-weight:650;color:#222;background:#fafafa;user-select:none;cursor:grab;touch-action:none}
 .time-scan-cell button{width:100%;white-space:nowrap}
-.time-range-inputs{display:grid;grid-template-columns:repeat(var(--time-range-cols,1),minmax(0,1fr))}
-.time-range-field{display:grid;align-items:center}
+.time-range-inputs{display:grid;grid-template-columns:repeat(var(--time-range-cols,1),minmax(0,1fr));gap:calc(3px * var(--tas-density))}
+.time-range-field{display:grid;align-items:center;grid-template-columns:max-content minmax(0,1fr);gap:calc(2px * var(--tas-density))}
 .time-range-label{color:#222;white-space:nowrap}
 .time-mcu-entry{display:block;min-width:0}
-.time-scan-actions button{min-height:0;}
+.time-scan-actions button{min-height:0;width:100%}
 .time-mcu-help{margin:calc(8px * var(--tas-density)) 0 calc(10px * var(--tas-density));font-size:calc(14px * var(--tas-density));line-height:1.4;color:#222;}
 .time-invalid-number{background:#f2b19d!important;border-color:#c55235!important;box-shadow:0 0 0 calc(1px * var(--tas-density)) rgba(197,82,53,.12) inset}
 .time-estimate-message.error-text{color:#a22;background:#fff4f4;border:calc(1px * var(--tas-density)) solid #e0aaaa;border-radius:calc(4px * var(--tas-density));padding:calc(6px * var(--tas-density)) calc(8px * var(--tas-density))}
-@media(max-width:760px){
-  .time-scan-actions{flex-wrap:wrap}
-}
 #singleMain .chart-grid.time-estimate-active .time-scan-table-wrap{overflow-x:visible}
-
-/* Time-estimate validation: make the problematic scan index unmistakable. */
-.time-scan-actions button{width:100%;}
 
 /* Time estimate footer: one compact row with matched controls. */
 .time-estimate-controls>button{
@@ -85,16 +82,11 @@
 .time-fix-header{display:flex;align-items:center;justify-content:center;gap:calc(5px * var(--tas-density))}
 .time-fix-header input,.time-fix-cell input{width:auto;margin:0}
 .time-fix-cell{display:flex;align-items:center;justify-content:center}
-.time-scan-index{user-select:none}
 .time-scan-row.time-scan-selected .time-scan-cell{background:#eaf2ff}
 .time-scan-row.time-scan-selected .time-scan-index{background:#dbe9ff;color:#234b7a}
 .time-scan-row.time-scan-warning .time-scan-index{background:#e96b4c;color:#fff;border-color:#b94e35}
-.time-scan-table-wrap{min-height:0;}
 
 /* Compact Time estimate table so HKL & E range fields fit the stable card width. */
-.time-scan-cell{padding:calc(4px * var(--tas-density));}
-.time-range-inputs{gap:calc(3px * var(--tas-density));}
-.time-range-field{grid-template-columns:max-content minmax(0,1fr);gap:calc(2px * var(--tas-density));}
 .time-range-field input{
   padding:calc(3px * var(--tas-density)) calc(4px * var(--tas-density));
 }
@@ -114,19 +106,7 @@
   background:#f7f7f7;
 }
 @media(max-width:760px){
-  .time-scan-actions{grid-template-columns:1fr;}
-}
-
-/* v15 row geometry: exactly ten body rows are visible before vertical scrolling. */
-.time-scan-header{
-  height:calc(34px * var(--tas-density));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.time-scan-cell{
-  height:calc(38px * var(--tas-density));
-  overflow:hidden;
+  .time-scan-actions{flex-wrap:wrap;grid-template-columns:1fr}
 }
 
 /* Time estimate footer order: Set now, Calc finish, Scan start, Scan finish, Calc MCU. */
@@ -247,7 +227,6 @@
 }
 
 /* Index cells double as drag handles. Selected scans move as one block. */
-.time-scan-index{cursor:grab;touch-action:none;}
 .time-scan-index:active{cursor:grabbing;}
 .time-scan-row.time-drag-source .time-scan-cell{opacity:.58;}
 .time-scan-row.time-drag-before .time-scan-cell{box-shadow:inset 0 calc(3px * var(--tas-density)) 0 #3b82f6;}
@@ -333,10 +312,6 @@
 /* Explicit MCU conversion and movement-overhead controls. */
 .time-setting-entry{display:inline-flex;align-items:center;gap:calc(4px * var(--tas-density))}
 .time-setting-entry input{width:calc(82px * var(--tas-density));min-width:0;padding:calc(4px * var(--tas-density)) calc(5px * var(--tas-density))}
-@media(max-width:760px){
-  .time-estimate-settings{grid-template-columns:1fr 1fr}
-}
-
 /* Clearer Time estimate settings — two independent white inline boxes. */
 .time-estimate-settings{
   display:flex;
@@ -376,6 +351,7 @@
 }
 @media(max-width:760px){
   .time-estimate-settings{
+    grid-template-columns:1fr 1fr;
     display:flex;
     flex-wrap:wrap;
   }
@@ -438,9 +414,12 @@
   text-align:center;
 }
 
-/* Angle calculation output, without resizing Plotly. */
+/* Angle calculation output, without resizing Plotly.  The result box keeps
+   one height (3 result lines + warning line), so the TAS drawing below never
+   jumps when a target becomes inaccessible. */
 #geometryAnglesPane .geometry-angles {
   line-height: 1.55;
+  min-height:calc(4 * 1.55em + 20px * var(--tas-density));
 }
 #geometryAnglesPane .geometry-target label,
 #geometryAnglesPane .powder-geometry-target label,
@@ -477,14 +456,11 @@
 
 /* hbar-omega / U / V sliders between the Angle result and the TAS geometry plot.
    One grid for all rows so the slider tracks line up whatever the label width. */
-.geometry-sliders{display:grid;align-items:center;column-gap:calc(10px * var(--tas-density));row-gap:calc(4px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density));}
+.geometry-sliders{display:grid;align-items:center;column-gap:calc(10px * var(--tas-density));row-gap:calc(4px * var(--tas-density));margin:calc(8px * var(--tas-density)) 0 calc(4px * var(--tas-density));font-size:calc(13px * var(--tas-density));grid-template-columns:max-content minmax(0,1fr) calc(52px * var(--tas-density)) max-content!important}
 .geometry-sliders .geometry-slider-row{display:contents;}
 .geometry-sliders .geometry-slider-row span{white-space:nowrap;}
 .geometry-sliders .geometry-slider-row input[type=range]{width:100%;padding:0;border:0;}
 .geometry-sliders .geometry-slider-row output{text-align:right;font-variant-numeric:tabular-nums;}
-/* Keep the result box height constant (3 result lines + warning line), so the
-   TAS drawing below never jumps when a target becomes inaccessible. */
-#geometryAnglesPane .geometry-angles{min-height:calc(4 * 1.55em + 20px * var(--tas-density));}
 /* Last valid drawing shown while the current target is inaccessible. */
 #geometryPlot.geometry-plot-stale{opacity:0.35;}
 .numeric-entry-rejected{border-color:#c44 !important;box-shadow:0 0 0 2px rgba(204,68,68,.25)}
@@ -510,8 +486,8 @@
   overflow-y:auto;
 }
 
-/* hbar-omega / U / V / linear-combination sliders: 4 aligned columns. */
-.geometry-sliders{grid-template-columns:max-content minmax(0,1fr) calc(52px * var(--tas-density)) max-content!important;}
+/* The linear-combination row (n·U + m·V, Set origin) uses the same four
+   columns as the ħω / U / V sliders. */
 .geometry-sliders .geometry-slider-combo{display:contents;}
 .geometry-combo-label{display:inline-flex;align-items:center;gap:calc(3px * var(--tas-density));white-space:nowrap;}
 .geometry-combo-label input{width:calc(42px * var(--tas-density))!important;min-width:0!important;padding:calc(2px * var(--tas-density)) calc(4px * var(--tas-density));text-align:right;}
